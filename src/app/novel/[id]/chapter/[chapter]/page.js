@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { novels } from "../../../../../novelsData";  // Adjust the relative path
@@ -19,12 +18,6 @@ export default function ChapterPage() {
   const nextChapter = parseInt(chapter) + 1;
   const prevChapterData = novel.chapters[prevChapter];
   const nextChapterData = novel.chapters[nextChapter];
-=======
-import { useParams } from 'next/navigation';
-
-export default function ChapterPage() {
-  const { id, chapter } = useParams();
->>>>>>> origin/master
 
   return (
     <div>
@@ -35,7 +28,6 @@ export default function ChapterPage() {
       </nav>
 
       <div className="container my-5">
-<<<<<<< HEAD
         <h1 className="text-orange">{chapterData.title}</h1>
         <p className="chapter-content">{chapterData.content}</p>
 
@@ -60,10 +52,6 @@ export default function ChapterPage() {
             </Link>
           )}
         </div>
-=======
-        <h1 className="text-orange">Novel {id} - Chapter {chapter}</h1>
-        <p>This is the chapter page for Novel {id}, Chapter {chapter}.</p>
->>>>>>> origin/master
       </div>
 
       <footer className="bg-dark text-white text-center py-4">
