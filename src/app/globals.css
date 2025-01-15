@@ -1,0 +1,56 @@
+/* Orange Background */
+.bg-orange {
+  background-color: rgb(243, 99, 22) !important;
+}
+
+<<<<<<< HEAD
+.bg-black {
+  background-color: rgb(43, 37, 33) !important;
+}
+
+/* Orange Text */
+.card-text {
+  color: rgb(0, 0, 0) !important;
+}
+
+.card-title {
+=======
+/* Orange Text */
+.text-orange {
+>>>>>>> origin/master
+  color: rgb(243, 99, 22) !important;
+}
+
+/* Customize Bootstrap Buttons */
+.btn-dark {
+  background-color: #333 !important;
+  border-color: #333 !important;
+}
+<<<<<<< HEAD
+
+.bg-card {
+  background-color: rgb(245, 244, 244) !important;
+}
+
+/* Fixed size for card images */
+.card-img-top {
+  height: 200px; /* Adjust height as needed */
+  width: 100%; /* Ensures the image spans the card width */
+  object-fit: cover; /* Maintains aspect ratio and fills the area */
+  border-radius: 0.25rem; /* Optional: Matches Bootstrap's card border radius */
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+  transform: scale(1.05);
+}
+.text-orange {
+  color: rgb(243, 99, 22);
+}
+
+=======
+>>>>>>> origin/master

@@ -1,0 +1,147 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { novels } from '../../novelsData';  // Import the novels data
+import BootstrapProvider from "../../components/BootstrapProvider";
+
+
+export default function CreatorsDashboard() {
+  const [novelTitle, setNovelTitle] = useState('');
+  const [novelImage, setNovelImage] = useState('');
+  const [chapterTitle, setChapterTitle] = useState('');
+  const [chapterContent, setChapterContent] = useState('');
+  const [novelsList, setNovelsList] = useState(Object.values(novels));  // Set initial state from novelsData.js
+
+  const handleNovelSubmit = async (e) => {
+    e.preventDefault();
+
+    // Prepare the novel data
+    const newNovel = {
+      title: novelTitle,
+      image: novelImage,
+      chapters: {
+        1: { title: chapterTitle, content: chapterContent },
+      },
+    };
+
+    // Send the novel data to the backend API
+    const response = await fetch('/api/upload-novel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newNovel),
+    });
+
+    const data = await response.json();
+
+    // If the novel is added successfully, update the list of novels
+    if (data.success) {
+      setNovelsList(Object.values(novels));  // Update novels list from novelsData.js
+    }
+
+    // Reset the form fields
+    setNovelTitle('');
+    setNovelImage('');
+    setChapterTitle('');
+    setChapterContent('');
+  };
+
+  return (
+    <div>
+      {/* Navbar */}
+      <nav className="navbar navbar-dark bg-dark">
+        <div className="container">
+          <Link href="/" className="navbar-brand">Sempai HQ</Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <header className="bg-orange py-5 text-center text-white">
+        <div className="container">
+          <h1 className="display-4">Creator's Dashboard</h1>
+          <p className="lead">Upload your novel and chapters here!</p>
+        </div>
+      </header>
+
+      {/* Novel Upload Form */}
+      <div className="container my-5">
+        <h2>Upload New Novel</h2>
+        <form onSubmit={handleNovelSubmit}>
+          <div className="mb-3">
+            <label htmlFor="novelTitle" className="form-label">Novel Title</label>
+            <input
+              type="text"
+              id="novelTitle"
+              className="form-control"
+              value={novelTitle}
+              onChange={(e) => setNovelTitle(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="novelImage" className="form-label">Novel Image URL</label>
+            <input
+              type="text"
+              id="novelImage"
+              className="form-control"
+              value={novelImage}
+              onChange={(e) => setNovelImage(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="chapterTitle" className="form-label">Chapter Title</label>
+            <input
+              type="text"
+              id="chapterTitle"
+              className="form-control"
+              value={chapterTitle}
+              onChange={(e) => setChapterTitle(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="chapterContent" className="form-label">Chapter Content</label>
+            <textarea
+              id="chapterContent"
+              className="form-control"
+              value={chapterContent}
+              onChange={(e) => setChapterContent(e.target.value)}
+              rows="5"
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-dark">Submit Novel</button>
+        </form>
+      </div>
+
+      {/* Display Uploaded Novels */}
+      <div className="container my-5">
+        <h2>Uploaded Novels</h2>
+        <div className="row">
+          {novelsList.map((novel, index) => (
+            <div key={index} className="col-md-4">
+              <div className="card">
+                <img src={novel.image} className="card-img-top" alt={novel.title} />
+                <div className="card-body">
+                  <h5 className="card-title">{novel.title}</h5>
+                  <p className="card-text">Chapter 1: {novel.chapters[1].title}</p>
+                  <Link href={`/novel/${index + 1}`} className="btn btn-dark">
+                    View Novel
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-dark py-4 text-center text-white">
+        <p>&copy; 2025 Sempai HQ. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+}
