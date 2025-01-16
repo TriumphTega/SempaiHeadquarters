@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { novels } from '../../novelsData';  // Import the novels data
 import BootstrapProvider from "../../components/BootstrapProvider";
-
 
 export default function CreatorsDashboard() {
   const [novelTitle, setNovelTitle] = useState('');
@@ -12,11 +11,12 @@ export default function CreatorsDashboard() {
   const [chapterTitle, setChapterTitle] = useState('');
   const [chapterContent, setChapterContent] = useState('');
   const [novelsList, setNovelsList] = useState(Object.values(novels));  // Set initial state from novelsData.js
+  const [selectedNovel, setSelectedNovel] = useState(null);  // To edit existing novels
 
+  // Function to handle the form submission for both new and existing novels
   const handleNovelSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare the novel data
     const newNovel = {
       title: novelTitle,
       image: novelImage,
@@ -25,8 +25,10 @@ export default function CreatorsDashboard() {
       },
     };
 
+    const url = selectedNovel ? `/api/upload-novel/${selectedNovel.title}` : '/api/upload-novel';
+
     // Send the novel data to the backend API
-    const response = await fetch('/api/upload-novel', {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,20 +38,30 @@ export default function CreatorsDashboard() {
 
     const data = await response.json();
 
-    // If the novel is added successfully, update the list of novels
     if (data.success) {
-      setNovelsList(Object.values(novels));  // Update novels list from novelsData.js
+      setNovelsList(Object.values(novels));  // Update novels list
+      setSelectedNovel(null); // Reset the selected novel for new entries
     }
 
-    // Reset the form fields
+    // Reset form fields
     setNovelTitle('');
     setNovelImage('');
     setChapterTitle('');
     setChapterContent('');
   };
 
+  // Function to edit an existing novel
+  const handleEditNovel = (novel) => {
+    setSelectedNovel(novel);
+    setNovelTitle(novel.title);
+    setNovelImage(novel.image);
+    setChapterTitle(novel.chapters[1].title);
+    setChapterContent(novel.chapters[1].content);
+  };
+
   return (
     <div>
+      <BootstrapProvider />
       {/* Navbar */}
       <nav className="navbar navbar-dark bg-dark">
         <div className="container">
@@ -61,13 +73,13 @@ export default function CreatorsDashboard() {
       <header className="bg-orange py-5 text-center text-white">
         <div className="container">
           <h1 className="display-4">Creator's Dashboard</h1>
-          <p className="lead">Upload your novel and chapters here!</p>
+          <p className="lead">Upload or Update your novel and chapters here!</p>
         </div>
       </header>
 
       {/* Novel Upload Form */}
       <div className="container my-5">
-        <h2>Upload New Novel</h2>
+        <h2>{selectedNovel ? 'Update Novel' : 'Upload New Novel'}</h2>
         <form onSubmit={handleNovelSubmit}>
           <div className="mb-3">
             <label htmlFor="novelTitle" className="form-label">Novel Title</label>
@@ -113,7 +125,7 @@ export default function CreatorsDashboard() {
               required
             />
           </div>
-          <button type="submit" className="btn btn-dark">Submit Novel</button>
+          <button type="submit" className="btn btn-dark">{selectedNovel ? 'Update Novel' : 'Submit Novel'}</button>
         </form>
       </div>
 
@@ -128,6 +140,12 @@ export default function CreatorsDashboard() {
                 <div className="card-body">
                   <h5 className="card-title">{novel.title}</h5>
                   <p className="card-text">Chapter 1: {novel.chapters[1].title}</p>
+                  <button
+                    onClick={() => handleEditNovel(novel)}
+                    className="btn btn-warning"
+                  >
+                    Edit Novel
+                  </button>
                   <Link href={`/novel/${index + 1}`} className="btn btn-dark">
                     View Novel
                   </Link>
