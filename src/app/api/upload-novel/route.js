@@ -1,12 +1,21 @@
-import { NextResponse } from 'next/server';
-import { addNovel } from '../../../novelsData';  // Import the addNovel function
+import { novels } from '../../../novelsData';
 
-export async function POST(req) {
-  const newNovel = await req.json();
+export async function POST(req, { params }) {
+  try {
+    const novelTitle = params.novelTitle;
+    const updatedNovel = await req.json();
 
-  // Add the new novel to the novelsData.js
-  addNovel(newNovel);
+    // If the novel exists, update it
+    if (novels[novelTitle]) {
+      novels[novelTitle] = updatedNovel;
+      return new Response(JSON.stringify({ success: true, message: 'Novel updated successfully' }), { status: 200 });
+    }
 
-  // Respond with success message
-  return NextResponse.json({ success: true, novel: newNovel });
+    // Otherwise, add a new novel
+    novels[updatedNovel.title] = updatedNovel;
+
+    return new Response(JSON.stringify({ success: true, message: 'Novel added successfully' }), { status: 200 });
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, message: 'Failed to update or add novel' }), { status: 500 });
+  }
 }

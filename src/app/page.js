@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { novels } from '../novelsData';  // Import the novels data
+import ConnectButton from '../components/ConnectButton';
+
 
 export default function Home() {
   return (
@@ -30,7 +32,7 @@ export default function Home() {
             </ul>
             <ul className="ms-auto navbar-nav">
               <li className="nav-item">
-                <Link href="/about" className="btn btn-warning text-dark">Connect</Link>
+              <ConnectButton />
               </li>
               {/* Creator Dashboard Link */}
               <li className="nav-item">
