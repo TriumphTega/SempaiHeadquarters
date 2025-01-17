@@ -32,7 +32,7 @@ export default function Home() {
                 <Link href="/" className="active nav-link">Home</Link>
               </li>
               <li className="nav-item">
-                <Link href="/about" className="nav-link">About</Link>
+                <Link href="/about" className="nav-link">Counter</Link>
               </li>
             </ul>
             <ul className="ms-auto navbar-nav">
@@ -41,13 +41,13 @@ export default function Home() {
               </li>
               {connected && (
                 <li className="nav-item">
-                  <span className="text-light ms-3">
+                  <span className="ms-3 text-light">
                   </span>
                 </li>
               )}
               <li className="nav-item">
                 <Link href="/creators-dashboard" className="btn btn-warning text-dark">
-                  Creator's Dashboard
+                  Creator Dashboard
                 </Link>
               </li>
             </ul>
@@ -59,7 +59,7 @@ export default function Home() {
       <header className="bg-orange py-5 text-center text-white">
         <div className="container">
           <h1 className="display-4">Welcome to Sempai HQ</h1>
-          <p className="lead">Explore your favorite novels and chapters!</p>
+          <p className="lead">Explore your favorite novels and earn tokens!</p>
         </div>
       </header>
 
@@ -69,7 +69,7 @@ export default function Home() {
           <div className="g-4 row row-cols-1 row-cols-md-3">
             {Object.values(novels).map((novel, index) => (
               <div key={index} className="col">
-                <div className="card h-100 shadow-sm bg-card">
+                <div className="bg-card card h-100 shadow-sm">
                   <img
                     src={novel.image}
                     className="card-img-top"
@@ -82,7 +82,7 @@ export default function Home() {
                     <p className="card-text">Click to explore chapters</p>
                     {connected ? (
                       <Link href={`/novel/${index + 1}`} className="btn btn-dark">
-                        Explore
+                       Read
                       </Link>
                     ) : (
                       <NovelConnectButton />
@@ -93,7 +93,7 @@ export default function Home() {
             ))}
             {/* Additional cards */}
             <div className="col">
-              <div className="card h-100 shadow-sm bg-card">
+              <div className="bg-card card h-100 shadow-sm">
                 <img
                   src="/images/novel-3.jpg"
                   className="card-img-top"
@@ -103,10 +103,10 @@ export default function Home() {
                   <h5 className="card-title fw-bold text-orange text-uppercase">
                     Hoard
                   </h5>
-                  <p className="card-text">Click to explore chapters</p>
+                  <p className="card-text">Our collection of books</p>
                   {connected ? (
                     <Link href="/novel/3" className="btn btn-dark">
-                      Explore more books
+                      Explore collection
                     </Link>
                   ) : (
                     <button className="btn btn-dark" disabled>
@@ -118,7 +118,7 @@ export default function Home() {
             </div>
 
             <div className="col">
-              <div className="card h-100 shadow-sm bg-card">
+              <div className="bg-card card h-100 shadow-sm">
                 <img
                   src="/images/novel-4.jpg"
                   className="card-img-top"
@@ -128,10 +128,10 @@ export default function Home() {
                   <h5 className="card-title fw-bold text-orange text-uppercase">
                     KISS (Keep It Simple, Stupid)
                   </h5>
-                  <p className="card-text">Click to explore chapters</p>
+                  <p className="card-text">Check our whitepaper</p>
                   {connected ? (
                     <Link href="/novel/4" className="btn btn-dark">
-                      Explore more books
+                      Read Whitepaper
                     </Link>
                   ) : (
                     <button className="btn btn-dark" disabled>
