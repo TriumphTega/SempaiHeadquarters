@@ -1,11 +1,16 @@
-import Link from 'next/link';
-import { novels } from '../novelsData';  // Import the novels data
-import ConnectButton from '../components/ConnectButton';
+'use client';
 
+import Link from 'next/link';
+import { novels } from '../novelsData';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { NovelConnectButton } from '../components/NovelConnectButton'
 
 export default function Home() {
+  const { connected, publicKey } = useWallet();
+
   return (
-    <div className='bg-black'>
+    <div className="bg-black">
       {/* Navbar */}
       <nav className="bg-dark navbar navbar-dark navbar-expand-lg">
         <div className="container">
@@ -32,12 +37,18 @@ export default function Home() {
             </ul>
             <ul className="ms-auto navbar-nav">
               <li className="nav-item">
-              <ConnectButton />
+                <WalletMultiButton />
               </li>
-              {/* Creator Dashboard Link */}
+              {connected && (
+                <li className="nav-item">
+                  <span className="text-light ms-3">
+                  </span>
+                </li>
+              )}
               <li className="nav-item">
-              <Link href="/creators-dashboard" className="btn btn-warning text-dark">Creator's Dashboard</Link>
-
+                <Link href="/creators-dashboard" className="btn btn-warning text-dark">
+                  Creator's Dashboard
+                </Link>
               </li>
             </ul>
           </div>
@@ -54,72 +65,86 @@ export default function Home() {
 
       {/* Novels Grid */}
       <div className="container my-5">
-        <div className="g-4 row row-cols-1 row-cols-md-3">
-          {Object.values(novels).map((novel, index) => (
-            <div key={index} className="col">
+        {novels && Object.values(novels).length > 0 ? (
+          <div className="g-4 row row-cols-1 row-cols-md-3">
+            {Object.values(novels).map((novel, index) => (
+              <div key={index} className="col">
+                <div className="card h-100 shadow-sm bg-card">
+                  <img
+                    src={novel.image}
+                    className="card-img-top"
+                    alt={novel.title}
+                  />
+                  <div className="card-body">
+                    <h5 className="card-title fw-bold text-orange text-uppercase">
+                      {novel.title}
+                    </h5>
+                    <p className="card-text">Click to explore chapters</p>
+                    {connected ? (
+                      <Link href={`/novel/${index + 1}`} className="btn btn-dark">
+                        Explore
+                      </Link>
+                    ) : (
+                      <NovelConnectButton />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* Additional cards */}
+            <div className="col">
               <div className="card h-100 shadow-sm bg-card">
-                {/* Card Image */}
                 <img
-                  src={novel.image}
+                  src="/images/novel-3.jpg"
                   className="card-img-top"
-                  alt={novel.title}
+                  alt="Hoard"
                 />
                 <div className="card-body">
-                  {/* Card Title */}
                   <h5 className="card-title fw-bold text-orange text-uppercase">
-                    {novel.title}
+                    Hoard
                   </h5>
-                  <p className="card-text card-text">Click to explore chapters</p>
-                  <Link href={`/novel/${index + 1}`} className="btn btn-dark">
-                    Explore
-                  </Link>
+                  <p className="card-text">Click to explore chapters</p>
+                  {connected ? (
+                    <Link href="/novel/3" className="btn btn-dark">
+                      Explore more books
+                    </Link>
+                  ) : (
+                    <button className="btn btn-dark" disabled>
+                      Connect Wallet to Explore
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
-          ))}
-          {/* Additional cards */}
-          <div className="col">
-            <div className="card h-100 shadow-sm bg-card">
-              {/* Card Image */}
-              <img
-                src="/images/novel-3.jpg"
-                className="card-img-top"
-                alt="Hoard"
-              />
-              <div className="card-body">
-                {/* Card Title */}
-                <h5 className="card-title fw-bold text-orange text-uppercase">
-                  Hoard
-                </h5>
-                <p className="card-text card-text">Click to explore chapters</p>
-                <Link href="/novel/3" className="btn btn-dark">
-                  Explore more books
-                </Link>
-              </div>
-            </div>
-          </div>
 
-          <div className="col">
-            <div className="card h-100 shadow-sm bg-card">
-              {/* Card Image */}
-              <img
-                src="/images/novel-4.jpg"
-                className="card-img-top"
-                alt="KISS(Keep It Simple, Stupid)"
-              />
-              <div className="card-body">
-                {/* Card Title */}
-                <h5 className="card-title fw-bold text-orange text-uppercase">
-                  KISS (Keep It Simple, Stupid)
-                </h5>
-                <p className="card-text card-text">Click to explore chapters</p>
-                <Link href="/novel/4" className="btn btn-dark">
-                  Explore more books
-                </Link>
+            <div className="col">
+              <div className="card h-100 shadow-sm bg-card">
+                <img
+                  src="/images/novel-4.jpg"
+                  className="card-img-top"
+                  alt="KISS(Keep It Simple, Stupid)"
+                />
+                <div className="card-body">
+                  <h5 className="card-title fw-bold text-orange text-uppercase">
+                    KISS (Keep It Simple, Stupid)
+                  </h5>
+                  <p className="card-text">Click to explore chapters</p>
+                  {connected ? (
+                    <Link href="/novel/4" className="btn btn-dark">
+                      Explore more books
+                    </Link>
+                  ) : (
+                    <button className="btn btn-dark" disabled>
+                      Connect Wallet to Explore
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <p className="text-center text-white">No novels available at the moment.</p>
+        )}
       </div>
 
       {/* Footer */}
