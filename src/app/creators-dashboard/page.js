@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { novels } from '../../novelsData';  // Import the novels data
 import BootstrapProvider from "../../components/BootstrapProvider";
+import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
+import {auth} from '../../services/firebase/firebase'
 
 export default function CreatorsDashboard() {
   const [novelTitle, setNovelTitle] = useState('');
@@ -12,6 +14,7 @@ export default function CreatorsDashboard() {
   const [chapterContent, setChapterContent] = useState('');
   const [novelsList, setNovelsList] = useState(Object.values(novels));  // Set initial state from novelsData.js
   const [selectedNovel, setSelectedNovel] = useState(null);  // To edit existing novels
+  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Track login status
 
   // Function to handle the form submission for both new and existing novels
   const handleNovelSubmit = async (e) => {
@@ -59,6 +62,28 @@ export default function CreatorsDashboard() {
     setChapterContent(novel.chapters[1].content);
   };
 
+  // Handle Logout
+  const handleLogout = async () => {
+    const auth = getAuth();
+    try {
+      await signOut(auth);
+      alert('You have been logged out successfully.');
+      setIsLoggedIn(false);
+      window.location.href = '/'; // Redirect to the homepage or login page
+    } catch (error) {
+      console.error('Logout failed:', error.message);
+      alert('Failed to log out. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLoggedIn(!!user); // Set login status based on user
+    });
+  
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div>
       <BootstrapProvider />
@@ -66,6 +91,14 @@ export default function CreatorsDashboard() {
       <nav className="navbar navbar-dark bg-dark">
         <div className="container">
           <Link href="/" className="navbar-brand">Sempai HQ</Link>
+          {isLoggedIn && (
+            <button
+              onClick={handleLogout}
+              className="btn btn-danger"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </nav>
 
