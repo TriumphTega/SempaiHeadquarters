@@ -1,28 +1,31 @@
-import { novels } from '../../novelsData'; // Adjust the path to where your novels data is stored
+import { storage } from '../../../services/firebase/firebase'; // Ensure this path is correct
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '../../../services/firebase/firebase'; // Firestore
+import { doc, setDoc } from 'firebase/firestore';
 
-export async function handler(req, res) {
-  const { novelTitle } = req.query; // Extract novelTitle from the request URL
+export async function POST(req) {
+  const { novelTitle } = req.query;
+  const body = await req.json();
 
-  // Find the novel based on the title or ID
-  const novel = novels.find((novel) => novel.title === novelTitle);
-
-  if (!novel) {
-    // If no novel is found, return an error response
-    return res.status(404).json({ error: 'Novel not found' });
+  let imageUrl = '';
+  if (body.image) {
+    // Upload image to Firebase Storage if present
+    const imageRef = ref(storage, `novels/${novelTitle}/image.jpg`);
+    await uploadBytes(imageRef, body.image);
+    imageUrl = await getDownloadURL(imageRef);
   }
 
-  if (req.method === 'POST') {
-    // Handle the POST request to upload/update the novel
-    const { title, image, chapters } = req.body;
+  // Create or update the novel document in Firestore
+  const novelData = {
+    title: body.title,
+    image: imageUrl, // This will be an empty string if no image is uploaded
+    chapters: body.chapters || [],
+  };
 
-    // Update the novel's information (you can also add validation here)
-    novel.title = title;
-    novel.image = image;
-    novel.chapters = chapters;
-
-    return res.status(200).json({ success: true, novel });
+  try {
+    await setDoc(doc(db, 'novels', novelTitle), novelData);
+    return new Response(JSON.stringify({ success: true, novel: novelData }));
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, message: error.message }), { status: 500 });
   }
-
-  // Handle other HTTP methods (e.g., GET)
-  return res.status(405).json({ error: 'Method Not Allowed' });
 }

@@ -46,3 +46,51 @@
   color: rgb(243, 99, 22);
 }
 
+.navbar-brand {
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+}
+
+.nav-link {
+  transition: color 0.3s ease-in-out;
+}
+
+.nav-link:hover {
+  color: #ffa726; /* Highlight color on hover */
+}
+
+.navbar-toggler {
+  border: none;
+}
+
+.navbar-toggler-icon {
+  background-color: #fff;
+}
+
+.btn-warning {
+  transition: background-color 0.3s ease-in-out, transform 0.2s;
+}
+
+.btn-warning:hover {
+  background-color: rgb(243, 136, 22); /* Lighter yellow */
+  transform: scale(1.05);
+}
+.btn-warning {
+  background-color: rgb(243, 99, 22); /* Lighter yellow */
+  transform: scale(1.05);
+}
+/* Example hover effect for navbar links */
+.hover-effect:hover {
+  text-decoration: underline;
+}
+
+/* Hover effect for novel cards */
+.hover-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+.navbar-logo {
+  height: 40px; /* Adjust height as needed */
+  width: auto;  /* Keep the aspect ratio of the logo */
+}
