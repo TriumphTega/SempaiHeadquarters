@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import { auth, firebaseApp } from '../../services/firebase/firebase';
-
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../services/firebase/firebase'; // Corrected import
 
 export default function CreatorSignup() {
   const [email, setEmail] = useState('');
@@ -16,8 +15,6 @@ export default function CreatorSignup() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
-
-  const db = getFirestore(firebaseApp);
 
   const handleSignup = async (e) => {
     e.preventDefault();
