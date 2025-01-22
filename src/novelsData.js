@@ -2,7 +2,7 @@
 
 export const novels = {
     1: {
-      title: "Rising Waters",
+      title: "Rising Water",
       image: "/images/novel-1.jpg",
       summary: "",
       chapters: {

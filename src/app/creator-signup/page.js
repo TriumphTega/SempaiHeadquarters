@@ -1,52 +1,97 @@
 'use client';
 
 import { useState } from 'react';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import firebaseApp from '../../services/firebase/firebase'; // Ensure this path is correct
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { auth, firebaseApp } from '../../services/firebase/firebase';
 
 export default function CreatorSignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
 
-  const auth = getAuth(firebaseApp); // Use the initialized Firebase app
+  const db = getFirestore(firebaseApp);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const userData = {
+        id: user.uid,
+        username,
+        name,
+        walletAddress,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      await setDoc(doc(db, 'users', user.uid), userData);
+
       setSuccess('Account created successfully! Redirecting to login...');
-      setTimeout(() => router.push('/creator-login'), 3000); // Redirect to login after 3 seconds
+      setTimeout(() => router.push('/creator-login'), 3000);
     } catch (err) {
-      setError(err.message); // Display the error message
+      setError(err.message);
     }
   };
 
   return (
-    <div className="container py-5">
-      <h2 className="text-center text-light">Creator Signup</h2>
-      <div className="d-flex justify-content-center">
-        <form onSubmit={handleSignup} className="bg-dark p-4 rounded shadow" style={{ maxWidth: '400px' }}>
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label text-light">Email</label>
+    <div className="signup-container">
+      <div className="form-wrapper">
+        <h2 className="text-center">Creator Signup</h2>
+        <form onSubmit={handleSignup} className="signup-form">
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="name">Name</label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="walletAddress">Wallet Address</label>
+            <input
+              type="text"
+              id="walletAddress"
+              value={walletAddress}
+              onChange={(e) => setWalletAddress(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
-              className="form-control"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label text-light">Password</label>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
-              className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -54,15 +99,10 @@ export default function CreatorSignup() {
           </div>
           {error && <div className="alert alert-danger">{error}</div>}
           {success && <div className="alert alert-success">{success}</div>}
-          <div className="d-grid">
-            <button type="submit" className="btn btn-warning">Sign Up</button>
-          </div>
-          <div className="text-center mt-3">
-            <p className="text-light">
-              Already have an account?{' '}
-              <a href="/creator-login" className="text-warning">Login</a>
-            </p>
-          </div>
+          <button type="submit" className="btn-submit">Sign Up</button>
+          <p className="login-link">
+            Already have an account? <a href="/creator-login">Login</a>
+          </p>
         </form>
       </div>
     </div>

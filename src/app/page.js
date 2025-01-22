@@ -100,86 +100,118 @@ export default function Home() {
 
       {/* Novels Grid */}
       <div className="container my-5">
-        {novels && Object.keys(novels).length > 0 ? (
-          <div className="g-4 row row-cols-1 row-cols-md-3">
-            {Object.entries(novels).map(([id, novel]) => (
-              <div key={id} className="col">
-                <div className="bg-card card h-100 shadow-sm rounded-3 hover-card">
+      {novels && Object.keys(novels).length > 0 ? (
+        <div className="row g-4">
+          {/* Loop through novels */}
+          {Object.entries(novels).map(([id, novel]) => (
+            <div key={id} className="col-md-4">
+                <div className="image-container">              <Link href={`/novel/${id}`} className="text-decoration-none">
+
+                  {/* Image */}
                   <img
                     src={novel.image}
-                    className="card-img-top rounded-3"
+                    className="img-fluid shadow rounded-3 hover-image"
                     alt={novel.title}
                   />
-                  <div className="card-body">
-                    <h5 className="card-title fw-bold text-orange text-uppercase">
-                      {novel.title}
-                    </h5>
-                    <p className="card-text">Click to explore chapters</p>
-                    {connected ? (
-                      <Link href={`/novel/${id}`} className="btn btn-dark">
-                        Read
-                      </Link>
-                    ) : (
-                      <NovelConnectButton />
-                    )}
-                  </div>
-                  
-                </div>
-                
-              </div>
+              </Link>
 
-              
-            ))}
-            
-            
-            <div className="col">
-                <div className="bg-card card h-100 shadow-sm rounded-3 hover-card">
-                  <img
-                    src="/images/novel-3.jpg"
-                    className="card-img-top rounded-3"
-                    alt="Hoard"
-                  />
-                  <div className="card-body">
-                    <h5 className="card-title fw-bold text-orange text-uppercase">Hoard
-                    </h5>
-                    <p className="card-text">Click to explore more </p>
-                    {connected ? (
-                      <Link href={`/novels`} className="btn btn-dark">
-                        Explore
-                      </Link>
-                    ) : (
-                      <NovelConnectButton />
-                    )}
+                  {/* Title */}
+                  <div className="image-title">
+                    <h5 className="fw-bold text-uppercase">{novel.title}</h5>
                   </div>
-                  
-                </div>
-                
-              </div>
-              <div className="col">
-                <div className="bg-card card h-100 shadow-sm rounded-3 hover-card">
-                  <img
-                    src="/images/novel-4.jpg"
-                    className="card-img-top rounded-3"
-                    alt="Hoard"
-                  />
-                  <div className="card-body">
-                    <h5 className="card-title fw-bold text-orange text-uppercase">KISS (Keep it Simple, Stupid)
-                    </h5>
-                    <p className="card-text">Click to explore more </p>
-                    {connected ? (
-                      <Link href={`/novels`} className="btn btn-dark">
-                        Read
-                      </Link>
-                    ) : (
-                      <NovelConnectButton />
-                    )}
-                  </div>
-                  
-                </div>
-                
-              </div>
 
-              
+                  {/* Overlay for disconnected users */}
+                  {!connected && (
+                    <div className="overlay d-flex align-items-center justify-content-center">
+                      <NovelConnectButton />
+                    </div>
+                  )}
+                </div>
+            </div>
+          ))}
+
+      {/* Additional Hoard Example */}
+    <div className="col-md-4">
+          <div className="image-container">
+            {/* Conditional Rendering Based on Connection Status */}
+            {connected ? (
+              <Link href="/novels" className="text-decoration-none">
+                {/* Image */}
+                <img
+                  src="/images/novel-3.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="Hoard"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">Hoard</h5>
+                </div>
+              </Link>
+            ) : (
+              <div className="position-relative">
+                {/* Image */}
+                <img
+                  src="/images/novel-3.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="Hoard"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">Hoard</h5>
+                </div>
+
+                {/* Overlay for Disconnected Users */}
+                <div className="overlay d-flex align-items-center justify-content-center">
+                  <NovelConnectButton />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+
+      {/* Card Example */}
+      <div className="col-md-4">
+          <div className="image-container">
+            {/* Conditional Rendering Based on Connection Status */}
+            {connected ? (
+              <Link href="/novels" className="text-decoration-none">
+                {/* Image */}
+                <img
+                  src="/images/novel-4.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">KISS (Keep it simple, stupid)</h5>
+                </div>
+              </Link>
+            ) : (
+              <div className="position-relative">
+                {/* Image */}
+                <img
+                  src="/images/novel-4.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">KISS (Keep it simple, stupid)</h5>
+                </div>
+
+                {/* Overlay for Disconnected Users */}
+                <div className="overlay d-flex align-items-center justify-content-center">
+                  <NovelConnectButton />
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
           </div>
           
           

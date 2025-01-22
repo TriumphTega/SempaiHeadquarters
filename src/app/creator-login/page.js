@@ -14,7 +14,7 @@ export default function CreatorLogin() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password); // Use the imported auth instance
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/creators-dashboard'); // Redirect to the creator's dashboard upon success
     } catch (err) {
       setError(err.message); // Display the error message
@@ -22,42 +22,35 @@ export default function CreatorLogin() {
   };
 
   return (
-    <div className="container py-5">
-      <h2 className="text-center text-light">Creator Login</h2>
-      <div className="d-flex justify-content-center">
-        <form onSubmit={handleLogin} className="bg-dark p-4 rounded shadow" style={{ maxWidth: '400px' }}>
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label text-light">Email</label>
+    <div className="login-container">
+      <div className="form-wrapper">
+        <h2 className="text-center">Creator Login</h2>
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
-              className="form-control"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label text-light">Password</label>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
-              className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
           {error && <div className="alert alert-danger">{error}</div>}
-          <div className="d-grid">
-            <button type="submit" className="btn btn-warning">Login</button>
-          </div>
-          <div className="text-center mt-3">
-            <p className="text-light">
-              Don't have an account?{' '}
-              <a href="/creator-signup" className="text-warning">Sign Up</a>
-            </p>
-          </div>
+          <button type="submit" className="btn-submit">Login</button>
+          <p className="signup-link">
+            Don't have an account? <a href="/creator-signup">Sign Up</a>
+          </p>
         </form>
       </div>
     </div>

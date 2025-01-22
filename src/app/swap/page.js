@@ -6,6 +6,10 @@ import BootstrapProvider from '../../components/BootstrapProvider';
 import ConnectButton from '../../components/ConnectButton'; // Assuming you have a button to connect wallet
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
+import Link from 'next/link';
+
+
+
 
 export default function SwapPage() {
   const { connected, publicKey, wallet, disconnect } = useWallet(); // Use the wallet adapter's hook
@@ -59,29 +63,51 @@ export default function SwapPage() {
     }
   };
 
+    
+
   return (
-    <div>
+    <div >
       <BootstrapProvider />
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
         <div className="container">
-          <a href="/" className="navbar-brand">Sempai HQ</a>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          {/* Brand Logo */}
+          <Link href="/" className="navbar-brand">
+            <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
+          </Link>
+          {/* Toggle Button for Mobile View */}
+          <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
             <span className="navbar-toggler-icon"></span>
           </button>
+          {/* Navbar Links */}
           <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
+            <ul className="navbar-nav me-auto">
               <li className="nav-item">
-                <a href="/" className="nav-link">Home</a>
+                <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+                  Home
+                </Link>
               </li>
               <li className="nav-item">
-                <a href="/swap" className="nav-link active">Swap</a>
+                <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+                  Swap
+                </Link>
               </li>
             </ul>
+            {/* Wallet and Creator Dashboard */}
+          
           </div>
         </div>
       </nav>
 
-      <header className="bg-orange text-white text-center py-5">
+
+      <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>
         <div className="container">
           <h1 className="display-4">Coin Swap</h1>
           <p className="lead">Swap your coins easily and securely.</p>
@@ -92,18 +118,18 @@ export default function SwapPage() {
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6">
             <div className="card shadow-lg border-0">
-              <div className="card-body">
+              <div>
                 {!connected ? (
                   <div className="alert alert-danger">
                     Please connect your wallet to proceed.
                     <ConnectButton />
                   </div>
                 ) : (
-                  <div>
-                    <h4 className="card-title mb-4">Swap {coinFrom} for {coinTo}</h4>
+                  <div className='bubble-form'>
+                    <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
                     <h5 className="text-success">Balance: {balance} {coinFrom}</h5>
 
-                    <div className="mb-3">
+                    <div className="mb-3 form-label">
                       <label className="form-label">Amount to Swap</label>
                       <input
                         type="number"
