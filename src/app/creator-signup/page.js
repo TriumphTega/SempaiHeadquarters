@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { auth, firebaseApp } from '../../services/firebase/firebase';
 
+
 export default function CreatorSignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
