@@ -23,48 +23,57 @@ export default function CreatorsDashboard() {
 
 
   // Function to handle the form submission for both new and existing novels
-  const handleNovelSubmit = async (e) => {
-    e.preventDefault();
+  // const handleNovelSubmit = async (e) => {
+  //   e.preventDefault();
   
-    const newNovel = {
-      title: novelTitle,
-      image: novelImage,
-      summary: novelSummary, // Include summary
-      chapters: {
-        1: { title: chapterTitle, content: chapterContent },
-        ...additionalChapters.reduce((acc, chapter, index) => {
-          acc[index + 2] = chapter; // Add additional chapters starting from index 2
-          return acc;
-        }, {}),
-      },
-    };
+  //   const newNovel = {
+  //     title: novelTitle,
+  //     image: novelImage,
+  //     summary: novelSummary, // Include summary
+  //     chapters: {
+  //       1: { title: chapterTitle, content: chapterContent },
+  //       ...additionalChapters.reduce((acc, chapter, index) => {
+  //         acc[index + 2] = chapter; // Add additional chapters starting from index 2
+  //         return acc;
+  //       }, {}),
+  //     },
+  //   };
   
-    const url = selectedNovel ? `/api/upload-novel/${selectedNovel.title}` : '/api/upload-novel';
+  //   const url = selectedNovel ? `/api/upload-novel/${selectedNovel.title}` : '/api/upload-novel';
+
+  // Function to handle the form submission for both new and existing novels
+const handleNovelSubmit = async (e) => {
+  e.preventDefault(); // Prevent the default form submission behavior
+
+  // Temporary: Do nothing when the form is submitted
+  console.log('Form submission is currently disabled.');
+};
+
   
     // Send the novel data to the backend API
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newNovel),
-    });
+    // const response = await fetch(url, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify(newNovel),
+    // });
   
-    const data = await response.json();
+    // const data = await response.json();
   
-    if (data.success) {
-      setNovelsList(Object.values(novels)); // Update novels list
-      setSelectedNovel(null); // Reset the selected novel for new entries
-    }
+    // if (data.success) {
+    //   setNovelsList(Object.values(novels)); // Update novels list
+    //   setSelectedNovel(null); // Reset the selected novel for new entries
+    // }
   
     // Reset form fields
-    setNovelTitle('');
-    setNovelImage('');
-    setNovelSummary('');
-    setChapterTitle('');
-    setChapterContent('');
-    setAdditionalChapters([]);
-  };
+  //   setNovelTitle('');
+  //   setNovelImage('');
+  //   setNovelSummary('');
+  //   setChapterTitle('');
+  //   setChapterContent('');
+  //   setAdditionalChapters([]);
+  // };
   
 
   // Function to edit an existing novel
