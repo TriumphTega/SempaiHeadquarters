@@ -5,6 +5,9 @@ import Link from "next/link";
 import { novels } from "../../../../../novelsData"; // Adjust the relative path
 import DOMPurify from "dompurify";
 
+// Ensure DOMPurify works in SSR by creating a sanitized instance
+const createDOMPurify = (typeof window !== "undefined" ? DOMPurify : null);
+
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const novel = novels[id];
@@ -14,8 +17,10 @@ export default function ChapterPage() {
     return <div>Chapter not found</div>;
   }
 
-  // Sanitize content after verifying chapterData exists
-  const sanitizedContent = DOMPurify.sanitize(chapterData.content);
+  // Sanitize content only on the client side
+  const sanitizedContent = createDOMPurify
+    ? createDOMPurify.sanitize(chapterData.content)
+    : chapterData.content;
 
   // Find the next and previous chapters
   const prevChapter = parseInt(chapter) - 1;
