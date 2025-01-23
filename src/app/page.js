@@ -11,6 +11,10 @@ import { useEffect, useState } from 'react';
 import { novels } from '../novelsData'; // Import the novels data file
 import { auth } from '../services/firebase/firebase'; // Import the initialized auth
 import LoadingPage from '../components/LoadingPage';
+import BootstrapProvider from "../components/BootstrapProvider";
+import "bootstrap/dist/css/bootstrap.min.css";
+
+
 
 
 export default function Home() {
@@ -37,57 +41,66 @@ export default function Home() {
 
   return (
     <div className="bg-black">
+      <BootstrapProvider />
       <LoadingPage />
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-  <div className="container">
-    {/* Brand Logo */}
-    <Link href="/" className="navbar-brand">
-      <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
-    </Link>
-    {/* Toggle Button for Mobile View */}
-    <button
-      className="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarNav"
-      aria-controls="navbarNav"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span className="navbar-toggler-icon"></span>
-    </button>
-    {/* Navbar Links */}
-    <div className="collapse navbar-collapse" id="navbarNav">
-      <ul className="navbar-nav me-auto">
-        <li className="nav-item">
-          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-            Home
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-            Swap
-          </Link>
-        </li>
-      </ul>
-      {/* Wallet and Creator Dashboard */}
-      <ul className="navbar-nav ms-auto align-items-center">
-        <li className="nav-item me-3">
-          <WalletMultiButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
-        </li>
-        <li className="nav-item">
-          <button
-            onClick={handleCreatorAccess}
-            className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-          >
-            Creator Dashboard
-          </button>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
+      <div className="container">
+        {/* Brand Logo */}
+        <Link href="/" className="navbar-brand">
+          <img
+            src="/images/ursa.jpg" // Ensure the correct path to the image
+            alt="Sempai HQ"
+            className="navbar-logo"
+            style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+          />
+        </Link>
+
+        {/* Toggle Button for Mobile View */}
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        {/* Navbar Links */}
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav me-auto">
+            <li className="nav-item">
+              <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+                Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+                Swap
+              </Link>
+            </li>
+          </ul>
+
+          {/* Wallet and Creator Dashboard */}
+          <ul className="navbar-nav ms-auto align-items-center">
+            <li className="nav-item me-3">
+              <WalletMultiButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
+            </li>
+            <li className="nav-item">
+              <button
+                onClick={handleCreatorAccess}
+                className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
+              >
+                Creator Dashboard
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
 
 
       {/* Hero Section */}
