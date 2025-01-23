@@ -2,27 +2,26 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { novels } from "../../../../../novelsData";  // Adjust the relative path
-import DOMPurify from 'dompurify';
-
-const sanitizedContent = DOMPurify.sanitize(chapterData.content);
+import { novels } from "../../../../../novelsData"; // Adjust the relative path
+import DOMPurify from "dompurify";
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const novel = novels[id];
   const chapterData = novel?.chapters?.[chapter];
 
-
   if (!novel || !chapterData) {
     return <div>Chapter not found</div>;
   }
+
+  // Sanitize content after verifying chapterData exists
+  const sanitizedContent = DOMPurify.sanitize(chapterData.content);
 
   // Find the next and previous chapters
   const prevChapter = parseInt(chapter) - 1;
   const nextChapter = parseInt(chapter) + 1;
   const prevChapterData = novel.chapters[prevChapter];
   const nextChapterData = novel.chapters[nextChapter];
-  const sanitizedContent = DOMPurify.sanitize(chapterData.content);
 
   return (
     <div>
@@ -34,7 +33,10 @@ export default function ChapterPage() {
 
       <div className="container my-5">
         <h1 className="text-orange">{chapterData.title}</h1>
-        <div className="chapter-content" dangerouslySetInnerHTML={{ __html: sanitizedContent  }}></div>
+        <div
+          className="chapter-content"
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        ></div>
 
         {/* Buttons Row */}
         <div className="d-flex justify-content-between mt-3">
