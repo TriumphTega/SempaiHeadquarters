@@ -2,15 +2,48 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { novels } from "../../../../../novelsData"; // Adjust the relative path
+import { useState, useEffect } from "react";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { db } from "../../../../../services/firebase/firebase"; // Adjust the relative path
 import DOMPurify from "dompurify";
 
 // Ensure DOMPurify works in SSR by creating a sanitized instance
 const createDOMPurify = (typeof window !== "undefined" ? DOMPurify : null);
 
 export default function ChapterPage() {
-  const { id, chapter } = useParams();
-  const novel = novels[id];
+  const { id, chapter } = useParams(); // Get the novel ID and chapter ID from the URL
+  const [novel, setNovel] = useState(null); // State for novel data
+  const [loading, setLoading] = useState(true); // Loading state
+
+  useEffect(() => {
+    const fetchNovel = async () => {
+      try {
+        const novelRef = doc(db, "novels", id); // Reference to the novel document in Firestore
+        const novelSnapshot = await getDoc(novelRef);
+
+        if (novelSnapshot.exists()) {
+          setNovel(novelSnapshot.data()); // Set the novel data
+        } else {
+          console.error("Novel not found");
+        }
+      } catch (error) {
+        console.error("Error fetching novel:", error);
+      } finally {
+        setLoading(false); // Stop loading
+      }
+    };
+
+    fetchNovel();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <h2 className="text-white">Loading...</h2>
+      </div>
+    );
+  }
+
   const chapterData = novel?.chapters?.[chapter];
 
   if (!novel || !chapterData) {

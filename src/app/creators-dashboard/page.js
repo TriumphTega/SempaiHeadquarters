@@ -1,180 +1,152 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getFirestore, collection, addDoc, getDocs, updateDoc, doc } from 'firebase/firestore';
 import Link from 'next/link';
-import { novels } from '../../novelsData';  // Import the novels data
 import BootstrapProvider from "../../components/BootstrapProvider";
 import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
-import {auth} from '../../services/firebase/firebase'
+import { auth } from '../../services/firebase/firebase';
+import { getNovels, addNovel, updateNovel } from '../../services/firebase/firestore';
 import LoadingPage from '../../components/LoadingPage';
 
 export default function CreatorsDashboard() {
   const [novelTitle, setNovelTitle] = useState('');
-  const [novelImage, setNovelImage] = useState('');
+  const [novelImage, setNovelImage] = useState('');  // To store Base64 string
+  const [novelSummary, setNovelSummary] = useState('');
   const [chapterTitle, setChapterTitle] = useState('');
   const [chapterContent, setChapterContent] = useState('');
-  const [novelsList, setNovelsList] = useState(Object.values(novels));  // Set initial state from novelsData.js
-  const [selectedNovel, setSelectedNovel] = useState(null);  // To edit existing novels
-  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Track login status
-  const [novelSummary, setNovelSummary] = useState('');
+  const [additionalChapters, setAdditionalChapters] = useState([]);
+  const [novelsList, setNovelsList] = useState([]);
+  const [selectedNovel, setSelectedNovel] = useState(null);
+  const [editingChapterIndex, setEditingChapterIndex] = useState(null);
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const [newChapterContent, setNewChapterContent] = useState('');
-  const [additionalChapters, setAdditionalChapters] = useState([]); // For storing additional chapters
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [imageText, setImageText] = useState(''); // To store the Base64 string
 
+  // Firestore reference
+  const db = getFirestore();
 
-  // Function to handle the form submission for both new and existing novels
-  // const handleNovelSubmit = async (e) => {
-  //   e.preventDefault();
-  
-  //   const newNovel = {
-  //     title: novelTitle,
-  //     image: novelImage,
-  //     summary: novelSummary, // Include summary
-  //     chapters: {
-  //       1: { title: chapterTitle, content: chapterContent },
-  //       ...additionalChapters.reduce((acc, chapter, index) => {
-  //         acc[index + 2] = chapter; // Add additional chapters starting from index 2
-  //         return acc;
-  //       }, {}),
-  //     },
-  //   };
-  
-  //   const url = selectedNovel ? `/api/upload-novel/${selectedNovel.title}` : '/api/upload-novel';
+  // Handle image change (Convert image to Base64)
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
 
-  // Function to handle the form submission for both new and existing novels
-const handleNovelSubmit = async (e) => {
-  e.preventDefault(); // Prevent the default form submission behavior
+      reader.onloadend = () => {
+        setImageText(reader.result); // Set the Base64 string
+      };
 
-  // Temporary: Do nothing when the form is submitted
-  console.log('Form submission is currently disabled.');
-};
-
-  
-    // Send the novel data to the backend API
-    // const response = await fetch(url, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(newNovel),
-    // });
-  
-    // const data = await response.json();
-  
-    // if (data.success) {
-    //   setNovelsList(Object.values(novels)); // Update novels list
-    //   setSelectedNovel(null); // Reset the selected novel for new entries
-    // }
-  
-    // Reset form fields
-  //   setNovelTitle('');
-  //   setNovelImage('');
-  //   setNovelSummary('');
-  //   setChapterTitle('');
-  //   setChapterContent('');
-  //   setAdditionalChapters([]);
-  // };
-  
-
-  // Function to edit an existing novel
-  const handleEditNovel = (novel) => {
-    setSelectedNovel(novel);
-    setNovelTitle(novel.title);
-    setNovelImage(novel.image);
-    setChapterTitle(novel.chapters[1].title);
-    setChapterContent(novel.chapters[1].content);
+      reader.readAsDataURL(file); // Convert image to Base64
+    }
   };
+
+  // Fetch novels from Firestore on page load
+  useEffect(() => {
+    const fetchNovels = async () => {
+      const novels = await getNovels();
+      setNovelsList(novels);
+    };
+    fetchNovels();
+  }, []);
 
   // Handle Logout
   const handleLogout = async () => {
-    const auth = getAuth();
     try {
       await signOut(auth);
       alert('You have been logged out successfully.');
       setIsLoggedIn(false);
-      window.location.href = '/'; // Redirect to the homepage or login page
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error.message);
       alert('Failed to log out. Please try again.');
     }
   };
 
+  // Track user login status
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoggedIn(!!user); // Set login status based on user
+      setIsLoggedIn(!!user);
     });
-  
     return () => unsubscribe();
   }, []);
 
+  // Handle form submission for new or existing novels
+  const handleNovelSubmit = async (e) => {
+    e.preventDefault();
+
+    const updatedChapters = { ...selectedNovel?.chapters };
+
+    // Update the selected chapter
+    if (editingChapterIndex !== null) {
+      updatedChapters[editingChapterIndex] = {
+        title: chapterTitle,
+        content: chapterContent,
+      };
+    }
+
+    // Add new chapters if additional chapters exist
+    additionalChapters.forEach((chapter, index) => {
+      updatedChapters[Object.keys(updatedChapters).length + 1] = chapter;
+    });
+
+    const newNovel = {
+      title: novelTitle,
+      image: imageText, // Save Base64 string of image
+      summary: novelSummary,
+      chapters: updatedChapters,
+    };
+
+    if (selectedNovel) {
+      // Update existing novel
+      await updateNovel(selectedNovel.id, newNovel);
+      alert('Novel updated successfully!');
+    } else {
+      // Add a new novel
+      await addNovel(newNovel);
+      alert('Novel added successfully!');
+    }
+
+    // Reset form fields
+    setNovelTitle('');
+    setNovelImage('');
+    setNovelSummary('');
+    setChapterTitle('');
+    setChapterContent('');
+    setAdditionalChapters([]);
+    setSelectedNovel(null);
+    setEditingChapterIndex(null);
+
+    // Refresh the novels list
+    const novels = await getNovels();
+    setNovelsList(novels);
+  };
+
+  // Handle selecting a novel to edit
+  const handleEditNovel = (novel) => {
+    setSelectedNovel(novel);
+    setNovelTitle(novel.title);
+    setNovelImage(novel.image);  // The Base64 image string
+    setNovelSummary(novel.summary);
+    setEditingChapterIndex(null);
+    setChapterTitle('');
+    setChapterContent('');
+  };
+
+  // Handle selecting a chapter to edit
+  const handleEditChapter = (index) => {
+    const chapter = selectedNovel.chapters[index];
+    setEditingChapterIndex(index);
+    setChapterTitle(chapter.title);
+    setChapterContent(chapter.content);
+  };
+
   return (
     <div>
-      <BootstrapProvider />
-       <LoadingPage />
-      {/* Navbar */}
-
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-  <div className="container">
-    {/* Brand Logo */}
-    <Link href="/" className="navbar-brand">
-      <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
-    </Link>
-    {/* Toggle Button for Mobile View */}
-    <button
-      className="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarNav"
-      aria-controls="navbarNav"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span className="navbar-toggler-icon"></span>
-    </button>
-    {/* Navbar Links */}
-    <div className="collapse navbar-collapse" id="navbarNav">
-      <ul className="navbar-nav me-auto">
-        <li className="nav-item">
-          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-            Home
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-            Swap
-          </Link>
-        </li>
-      </ul>
-      {/* Wallet and Creator Dashboard */}
-      <ul className="navbar-nav ms-auto align-items-center">
-        
-        <li className="nav-item">
-        {isLoggedIn && (
-            <button
-              onClick={handleLogout}
-              className="btn btn-danger"
-            >
-              Logout
-            </button>
-          )}
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
-
-
-      {/* Hero Section */}
-      <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>        <div className="container">
-          <h1 className="display-4">Creator's Dashboard</h1>
-          <p className="lead">Upload or Update your novel and chapters here!</p>
-        </div>
-      </header>
-
-      {/* Novel Upload Form */}
-      <div className="container my-5">
-  <     h2 className="mb-4">{selectedNovel ? 'Update Novel' : 'Upload New Novel'}</h2>
-      <form onSubmit={handleNovelSubmit} className="bubble-form">
+  <LoadingPage />
+  <div className="container my-5">
+    <h2>Upload Novel</h2>
+    <form onSubmit={handleNovelSubmit} className="bubble-form">
       <div className="mb-3">
         <label htmlFor="novelTitle" className="form-label">Novel Title</label>
         <input
@@ -186,17 +158,19 @@ const handleNovelSubmit = async (e) => {
           required
         />
       </div>
+
       <div className="mb-3">
-        <label htmlFor="novelImage" className="form-label">Novel Image URL</label>
+        <label htmlFor="novelImage" className="form-label">Novel Image</label>
         <input
-          type="text"
+          type="file"
           id="novelImage"
           className="form-control"
-          value={novelImage}
-          onChange={(e) => setNovelImage(e.target.value)}
+          accept="image/*"
+          onChange={handleImageChange}
           required
         />
       </div>
+
       <div className="mb-3">
         <label htmlFor="novelSummary" className="form-label">Novel Summary</label>
         <textarea
@@ -208,120 +182,150 @@ const handleNovelSubmit = async (e) => {
           required
         />
       </div>
-      <div className="mb-3">
-        <label htmlFor="chapterTitle" className="form-label">Initial Chapter Title</label>
-        <input
-          type="text"
-          id="chapterTitle"
-          className="form-control"
-          value={chapterTitle}
-          onChange={(e) => setChapterTitle(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-3">
-        <label htmlFor="chapterContent" className="form-label">Initial Chapter Content</label>
-        <textarea
-          id="chapterContent"
-          className="form-control"
-          value={chapterContent}
-          onChange={(e) => setChapterContent(e.target.value)}
-          rows="5"
-          required
-        />
-      </div>
+{/* Select Chapter to Edit */}
+{selectedNovel && (
+  <div className="mb-3">
+    <label htmlFor="chapterSelector" className="form-label">Select Chapter to Edit</label>
+    <select
+      id="chapterSelector"
+      className="form-select"
+      value={editingChapterIndex ?? ''}
+      onChange={(e) => {
+        const index = e.target.value;
+        if (index !== '') {
+          const selectedChapter = selectedNovel.chapters[index];
+          setEditingChapterIndex(index);
+          setChapterTitle(selectedChapter.title);
+          setChapterContent(selectedChapter.content);
+        } else {
+          setEditingChapterIndex(null);
+          setChapterTitle('');
+          setChapterContent('');
+        }
+      }}
+    >
+      <option value="">Select a chapter</option>
+      {Object.entries(selectedNovel.chapters).map(([index, chapter]) => (
+        <option key={index} value={index}>
+          Chapter {index}: {chapter.title}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
-      {/* Section for Additional Chapters */}
-      <h4>Add Additional Chapters</h4>
-      <div className="mb-3">
-        <label htmlFor="newChapterTitle" className="form-label">New Chapter Title</label>
-        <input
-          type="text"
-          id="newChapterTitle"
-          className="form-control"
-          value={newChapterTitle}
-          onChange={(e) => setNewChapterTitle(e.target.value)}
-        />
-      </div>
-      <div className="mb-3">
-        <label htmlFor="newChapterContent" className="form-label">New Chapter Content</label>
-        <textarea
-          id="newChapterContent"
-          className="form-control"
-          value={newChapterContent}
-          onChange={(e) => setNewChapterContent(e.target.value)}
-          rows="5"
-        />
-      </div>
-      <button
-        type="button"
-        className="btn btn-secondary mb-3"
-        onClick={() => {
-          if (newChapterTitle && newChapterContent) {
-            setAdditionalChapters([...additionalChapters, { title: newChapterTitle, content: newChapterContent }]);
-            setNewChapterTitle('');
-            setNewChapterContent('');
-          } else {
-            alert('Please provide both title and content for the chapter.');
-          }
-        }}
-      >
-        Add Chapter
-      </button>
-
-      {/* Display Added Chapters */}
-      {additionalChapters.length > 0 && (
-        <div className="mb-3">
-          <h5>Added Chapters:</h5>
-          <ul>
-            {additionalChapters.map((chapter, index) => (
-              <li key={index}>
-                <strong>{chapter.title}:</strong> {chapter.content.slice(0, 50)}...
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <button type="submit" className="btn btn-dark">
-        {selectedNovel ? 'Update Novel' : 'Submit Novel'}
-      </button>
-    </form>
-
+{/* Chapter Title and Content */}
+<div className="mb-3">
+  <label htmlFor="chapterTitle" className="form-label">Chapter Title</label>
+  <input
+    type="text"
+    id="chapterTitle"
+    className="form-control"
+    value={chapterTitle}
+    onChange={(e) => setChapterTitle(e.target.value)}
+    required
+  />
+</div>
+<div className="mb-3">
+  <label htmlFor="chapterContent" className="form-label">Chapter Content</label>
+  <textarea
+    id="chapterContent"
+    className="form-control"
+    value={chapterContent}
+    onChange={(e) => setChapterContent(e.target.value)}
+    rows="5"
+    required
+  />
 </div>
 
+{/* Add Additional Chapters */}
+<h4>Add Additional Chapters</h4>
+<div className="mb-3">
+  <label htmlFor="newChapterTitle" className="form-label">New Chapter Title</label>
+  <input
+    type="text"
+    id="newChapterTitle"
+    className="form-control"
+    value={newChapterTitle}
+    onChange={(e) => setNewChapterTitle(e.target.value)}
+  />
+</div>
+<div className="mb-3">
+  <label htmlFor="newChapterContent" className="form-label">New Chapter Content</label>
+  <textarea
+    id="newChapterContent"
+    className="form-control"
+    value={newChapterContent}
+    onChange={(e) => setNewChapterContent(e.target.value)}
+    rows="5"
+  />
+</div>
+<button
+  type="button"
+  className="btn btn-secondary mb-3"
+  onClick={() => {
+    if (newChapterTitle && newChapterContent) {
+      const newChapter = {
+        title: newChapterTitle,
+        content: newChapterContent,
+      };
+      setAdditionalChapters([...additionalChapters, newChapter]);
+      setNewChapterTitle('');
+      setNewChapterContent('');
+    }
+  }}
+>
+  Add New Chapter
+</button>
 
-      {/* Display Uploaded Novels */}
-      <div className="container my-5">
-        <h2>Uploaded Novels</h2>
-        <div className="row">
-          {novelsList.map((novel, index) => (
-            <div key={index} className="col-md-4">
-              <div className="card">
-                <img src={novel.image} className="card-img-top" alt={novel.title} />
-                <div className="card-body">
-                  <h5 className="card-title">{novel.title}</h5>
-                  <p className="card-text">Chapter 1: {novel.chapters[1].title}</p>
-                  <button
-                    onClick={() => handleEditNovel(novel)}
-                    className="btn btn-warning"
-                  >
-                    Edit Novel
-                  </button>
-                  <Link href={`/novel/${index + 1}`} className="btn btn-dark">
-                    View Novel
-                  </Link>
-                </div>
-              </div>
+{/* Submit Button */}
+<button type="submit" className="btn btn-dark">
+  Submit Novel
+</button>
+    </form>
+  </div>
+
+  <div className="container my-5">
+    <h2>Uploaded Novels</h2>
+    <div className="row">
+      {novelsList.map((novel, index) => (
+        <div key={index} className="col-md-4">
+          <div className="card">
+            {/* Use the Base64 string as image source */}
+            <img src={novel.image} className="card-img-top" alt={novel.title} />
+            <div className="card-body">
+              <h5 className="card-title">{novel.title}</h5>
+              <p className="card-text">
+                {novel.summary.length > 60 ? `${novel.summary.slice(0, 70)}...` : novel.summary}
+              </p>
+              <button onClick={() => handleEditNovel(novel)} className="btn btn-primary">Edit</button>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-dark py-4 text-center text-white">
-        <p>&copy; 2025 Sempai HQ. All rights reserved.</p>
-      </footer>
+      ))}
     </div>
+  </div>
+
+  {/* Display chapters and allow editing */}
+  {selectedNovel && (
+    <div className="container my-5">
+      <h3>Chapters</h3>
+      <ul className="list-group">
+        {Object.entries(selectedNovel.chapters).map(([index, chapter]) => (
+          <li key={index} className="list-group-item">
+            <strong>{chapter.title}</strong>
+            <button
+              onClick={() => handleEditChapter(index)}
+              className="btn btn-secondary btn-sm float-end"
+            >
+              Edit Chapter
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</div>
+
   );
 }
