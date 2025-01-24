@@ -11,7 +11,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase/firebase'; // Import the initialized Firebase services
 import LoadingPage from '../components/LoadingPage';
 import BootstrapProvider from "../components/BootstrapProvider";
-import "bootstrap/dist/css/bootstrap.min.css";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 export default function Home() {
   const { connected } = useWallet();
@@ -66,63 +67,64 @@ export default function Home() {
     <div className="bg-black">
       <BootstrapProvider />
       {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-        <div className="container">
-          {/* Brand Logo */}
-          <Link href="/" className="navbar-brand">
-            <img
-              src="/images/ursa.jpg"
-              alt="Sempai HQ"
-              className="navbar-logo"
-              style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-            />
+<nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
+  <div className="container">
+    {/* Brand Logo */}
+    <Link href="/" className="navbar-brand">
+      <img
+        src="/images/ursa.jpg"
+        alt="Sempai HQ"
+        className="navbar-logo"
+        style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+      />
+    </Link>
+
+    {/* Toggle Button for Mobile View */}
+    <button
+      className="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span className="navbar-toggler-icon"></span>
+    </button>
+
+    {/* Navbar Links */}
+    <div className="collapse navbar-collapse" id="navbarNav">
+      <ul className="navbar-nav me-auto text-center">
+        <li className="nav-item">
+          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+            Home
           </Link>
+        </li>
+        <li className="nav-item">
+          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+            Swap
+          </Link>
+        </li>
+      </ul>
 
-          {/* Toggle Button for Mobile View */}
+      {/* Wallet and Creator Dashboard */}
+      <ul className="navbar-nav ms-auto text-center">
+        <li className="nav-item me-lg-3 mb-3 mb-lg-0">
+          <WalletMultiButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
+        </li>
+        <li className="nav-item">
           <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
+            onClick={handleCreatorAccess}
+            className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
           >
-            <span className="navbar-toggler-icon"></span>
+            Creator Dashboard
           </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
-          {/* Navbar Links */}
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav me-auto">
-              <li className="nav-item">
-                <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-                  Home
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-                  Swap
-                </Link>
-              </li>
-            </ul>
-
-            {/* Wallet and Creator Dashboard */}
-            <ul className="navbar-nav ms-auto align-items-center">
-              <li className="nav-item me-3">
-                <WalletMultiButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
-              </li>
-              <li className="nav-item">
-                <button
-                  onClick={handleCreatorAccess}
-                  className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-                >
-                  Creator Dashboard
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>
