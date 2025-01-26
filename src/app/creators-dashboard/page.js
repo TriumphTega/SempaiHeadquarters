@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+
 import Link from 'next/link';
 import BootstrapProvider from "../../components/BootstrapProvider";
-import { auth } from '../../services/firebase/firebase';
+import { auth, db } from '../../services/firebase/firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { getNovels, addNovel, updateNovel } from '../../services/firebase/firestore';
 import LoadingPage from '../../components/LoadingPage';
@@ -22,8 +24,48 @@ export default function CreatorsDashboard() {
   const [imageText, setImageText] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [editChapterIndex, setEditChapterIndex] = useState(null);
+  const [writers, setWriters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const db = getFirestore();
+
+  useEffect(() => {
+    const fetchWriters = async (user) => {
+      try {
+        const writersQuery = query(
+          collection(db, 'users'),
+          where('isWriter', '==', true),
+          where('uid', '==', user.uid) // Match the logged-in user's UID
+        );
+
+        const querySnapshot = await getDocs(writersQuery);
+
+        if (querySnapshot.empty) {
+          console.error('No writers found for the current user.');
+          setWriters([]);
+        } else {
+          const writersList = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setWriters(writersList);
+        }
+      } catch (error) {
+        console.error('Error fetching writers:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchWriters(user);
+      } else {
+        router.push('/login'); // Redirect to login if not authenticated
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -143,11 +185,12 @@ export default function CreatorsDashboard() {
       alert('Logout failed. Please try again.');
     }
   };
-
+if (loading) {
+    return <LoadingPage />;
+  }
   return (
     <div>
     <BootstrapProvider />
-    <LoadingPage />
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
       <div className="container">
         <Link href="/" className="navbar-brand">
@@ -174,8 +217,10 @@ export default function CreatorsDashboard() {
         </div>
       </div>
     </nav>
-  
-    <div className="container my-5 text-white">
+
+    {writers.length > 0 ? (
+  writers.map((writer) => (
+    <div key={writer.uid} className="container my-5 text-white">
       <h2 className="text-center section-title">
         {selectedNovel ? 'Edit Novel' : 'Upload Novel'}
       </h2>
@@ -204,7 +249,7 @@ export default function CreatorsDashboard() {
             required
           ></textarea>
         </div>
-  
+
         <h4 className="chapter-heading">Add Chapters</h4>
         <div className="form-group">
           <label htmlFor="chapterTitle">Chapter Title</label>
@@ -227,11 +272,11 @@ export default function CreatorsDashboard() {
         <button type="button" className="btn btn-secondary" onClick={handleAddChapter}>
           {editChapterIndex !== null ? 'Update Chapter' : 'Add Chapter'}
         </button>
-  
-        <ul className="list-group my-3 text-white" >
+
+        <ul className="list-group my-3 text-white">
           {chapters.map((chapter, index) => (
             <li key={index} className="list-group-item chapter-item">
-              <div className='text-white'>
+              <div className="text-white">
                 <strong>{chapter.title}</strong>
                 <p>
                   {chapter.content.length > 50
@@ -241,7 +286,7 @@ export default function CreatorsDashboard() {
               </div>
               <div>
                 <button
-                  className="btn btn-primary btn-sm me-2 "
+                  className="btn btn-primary btn-sm me-2"
                   onClick={() => handleEditChapter(index)}
                 >
                   Edit
@@ -256,37 +301,42 @@ export default function CreatorsDashboard() {
             </li>
           ))}
         </ul>
-  
+
         <button type="submit" className="btn btn-primary">Submit</button>
       </form>
-    </div>
-  
-    <div className="container my-5 ">
-      <h2 className="text-center section-title text-white">Uploaded Novels</h2>
-      <div className="row">
-        {novelsList.map((novel, index) => (
-          <div key={index} className="col-md-4">
-            <div className="card novel-card">
-              <img src={novel.image} className="card-img-top" alt={novel.title} />
-              <div className="card-body">
-                <h5 className="card-title">{novel.title}</h5>
-                <p className="card-text">
-                  {novel.summary.length > 60
-                    ? `${novel.summary.slice(0, 70)}...`
-                    : novel.summary}
-                </p>
-                <button
-                  onClick={() => handleEditNovel(novel)}
-                  className="btn btn-primary"
-                >
-                  Edit
-                </button>
+
+      <div className="container my-5">
+        <h2 className="text-center section-title text-white">Uploaded Novels</h2>
+        <div className="row">
+          {novelsList.map((novel, index) => (
+            <div key={index} className="col-md-4">
+              <div className="card novel-card">
+                <img src={novel.image} className="card-img-top" alt={novel.title} />
+                <div className="card-body">
+                  <h5 className="card-title">{novel.title}</h5>
+                  <p className="card-text">
+                    {novel.summary.length > 60
+                      ? `${novel.summary.slice(0, 70)}...`
+                      : novel.summary}
+                  </p>
+                  <button
+                    onClick={() => handleEditNovel(novel)}
+                    className="btn btn-primary"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
+  ))
+) : (
+  <p className="text-center text-white">No writers found.</p>
+)}
+
   </div>
   
   );

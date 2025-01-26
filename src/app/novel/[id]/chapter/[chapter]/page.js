@@ -87,7 +87,7 @@ export default function ChapterPage() {
 
       {/* Main Content */}
       <div className="container my-4 px-3">
-        <div className="p-4 bg-secondary rounded shadow-lg">
+        <div className="p-4 rounded shadow-lg chapter-content ">
           <h1 className="text-warning text-center fs-4 fs-md-2">{chapterData.title}</h1>
           <div
             className="chapter-content mt-4 fs-6 fs-md-5"
@@ -138,6 +138,9 @@ export default function ChapterPage() {
           line-height: 1.6;
           word-spacing: 0.05em;
           font-size: 0.9rem;
+          background-color: rgb(255,255,255);
+          font-weight: bold;
+
         }
 
         @media (min-width: 768px) {
