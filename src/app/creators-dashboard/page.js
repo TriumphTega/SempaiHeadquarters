@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -27,6 +27,9 @@ export default function CreatorsDashboard() {
   const [writers, setWriters] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const chapterTitleRef = useRef(null); // Reference for the chapter title input
+
 
 
   useEffect(() => {
@@ -130,6 +133,12 @@ export default function CreatorsDashboard() {
     setNewChapterTitle(chapterToEdit.title);
     setNewChapterContent(chapterToEdit.content);
     setEditChapterIndex(index);
+  
+    // Scroll to the chapter title input field
+    if (chapterTitleRef.current) {
+      chapterTitleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      chapterTitleRef.current.focus(); // Optional: Focus the input for better UX
+    }
   };
 
   const handleRemoveChapter = (index) => {
@@ -273,6 +282,7 @@ if (loading) {
           <input
             type="text"
             id="chapterTitle"
+            ref={chapterTitleRef} // Attach the ref here
             value={newChapterTitle}
             onChange={(e) => setNewChapterTitle(e.target.value)}
           />
@@ -286,9 +296,14 @@ if (loading) {
             onChange={(e) => setNewChapterContent(e.target.value)}
           ></textarea>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={handleAddChapter}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleAddChapter}
+        >
           {editChapterIndex !== null ? 'Update Chapter' : 'Add Chapter'}
         </button>
+
 
         <ul className="list-group my-3 text-white">
           {chapters.map((chapter, index) => (
@@ -302,18 +317,21 @@ if (loading) {
                 </p>
               </div>
               <div>
-                <button
-                  className="btn btn-primary btn-sm me-2"
-                  onClick={() => handleEditChapter(index)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => handleRemoveChapter(index)}
-                >
-                  Remove
-                </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm me-2"
+                onClick={() => handleEditChapter(index)}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => handleRemoveChapter(index)}
+              >
+                Remove
+              </button>
+
               </div>
             </li>
           ))}
