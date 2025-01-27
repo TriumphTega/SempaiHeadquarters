@@ -12,6 +12,7 @@ import { auth, db } from '../services/firebase/firebase'; // Import the initiali
 import LoadingPage from '../components/LoadingPage';
 import BootstrapProvider from "../components/BootstrapProvider";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import  ConnectButton  from '../components/ConnectButton';
 
 export default function Home() {
   const { connected } = useWallet();
@@ -109,7 +110,7 @@ export default function Home() {
       {/* Wallet and Creator Dashboard */}
       <ul className="navbar-nav ms-auto text-center">
         <li className="nav-item me-lg-3 mb-3 mb-lg-0">
-          <WalletMultiButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
+          <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
         </li>
         <li className="nav-item">
           <button
@@ -182,7 +183,7 @@ export default function Home() {
                   <div className="position-relative">
                     {/* Image */}
                     <img
-                      src="/images/novel-4.jpg"
+                      src="/images/novel-3.jpg"
                       className="img-fluid shadow rounded-3 hover-image"
                       alt="KISS (Keep it simple, stupid)"
                     />
@@ -201,8 +202,8 @@ export default function Home() {
               </div>
               </div>
 
-{/* Card Example */}
-<div className="col-md-4">
+            {/* Card Example */}
+            <div className="col-md-4">
               <div className="image-container">
                 {/* Conditional Rendering Based on Connection Status */}
                 {connected ? (

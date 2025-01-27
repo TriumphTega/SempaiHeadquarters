@@ -60,7 +60,7 @@ export default function CreatorsDashboard() {
       if (user) {
         fetchWriters(user);
       } else {
-        router.push('/login'); // Redirect to login if not authenticated
+        router.push('/creator-login'); // Redirect to login if not authenticated
       }
     });
 
@@ -220,7 +220,13 @@ if (loading) {
 
     {writers.length > 0 ? (
   writers.map((writer) => (
+    
     <div key={writer.uid} className="container my-5 text-white">
+      {/* <li key={writer.id} className="list-group-item">
+              <h5>{writer.name}</h5>
+              <p>Email: {writer.email}</p>
+              <p>UID: {writer.uid}</p>
+            </li> */}
       <h2 className="text-center section-title">
         {selectedNovel ? 'Edit Novel' : 'Upload Novel'}
       </h2>
@@ -237,7 +243,7 @@ if (loading) {
         </div>
         <div className="form-group">
           <label htmlFor="novelImage">Image</label>
-          <input type="file" id="novelImage" onChange={handleImageChange} />
+          <input type="file" id="novelImage" onChange={handleImageChange} required/>
         </div>
         <div className="form-group">
           <label htmlFor="novelSummary">Summary</label>

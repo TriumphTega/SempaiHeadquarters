@@ -4,14 +4,11 @@ import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../services/firebase/firebase'; // Corrected import
+import { auth, db } from '../../services/firebase/firebase';
 
 export default function CreatorSignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
@@ -19,20 +16,23 @@ export default function CreatorSignup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
+      // Create a new user with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Prepare the data for the users collection
       const userData = {
-        id: user.uid,
-        username,
+        uid: user.uid,
+        email,
         name,
-        walletAddress,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        isWriter: false, // Default value
+        isSuperuser: false, // Default value
       };
 
+      // Add the user to the Firestore users collection
       await setDoc(doc(db, 'users', user.uid), userData);
 
+      // Show success message and redirect
       setSuccess('Account created successfully! Redirecting to login...');
       setTimeout(() => router.push('/creator-login'), 3000);
     } catch (err) {
@@ -45,36 +45,7 @@ export default function CreatorSignup() {
       <div className="form-wrapper">
         <h2 className="text-center">Creator Signup</h2>
         <form onSubmit={handleSignup} className="signup-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="name">Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="walletAddress">Wallet Address</label>
-            <input
-              type="text"
-              id="walletAddress"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              required
-            />
-          </div>
+          
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input

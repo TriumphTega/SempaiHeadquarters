@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../../services/firebase/firebase"; // Adjust the relative path
 import DOMPurify from "dompurify";
+import { useWallet } from '@solana/wallet-adapter-react';
 import Head from "next/head";
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
@@ -14,6 +15,10 @@ export default function ChapterPage() {
   const { id, chapter } = useParams();
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { publicKey } = useWallet();  // Solana wallet public key
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(""); // State for success notification
+
 
   useEffect(() => {
     const fetchNovel = async () => {
@@ -36,6 +41,71 @@ export default function ChapterPage() {
     fetchNovel();
   }, [id]);
 
+  useEffect(() => {
+    const updateTokenBalance = async () => {
+      if (!publicKey) return; // Exit if no wallet is connected
+  
+      try {
+        const readerRef = doc(db, "readers", publicKey.toString());
+  
+        // Get the current reader data (if any)
+        const readerSnapshot = await getDoc(readerRef);
+        const currentBalance = readerSnapshot.exists() ? readerSnapshot.data().tokenBalance : 0;
+  
+        // Check if the user has already read this chapter
+        const ledgerQuery = query(
+          collection(db, "ledger"),
+          where("walletAddress", "==", publicKey.toString()),
+          where("description", "==", `Read Chapter ${parseInt(chapter) + 1} of Novel ${novel.title}`),
+          where("type", "==", "credit")
+        );
+        
+        const ledgerSnapshot = await getDocs(ledgerQuery);
+  
+        if (!ledgerSnapshot.empty) {
+          console.log("User has already read this chapter. No credit will be given.");
+          return; // Exit if the chapter has already been read
+        }
+  
+        // Update the token balance (add 5 tokens)
+        await updateDoc(readerRef, {
+          tokenBalance: currentBalance + 5,
+        });
+  
+        // Create a ledger entry
+        const transactionId = publicKey.toString() + Date.now();
+        const transactionData = {
+          walletAddress: publicKey.toString(),
+          type: "credit", // Type of transaction
+          amount: 5, // Amount added
+          description: `Read Chapter ${parseInt(chapter) + 1} of Novel ${novel.title}`,
+          timestamp: new Date().toISOString(),
+        };
+  
+        // Create ledger document
+        const ledgerRef = doc(db, "ledger", transactionId);
+        await setDoc(ledgerRef, transactionData);
+  
+        // Show success notification
+        setSuccessMessage("Transaction successfully added to ledger!");
+  
+        // Optionally, hide the notification after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 5000);
+  
+      } catch (error) {
+        setError("Error updating token balance and creating ledger entry.");
+        console.error("Error creating ledger transaction:", error);
+      }
+    };
+  
+    if (!loading) {
+      updateTokenBalance();
+    }
+  }, [publicKey, chapter, novel, loading]);
+  
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100 bg-dark text-light">
@@ -52,6 +122,7 @@ export default function ChapterPage() {
   if (!novel || !chapterData) {
     return (
       <div className="d-flex flex-column align-items-center vh-100 bg-dark text-light">
+
         <h2 className="text-warning">Chapter Not Found</h2>
         <Link href="/" className="btn btn-outline-warning mt-3">
           Back to Home
@@ -86,8 +157,16 @@ export default function ChapterPage() {
       </nav>
 
       {/* Main Content */}
+
       <div className="container my-4 px-3">
-        <div className="p-4 rounded shadow-lg chapter-content ">
+        {/* Success Notification */}
+      {successMessage && (
+        <div className="alert alert-success alert-dismissible fade show" role="alert">
+          {successMessage}
+          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      )}
+        <div className="p-4 rounded shadow-lg chapter-content">
           <h1 className="text-warning text-center fs-4 fs-md-2">{chapterData.title}</h1>
           <div
             className="chapter-content mt-4 fs-6 fs-md-5"
@@ -140,7 +219,6 @@ export default function ChapterPage() {
           font-size: 0.9rem;
           background-color: rgb(255,255,255);
           font-weight: bold;
-
         }
 
         @media (min-width: 768px) {
