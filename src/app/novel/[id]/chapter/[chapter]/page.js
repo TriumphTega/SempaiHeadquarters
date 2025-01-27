@@ -19,6 +19,20 @@ export default function ChapterPage() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(""); // State for success notification
 
+  const readText = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1; // Adjust the speaking rate
+      utterance.pitch = 1; // Adjust the pitch
+      utterance.lang = 'en-US'; // Set the language
+  
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert('Your browser does not support text-to-speech.');
+    }
+  };
+  
+
 
   useEffect(() => {
     const fetchNovel = async () => {
@@ -153,26 +167,51 @@ export default function ChapterPage() {
           <a className="navbar-brand fw-bold text-warning" href="/">
             Sempai HQ
           </a>
+          
         </div>
       </nav>
 
       {/* Main Content */}
 
       <div className="container my-4 px-3">
-        {/* Success Notification */}
-      {successMessage && (
-        <div className="alert alert-success alert-dismissible fade show" role="alert">
-          {successMessage}
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      )}
-        <div className="p-4 rounded shadow-lg chapter-content">
-          <h1 className="text-warning text-center fs-4 fs-md-2">{chapterData.title}</h1>
-          <div
-            className="chapter-content mt-4 fs-6 fs-md-5"
-            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-          ></div>
-        </div>
+        <div className="text-center my-3">
+          <button className="btn btn-secondary mx-2" onClick={() => window.speechSynthesis.pause()}>
+            Pause
+          </button>
+          <button className="btn btn-secondary mx-2" onClick={() => window.speechSynthesis.resume()}>
+            Resume
+          </button>
+          <button className="btn btn-danger mx-2" onClick={() => window.speechSynthesis.cancel()}>
+            Stop
+          </button>
+          </div>
+
+              {/* Success Notification */}
+          {successMessage && (
+            <div className="alert alert-success alert-dismissible fade show" role="alert">
+              {successMessage}
+              <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          )}
+
+          <div className="p-4 rounded shadow-lg chapter-content">
+            <h1 className="text-warning text-center fs-4 fs-md-2">{chapterData.title}</h1>
+            
+            {/* Read Aloud Button */}
+            <div className="text-center my-3">
+              <button
+                className="btn btn-warning px-3 py-2"
+                onClick={() => readText(chapterData.content)}
+              >
+                Read Aloud
+              </button>
+            </div>
+
+            <div
+              className="chapter-content mt-4 fs-6 fs-md-5"
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+            ></div>
+          </div>
 
         {/* Navigation Buttons */}
         <div className="d-flex justify-content-between align-items-center mt-4">
