@@ -171,7 +171,7 @@ export default function CreatorsDashboard() {
   const handleEditNovel = (novel) => {
     setSelectedNovel(novel);
     setNovelTitle(novel.title);
-    setNovelImage(novel.image);
+    setImageText(novel.image);
     setNovelSummary(novel.summary);
     setChapters(novel.chapters || []);
   };
@@ -241,9 +241,20 @@ if (loading) {
             required
           />
         </div>
-        <div className="form-group">
+          <div className="form-group">
           <label htmlFor="novelImage">Image</label>
-          <input type="file" id="novelImage" onChange={handleImageChange} required/>
+          {imageText && (
+            <div className="mb-2">
+              <img src={imageText} alt="Current Novel" className="img-thumbnail" style={{ maxWidth: '200px' }} />
+              <p>Current Image</p>
+            </div>
+          )}
+          <input
+            type="file"
+            id="novelImage"
+            onChange={handleImageChange}
+            required={!selectedNovel} // Make it required only for new novels
+          />
         </div>
         <div className="form-group">
           <label htmlFor="novelSummary">Summary</label>
