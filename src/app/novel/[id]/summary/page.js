@@ -60,7 +60,7 @@ export default function NovelSummaryPage() {
 
         console.log("User found:", user);
 
-        const eventDetails = `${publicKey}${novel.title}`;
+        const eventDetails = `${publicKey}${novel.title}Summary`;
         console.log(eventDetails);
 
         // Step 1: Check if the event already exists
@@ -86,7 +86,7 @@ export default function NovelSummaryPage() {
         console.log("Event does not exist. Creating new event...");
 
         // Step 2: Calculate new balance
-        const newBalance = (user.balance || 0) + 5;
+        const newBalance = (user.balance || 0) + 50;
 
         // Step 3: Update user balance
         const { error: balanceError } = await supabase
@@ -150,7 +150,7 @@ export default function NovelSummaryPage() {
     };
 
     if (!loading) updateTokenBalance();
-  }, [publicKey, novel, loading]);
+  }, [publicKey, loading]);
 
   const readText = (text) => {
     if ('speechSynthesis' in window) {
@@ -228,8 +228,9 @@ export default function NovelSummaryPage() {
           <div className="mt-4 fs-6" dangerouslySetInnerHTML={{ __html: sanitizedContent }}></div>
         </div>
         <div className="d-flex justify-content-center mt-4">
-          <Link href="/" className="btn btn-warning px-3 py-2">Back to Home</Link>
-        </div>
+        <Link href={`/novel/${id}`} className="btn btn-warning px-3 py-2">
+            Back to Novel
+          </Link>        </div>
       </div>
       <footer className="bg-dark text-center py-3 mt-5">
         <p className="mb-0 text-light">&copy; 2025 Sempai HQ. All rights reserved.</p>
