@@ -27,6 +27,7 @@ export default function CreatorsDashboard() {
   const [editChapterIndex, setEditChapterIndex] = useState(null); // Define editChapterIndex state
   const [chaptertitles, setChapterTitles] = useState([]);
   const [chaptercontents, setChapterContents] = useState([]);
+  const [isSuperuser, setIsSuperuser] = useState(false);
 
   const router = useRouter();
   const chapterTitleRef = useRef(null);
@@ -46,11 +47,9 @@ export default function CreatorsDashboard() {
       // Fetch the user's details from the `users` table
       const { data, error } = await supabase
         .from('users')
-        .select('id, isWriter')  // Ensure you're fetching the 'id' field
+        .select('id, isWriter, isSuperuser')  // Ensure you're fetching the 'id', 'isWriter', and 'isSuperuser' fields
         .eq('wallet_address', walletAddress)
         .single();
-  
-      console.log(data);
   
       if (error) {
         console.error('Error fetching user:', error.message);
@@ -58,19 +57,22 @@ export default function CreatorsDashboard() {
         return;
       }
   
-      if (data?.isWriter) {  // Correctly check 'data' instead of 'user'
+      if (data?.isSuperuser || data?.isWriter) {  // Check for both isSuperuser and isWriter
         setCurrentUserId(data.id);  // Set currentUserId to the fetched user's ID
         setIsWriter(data.isWriter);  // Set the isWriter state
+        setIsSuperuser(data.isSuperuser); // Set the isSuperuser state
         setLoading(false);  // Allow access to the dashboard
       } else {
-        alert('Access denied. You must be a creator to access this page.');
-        router.push('/error');  // Redirect non-creators to the error page
+        alert('Access denied. You must be a creator or superuser to access this page.');
+        router.push('/error');  // Redirect non-creators and non-superusers to the error page
       }
     } catch (err) {
       console.error('Error handling creator access:', err.message);
       alert('An error occurred. Please try again later.');
     }
   };
+  
+  
   
   
   
@@ -119,19 +121,32 @@ export default function CreatorsDashboard() {
   
     setLoading(true); // Set loading to true while fetching data
   
-    const { data, error } = await supabase
+    let query = supabase
       .from('novels')
-      .select('*')
-      .eq('user_id', currentUserId); // Filter novels by user_id
+      .select('*');
   
-    if (error) {
-      console.error('Error fetching novels:', error.message);
-      setLoading(false); // Set loading to false even if there's an error
-    } else {
-      setNovelsList(data); // Set the fetched novels in state
-      setLoading(false); // Set loading to false after data is fetched
+    // If the user is not a superuser, filter by their user_id
+    if (!isSuperuser) {
+      query = query.eq('user_id', currentUserId);
+    }
+  
+    try {
+      const { data, error } = await query;
+  
+      if (error) {
+        console.error('Error fetching novels:', error.message);
+        setLoading(false); // Set loading to false even if there's an error
+      } else {
+        setNovelsList(data); // Set the fetched novels in state
+        setLoading(false); // Set loading to false after data is fetched
+      }
+    } catch (err) {
+      console.error('Error in fetching novels:', err.message);
+      setLoading(false); // Set loading to false in case of error
     }
   };
+  
+  
   
   
 

@@ -55,7 +55,7 @@ export default function ChapterPage() {
   
       console.log("Novel owner found:", novelOwner);
   
-      const eventDetails = `${publicKey}${novel.title}${chapter}`;
+      const eventDetails = `${publicKey}${novel.title}${chapter}`.replace(/\s+/g, '');
       console.log(eventDetails);
   
       // Step 1: Check if the event already exists

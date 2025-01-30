@@ -156,15 +156,32 @@ export default function Home() {
               <li className="nav-item me-lg-3 mb-3 mb-lg-0">
                 <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
               </li>
-              <li className="nav-item">
-                <button
-                  onClick={handleCreatorAccess}
-                  className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-                  disabled={!connected || !isWriter} // Disable if wallet not connected or user is not a writer
-                >
-                  Creator Dashboard
-                </button>
-              </li>
+              <div className="navbar-nav ms-auto text-center">
+              
+
+                <li className="nav-item">
+                  {connected ? (
+                    isWriter ? (
+                      <button
+                        onClick={handleCreatorAccess}
+                        className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
+                        disabled={!connected || !isWriter} // Disable if wallet not connected or user is not a writer
+                      >
+                        Creator Dashboard
+                      </button>
+                    ) : (
+                      <Link href="/apply"className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
+                          Apply to be a Writer
+                      </Link>
+                    )
+                  ) : (
+                    <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
+                      Connect Wallet to Access
+                    </button>
+                  )}
+                </li>
+              </div>
+
             </ul>
 
 

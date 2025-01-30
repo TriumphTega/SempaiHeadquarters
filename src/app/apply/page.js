@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../services/supabase/supabaseClient';
+import { useWallet } from '@solana/wallet-adapter-react';
+
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'; // Import Wallet hook and UI button
 import Popup from "../../components/Popup";
 
 export default function ApplyForWriter() {
+  const { connected, publicKey, disconnect } = useWallet(); // Use the wallet hook to handle wallet connection
   const [userId, setUserId] = useState(null); // Store user ID
-  const [walletAddress, setWalletAddress] = useState(null); // Store connected wallet
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [reason, setReason] = useState('');
@@ -17,29 +20,15 @@ export default function ApplyForWriter() {
   const [showPopup, setShowPopup] = useState(false);
   const router = useRouter();
 
-  // Function to get connected wallet address
-  const fetchConnectedWallet = async () => {
-    try {
-      if (window.solana && window.solana.isPhantom) {
-        const response = await window.solana.connect();
-        setWalletAddress(response.publicKey.toString());
-      } else {
-        setError("Phantom wallet not found. Please install it.");
-      }
-    } catch (err) {
-      setError("Wallet connection failed.");
-    }
-  };
-
   // Fetch user_id from users table using wallet_address
   useEffect(() => {
     const fetchUserId = async () => {
-      if (!walletAddress) return;
+      if (!connected || !publicKey) return;
       
       const { data, error } = await supabase
         .from('users')
         .select('id, email, name')
-        .eq('wallet_address', walletAddress)
+        .eq('wallet_address', publicKey.toString())
         .single();
       
       if (error) {
@@ -48,12 +37,12 @@ export default function ApplyForWriter() {
       }
 
       setUserId(data.id);
-      setEmail('');
-      setName('');
+      setEmail(data.email);
+      setName(data.name);
     };
 
     fetchUserId();
-  }, [walletAddress]); // Run this when the walletAddress changes
+  }, [connected, publicKey]); // Run this when the wallet connection status or publicKey changes
 
   const handlePopupSubmit = (reason) => {
     setReason(reason);
@@ -75,16 +64,14 @@ export default function ApplyForWriter() {
       return;
     }
 
-    const { error } = await supabase.from('writer_applications').insert([
-      {
-        user_id: userId, // Include user_id from wallet lookup
-        name,
-        email,
-        reason,
-        submission_link: submissionLink,
-        application_status: 'pending',
-      },
-    ]);
+    const { error } = await supabase.from('writer_applications').insert([{
+      user_id: userId, // Include user_id from wallet lookup
+      name,
+      email,
+      reason,
+      submission_link: submissionLink,
+      application_status: 'pending',
+    }]);
 
     if (error) {
       setError(error.message);
@@ -100,24 +87,38 @@ export default function ApplyForWriter() {
       <div className="form-wrapper">
         <h2 className="text-center">Apply to Become a Creator</h2>
         
-        {!walletAddress ? (
-          <button className="btn-connect" onClick={fetchConnectedWallet}>
-            Connect Wallet
-          </button>
+        {/* Display the WalletMultiButton to connect the wallet */}
+        {!connected ? (
+          <div className="connect-container">
+            <p>Please connect your wallet to apply.</p>
+            <WalletMultiButton className="btn-connect" /> {/* Wallet UI button */}
+          </div>
         ) : (
-          <p className="wallet-connected">Wallet Connected: {walletAddress}</p>
+          <p className="wallet-connected">Wallet Connected: {publicKey.toString()}</p>
         )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="name">Name</label>
-            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={!connected} // Disable if wallet is not connected
+            />
           </div>
           <div className="form-group">
             <label htmlFor="email">Email</label>
-            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={!connected} // Disable if wallet is not connected
+            />
           </div>
           <div className="form-group">
             <label htmlFor="reason">Why do you want to be a creator?</label>
@@ -133,11 +134,15 @@ export default function ApplyForWriter() {
               id="submissionLink"
               value={submissionLink}
               onChange={(e) => setSubmissionLink(e.target.value)}
-            required/>
+              required
+              disabled={!connected} // Disable if wallet is not connected
+            />
           </div>
           {error && <div className="alert alert-danger">{error}</div>}
           {success && <div className="alert alert-success">{success}</div>}
-          <button type="submit" className="btn-submit">Submit Application</button>
+          <button type="submit" className="btn-submit" disabled={!connected}>
+            Submit Application
+          </button>
         </form>
       </div>
 
@@ -168,6 +173,15 @@ export default function ApplyForWriter() {
           margin-top: 10px;
           color: #ff9900;
           font-size: 14px;
+        }
+        .alert {
+          margin: 10px 0;
+        }
+        .alert-danger {
+          color: #e74c3c;
+        }
+        .alert-success {
+          color: #2ecc71;
         }
       `}</style>
     </div>
