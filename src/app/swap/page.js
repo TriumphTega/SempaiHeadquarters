@@ -7,6 +7,8 @@ import ConnectButton from '../../components/ConnectButton'; // Assuming you have
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import Link from 'next/link';
+import { supabase } from '../../services/supabase/supabaseClient';
+
 
 
 
@@ -20,20 +22,39 @@ export default function SwapPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Function to check the balance of the connected wallet
   const checkBalance = async () => {
-    if (publicKey) {
-      const provider = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-      const balance = await provider.getBalance(publicKey);
-      setBalance(balance / 10 ** 9); // Convert lamports to SOL
+    if (!publicKey) {
+      console.log("No public key found. Wallet might not be connected.");
+      return;
+    }
+  
+    try {
+      console.log("Fetching balance from users table for:", publicKey.toString());
+  
+      const { data: user, error } = await supabase
+        .from("users")
+        .select("balance")
+        .eq("wallet_address", publicKey.toString())
+        .single();
+  
+      if (error) {
+        console.error("Error fetching user balance:", error);
+        return;
+      }
+  
+      console.log("User balance fetched:", user?.balance || 0);
+      setBalance(user?.balance || 0); // Set balance (default to 0 if not found)
+    } catch (error) {
+      console.error("Unexpected error fetching balance:", error);
     }
   };
-
   useEffect(() => {
     if (connected) {
-      checkBalance(); // Fetch balance when the wallet is connected
+      checkBalance(); // Fetch balance from Supabase when wallet connects
     }
-  }, [connected, publicKey]);
+  }, [connected, publicKey]); // Run when connection changes
+    
+
 
   // Handle the coin swap
   const handleSwap = async () => {
@@ -127,7 +148,14 @@ export default function SwapPage() {
                 ) : (
                   <div className='bubble-form'>
                     <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
-                    <h5 className="text-success">Balance: {balance} {coinFrom}</h5>
+                    <h5 className="text-success">
+                      Balance: {balance} SMPT  
+                      <button onClick={checkBalance} className="btn btn-sm btn-outline-primary ms-2">
+                        Refresh
+                      </button>
+                    </h5>
+
+
 
                     <div className="mb-3 form-label">
                       <label className="form-label">Amount to Swap</label>

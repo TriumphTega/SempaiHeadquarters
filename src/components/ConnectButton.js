@@ -3,45 +3,70 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../services/firebase/firebase'; // Ensure this points to your Firebase setup
+import { supabase } from '../services/supabase/supabaseClient'; // Correct import
 
 export default function ConnectButton() {
   const { connected, publicKey } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [userCreated, setUserCreated] = useState(false); // To track user creation status
 
   useEffect(() => {
-    const checkWalletInFirestore = async () => {
+    const createUserInSupabase = async () => {
       if (!connected || !publicKey) return;
-
+  
       setIsLoading(true);
-
+  
       try {
         const walletAddress = publicKey.toString();
-        const walletDocRef = doc(db, 'readers', walletAddress);
-        const walletDoc = await getDoc(walletDocRef);
-
-        if (walletDoc.exists()) {
-          console.log('Wallet already exists:', walletDoc.data());
-          // Wallet exists, you can proceed with your logic
+  
+        // Check if the user already exists in the 'users' table
+        const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('wallet_address', walletAddress);
+  
+        if (fetchError) {
+          console.error('Error fetching user:', fetchError.message);
+          setError(fetchError.message);
+          setIsLoading(false);
+          return;
+        }
+  
+        if (existingUser.length === 0) {
+          // User does not exist, create a new user
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert([
+              {
+                wallet_address: walletAddress,
+                name: walletAddress, // Set wallet address as name
+                email: walletAddress, // Set wallet address as email
+                isWriter: false, // Explicitly set isWriter to false
+                isSuperuser: false, // Explicitly set isSuperuser to false
+              },
+            ]);
+  
+          if (insertError) {
+            console.error('Error creating new user:', insertError.message);
+            setError(insertError.message);
+          } else {
+            console.log('New user instance created with wallet address.');
+          }
         } else {
-          console.log('Wallet not found, creating new instance...');
-          await setDoc(walletDocRef, {
-            tokenBalance: 0,
-          });
-          console.log('New wallet instance created with tokenBalance 0.');
+          console.log('User already exists:', existingUser);
         }
       } catch (err) {
-        console.error('Error checking wallet:', err.message);
+        console.error('Error creating user:', err.message);
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
-
-    checkWalletInFirestore();
+  
+    createUserInSupabase();
   }, [connected, publicKey]);
+  
 
   if (isLoading) {
     return (
@@ -61,6 +86,7 @@ export default function ConnectButton() {
     <div>
       <WalletMultiButton className="btn btn-warning text-dark" />
       {connected}
+      {userCreated && <p>User successfully created!</p>}
     </div>
   );
 }

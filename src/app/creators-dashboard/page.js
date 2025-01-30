@@ -1,205 +1,451 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-
-import Link from 'next/link';
 import BootstrapProvider from "../../components/BootstrapProvider";
-import { auth, db } from '../../services/firebase/firebase';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { getNovels, addNovel, updateNovel } from '../../services/firebase/firestore';
+import { supabase } from '../../services/supabase/supabaseClient';
 import LoadingPage from '../../components/LoadingPage';
+import { useWallet } from '@solana/wallet-adapter-react'; // Assuming you're using Solana wallet adapter
+import Link from 'next/link';
+import ConnectButton from '../../components/ConnectButton';
+import {NovelConnectButton} from '../../components/NovelConnectButton';
+
 
 export default function CreatorsDashboard() {
   const [novelTitle, setNovelTitle] = useState('');
   const [novelImage, setNovelImage] = useState('');
   const [novelSummary, setNovelSummary] = useState('');
-  const [chapters, setChapters] = useState([]);
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const [newChapterContent, setNewChapterContent] = useState('');
   const [novelsList, setNovelsList] = useState([]);
   const [selectedNovel, setSelectedNovel] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [imageText, setImageText] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [editChapterIndex, setEditChapterIndex] = useState(null);
-  const [writers, setWriters] = useState([]);
+  const [isWriter, setIsWriter] = useState(false); // Store the isWriter state here
   const [loading, setLoading] = useState(true);
+  const [writers, setWriters] = useState([]); // Define the writers state
+  const [editChapterIndex, setEditChapterIndex] = useState(null); // Define editChapterIndex state
+  const [chaptertitles, setChapterTitles] = useState([]);
+  const [chaptercontents, setChapterContents] = useState([]);
+
   const router = useRouter();
-
-  const chapterTitleRef = useRef(null); // Reference for the chapter title input
-
-
-
+  const chapterTitleRef = useRef(null);
+  const { connected, publicKey } = useWallet(); // Wallet connection details
+  
+  
+  
+  const handleCreatorAccess = async () => {
+    if (!connected || !publicKey) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+  
+    try {
+      const walletAddress = publicKey.toString();
+  
+      // Fetch the user's details from the `users` table
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, isWriter')  // Ensure you're fetching the 'id' field
+        .eq('wallet_address', walletAddress)
+        .single();
+  
+      console.log(data);
+  
+      if (error) {
+        console.error('Error fetching user:', error.message);
+        alert('Unable to verify user. Please try again later.');
+        return;
+      }
+  
+      if (data?.isWriter) {  // Correctly check 'data' instead of 'user'
+        setCurrentUserId(data.id);  // Set currentUserId to the fetched user's ID
+        setIsWriter(data.isWriter);  // Set the isWriter state
+        setLoading(false);  // Allow access to the dashboard
+      } else {
+        alert('Access denied. You must be a creator to access this page.');
+        router.push('/error');  // Redirect non-creators to the error page
+      }
+    } catch (err) {
+      console.error('Error handling creator access:', err.message);
+      alert('An error occurred. Please try again later.');
+    }
+  };
+  
+  
+  
   useEffect(() => {
-    const fetchWriters = async (user) => {
-      try {
-        const writersQuery = query(
-          collection(db, 'users'),
-          where('isWriter', '==', true),
-          where('uid', '==', user.uid) // Match the logged-in user's UID
-        );
+    const fetchWriters = async () => {
+      setLoading(true);
 
-        const querySnapshot = await getDocs(writersQuery);
+      // Fetch the writers (users with isWriter: true)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, isWriter')
+        .eq('isWriter', true);
 
-        if (querySnapshot.empty) {
-          console.error('No writers found for the current user.');
-          setWriters([]);
-        } else {
-          const writersList = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setWriters(writersList);
-        }
-      } catch (error) {
+      if (error) {
         console.error('Error fetching writers:', error.message);
-      } finally {
-        setLoading(false);
+      } else {
+        setWriters(data);
       }
+
+      setLoading(false);
     };
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        fetchWriters(user);
-      } else {
-        router.push('/creator-login'); // Redirect to login if not authenticated
-      }
-    });
 
-    return () => unsubscribe();
-  }, [router]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsLoggedIn(true);
-        setCurrentUserId(user.uid);
-        fetchNovels(user.uid);
-      } else {
-        setIsLoggedIn(false);
-        setCurrentUserId(null);
-        setNovelsList([]);
-      }
-    });
-    return () => unsubscribe();
+    fetchWriters();
   }, []);
 
-  const fetchNovels = async (userId) => {
-    const novels = await getNovels();
-    const filteredNovels = novels.map((novel) => ({
-      ...novel,
-      chapters: Array.isArray(novel.chapters) ? novel.chapters : [],
-    }));
-    setNovelsList(filteredNovels.filter((novel) => novel.user_id === userId));
+  useEffect(() => {
+    // Run the creator access check when the wallet state changes
+    if (connected && publicKey) {
+      handleCreatorAccess();
+    }
+  }, [connected, publicKey]); // Re-run when wallet state changes
+
+  useEffect(() => {
+    if (currentUserId && isWriter) {
+      console.log(currentUserId)
+      fetchNovels(currentUserId);
+    }
+    
+  }, [currentUserId, isWriter]);
+  
+  const fetchNovels = async () => {
+    if (!currentUserId) {
+      console.error('No user ID available');
+      return;
+    }
+  
+    setLoading(true); // Set loading to true while fetching data
+  
+    const { data, error } = await supabase
+      .from('novels')
+      .select('*')
+      .eq('user_id', currentUserId); // Filter novels by user_id
+  
+    if (error) {
+      console.error('Error fetching novels:', error.message);
+      setLoading(false); // Set loading to false even if there's an error
+    } else {
+      setNovelsList(data); // Set the fetched novels in state
+      setLoading(false); // Set loading to false after data is fetched
+    }
   };
+  
+  
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (file && file.type.startsWith('image/')) { // Check if it's an image file
       const reader = new FileReader();
       reader.onloadend = () => setImageText(reader.result);
       reader.readAsDataURL(file);
+    } else {
+      alert('Please upload a valid image file.');
     }
   };
 
   const handleAddChapter = () => {
     if (newChapterTitle && newChapterContent) {
-      if (editChapterIndex !== null) {
-        setChapters((prevChapters) => {
-          const updatedChapters = [...prevChapters];
-          updatedChapters[editChapterIndex] = {
-            title: newChapterTitle,
-            content: newChapterContent,
-          };
-          return updatedChapters;
-        });
-        setEditChapterIndex(null);
-      } else {
-        setChapters((prevChapters) => [
-          ...prevChapters,
-          { title: newChapterTitle, content: newChapterContent },
-        ]);
-      }
-      setNewChapterTitle('');
-      setNewChapterContent('');
+        if (editChapterIndex !== null) {
+            setChapterTitles((prevTitles) => {
+                const updatedTitles = [...prevTitles];
+                updatedTitles[editChapterIndex] = newChapterTitle;
+                return updatedTitles;
+            });
+
+            setChapterContents((prevContents) => {
+                const updatedContents = [...prevContents];
+                updatedContents[editChapterIndex] = newChapterContent;
+                return updatedContents;
+            });
+
+            setEditChapterIndex(null);
+        } else {
+            setChapterTitles((prevTitles) => [...prevTitles, newChapterTitle]);
+            setChapterContents((prevContents) => [...prevContents, newChapterContent]);
+        }
+        setNewChapterTitle('');
+        setNewChapterContent('');
     } else {
-      alert('Please fill in both chapter title and content.');
+        alert('Please fill in both chapter title and content.');
     }
-  };
+};
+
 
   const handleEditChapter = (index) => {
-    const chapterToEdit = chapters[index];
-    setNewChapterTitle(chapterToEdit.title);
-    setNewChapterContent(chapterToEdit.content);
+    const titleToEdit = chaptertitles[index];
+    const contentToEdit = chaptercontents[index];
+
+    setNewChapterTitle(titleToEdit);
+    setNewChapterContent(contentToEdit);
     setEditChapterIndex(index);
-  
+
     // Scroll to the chapter title input field
     if (chapterTitleRef.current) {
-      chapterTitleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      chapterTitleRef.current.focus(); // Optional: Focus the input for better UX
+        chapterTitleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        chapterTitleRef.current.focus(); // Optional: Focus the input for better UX
     }
-  };
+};
 
-  const handleRemoveChapter = (index) => {
-    setChapters((prevChapters) => prevChapters.filter((_, i) => i !== index));
-  };
+const handleEditNovel = (novel) => {
+  setSelectedNovel(novel);
+  setNovelTitle(novel.title);
+  setImageText(novel.image);
+  setNovelSummary(novel.summary);
+  setChapterTitles(novel.chaptertitles || []); // Use chaptertitles instead of chapters
+  setChapterContents(novel.chaptercontents || []); // Use chaptercontents instead of chapters
+};
+
+const handleRemoveChapter = (index) => {
+  setChapterTitles((prevTitles) => prevTitles.filter((_, i) => i !== index));
+  setChapterContents((prevContents) => prevContents.filter((_, i) => i !== index));
+};
+
 
   const handleNovelSubmit = async (e) => {
     e.preventDefault();
+  
+    // Prepare the data for submission
     const novelData = {
       user_id: currentUserId,
       title: novelTitle,
       image: imageText,
       summary: novelSummary,
-      chapters,
+      chaptertitles: chaptertitles, // Use chaptertitles directly
+      chaptercontents: chaptercontents, // Use chaptercontents directly
     };
-
-    if (selectedNovel) {
-      await updateNovel(selectedNovel.id, novelData);
-      alert('Novel updated successfully!');
-    } else {
-      await addNovel(novelData);
-      alert('Novel added successfully!');
+  
+    try {
+      const { error } = selectedNovel
+        ? await supabase
+            .from('novels')
+            .update(novelData)
+            .eq('id', selectedNovel.id)
+        : await supabase.from('novels').insert([novelData]);
+  
+      if (error) {
+        alert('Error submitting novel: ' + error.message);
+        return;
+      }
+  
+      alert('Novel submitted successfully!');
+      resetForm();
+    } catch (err) {
+      console.error('Error submitting novel:', err.message);
+      alert('An error occurred. Please try again later.');
     }
-
-    resetForm();
-    fetchNovels(currentUserId);
   };
+  
 
   const resetForm = () => {
+    console.log("Resetting form...");
+  
     setNovelTitle('');
     setNovelImage('');
     setNovelSummary('');
-    setChapters([]);
     setNewChapterTitle('');
     setNewChapterContent('');
+    setChapterTitles([]); // Clear chapter titles
+    setChapterContents([]); // Clear chapter contents
     setSelectedNovel(null);
+  
+    setTimeout(() => {
+      console.log("Form reset:", {
+        novelTitle,
+        novelImage,
+        novelSummary,
+        newChapterTitle,
+        newChapterContent,
+        chaptertitles, // Check if empty
+        chaptercontents, // Check if empty
+        selectedNovel,
+      });
+    }, 100); // Delay to allow state updates
   };
+  
 
-  const handleEditNovel = (novel) => {
-    setSelectedNovel(novel);
-    setNovelTitle(novel.title);
-    setImageText(novel.image);
-    setNovelSummary(novel.summary);
-    setChapters(novel.chapters || []);
-  };
+  const renderWritersContent = () => {
+    if (writers.length > 0) {
+      return (
+        
+        <div className="container my-5 text-white">
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      alert('Logged out successfully.');
-      window.location.href = '/';
-    } catch (error) {
-      alert('Logout failed. Please try again.');
+          {/* Render Writers List */}
+          {/* <ul className="list-group">
+            {writers.map((writer, index) => (
+              <li key={writer.uid || index} className="list-group-item">
+                <h5>{writer.name}</h5>
+                <p>Email: {writer.email}</p>
+                <p>UID: {writer.id}</p>
+              </li>
+            ))}
+          </ul> */}
+  
+          {/* Render the Form (only once) */}
+          <h2 className="text-center section-title">
+            {selectedNovel ? "Edit Novel" : "Upload Novel"}
+          </h2>
+          {!connected && (
+          <div className="overlay d-flex align-items-center justify-content-center">
+            <NovelConnectButton />
+          </div>
+        )}
+          <form onSubmit={handleNovelSubmit} className="novel-form">
+            <div className="form-group">
+              <label htmlFor="novelTitle">Title</label>
+              <input
+                type="text"
+                id="novelTitle"
+                value={novelTitle}
+                onChange={(e) => setNovelTitle(e.target.value)}
+                required
+              />
+            </div>
+  
+            <div className="form-group">
+              <label htmlFor="novelImage">Image</label>
+              {imageText && (
+                <div className="mb-2">
+                  <img
+                    src={imageText}
+                    alt="Current Novel"
+                    className="img-thumbnail"
+                    style={{ maxWidth: "200px" }}
+                  />
+                  <p>Current Image</p>
+                </div>
+              )}
+              <input
+                type="file"
+                id="novelImage"
+                onChange={handleImageChange}
+                required={!selectedNovel}
+              />
+            </div>
+  
+            <div className="form-group">
+              <label htmlFor="novelSummary">Summary</label>
+              <textarea
+                id="novelSummary"
+                rows="3"
+                value={novelSummary}
+                onChange={(e) => setNovelSummary(e.target.value)}
+                required
+              ></textarea>
+            </div>
+  
+            <h4 className="chapter-heading">Add Chapters</h4>
+            <div className="form-group">
+              <label htmlFor="chapterTitle">Chapter Title</label>
+              <input
+                type="text"
+                id="chapterTitle"
+                ref={chapterTitleRef}
+                value={newChapterTitle}
+                onChange={(e) => setNewChapterTitle(e.target.value)}
+              />
+            </div>
+  
+            <div className="form-group">
+              <label htmlFor="chapterContent">Chapter Content</label>
+              <textarea
+                id="chapterContent"
+                rows="3"
+                value={newChapterContent}
+                onChange={(e) => setNewChapterContent(e.target.value)}
+              ></textarea>
+            </div>
+  
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleAddChapter}
+            >
+              {editChapterIndex !== null ? "Update Chapter" : "Add Chapter"}
+            </button>
+  
+            <ul className="list-group my-3 text-white">
+              {chaptertitles.map((title, index) => (
+                <li key={title || index} className="list-group-item chapter-item">
+                  <div className="text-white">
+                    <strong>{title}</strong>
+                    <p>
+                      {chaptercontents[index].length > 50
+                        ? `${chaptercontents[index].slice(0, 50)}...`
+                        : chaptercontents[index]}
+                    </p>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm me-2"
+                      onClick={() => handleEditChapter(index)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleRemoveChapter(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+  
+            <button type="submit" className="btn btn-primary">
+              Submit
+            </button>
+          </form>
+  
+          {/* Uploaded Novels Section */}
+          <div className="container my-5">
+            <h2 className="text-center section-title text-white">Uploaded Novels</h2>
+            <div className="row">
+              {novelsList.map((novel, index) => (
+                <div key={novel.id || index} className="col-md-4">
+                  <div className="card novel-card">
+                    <img
+                      src={novel.image}
+                      className="card-img-top"
+                      alt={novel.title}
+                    />
+                    <div className="card-body">
+                      <h5 className="card-title">{novel.title}</h5>
+                      <p className="card-text">
+                        {novel.summary.length > 60
+                          ? `${novel.summary.slice(0, 70)}...`
+                          : novel.summary}
+                      </p>
+                      <button
+                        onClick={() => handleEditNovel(novel)}
+                        className="btn btn-primary"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      return <p className="text-center text-white">No writers found.</p>;
     }
   };
-if (loading) {
+  
+
+  if (loading) {
     return <LoadingPage />;
   }
-  return (
-    <div>
-    <BootstrapProvider />
+
+  return <div>
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
       <div className="container">
         <Link href="/" className="navbar-brand">
@@ -213,166 +459,33 @@ if (loading) {
         >
           <span className="navbar-toggler-icon"></span>
         </button>
+        <ul className="navbar-nav me-auto text-center">
+              <li className="nav-item">
+                <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+                  Home
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+                  Swap
+                </Link>
+              </li>
+            </ul>
+      </div>
+
+        {/* Navbar Links */}
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto align-items-center">
-            <li className="nav-item">
-              {isLoggedIn && (
-                <button onClick={handleLogout} className="btn btn-danger">
-                  Logout
-                </button>
-              )}
-            </li>
-          </ul>
-        </div>
-      </div>
+            
+
+            {/* Wallet and Creator Dashboard */}
+            <ul className="navbar-nav ms-auto text-center">
+              <li className="nav-item me-lg-3 mb-3 mb-lg-0">
+                <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
+              </li>
+            </ul>
+
+
+          </div>
     </nav>
-
-    {writers.length > 0 ? (
-  writers.map((writer) => (
-    
-    <div key={writer.uid} className="container my-5 text-white">
-      {/* <li key={writer.id} className="list-group-item">
-              <h5>{writer.name}</h5>
-              <p>Email: {writer.email}</p>
-              <p>UID: {writer.uid}</p>
-            </li> */}
-      <h2 className="text-center section-title">
-        {selectedNovel ? 'Edit Novel' : 'Upload Novel'}
-      </h2>
-      <form onSubmit={handleNovelSubmit} className="novel-form">
-        <div className="form-group">
-          <label htmlFor="novelTitle">Title</label>
-          <input
-            type="text"
-            id="novelTitle"
-            value={novelTitle}
-            onChange={(e) => setNovelTitle(e.target.value)}
-            required
-          />
-        </div>
-          <div className="form-group">
-          <label htmlFor="novelImage">Image</label>
-          {imageText && (
-            <div className="mb-2">
-              <img src={imageText} alt="Current Novel" className="img-thumbnail" style={{ maxWidth: '200px' }} />
-              <p>Current Image</p>
-            </div>
-          )}
-          <input
-            type="file"
-            id="novelImage"
-            onChange={handleImageChange}
-            required={!selectedNovel} // Make it required only for new novels
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="novelSummary">Summary</label>
-          <textarea
-            id="novelSummary"
-            rows="3"
-            value={novelSummary}
-            onChange={(e) => setNovelSummary(e.target.value)}
-            required
-          ></textarea>
-        </div>
-
-        <h4 className="chapter-heading">Add Chapters</h4>
-        <div className="form-group">
-          <label htmlFor="chapterTitle">Chapter Title</label>
-          <input
-            type="text"
-            id="chapterTitle"
-            ref={chapterTitleRef} // Attach the ref here
-            value={newChapterTitle}
-            onChange={(e) => setNewChapterTitle(e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="chapterContent">Chapter Content</label>
-          <textarea
-            id="chapterContent"
-            rows="3"
-            value={newChapterContent}
-            onChange={(e) => setNewChapterContent(e.target.value)}
-          ></textarea>
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={handleAddChapter}
-        >
-          {editChapterIndex !== null ? 'Update Chapter' : 'Add Chapter'}
-        </button>
-
-
-        <ul className="list-group my-3 text-white">
-          {chapters.map((chapter, index) => (
-            <li key={index} className="list-group-item chapter-item">
-              <div className="text-white">
-                <strong>{chapter.title}</strong>
-                <p>
-                  {chapter.content.length > 50
-                    ? `${chapter.content.slice(0, 50)}...`
-                    : chapter.content}
-                </p>
-              </div>
-              <div>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm me-2"
-                onClick={() => handleEditChapter(index)}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                onClick={() => handleRemoveChapter(index)}
-              >
-                Remove
-              </button>
-
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <button type="submit" className="btn btn-primary">Submit</button>
-      </form>
-
-      <div className="container my-5">
-        <h2 className="text-center section-title text-white">Uploaded Novels</h2>
-        <div className="row">
-          {novelsList.map((novel, index) => (
-            <div key={index} className="col-md-4">
-              <div className="card novel-card">
-                <img src={novel.image} className="card-img-top" alt={novel.title} />
-                <div className="card-body">
-                  <h5 className="card-title">{novel.title}</h5>
-                  <p className="card-text">
-                    {novel.summary.length > 60
-                      ? `${novel.summary.slice(0, 70)}...`
-                      : novel.summary}
-                  </p>
-                  <button
-                    onClick={() => handleEditNovel(novel)}
-                    className="btn btn-primary"
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  ))
-) : (
-  <p className="text-center text-white">No writers found.</p>
-)}
-
-  </div>
-  
-  );
+    {renderWritersContent()}</div>;
 }

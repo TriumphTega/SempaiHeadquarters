@@ -588,3 +588,72 @@ h2 {
 .novel-card img {
   border-bottom: 2px solid rgb(243, 99, 22);
 }
+
+/* Admin page styles */
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.collection-section {
+  margin-bottom: 30px;
+}
+
+.collection-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+
+
+.card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  padding: 10px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.card-body {
+  padding: 15px;
+}
+
+.card-text {
+  font-size: 1rem;
+  color: #555;
+  max-width: 600px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px;
+}
+
+.card-footer button {
+  margin-left: 10px;
+}
+
+.modal-content {
+  max-width: 90%;
+  margin: 20px auto;
+}
+
+.modal-body {
+  font-size: 1rem;
+  padding: 15px;
+}
+
+.text-center {
+  text-align: center;
+}

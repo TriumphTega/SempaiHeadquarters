@@ -3,8 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { db } from "../../../services/firebase/firebase"; // Import Firestore instance
+import { supabase } from '../../../services/supabase/supabaseClient';
 
 export default function NovelPage() {
   const { id } = useParams(); // Get the novel ID from the URL
@@ -14,16 +13,19 @@ export default function NovelPage() {
   useEffect(() => {
     const fetchNovel = async () => {
       try {
-        const novelRef = doc(db, "novels", id); // Reference to the specific novel document
-        const novelSnapshot = await getDoc(novelRef);
+        const { data, error } = await supabase
+          .from("novels")
+          .select("*")
+          .eq("id", id)
+          .single(); // Fetch the novel by ID
 
-        if (novelSnapshot.exists()) {
-          setNovel(novelSnapshot.data()); // Set novel data
+        if (error) {
+          console.error("Error fetching novel:", error);
         } else {
-          console.error("Novel not found");
+          setNovel(data); // Set novel data
         }
       } catch (error) {
-        console.error("Error fetching novel:", error);
+        console.error("Unexpected error:", error);
       } finally {
         setLoading(false); // Set loading to false
       }
@@ -65,7 +67,7 @@ export default function NovelPage() {
         <div className="text-center">
           <h1 className="text-white display-4 fw-bold">{novel.title}</h1>
           <img
-            src={novel.image} // Use the image from Firestore
+            src={novel.image} // Use the image from Supabase
             alt={novel.title}
             className="img-fluid rounded shadow-lg my-4"
             style={{ maxHeight: "500px", objectFit: "cover" }}
@@ -73,11 +75,32 @@ export default function NovelPage() {
           <p className="fs-5 text-white">
             Explore the exciting chapters of <strong>{novel.title}</strong> below:
           </p>
+          
         </div>
+        <div className="d-flex justify-content-center w-100 mb-4">
+          <div className="w-100">
+            <Link
+              href={`/novel/${id}/summary`}
+              className="text-decoration-none text-white"
+            >
+              <div className="col">
+                <div className="card h-100 shadow border-0 rounded-3 hover-card">
+                  <div className="card-body d-flex flex-column justify-content-between">
+                    <h5 className="card-title text-uppercase fw-bold d-flex justify-content-center">
+                      Summary
+                    </h5>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+
 
         {/* Chapters */}
         <div className="row row-cols-1 row-cols-md-3 g-4">
-          {Object.entries(novel.chapters).map(([chapterId, chapter]) => (
+          {Object.entries(novel.chaptertitles || {}).map(([chapterId, title]) => (
             <Link
               href={`/novel/${id}/chapter/${chapterId}`}
               className="text-decoration-none text-white"
@@ -87,7 +110,7 @@ export default function NovelPage() {
                 <div className="card h-100 shadow border-0 rounded-3 hover-card">
                   <div className="card-body d-flex flex-column justify-content-between">
                     <h5 className="card-title text-uppercase fw-bold">
-                      {chapter.title}
+                      {title}
                     </h5>
                   </div>
                 </div>
