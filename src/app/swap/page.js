@@ -149,7 +149,7 @@ export default function SwapPage() {
                   <div className='bubble-form'>
                     <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
                     <h5 className="text-success">
-                      Balance: {balance} SMPT  
+                      Balance: {balance} SMP  
                       <button onClick={checkBalance} className="btn btn-sm btn-outline-primary ms-2">
                         Refresh
                       </button>

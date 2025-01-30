@@ -112,82 +112,80 @@ export default function Home() {
       <BootstrapProvider />
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-        <div className="container">
-          {/* Brand Logo */}
-          <Link href="/" className="navbar-brand">
-            <img
-              src="/images/ursa.jpg"
-              alt="Sempai HQ"
-              className="navbar-logo"
-              style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-            />
+  <div className="container">
+    {/* Brand Logo */}
+    <Link href="/" className="navbar-brand">
+      <img
+        src="/images/ursa.jpg"
+        alt="Sempai HQ"
+        className="navbar-logo"
+        style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+      />
+    </Link>
+
+    {/* Toggle Button for Mobile View */}
+    <button
+      className="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span className="navbar-toggler-icon"></span>
+    </button>
+
+    {/* Navbar Links */}
+    <div className="collapse navbar-collapse" id="navbarNav">
+      <ul className="navbar-nav me-auto text-center">
+        <li className="nav-item">
+          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+            Home
           </Link>
+        </li>
+        <li className="nav-item">
+          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+            Swap
+          </Link>
+        </li>
+      </ul>
 
-          {/* Toggle Button for Mobile View */}
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
+      {/* Wallet and Creator Dashboard Section */}
+      <ul className="navbar-nav ms-auto text-center">
+        {/* Wallet Connect Button */}
+        <li className="nav-item me-lg-3 mb-3 mb-lg-0">
+          <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
+        </li>
 
-          {/* Navbar Links */}
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav me-auto text-center">
-              <li className="nav-item">
-                <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-                  Home
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-                  Swap
-                </Link>
-              </li>
-            </ul>
+        {/* Conditional Rendering for Creator Dashboard & Writer Application */}
+        <li className="nav-item">
+          {connected ? (
+            isWriter ? (
+              <button
+                onClick={handleCreatorAccess}
+                className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
+              >
+                Creator Dashboard
+              </button>
+            ) : (
+              <Link href="/apply">
+                <a className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
+                  Apply to be a Writer
+                </a>
+              </Link>
+            )
+          ) : (
+            <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
+              Connect Wallet to Access
+            </button>
+          )}
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
-            {/* Wallet and Creator Dashboard */}
-            <ul className="navbar-nav ms-auto text-center">
-              <li className="nav-item me-lg-3 mb-3 mb-lg-0">
-                <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
-              </li>
-              <div className="navbar-nav ms-auto text-center">
-              
-
-                <li className="nav-item">
-                  {connected ? (
-                    isWriter ? (
-                      <button
-                        onClick={handleCreatorAccess}
-                        className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-                        disabled={!connected || !isWriter} // Disable if wallet not connected or user is not a writer
-                      >
-                        Creator Dashboard
-                      </button>
-                    ) : (
-                      <Link href="/apply"className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
-                          Apply to be a Writer
-                      </Link>
-                    )
-                  ) : (
-                    <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
-                      Connect Wallet to Access
-                    </button>
-                  )}
-                </li>
-              </div>
-
-            </ul>
-
-
-          </div>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>

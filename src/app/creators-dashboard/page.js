@@ -460,20 +460,28 @@ const handleRemoveChapter = (index) => {
     return <LoadingPage />;
   }
 
-  return <div>
+  return     <div className="bg-black">
+<BootstrapProvider />
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
       <div className="container">
         <Link href="/" className="navbar-brand">
           <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
         </Link>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
+         {/* Toggle Button for Mobile View */}
+         <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+
+          <div className="collapse navbar-collapse" id="navbarNav">
+
         <ul className="navbar-nav me-auto text-center">
               <li className="nav-item">
                 <Link href="/" className="nav-link text-light fw-semibold hover-effect">
@@ -500,7 +508,8 @@ const handleRemoveChapter = (index) => {
             </ul>
 
 
-          </div>
-    </nav>
+            </div>
+            </div>
+            </nav>
     {renderWritersContent()}</div>;
 }

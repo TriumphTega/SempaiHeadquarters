@@ -129,7 +129,7 @@ export default function NovelsPage() {
         {/* Display Balance */}
         {connected ? (
           <h5 className="text-success">
-            Balance: {loading ? 'Loading...' : `${balance} SMPT`}
+            Balance: {loading ? 'Loading...' : `${balance} SMP`}
             <button onClick={checkBalance} className="btn btn-sm btn-outline-dark ms-2">
               Refresh
             </button>
