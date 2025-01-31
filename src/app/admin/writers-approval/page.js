@@ -106,28 +106,29 @@ export default function WriterApprovals() {
 
   // Rendering writer applications for superusers
   return (
-    <div className="container">
-      <h2 className="title">Writer Applications</h2>
-      {applications.length > 0 ? (
-        applications.map((app) => (
-          <div key={app.id} className="card">
-            <h3>{app.name}</h3>
-            <p><strong>Email:</strong> {app.email}</p>
-            <p><strong>Reason:</strong> {app.reason}</p>
-            {app.submission_link && (
-              <p>
-                <strong>Submission:</strong>
-                <a href={app.submission_link} target="_blank" rel="noopener noreferrer"> View Here</a>
-              </p>
-            )}
-            <button className="approve-btn" onClick={() => handleApproval(app.user_id, app.id, app.name, app.email)}>
-              ✅ Approve
-            </button>
-          </div>
-        ))
-      ) : (
-        <p className="no-applications">No pending applications.</p>
-      )}
-    </div>
+    <div className="writer-approvals-container">
+  <h2 className="writer-approvals-title">Writer Applications</h2>
+  {applications.length > 0 ? (
+    applications.map((app) => (
+      <div key={app.id} className="writer-approvals-card">
+        <h3>{app.name}</h3>
+        <p><strong>Email:</strong> {app.email}</p>
+        <p><strong>Reason:</strong> {app.reason}</p>
+        {app.submission_link && (
+          <p>
+            <strong>Submission:</strong>
+            <a href={app.submission_link} target="_blank" rel="noopener noreferrer"> View Here</a>
+          </p>
+        )}
+        <button className="writer-approvals-approve-btn" onClick={() => handleApproval(app.user_id, app.id, app.name, app.email)}>
+          ✅ Approve
+        </button>
+      </div>
+    ))
+  ) : (
+    <p className="writer-approvals-no-applications">No pending applications.</p>
+  )}
+</div>
+
   );
 }
