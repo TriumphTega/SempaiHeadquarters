@@ -171,7 +171,7 @@ export default function Home() {
             ) : (
               <Link href="/apply">
                 <a className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
-                  Apply to be a Writer
+                  Apply to be a Creator
                 </a>
               </Link>
             )
