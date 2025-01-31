@@ -115,12 +115,13 @@ export default function Home() {
   <div className="container">
     {/* Brand Logo */}
     <Link href="/" className="navbar-brand">
-      <img
-        src="/images/ursa.jpg"
-        alt="Sempai HQ"
-        className="navbar-logo"
-        style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-      />
+    <img
+  src="/images/logo.jpg"  // The path is correct if the image is in the public folder
+  alt="Sempai HQ"
+  className="navbar-logo"
+  style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+/>
+
     </Link>
 
     {/* Toggle Button for Mobile View */}
@@ -268,7 +269,7 @@ export default function Home() {
           <div className="image-container">
             {/* Conditional Rendering Based on Connection Status */}
             {connected ? (
-              <Link href="/novels" className="text-decoration-none">
+              <Link href="/keepItSimple" className="text-decoration-none">
                 {/* Image */}
                 <img
                   src="/images/novel-4.jpg"

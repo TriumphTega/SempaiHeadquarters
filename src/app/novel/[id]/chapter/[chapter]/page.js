@@ -27,38 +27,34 @@ export default function ChapterPage() {
       
       if (!publicKey || !novel || !chapter) return;
   
-      console.log("Fetching user details...");
-      const { data: user, error: userError } = await supabase
+      console.log("Fetching user, novel owner, and team details...");
+  
+      // Single query to fetch user, novel owner, and team balance
+      const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, wallet_address, balance")
-        .eq("wallet_address", publicKey.toString())
-        .single();
+        .in("id", [publicKey.toString(), novel.user_id, "33e4387d-5964-4418-98e2-225630a4fcef"]);
   
-      if (userError || !user) {
-        console.error("Error fetching user:", userError);
+      if (usersError || !users || users.length < 3) {
+        console.error("Error fetching users:", usersError);
         return;
       }
   
-      console.log("User found:", user);
+      const user = users.find(u => u.wallet_address === publicKey.toString());
+      const novelOwner = users.find(u => u.id === novel.user_id);
+      const team = users.find(u => u.id === "33e4387d-5964-4418-98e2-225630a4fcef");
   
-      // Fetch novel owner details
-      const { data: novelOwner, error: ownerError } = await supabase
-        .from("users")
-        .select("id, wallet_address, balance")
-        .eq("id", novel.user_id) // Using the user_id from the novel
-        .single();
-  
-      if (ownerError || !novelOwner) {
-        console.error("Error fetching novel owner:", ownerError);
+      if (!user || !novelOwner || !team) {
+        console.error("Some user data is missing.");
         return;
       }
   
-      console.log("Novel owner found:", novelOwner);
+      console.log("User, novel owner, and team found:", { user, novelOwner, team });
   
       const eventDetails = `${publicKey}${novel.title}${chapter}`.replace(/\s+/g, '');
-      console.log(eventDetails);
+      console.log("Generated event details:", eventDetails);
   
-      // Step 1: Check if the event already exists
+      // Check if the event already exists
       const { data: existingEvent, error: eventError } = await supabase
         .from("wallet_events")
         .select("id")
@@ -78,48 +74,35 @@ export default function ChapterPage() {
         return;
       }
   
-      console.log("Event does not exist. Creating new event...");
+      console.log("No existing event. Proceeding with transaction...");
   
-    // Define token rewards
+      // Define rewards
       const readerReward = 100;
       const authorReward = 50;
       const teamReward = 50;
-
-      const teamWalletAddress = "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc"; // Replace with actual team wallet address
-
-      // Step 1: Fetch the team details (you need to fetch it just like user and novel owner)
-      const { data: team, error: teamError } = await supabase
-        .from("users")
-        .select("id, balance")
-        .eq("id", "33e4387d-5964-4418-98e2-225630a4fcef")  // Team ID
-        .single();
-
-      if (teamError || !team) {
-        console.error("Error fetching team details:", teamError);
-        return;
-      }
-
-      console.log("team owner found:", team);
-
-
+  
       // Update balances
       const newReaderBalance = (user.balance || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
-      const newTeamBalance = (team.balance || 0) + teamReward; // Update team balance correctly
-
-      // Step 2: Update Reader's Balance
-      await supabase.from("users").update({ balance: newReaderBalance }).eq("id", user.id);
-
-      // Step 3: Update Novel Owner's Balance
-      await supabase.from("users").update({ balance: newAuthorBalance }).eq("id", novelOwner.id);
-
-      // Step 4: Update Team's Balance
-      await supabase.from("users").update({ balance: newTeamBalance }).eq("id", "33e4387d-5964-4418-98e2-225630a4fcef");  // Team ID
-
-
-   
-
-      // 🔹 Define the walletBalancesData before using it
+      const newTeamBalance = (team.balance || 0) + teamReward;
+  
+      // Update user balances in a single batch update
+      const { error: updateError } = await supabase
+        .from("users")
+        .upsert([
+          { id: user.id, balance: newReaderBalance },
+          { id: novelOwner.id, balance: newAuthorBalance },
+          { id: team.id, balance: newTeamBalance },
+        ]);
+  
+      if (updateError) {
+        console.error("Error updating user balances:", updateError);
+        return;
+      }
+  
+      console.log("✅ User balances updated successfully!");
+  
+      // Upsert wallet balances
       const walletBalancesData = [
         {
           user_id: user.id,
@@ -138,28 +121,27 @@ export default function ChapterPage() {
           wallet_address: novelOwner.wallet_address,
         },
         {
-          user_id: "33e4387d-5964-4418-98e2-225630a4fcef", // Replace with actual team user ID
+          user_id: team.id,
           chain: "SOL",
           currency: "Token",
-          amount: teamReward, // Since the team receives a fixed amount
+          amount: newTeamBalance,
           decimals: 0,
-          wallet_address: teamWalletAddress,
+          wallet_address: "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc",
         },
       ];
   
-      console.log("Upserting wallet balances with data:", walletBalancesData);
+      console.log("Upserting wallet balances with:", walletBalancesData);
   
-      // Step 4: Update Wallet Balances
       const { error: walletError } = await supabase.from("wallet_balances").upsert(walletBalancesData);
   
       if (walletError) {
         console.error("❌ Error upserting wallet balances:", walletError);
-      } else {
-        console.log("✅ Wallet balances updated successfully!");
-        console.log(eventDetails);
+        return;
       }
   
-      // Step 5: Insert Transactions into wallet_events
+      console.log("✅ Wallet balances updated successfully!");
+  
+      // Insert transactions into wallet_events
       const { error: eventInsertError } = await supabase.from("wallet_events").insert([
         {
           destination_user_id: user.id,
@@ -184,27 +166,25 @@ export default function ChapterPage() {
           destination_chain: "SOL",
         },
         {
-          destination_user_id: "33e4387d-5964-4418-98e2-225630a4fcef",
+          destination_user_id: team.id,
           event_type: "deposit",
           event_details: eventDetails,
           source_chain: "SOL",
           source_currency: "Token",
           amount_change: teamReward,
-          wallet_address: teamWalletAddress,
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27", // Fix: Correct team ID
+          wallet_address: "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc",
+          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
         },
       ]);
-
-// Check if the insert was successful
-if (eventInsertError) {
-  console.error("❌ Error inserting into wallet_events:", eventInsertError);
-  setError("Failed to log transaction.");
-  return;
-}
-
-console.log("✅ Wallet events inserted successfully!");
-
+  
+      if (eventInsertError) {
+        console.error("❌ Error inserting into wallet_events:", eventInsertError);
+        setError("Failed to log transaction.");
+        return;
+      }
+  
+      console.log("✅ Wallet events inserted successfully!");
   
       setSuccessMessage("Tokens credited successfully!");
       setTimeout(() => setSuccessMessage(""), 5000);
@@ -215,17 +195,18 @@ console.log("✅ Wallet events inserted successfully!");
     }
   };
   
-  
   useEffect(() => {
+    let executed = false; // Prevent multiple executions
+  
     const fetchData = async () => {
-      if (!loading) {
+      if (!loading && !executed) {
+        executed = true;
         await updateTokenBalance();
       }
     };
   
-    fetchData(); // Call the async function inside useEffect
-  }, [publicKey, loading]);
-  
+    fetchData();
+  }, [publicKey, novel, chapter, loading]);
   
   
  

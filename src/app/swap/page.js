@@ -194,9 +194,9 @@ export default function SwapPage() {
                       </select>
                     </div>
 
-                    <button
-                      className="btn btn-warning w-100"
-                      onClick={handleSwap}
+                    <button 
+                      className="glass-button w-100" 
+                      onClick={handleSwap} 
                       disabled={loading}
                     >
                       {loading ? 'Swapping...' : 'Swap Coins'}
@@ -212,6 +212,37 @@ export default function SwapPage() {
       <footer className="bg-dark py-4 text-center text-white">
         <p>&copy; 2025 Sempai HQ. All rights reserved.</p>
       </footer>
+      <style jsx>{`
+    .glass-button {
+    background: rgba(243, 99, 22, 0.15); /* More transparency */
+    backdrop-filter: blur(15px); /* Stronger glass blur */
+    -webkit-backdrop-filter: blur(15px);
+    border: 2px solid rgba(243, 99, 22, 0.4);
+    padding: 14px 22px;
+    font-size: 17px;
+    font-weight: bold;
+    color: rgb(243, 99, 22); /* Fixes text color */
+    border-radius: 30px; /* Rounded shape */
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 6px 12px rgba(243, 99, 22, 0.35);
+}
+
+.glass-button:hover {
+    background: rgba(243, 99, 22, 0.5);
+    box-shadow: 0 8px 18px rgba(243, 99, 22, 0.4);
+    transform: translateY(-3px);
+}
+
+.glass-button:disabled {
+    background: rgba(243, 99, 22, 0.2);
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+
+`}</style>
     </div>
   );
 }
