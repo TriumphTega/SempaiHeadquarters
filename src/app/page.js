@@ -170,10 +170,8 @@ export default function Home() {
                 Creator Dashboard
               </button>
             ) : (
-              <Link href="/apply">
-                <a className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
+              <Link href="/apply" className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
                   Apply to be a Creator
-                </a>
               </Link>
             )
           ) : (
@@ -269,7 +267,7 @@ export default function Home() {
           <div className="image-container">
             {/* Conditional Rendering Based on Connection Status */}
             {connected ? (
-              <Link href="/keepItSimple" className="text-decoration-none">
+              <Link href="/keep-it-simple" className="text-decoration-none">
                 {/* Image */}
                 <img
                   src="/images/novel-4.jpg"

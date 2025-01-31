@@ -1,10 +1,69 @@
 'use client';
 
-import Head from "next/head";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
 
 export default function Haven() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This ensures the code is only run on the client side
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null; // Render nothing on the server-side
+  }
+
   return (
-    <>
+    <div>
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
+        {/* Brand Logo */}
+        <Link href="/" className="navbar-brand">
+          <img
+            src="/images/logo.jpg" // The path is correct if the image is in the public folder
+            alt="Sempai HQ"
+            className="navbar-logo"
+            style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+          />
+        </Link>
+
+        {/* Toggle Button for Mobile View */}
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        {/* Navbar Links */}
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav me-auto">
+            <li className="nav-item">
+              <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+                Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+                Swap
+              </Link>
+            </li>
+          </ul>
+
+          {/* Wallet and Creator Dashboard */}
+          <ul className="navbar-nav ms-auto">
+            {/* Add Wallet connect or other buttons here */}
+          </ul>
+        </div>
+      </nav>
+
       <Head>
         <title>Haven For the Otaku</title>
         <meta name="description" content="A home for anime, manga, and web novel lovers, powered by blockchain technology." />
@@ -82,7 +141,6 @@ export default function Haven() {
         .container {
           background-color: #000;
           color: #fff;
-          min-height: 100vh;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -116,6 +174,6 @@ export default function Haven() {
           font-weight: bold;
         }
       `}</style>
-    </>
+    </div>
   );
 }

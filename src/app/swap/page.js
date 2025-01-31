@@ -93,7 +93,12 @@ export default function SwapPage() {
         <div className="container">
           {/* Brand Logo */}
           <Link href="/" className="navbar-brand">
-            <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
+          <img
+            src="/images/logo.jpg"  // The path is correct if the image is in the public folder
+            alt="Sempai HQ"
+            className="navbar-logo"
+            style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+          />
           </Link>
           {/* Toggle Button for Mobile View */}
           <button
