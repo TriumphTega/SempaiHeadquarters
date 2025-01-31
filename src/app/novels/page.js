@@ -120,7 +120,7 @@ export default function NovelsPage() {
       <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>
         <div className="container">
          <h1 className="text-uppercase fw-bold" style={{ color: '#fff', fontFamily: 'Lora, serif' }}>
-          Explore Our Novels
+          Explore Our Collection
         </h1>
         <p className="text-muted mb-4" style={{ fontSize: '1.1rem', fontFamily: 'Open Sans, sans-serif' }}>
           Dive into a collection of captivating stories and immersive worlds.

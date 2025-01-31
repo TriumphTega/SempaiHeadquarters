@@ -107,7 +107,7 @@ export default function WriterApprovals() {
   // Rendering writer applications for superusers
   return (
     <div className="writer-approvals-container">
-  <h2 className="writer-approvals-title">Writer Applications</h2>
+  <h2 className="writer-approvals-title">Creator Applications</h2>
   {applications.length > 0 ? (
     applications.map((app) => (
       <div key={app.id} className="writer-approvals-card">
