@@ -13,54 +13,73 @@ export default function NovelsPage() {
   const [loading, setLoading] = useState(true);
   const [novels, setNovels] = useState([]); // Store novels
 
-  const checkBalance = async () => {
-    if (!publicKey) {
-      console.log("No public key found. Wallet might not be connected.");
+  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
+
+const checkBalance = async () => {
+  if (!publicKey) {
+    console.log("No public key found. Wallet might not be connected.");
+    return;
+  }
+
+  try {
+    console.log("Fetching balance for:", publicKey.toString());
+
+    // Get user_id
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', publicKey.toString())
+      .single();
+
+    if (userError) {
+      console.error('Error fetching user:', userError);
       return;
     }
 
-    try {
-      console.log("Fetching balance for:", publicKey.toString());
-
-      // Get the user_id from the 'users' table using the wallet address
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', publicKey.toString())
-        .single();
-
-      if (userError) {
-        console.error('Error fetching user from users table:', userError);
-        return;
-      }
-
-      if (!user) {
-        console.log('User not found in the users table.');
-        return;
-      }
-
-      const userId = user.id; // Use user.id as the user_id
-
-      // Fetch balance from 'wallet_balances' using the user_id
-      const { data: walletBalance, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("amount")
-        .eq("user_id", userId)
-        .single();
-
-      if (balanceError) {
-        console.error("Error fetching user balance:", balanceError);
-        return;
-      }
-
-      console.log("User balance:", walletBalance?.amount || 0);
-      setBalance(walletBalance?.amount || 0);
-      setLoading(false);
-    } catch (error) {
-      console.error("Unexpected error fetching balance:", error);
-      setLoading(false);
+    if (!user) {
+      console.log('User not found in the users table.');
+      return;
     }
-  };
+
+    const userId = user.id;
+
+    // Fetch wallet balance
+    const { data: walletBalance, error: balanceError } = await supabase
+      .from("wallet_balances")
+      .select("amount")
+      .eq("user_id", userId)
+      .single();
+
+    if (balanceError) {
+      console.error("Error fetching balance:", balanceError);
+      return;
+    }
+
+    setBalance(walletBalance?.amount || 0);
+
+    // Fetch pending withdrawals
+    const { data: pendingData, error: pendingError } = await supabase
+      .from("pending_withdrawals")
+      .select("amount")
+      .eq("user_id", userId)
+      .eq("status", "pending");
+
+    if (pendingError) {
+      console.error("Error fetching pending withdrawals:", pendingError);
+      return;
+    }
+
+    // Sum pending withdrawal amounts
+    const totalPending = pendingData.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+    setPendingWithdrawal(totalPending);
+
+    setLoading(false);
+  } catch (error) {
+    console.error("Unexpected error fetching balance:", error);
+    setLoading(false);
+  }
+};
+
 
   const handleWithdraw = async () => {
     if (!connected) {
@@ -224,21 +243,28 @@ export default function NovelsPage() {
           </p>
 
           {connected ? (
-            <h5 className="text-success">
-              Balance: {loading ? 'Loading...' : `${balance} SMP`}
-              <button onClick={checkBalance} className="btn btn-sm btn-outline-dark ms-2">
-                Refresh
-              </button>
-              <button onClick={handleWithdraw} className="btn btn-sm btn-outline-danger ms-2">
-                Withdraw
-              </button>
-            </h5>
-          ) : (
-            <div className="alert alert-danger">
-              Please connect your wallet to proceed.
-              <ConnectButton />
-            </div>
-          )}
+          <h5 className="text-success">
+            Balance: {loading ? 'Loading...' : `${balance} SMP`}
+            <button onClick={checkBalance} className="btn btn-sm btn-outline-dark ms-2">
+              Refresh
+            </button>
+            <button onClick={handleWithdraw} className="btn btn-sm btn-outline-danger ms-2">
+              Withdraw
+            </button>
+
+            {pendingWithdrawal > 0 && (
+              <p className="text-warning mt-2">
+                Pending Withdrawal: {pendingWithdrawal} SMP (Processing)
+              </p>
+            )}
+          </h5>
+        ) : (
+          <div className="alert alert-danger">
+            Please connect your wallet to proceed.
+            <ConnectButton />
+          </div>
+        )}
+
         </div>
       </header>
 

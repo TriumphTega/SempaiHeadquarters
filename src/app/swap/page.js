@@ -10,6 +10,8 @@ import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token"
 import Link from 'next/link';
 import { supabase } from '../../services/supabase/supabaseClient';
 import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
+import TreasuryBalance from "../../components/TreasuryBalance";
+
 
 
 
@@ -157,6 +159,8 @@ export default function SwapPage() {
         <div className="container">
           <h1 className="display-4">Coin Swap</h1>
           <p className="lead">Swap your coins easily and securely.</p>
+          <TreasuryBalance />
+
         </div>
       </header>
 
