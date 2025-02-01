@@ -1,0 +1,38 @@
+[debug] [2025-01-31T23:32:55.858Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-01-31T23:34:26.539Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[info] [Firebase Plugin] Starting Data Connect toolkit on port 50001
+[info] i  dataconnect: downloading dataconnect-emulator-1.7.7.exe... {"metadata":{"emulator":{"name":"dataconnect"},"message":"downloading dataconnect-emulator-1.7.7.exe..."}}
+[debug] [2025-01-31T23:34:27.979Z] >>> [apiv2][query] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v1.7.7 
+[debug] [2025-01-31T23:34:28.741Z] <<< [apiv2][status] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v1.7.7 200
+[debug] [2025-01-31T23:34:28.742Z] <<< [apiv2][body] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v1.7.7 [stream]
+[info] i  dataconnect: Removing outdated emulator files: dataconnect-emulator-1.7.6.exe {"metadata":{"emulator":{"name":"dataconnect"},"message":"Removing outdated emulator files: dataconnect-emulator-1.7.6.exe"}}
+[debug] [2025-01-31T23:34:35.269Z] I0201 00:34:35.263603   15532 control.go:59] [/emulator/Sempaithon 1598] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\mutations.gql [1213B] connector\queries.gql [1938B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.263603   15532 control.go:59] [/emulator/Sempaithon 1598] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\mutations.gql [1213B] connector\\queries.gql [1938B] \n"}}
+[debug] [2025-01-31T23:34:35.271Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-01-31T23:34:35.271Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-01-31T23:34:35.272Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\USER\\.cache\\firebase\\emulators\\dataconnect-emulator-1.7.7.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=c:\\Users\\USER\\Sempaithon-1\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\USER\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-1.7.7.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=c:\\\\Users\\\\USER\\\\Sempaithon-1\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-01-31T23:34:35.318Z] I0201 00:34:35.317542    4092 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.317542    4092 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-01-31T23:34:35.348Z] I0201 00:34:35.348469    4092 control.go:59] [/emulator/Sempaithon cda5] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\mutations.gql [1213B] connector\queries.gql [1938B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.348469    4092 control.go:59] [/emulator/Sempaithon cda5] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\mutations.gql [1213B] connector\\queries.gql [1938B] \n"}}
+[debug] [2025-01-31T23:34:35.370Z] I0201 00:34:35.369431    4092 codegen.go:82] [connector "default" javascriptSdk] Generating sources into "c:\\Users\\USER\\Sempaithon-1\\dataconnect-generated\\js\\default-connector"
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.369431    4092 codegen.go:82] [connector \"default\" javascriptSdk] Generating sources into \"c:\\\\Users\\\\USER\\\\Sempaithon-1\\\\dataconnect-generated\\\\js\\\\default-connector\"\n"}}
+[debug] [2025-01-31T23:34:35.374Z] I0201 00:34:35.374436    4092 collector.go:107] schema extensions wrote into "c:\\Users\\USER\\Sempaithon-1\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [65151B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.374436    4092 collector.go:107] schema extensions wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-1\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [65151B] \n"}}
+[debug] [2025-01-31T23:34:35.378Z] I0201 00:34:35.378434    4092 collector.go:107] connector "default" javascriptSdk wrote into "c:\\Users\\USER\\Sempaithon-1\\dataconnect-generated\\js\\default-connector"
+Generated sources: package.json [634B] README.md [2740B] index.d.ts [261B] esm\index.esm.js [169B] esm\package.json [17B] index.cjs.js [210B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.378434    4092 collector.go:107] connector \"default\" javascriptSdk wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-1\\\\dataconnect-generated\\\\js\\\\default-connector\"\nGenerated sources: package.json [634B] README.md [2740B] index.d.ts [261B] esm\\index.esm.js [169B] esm\\package.json [17B] index.cjs.js [210B] \n"}}
+[debug] [2025-01-31T23:34:35.454Z] I0201 00:34:35.453905    4092 installsdk.go:76] Running command: C:\nvm4w\nodejs\npm.cmd install file:dataconnect-generated\js\default-connector
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:35.453905    4092 installsdk.go:76] Running command: C:\\nvm4w\\nodejs\\npm.cmd install file:dataconnect-generated\\js\\default-connector\n"}}
+[debug] [2025-01-31T23:34:50.170Z] E0201 00:34:50.170060    4092 installsdk.go:78] Failed to install package: exit status 0xc000013a
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0201 00:34:50.170060    4092 installsdk.go:78] Failed to install package: exit status 0xc000013a\n"}}
+[debug] [2025-01-31T23:34:50.173Z] I0201 00:34:50.170060    4092 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:50.170060    4092 load.go:115] Finished reloading\n"}}
+[debug] [2025-01-31T23:34:50.276Z] I0201 00:34:50.276101    4092 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0201 00:34:50.276101    4092 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}

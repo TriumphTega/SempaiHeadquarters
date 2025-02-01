@@ -5,16 +5,18 @@ import { useRouter } from 'next/navigation';
 import BootstrapProvider from '../../components/BootstrapProvider';
 import ConnectButton from '../../components/ConnectButton'; // Assuming you have a button to connect wallet
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from 'next/link';
 import { supabase } from '../../services/supabase/supabaseClient';
+import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
 
 
 
-
+const connection = new Connection(RPC_URL);
 
 export default function SwapPage() {
-  const { connected, publicKey, wallet, disconnect } = useWallet(); // Use the wallet adapter's hook
+  const { connected, publicKey, wallet, disconnect, sendTransaction } = useWallet(); // Use the wallet adapter's hook
   const [amount, setAmount] = useState('');
   const [coinFrom, setCoinFrom] = useState('SOL');
   const [coinTo, setCoinTo] = useState('USDT');
@@ -27,25 +29,20 @@ export default function SwapPage() {
       console.log("No public key found. Wallet might not be connected.");
       return;
     }
-  
+
     try {
-      console.log("Fetching balance from users table for:", publicKey.toString());
-  
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("balance")
-        .eq("wallet_address", publicKey.toString())
-        .single();
-  
-      if (error) {
-        console.error("Error fetching user balance:", error);
+      const amethystAtaAddress = getAssociatedTokenAddressSync(AMETHYST_MINT_ADDRESS, publicKey);
+      const amethystAtaInfo = await connection.getAccountInfo(amethystAtaAddress);
+      if(!amethystAtaInfo){
+        console.log("user has no amethyst");
+        setBalance(0);
         return;
       }
-  
-      console.log("User balance fetched:", user?.balance || 0);
-      setBalance(user?.balance || 0); // Set balance (default to 0 if not found)
+
+      const amethystAta = unpackAccount(amethystAtaAddress, amethystAtaInfo);
+      setBalance(Number(amethystAta.amount)/1_000_000);
     } catch (error) {
-      console.error("Unexpected error fetching balance:", error);
+        console.error("Unexpected error fetching balance:", error);
     }
   };
   useEffect(() => {
@@ -53,7 +50,7 @@ export default function SwapPage() {
       checkBalance(); // Fetch balance from Supabase when wallet connects
     }
   }, [connected, publicKey]); // Run when connection changes
-    
+
 
 
   // Handle the coin swap
@@ -70,21 +67,44 @@ export default function SwapPage() {
     setLoading(true);
 
     try {
-      // Simulate swap process here
-      // In a real implementation, you would call a smart contract or API for swapping coins
       console.log(`Swapping ${amount} ${coinFrom} to ${coinTo}`);
-      setTimeout(() => {
-        alert('Swap successful!');
-        setLoading(false);
-      }, 2000);
+
+      const { transaction, blockhashInfo, error, message } = await fetch("/api/swap", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          userAddress: publicKey,
+          amethystAmount: parseFloat(amount)
+        })
+      }).then((r) => r.json());
+
+      if(error){
+        console.error(`${error}: ${message}`);
+        // TODO: show error
+        alert(`${error}: ${message}`);
+        return;
+      }
+      console.log(`received transaction: ${transaction}`);
+
+      const signature = await sendTransaction(
+        Transaction.from(Buffer.from(transaction, "base64")),
+        connection,
+      );
+      console.log(`signature: ${signature}`);
+
+      alert(`Swap successful! ${signature}`);
     } catch (error) {
       console.error('Error swapping coins:', error);
       alert('Swap failed. Please try again.');
+    }
+    finally {
       setLoading(false);
     }
   };
 
-    
+
 
   return (
     <div >
@@ -127,7 +147,7 @@ export default function SwapPage() {
               </li>
             </ul>
             {/* Wallet and Creator Dashboard */}
-          
+
           </div>
         </div>
       </nav>
@@ -154,7 +174,7 @@ export default function SwapPage() {
                   <div className='bubble-form'>
                     <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
                     <h5 className="text-success">
-                      Balance: {balance} SMP  
+                      Balance: {balance} SMP
                       <button onClick={checkBalance} className="btn btn-sm btn-outline-primary ms-2">
                         Refresh
                       </button>
@@ -199,9 +219,9 @@ export default function SwapPage() {
                       </select>
                     </div>
 
-                    <button 
-                      className="glass-button w-100" 
-                      onClick={handleSwap} 
+                    <button
+                      className="glass-button w-100"
+                      onClick={handleSwap}
                       disabled={loading}
                     >
                       {loading ? 'Swapping...' : 'Swap Coins'}
