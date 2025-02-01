@@ -1,0 +1,721 @@
+From a63a39d5bdd18af2367d14a97bb6305cb873bfaf Mon Sep 17 00:00:00 2001
+From: a <a>
+Date: Sat, 1 Feb 2025 04:57:47 +0530
+Subject: [PATCH] Implement swap page
+
+---
+ package-lock.json         | 339 ++++++++++++++++++++++++++++++++++++++
+ package.json              |   1 +
+ src/app/api/swap/route.js | 167 +++++++++++++++++++
+ src/app/swap/page.js      |  77 +++++----
+ src/constants.js          |   6 +
+ 5 files changed, 560 insertions(+), 30 deletions(-)
+ create mode 100644 src/app/api/swap/route.js
+ create mode 100644 src/constants.js
+
+diff --git a/package-lock.json b/package-lock.json
+index a58e16b..31f60ba 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,6 +9,7 @@
+       "version": "0.1.0",
+       "dependencies": {
+         "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
++        "@solana/spl-token": "^0.4.12",
+         "@solana/wallet-adapter-react": "^0.15.35",
+         "@solana/wallet-adapter-react-ui": "^0.9.35",
+         "@solana/wallet-adapter-wallets": "^0.19.32",
+@@ -6032,6 +6033,344 @@
+         "node": ">=5.10"
+       }
+     },
++    "node_modules/@solana/buffer-layout-utils": {
++      "version": "0.2.0",
++      "resolved": "https://registry.npmjs.org/@solana/buffer-layout-utils/-/buffer-layout-utils-0.2.0.tgz",
++      "integrity": "sha512-szG4sxgJGktbuZYDg2FfNmkMi0DYQoVjN2h7ta1W1hPrwzarcFLBq9UpX1UjNXsNpT9dn+chgprtWGioUAr4/g==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@solana/buffer-layout": "^4.0.0",
++        "@solana/web3.js": "^1.32.0",
++        "bigint-buffer": "^1.1.5",
++        "bignumber.js": "^9.0.1"
++      },
++      "engines": {
++        "node": ">= 10"
++      }
++    },
++    "node_modules/@solana/spl-token": {
++      "version": "0.4.12",
++      "resolved": "https://registry.npmjs.org/@solana/spl-token/-/spl-token-0.4.12.tgz",
++      "integrity": "sha512-K6CxzSoO1vC+WBys25zlSDaW0w4UFZO/IvEZquEI35A/PjqXNQHeVigmDCZYEJfESvYarKwsr8tYr/29lPtvaw==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@solana/buffer-layout": "^4.0.0",
++        "@solana/buffer-layout-utils": "^0.2.0",
++        "@solana/spl-token-group": "^0.0.7",
++        "@solana/spl-token-metadata": "^0.1.6",
++        "buffer": "^6.0.3"
++      },
++      "engines": {
++        "node": ">=16"
++      },
++      "peerDependencies": {
++        "@solana/web3.js": "^1.95.5"
++      }
++    },
++    "node_modules/@solana/spl-token-group": {
++      "version": "0.0.7",
++      "resolved": "https://registry.npmjs.org/@solana/spl-token-group/-/spl-token-group-0.0.7.tgz",
++      "integrity": "sha512-V1N/iX7Cr7H0uazWUT2uk27TMqlqedpXHRqqAbVO2gvmJyT0E0ummMEAVQeXZ05ZhQ/xF39DLSdBp90XebWEug==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@solana/codecs": "2.0.0-rc.1"
++      },
++      "engines": {
++        "node": ">=16"
++      },
++      "peerDependencies": {
++        "@solana/web3.js": "^1.95.3"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/codecs": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs/-/codecs-2.0.0-rc.1.tgz",
++      "integrity": "sha512-qxoR7VybNJixV51L0G1RD2boZTcxmwUWnKCaJJExQ5qNKwbpSyDdWfFJfM5JhGyKe9DnPVOZB+JHWXnpbZBqrQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-data-structures": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/codecs-strings": "2.0.0-rc.1",
++        "@solana/options": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/codecs-core": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-core/-/codecs-core-2.0.0-rc.1.tgz",
++      "integrity": "sha512-bauxqMfSs8EHD0JKESaNmNuNvkvHSuN3bbWAF5RjOfDu2PugxHrvRebmYauvSumZ3cTfQ4HJJX6PG5rN852qyQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/codecs-data-structures": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-data-structures/-/codecs-data-structures-2.0.0-rc.1.tgz",
++      "integrity": "sha512-rinCv0RrAVJ9rE/rmaibWJQxMwC5lSaORSZuwjopSUE6T0nb/MVg6Z1siNCXhh/HFTOg0l8bNvZHgBcN/yvXog==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/codecs-numbers": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-numbers/-/codecs-numbers-2.0.0-rc.1.tgz",
++      "integrity": "sha512-J5i5mOkvukXn8E3Z7sGIPxsThRCgSdgTWJDQeZvucQ9PT6Y3HiVXJ0pcWiOWAoQ3RX8e/f4I3IC+wE6pZiJzDQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/codecs-strings": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-strings/-/codecs-strings-2.0.0-rc.1.tgz",
++      "integrity": "sha512-9/wPhw8TbGRTt6mHC4Zz1RqOnuPTqq1Nb4EyuvpZ39GW6O2t2Q7Q0XxiB3+BdoEjwA2XgPw6e2iRfvYgqty44g==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "fastestsmallesttextencoderdecoder": "^1.0.22",
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/errors": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/errors/-/errors-2.0.0-rc.1.tgz",
++      "integrity": "sha512-ejNvQ2oJ7+bcFAYWj225lyRkHnixuAeb7RQCixm+5mH4n1IA4Qya/9Bmfy5RAAHQzxK43clu3kZmL5eF9VGtYQ==",
++      "license": "MIT",
++      "dependencies": {
++        "chalk": "^5.3.0",
++        "commander": "^12.1.0"
++      },
++      "bin": {
++        "errors": "bin/cli.mjs"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/@solana/options": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/options/-/options-2.0.0-rc.1.tgz",
++      "integrity": "sha512-mLUcR9mZ3qfHlmMnREdIFPf9dpMc/Bl66tLSOOWxw4ml5xMT2ohFn7WGqoKcu/UHkT9CrC6+amEdqCNvUqI7AA==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-data-structures": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/codecs-strings": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/chalk": {
++      "version": "5.4.1",
++      "resolved": "https://registry.npmjs.org/chalk/-/chalk-5.4.1.tgz",
++      "integrity": "sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==",
++      "license": "MIT",
++      "engines": {
++        "node": "^12.17.0 || ^14.13 || >=16.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/chalk/chalk?sponsor=1"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/commander": {
++      "version": "12.1.0",
++      "resolved": "https://registry.npmjs.org/commander/-/commander-12.1.0.tgz",
++      "integrity": "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/@solana/spl-token-group/node_modules/typescript": {
++      "version": "5.7.3",
++      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.7.3.tgz",
++      "integrity": "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==",
++      "license": "Apache-2.0",
++      "peer": true,
++      "bin": {
++        "tsc": "bin/tsc",
++        "tsserver": "bin/tsserver"
++      },
++      "engines": {
++        "node": ">=14.17"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata": {
++      "version": "0.1.6",
++      "resolved": "https://registry.npmjs.org/@solana/spl-token-metadata/-/spl-token-metadata-0.1.6.tgz",
++      "integrity": "sha512-7sMt1rsm/zQOQcUWllQX9mD2O6KhSAtY1hFR2hfFwgqfFWzSY9E9GDvFVNYUI1F0iQKcm6HmePU9QbKRXTEBiA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@solana/codecs": "2.0.0-rc.1"
++      },
++      "engines": {
++        "node": ">=16"
++      },
++      "peerDependencies": {
++        "@solana/web3.js": "^1.95.3"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/codecs": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs/-/codecs-2.0.0-rc.1.tgz",
++      "integrity": "sha512-qxoR7VybNJixV51L0G1RD2boZTcxmwUWnKCaJJExQ5qNKwbpSyDdWfFJfM5JhGyKe9DnPVOZB+JHWXnpbZBqrQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-data-structures": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/codecs-strings": "2.0.0-rc.1",
++        "@solana/options": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/codecs-core": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-core/-/codecs-core-2.0.0-rc.1.tgz",
++      "integrity": "sha512-bauxqMfSs8EHD0JKESaNmNuNvkvHSuN3bbWAF5RjOfDu2PugxHrvRebmYauvSumZ3cTfQ4HJJX6PG5rN852qyQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/codecs-data-structures": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-data-structures/-/codecs-data-structures-2.0.0-rc.1.tgz",
++      "integrity": "sha512-rinCv0RrAVJ9rE/rmaibWJQxMwC5lSaORSZuwjopSUE6T0nb/MVg6Z1siNCXhh/HFTOg0l8bNvZHgBcN/yvXog==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/codecs-numbers": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-numbers/-/codecs-numbers-2.0.0-rc.1.tgz",
++      "integrity": "sha512-J5i5mOkvukXn8E3Z7sGIPxsThRCgSdgTWJDQeZvucQ9PT6Y3HiVXJ0pcWiOWAoQ3RX8e/f4I3IC+wE6pZiJzDQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/codecs-strings": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/codecs-strings/-/codecs-strings-2.0.0-rc.1.tgz",
++      "integrity": "sha512-9/wPhw8TbGRTt6mHC4Zz1RqOnuPTqq1Nb4EyuvpZ39GW6O2t2Q7Q0XxiB3+BdoEjwA2XgPw6e2iRfvYgqty44g==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "fastestsmallesttextencoderdecoder": "^1.0.22",
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/errors": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/errors/-/errors-2.0.0-rc.1.tgz",
++      "integrity": "sha512-ejNvQ2oJ7+bcFAYWj225lyRkHnixuAeb7RQCixm+5mH4n1IA4Qya/9Bmfy5RAAHQzxK43clu3kZmL5eF9VGtYQ==",
++      "license": "MIT",
++      "dependencies": {
++        "chalk": "^5.3.0",
++        "commander": "^12.1.0"
++      },
++      "bin": {
++        "errors": "bin/cli.mjs"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/@solana/options": {
++      "version": "2.0.0-rc.1",
++      "resolved": "https://registry.npmjs.org/@solana/options/-/options-2.0.0-rc.1.tgz",
++      "integrity": "sha512-mLUcR9mZ3qfHlmMnREdIFPf9dpMc/Bl66tLSOOWxw4ml5xMT2ohFn7WGqoKcu/UHkT9CrC6+amEdqCNvUqI7AA==",
++      "license": "MIT",
++      "dependencies": {
++        "@solana/codecs-core": "2.0.0-rc.1",
++        "@solana/codecs-data-structures": "2.0.0-rc.1",
++        "@solana/codecs-numbers": "2.0.0-rc.1",
++        "@solana/codecs-strings": "2.0.0-rc.1",
++        "@solana/errors": "2.0.0-rc.1"
++      },
++      "peerDependencies": {
++        "typescript": ">=5"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/chalk": {
++      "version": "5.4.1",
++      "resolved": "https://registry.npmjs.org/chalk/-/chalk-5.4.1.tgz",
++      "integrity": "sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==",
++      "license": "MIT",
++      "engines": {
++        "node": "^12.17.0 || ^14.13 || >=16.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/chalk/chalk?sponsor=1"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/commander": {
++      "version": "12.1.0",
++      "resolved": "https://registry.npmjs.org/commander/-/commander-12.1.0.tgz",
++      "integrity": "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/@solana/spl-token-metadata/node_modules/typescript": {
++      "version": "5.7.3",
++      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.7.3.tgz",
++      "integrity": "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==",
++      "license": "Apache-2.0",
++      "peer": true,
++      "bin": {
++        "tsc": "bin/tsc",
++        "tsserver": "bin/tsserver"
++      },
++      "engines": {
++        "node": ">=14.17"
++      }
++    },
+     "node_modules/@solana/wallet-adapter-alpha": {
+       "version": "0.1.10",
+       "resolved": "https://registry.npmjs.org/@solana/wallet-adapter-alpha/-/wallet-adapter-alpha-0.1.10.tgz",
+diff --git a/package.json b/package.json
+index 20f17fb..2d0a6a1 100644
+--- a/package.json
++++ b/package.json
+@@ -10,6 +10,7 @@
+   },
+   "dependencies": {
+     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
++    "@solana/spl-token": "^0.4.12",
+     "@solana/wallet-adapter-react": "^0.15.35",
+     "@solana/wallet-adapter-react-ui": "^0.9.35",
+     "@solana/wallet-adapter-wallets": "^0.19.32",
+diff --git a/src/app/api/swap/route.js b/src/app/api/swap/route.js
+new file mode 100644
+index 0000000..b955019
+--- /dev/null
++++ b/src/app/api/swap/route.js
+@@ -0,0 +1,167 @@
++import {
++  Connection,
++  ComputeBudgetProgram,
++  Keypair,
++  PublicKey,
++  SystemProgram,
++  Transaction,
++  LAMPORTS_PER_SOL,
++} from "@solana/web3.js";
++import {
++  createAssociatedTokenAccountIdempotentInstruction,
++  createBurnInstruction,
++  createCloseAccountInstruction,
++  createTransferInstruction,
++  getAssociatedTokenAddressSync,
++  unpackAccount,
++} from "@solana/spl-token";
++import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
++
++const TREASURY_WALLET = new PublicKey(
++  "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58",
++);
++
++const BACKEND_KEYPAIR = Keypair.fromSecretKey(
++  Uint8Array.from(JSON.parse(process.env.BACKEND_WALLET_KEYPAIR ?? "[]")),
++);
++
++const connection = new Connection(RPC_URL);
++
++export async function POST(req) {
++  const body = await req.json();
++
++  const { userAddress, amethystAmount } = body ?? {};
++
++  let user;
++  try {
++    user = new PublicKey(userAddress);
++  } catch (e) {
++    return Response.json(
++      {
++        error: "invalid public key",
++        message: `could not parse ${userAddress} as public key: ${e?.message}`,
++      },
++      { status: 400 },
++    );
++  }
++
++  const amethystAta = {
++    treasury: getAssociatedTokenAddressSync(
++      AMETHYST_MINT_ADDRESS,
++      TREASURY_WALLET,
++    ),
++    user: getAssociatedTokenAddressSync(AMETHYST_MINT_ADDRESS, user),
++  };
++  const smpAta = {
++    treasury: getAssociatedTokenAddressSync(
++      SMP_MINT_ADDRESS,
++      BACKEND_KEYPAIR.publicKey,
++    ),
++    user: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, user),
++  };
++
++  const [userAmethystAccountInfo, userSmbAccountInfo] =
++    await connection.getMultipleAccountsInfo([amethystAta.user, smpAta.user]);
++
++  if (!userAmethystAccountInfo)
++    return Response.json(
++      {
++        error: "could not fetch user's amethyst token account",
++        message: `${amethystAta.user} does not exist`,
++      },
++      { status: 400 },
++    );
++
++  const userAmethystAccount = unpackAccount(
++    amethystAta.user,
++    userAmethystAccountInfo,
++  );
++
++  let rawAmethystAmount;
++  if (typeof amethystAmount === "number")
++    rawAmethystAmount = BigInt(Math.floor(amethystAmount * 1_000_000));
++  else rawAmethystAmount = userAmethystAccount.amount;
++
++  if (rawAmethystAmount > userAmethystAccount.amount)
++    return Response.json(
++      {
++        error: "insufficient balance",
++        message: `${user} is swapping ${rawAmethystAmount} but has ${userAmethystAccount.amount}`,
++      },
++      { status: 400 },
++    );
++
++  const rawSmpAmount = (rawAmethystAmount * 125n) / 100n;
++  const amethystBurnAmount = (rawAmethystAmount * 25n) / 100n;
++  const amethystTransferAmount = rawAmethystAmount - amethystBurnAmount;
++
++  const transaction = new Transaction();
++  // add priority fees
++  transaction.add(
++    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
++  );
++
++  // create smb ata if it doesn't exist
++  if (!userSmbAccountInfo)
++    transaction.add(
++      createAssociatedTokenAccountIdempotentInstruction(
++        user,
++        smpAta.user,
++        user,
++        SMP_MINT_ADDRESS,
++      ),
++    );
++
++  transaction.add(
++    // transfer 75% amethyst from user -> treasury
++    createTransferInstruction(
++      amethystAta.user,
++      amethystAta.treasury,
++      user,
++      amethystTransferAmount,
++    ),
++
++    // burn 25% amethyst
++    createBurnInstruction(
++      amethystAta.user,
++      AMETHYST_MINT_ADDRESS,
++      user,
++      amethystBurnAmount,
++    ),
++
++    // transfer smp from treasury -> user
++    createTransferInstruction(
++      smpAta.treasury,
++      smpAta.user,
++      BACKEND_KEYPAIR.publicKey,
++      rawSmpAmount,
++    ),
++  );
++
++  // close token account if empty
++  if (userAmethystAccount.amount === rawAmethystAmount)
++    transaction.add(
++      createCloseAccountInstruction(amethystAta.user, user, user),
++    );
++
++  // charge user 0.01 sol
++  transaction.add(
++    SystemProgram.transfer({
++      fromPubkey: user,
++      toPubkey: TREASURY_WALLET,
++      lamports: Math.floor(0.01 * LAMPORTS_PER_SOL),
++    }),
++  );
++
++  const blockhashInfo = await connection.getLatestBlockhash("finalized");
++  transaction.feePayer = user;
++  transaction.recentBlockhash = blockhashInfo.blockhash;
++  transaction.partialSign(BACKEND_KEYPAIR);
++
++  return Response.json({
++    blockhashInfo,
++    transaction: transaction
++      .serialize({ requireAllSignatures: false })
++      .toString("base64"),
++  });
++}
+diff --git a/src/app/swap/page.js b/src/app/swap/page.js
+index 5dedcd8..35056d1 100644
+--- a/src/app/swap/page.js
++++ b/src/app/swap/page.js
+@@ -6,15 +6,17 @@ import BootstrapProvider from '../../components/BootstrapProvider';
+ import ConnectButton from '../../components/ConnectButton'; // Assuming you have a button to connect wallet
+ import { useWallet } from '@solana/wallet-adapter-react';
+ import { Connection, PublicKey } from '@solana/web3.js';
++import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
+ import Link from 'next/link';
+ import { supabase } from '../../services/supabase/supabaseClient';
++import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
+ 
+ 
+ 
+-
++const connection = new Connection(RPC_URL);
+ 
+ export default function SwapPage() {
+-  const { connected, publicKey, wallet, disconnect } = useWallet(); // Use the wallet adapter's hook
++  const { connected, publicKey, wallet, disconnect, sendTransaction } = useWallet(); // Use the wallet adapter's hook
+   const [amount, setAmount] = useState('');
+   const [coinFrom, setCoinFrom] = useState('SOL');
+   const [coinTo, setCoinTo] = useState('USDT');
+@@ -27,25 +29,20 @@ export default function SwapPage() {
+       console.log("No public key found. Wallet might not be connected.");
+       return;
+     }
+-  
++
+     try {
+-      console.log("Fetching balance from users table for:", publicKey.toString());
+-  
+-      const { data: user, error } = await supabase
+-        .from("users")
+-        .select("balance")
+-        .eq("wallet_address", publicKey.toString())
+-        .single();
+-  
+-      if (error) {
+-        console.error("Error fetching user balance:", error);
++      const amethystAtaAddress = getAssociatedTokenAddressSync(AMETHYST_MINT_ADDRESS, publicKey);
++      const amethystAtaInfo = await connection.getAccountInfo(amethystAtaAddress);
++      if(!amethystAtaInfo){
++        console.log("user has no amethyst");
++        setBalance(0);
+         return;
+       }
+-  
+-      console.log("User balance fetched:", user?.balance || 0);
+-      setBalance(user?.balance || 0); // Set balance (default to 0 if not found)
++
++      const amethystAta = unpackAccount(amethystAtaAddress, amethystAtaInfo);
++      setBalance(Number(amethystAta.amount)/1_000_000);
+     } catch (error) {
+-      console.error("Unexpected error fetching balance:", error);
++        console.error("Unexpected error fetching balance:", error);
+     }
+   };
+   useEffect(() => {
+@@ -53,7 +50,7 @@ export default function SwapPage() {
+       checkBalance(); // Fetch balance from Supabase when wallet connects
+     }
+   }, [connected, publicKey]); // Run when connection changes
+-    
++
+ 
+ 
+   // Handle the coin swap
+@@ -70,21 +67,41 @@ export default function SwapPage() {
+     setLoading(true);
+ 
+     try {
+-      // Simulate swap process here
+-      // In a real implementation, you would call a smart contract or API for swapping coins
+       console.log(`Swapping ${amount} ${coinFrom} to ${coinTo}`);
+-      setTimeout(() => {
+-        alert('Swap successful!');
+-        setLoading(false);
+-      }, 2000);
++
++      const { transaction, blockhashInfo, error, message } = await fetch("/api/swap", {
++        method: "POST",
++        headers: {
++          "content-type": "application/json",
++        },
++        body: JSON.stringify({
++          userAddress: publicKey,
++          amethystAmount: parseFloat(amount)
++        })
++      }).then((r) => r.json());
++
++      if(error){
++        console.error(`${error}: ${message}`);
++        // TODO: show error
++        alert(`${error}: ${message}`);
++        return;
++      }
++      console.log(`received transaction: ${transaction}`);
++
++      const signature = await sendTransaction(Buffer.from(transaction, "base64"), connection);
++      console.log(`signature: ${signature}`);
++
++      alert(`Swap successful! ${signature}`);
+     } catch (error) {
+       console.error('Error swapping coins:', error);
+       alert('Swap failed. Please try again.');
++    }
++    finally {
+       setLoading(false);
+     }
+   };
+ 
+-    
++
+ 
+   return (
+     <div >
+@@ -127,7 +144,7 @@ export default function SwapPage() {
+               </li>
+             </ul>
+             {/* Wallet and Creator Dashboard */}
+-          
++
+           </div>
+         </div>
+       </nav>
+@@ -154,7 +171,7 @@ export default function SwapPage() {
+                   <div className='bubble-form'>
+                     <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
+                     <h5 className="text-success">
+-                      Balance: {balance} SMP  
++                      Balance: {balance} SMP
+                       <button onClick={checkBalance} className="btn btn-sm btn-outline-primary ms-2">
+                         Refresh
+                       </button>
+@@ -199,9 +216,9 @@ export default function SwapPage() {
+                       </select>
+                     </div>
+ 
+-                    <button 
+-                      className="glass-button w-100" 
+-                      onClick={handleSwap} 
++                    <button
++                      className="glass-button w-100"
++                      onClick={handleSwap}
+                       disabled={loading}
+                     >
+                       {loading ? 'Swapping...' : 'Swap Coins'}
+diff --git a/src/constants.js b/src/constants.js
+new file mode 100644
+index 0000000..1c8b7af
+--- /dev/null
++++ b/src/constants.js
+@@ -0,0 +1,6 @@
++import { PublicKey } from "@solana/web3.js";
++
++export const AMETHYST_MINT_ADDRESS = new PublicKey("4TxguLvR4vXwpS4CJXEemZ9DUhVYjhmsaTkqJkYrpump");
++export const SMP_MINT_ADDRESS = new PublicKey("SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor");
++
++export const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=ad8457f8-9c51-4122-95d4-91b15728ea90";
+-- 
+2.47.1.windows.1
+
