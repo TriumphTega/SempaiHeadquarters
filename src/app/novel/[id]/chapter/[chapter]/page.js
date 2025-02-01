@@ -24,55 +24,90 @@ export default function ChapterPage() {
   const updateTokenBalance = async () => {
     try {
       console.log("Fetching novel with ID:", id);
-      
+  
       if (!publicKey || !novel || !chapter) return;
   
       console.log("Fetching user, novel owner, and team details...");
   
-      // Single query to fetch user, novel owner, and team balance
-      const { data: users, error: usersError } = await supabase
+      // Step 1: Fetch the user based on the connected wallet
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, wallet_address, balance")
-        .in("id", [publicKey.toString(), novel.user_id, "33e4387d-5964-4418-98e2-225630a4fcef"]);
+        .eq("wallet_address", publicKey.toString())
+        .single();  // We expect a single result
   
-      if (usersError || !users || users.length < 3) {
-        console.error("Error fetching users:", usersError);
+      if (userError || !userData) {
+        console.error("Error fetching user:", userError);
         return;
       }
   
-      const user = users.find(u => u.wallet_address === publicKey.toString());
-      const novelOwner = users.find(u => u.id === novel.user_id);
-      const team = users.find(u => u.id === "33e4387d-5964-4418-98e2-225630a4fcef");
+      const user = userData;
+      console.log("User found:", user);
   
-      if (!user || !novelOwner || !team) {
-        console.error("Some user data is missing.");
+      // Step 2: Fetch the novel owner using the novel's user_id
+      const { data: novelOwnerData, error: novelOwnerError } = await supabase
+        .from("novels")
+        .select("user_id")
+        .eq("id", novel.id)
+        .single();  // We expect a single result
+  
+      if (novelOwnerError || !novelOwnerData) {
+        console.error("Error fetching novel owner:", novelOwnerError);
         return;
       }
   
-      console.log("User, novel owner, and team found:", { user, novelOwner, team });
+      const novelOwnerId = novelOwnerData.user_id;
+      const { data: novelOwner, error: novelOwnerBalanceError } = await supabase
+        .from("users")
+        .select("id, wallet_address, balance")
+        .eq("id", novelOwnerId)
+        .single();
+  
+      if (novelOwnerBalanceError || !novelOwner) {
+        console.error("Error fetching novel owner balance:", novelOwnerBalanceError);
+        return;
+      }
+  
+      console.log("Novel owner found:", novelOwner);
+  
+      // Step 3: Use the predefined team ID (no need to fetch)
+      const teamId = "33e4387d-5964-4418-98e2-225630a4fcef";
+      const { data: team, error: teamError } = await supabase
+        .from("users")
+        .select("id, wallet_address, balance")
+        .eq("id", teamId)
+        .single();
+  
+      if (teamError || !team) {
+        console.error("Error fetching team:", teamError);
+        return;
+      }
+  
+      console.log("Team found:", team);
   
       const eventDetails = `${publicKey}${novel.title}${chapter}`.replace(/\s+/g, '');
       console.log("Generated event details:", eventDetails);
   
-      // Check if the event already exists
+      // Step 4: Check if the event already exists in wallet_events
       const { data: existingEvent, error: eventError } = await supabase
-        .from("wallet_events")
-        .select("id")
-        .eq("event_details", eventDetails)
-        .eq("wallet_address", publicKey)
-        .maybeSingle();
-  
-      if (eventError && eventError.code !== "PGRST116") {
-        console.error("Error checking wallet_events:", eventError);
-        return;
+      .from("wallet_events")
+      .select("id")  // Selecting "id" just to verify the existence of the event
+      .eq("event_details", eventDetails)  // Check for matching event_details
+      .eq("wallet_address", publicKey.toString())  // Check for matching wallet_address
+      .maybeSingle();  // We expect at most one result
+
+      if (eventError) {
+      console.error("Error checking wallet_events:", eventError);
+      return;
       }
-  
+
       if (existingEvent) {
-        console.log("⚠️ You've been credited before.");
-        setWarningMessage("⚠️ You've been credited for this chapter before.");
-        setTimeout(() => setWarningMessage(""), 5000);
-        return;
+      console.log("⚠️ You've been credited before.");
+      setWarningMessage("⚠️ You've been credited for this chapter before.");
+      setTimeout(() => setWarningMessage(""), 5000);
+      return;  // Don't credit to anyone if the event already exists
       }
+
   
       console.log("No existing event. Proceeding with transaction...");
   
@@ -207,6 +242,8 @@ export default function ChapterPage() {
   
     fetchData();
   }, [publicKey, novel, chapter, loading]);
+  
+  
   
   
  
