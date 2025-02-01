@@ -18,8 +18,8 @@ const connection = new Connection(RPC_URL);
 export default function SwapPage() {
   const { connected, publicKey, wallet, disconnect, sendTransaction } = useWallet(); // Use the wallet adapter's hook
   const [amount, setAmount] = useState('');
-  const [coinFrom, setCoinFrom] = useState('SOL');
-  const [coinTo, setCoinTo] = useState('USDT');
+  const [coinFrom, setCoinFrom] = useState('Amethyst');
+  const [coinTo, setCoinTo] = useState('SMP');
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -174,7 +174,7 @@ export default function SwapPage() {
                   <div className='bubble-form'>
                     <h4 className=" mb-4 form-label">Swap {coinFrom} for {coinTo}</h4>
                     <h5 className="text-success">
-                      Balance: {balance} SMP
+                      Balance: {balance} Amethyst
                       <button onClick={checkBalance} className="btn btn-sm btn-outline-primary ms-2">
                         Refresh
                       </button>
@@ -200,8 +200,8 @@ export default function SwapPage() {
                         value={coinFrom}
                         onChange={(e) => setCoinFrom(e.target.value)}
                       >
-                        <option value="SOL">Solana (SOL)</option>
-                        <option value="USDT">Tether (USDT)</option>
+                        <option value="Amethyst">Amethyst</option>
+                        <option value="SMP">SMP</option>
                         {/* Add more coins as needed */}
                       </select>
                     </div>
@@ -213,8 +213,8 @@ export default function SwapPage() {
                         value={coinTo}
                         onChange={(e) => setCoinTo(e.target.value)}
                       >
-                        <option value="USDT">Tether (USDT)</option>
-                        <option value="SOL">Solana (SOL)</option>
+                        <option value="SMP">SMP</option>
+                        <option value="Amethyst">Amethyst</option>
                         {/* Add more coins as needed */}
                       </select>
                     </div>
