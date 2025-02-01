@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import BootstrapProvider from '../../components/BootstrapProvider';
 import ConnectButton from '../../components/ConnectButton'; // Assuming you have a button to connect wallet
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from 'next/link';
 import { supabase } from '../../services/supabase/supabaseClient';
@@ -88,7 +88,10 @@ export default function SwapPage() {
       }
       console.log(`received transaction: ${transaction}`);
 
-      const signature = await sendTransaction(Buffer.from(transaction, "base64"), connection);
+      const signature = await sendTransaction(
+        Transaction.from(Buffer.from(transaction, "base64")),
+        connection,
+      );
       console.log(`signature: ${signature}`);
 
       alert(`Swap successful! ${signature}`);
