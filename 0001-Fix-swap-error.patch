@@ -1,0 +1,37 @@
+From 72d890c3ce03d2d893608563eb44f9e82d1af400 Mon Sep 17 00:00:00 2001
+From: a <a>
+Date: Sat, 1 Feb 2025 06:12:22 +0530
+Subject: [PATCH] Fix swap error
+
+---
+ src/app/swap/page.js | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/app/swap/page.js b/src/app/swap/page.js
+index 35056d1..6e2d380 100644
+--- a/src/app/swap/page.js
++++ b/src/app/swap/page.js
+@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
+ import BootstrapProvider from '../../components/BootstrapProvider';
+ import ConnectButton from '../../components/ConnectButton'; // Assuming you have a button to connect wallet
+ import { useWallet } from '@solana/wallet-adapter-react';
+-import { Connection, PublicKey } from '@solana/web3.js';
++import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+ import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
+ import Link from 'next/link';
+ import { supabase } from '../../services/supabase/supabaseClient';
+@@ -88,7 +88,10 @@ export default function SwapPage() {
+       }
+       console.log(`received transaction: ${transaction}`);
+ 
+-      const signature = await sendTransaction(Buffer.from(transaction, "base64"), connection);
++      const signature = await sendTransaction(
++        Transaction.from(Buffer.from(transaction, "base64")),
++        connection,
++      );
+       console.log(`signature: ${signature}`);
+ 
+       alert(`Swap successful! ${signature}`);
+-- 
+2.47.1.windows.1
+
