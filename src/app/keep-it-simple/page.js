@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import LoadingPage from '../../components/LoadingPage';
 
 export default function Haven() {
   const [isClient, setIsClient] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // This ensures the code is only run on the client side
@@ -14,8 +16,16 @@ export default function Haven() {
 
   if (!isClient) {
     return null; // Render nothing on the server-side
-  }
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 1000); // 1 second delay
+  
+      return () => clearTimeout(timer); // Cleanup the timer when the component unmounts
+    }, []);
 
+  }
+ 
   return (
     <div>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">

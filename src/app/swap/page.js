@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { supabase } from '../../services/supabase/supabaseClient';
 import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
 import TreasuryBalance from "../../components/TreasuryBalance";
+import LoadingPage from '../../components/LoadingPage';
 
 
 
@@ -106,7 +107,9 @@ export default function SwapPage() {
     }
   };
 
-
+ if (loading) {
+    return <LoadingPage />;
+  }
 
   return (
     <div >

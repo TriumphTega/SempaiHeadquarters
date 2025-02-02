@@ -1,45 +1,47 @@
-/* Container for the loading screen */
+/* LoadingPage.css */
+
 .loading-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 0.5s ease-in-out;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, rgb(243, 99, 22), black);
+  flex-direction: column;
+}
+
+.hidden {
+  display: none;
+}
+
+.spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: spin 2s linear infinite;
+  border-radius: 50%; /* Make the container of the logo circular */
+  padding: 20px; /* Padding around the logo to give it space */
+  background-color: white; /* Make the background of the spinner white */
+}
+
+.logo {
+  width: 100px; /* Adjust based on your logo size */
+  height: 100px; /* Adjust based on your logo size */
+  border-radius: 50%; /* Make the logo itself circular */
+}
+
+.loading-text {
+  color: white;
+  font-size: 1.5rem;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+  color: #fff;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
-  
-  .hidden {
-    opacity: 0;
-    visibility: hidden;
+  100% {
+    transform: rotate(360deg);
   }
-  
-  /* Spinner styles */
-  .spinner {
-    border: 8px solid rgba(255, 255, 255, 0.1);
-    border-top: 8px solid #f39c12; /* Orange color */
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1.5s linear infinite;
-  }
-  
-  /* Spinner animation */
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  /* Loading text styling */
-  .loading-text {
-    color: #fff;
-    font-size: 24px;
-    font-weight: bold;
-    margin-top: 20px;
-    font-family: 'Arial', sans-serif;
-  }
-  
+}

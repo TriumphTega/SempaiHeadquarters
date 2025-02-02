@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import './LoadingPage.css'; // Import the CSS file for styling
@@ -15,7 +15,9 @@ export default function LoadingPage() {
 
   return (
     <div className={loading ? 'loading-container' : 'loading-container hidden'}>
-      <div className="spinner"></div>
+      <div className="spinner">
+        <img src="images/logo.jpg" alt="Logo" className="logo" />
+      </div>
       <h2 className="loading-text">Loading...</h2>
     </div>
   );

@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { supabase } from '../../services/supabase/supabaseClient';
 import ConnectButton from '../../components/ConnectButton'; // Ensure this component exists
 import { v4 as uuidv4 } from 'uuid'; // To generate unique transaction IDs
+import LoadingPage from '../../components/LoadingPage';
 
 export default function NovelsPage() {
   const { connected, publicKey } = useWallet(); // Solana wallet hook
@@ -183,6 +184,7 @@ const checkBalance = async () => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -190,6 +192,10 @@ const checkBalance = async () => {
     }
     fetchNovels();
   }, [connected, publicKey]);
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   return (
     <div className="bg-black">

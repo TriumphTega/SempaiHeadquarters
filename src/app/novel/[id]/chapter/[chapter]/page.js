@@ -8,6 +8,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import { supabase } from '../../../../../services/supabase/supabaseClient';
+import LoadingPage from '../../../../../components/LoadingPage';
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from '@solana/wallet-adapter-react';
+import LoadingPage from '../../../components/LoadingPage';
 
 
 export default function NovelPage() {
@@ -147,6 +148,7 @@ const renderComments = (parentId = null) => {
   const key = parentId === null ? "root" : String(parentId);
 
   const filteredComments = comments.filter((comment) => comment.parent_id === parentId);
+   
 
   return (
     <>
@@ -205,13 +207,9 @@ const renderComments = (parentId = null) => {
   
   
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <h2 className="text-white">Loading...</h2>
-      </div>
-    );
-  }
+if (loading) {
+  return <LoadingPage />;
+}
 
   if (!novel) {
     return (
