@@ -743,3 +743,7 @@ h2 {
   color: #ffffff;
   margin-top: 50px;
 }
+.comment-box, .reply-box {
+  max-height: 150px; /* Adjust this value */
+  overflow-y: auto;
+}

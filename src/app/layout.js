@@ -23,6 +23,8 @@ export default function RootLayout({ children }) {
           {children}
         </WalletProvider>
       </body>
+
+
     </html>
   );
 }
