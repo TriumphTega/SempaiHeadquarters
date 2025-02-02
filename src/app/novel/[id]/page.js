@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../services/supabase/supabaseClient";
+import { useWallet } from '@solana/wallet-adapter-react';
+
 
 export default function NovelPage() {
   const { id } = useParams(); // Get the novel ID from the URL
@@ -13,6 +15,8 @@ export default function NovelPage() {
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null); // Track which comment is being replied to
   const [showMoreReplies, setShowMoreReplies] = useState({}); // Object to track 'show more' state per comment
+  const { connected, publicKey } = useWallet(); // Get wallet publicKey
+  
 
   // Toggle the show-more state for replies of a given comment (identified by its parentId)
   const toggleShowMoreReplies = (groupKey) => {
@@ -83,7 +87,7 @@ export default function NovelPage() {
     if (!newComment.trim()) return;
 
     // Get the wallet address and ensure it's connected
-    const walletAddress = window.solana?.publicKey?.toString();
+    const walletAddress = publicKey.toString();
     if (!walletAddress) {
       console.error("Wallet not connected.");
       return;
