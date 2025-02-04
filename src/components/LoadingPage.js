@@ -18,7 +18,7 @@ export default function LoadingPage() {
       <div className="spinner">
         <img src="images/logo.jpg" alt="Logo" className="logo" />
       </div>
-      <h2 className="loading-text">Loading...</h2>
+      <h6 className="loading-text">Loading...</h6>
     </div>
   );
 }

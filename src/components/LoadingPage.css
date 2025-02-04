@@ -19,7 +19,7 @@
   align-items: center;
   animation: spin 2s linear infinite;
   border-radius: 50%; /* Make the container of the logo circular */
-  padding: 20px; /* Padding around the logo to give it space */
+  padding: 0px; /* Padding around the logo to give it space */
   background-color: white; /* Make the background of the spinner white */
 }
 

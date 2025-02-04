@@ -6,6 +6,10 @@ import Link from "next/link";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from '@solana/wallet-adapter-react';
 import LoadingPage from '../../../components/LoadingPage';
+import NovelCommentSection from '../../../components/Comments/NovelCommentSection';
+
+
+
 
 
 export default function NovelPage() {
@@ -19,24 +23,8 @@ export default function NovelPage() {
   const { connected, publicKey } = useWallet(); // Get wallet publicKey
   
 
-  // Toggle the show-more state for replies of a given comment (identified by its parentId)
-  const toggleShowMoreReplies = (groupKey) => {
-    setShowMoreReplies((prev) => ({
-      ...prev,
-      [groupKey]: !prev[groupKey],
-    }));
-  };
-  
 
-  // Helper to format username
-  const formatUsername = (username) => {
-    if (username.length > 15) {
-      const firstThree = username.slice(0, 3);
-      const lastThree = username.slice(-3);
-      return `${firstThree}****${lastThree}`;
-    }
-    return username;
-  };
+  
 
   // Fetch novel data on mount
   useEffect(() => {
@@ -63,146 +51,11 @@ export default function NovelPage() {
     fetchNovel();
   }, [id]);
 
-  // Fetch comments once the novel is loaded
-  useEffect(() => {
-    if (!novel) return;
-    const fetchComments = async () => {
-      const { data, error } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("novel_id", id)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching comments:", error);
-      } else {
-        setComments(data);
-      }
-    };
-
-    fetchComments();
-  }, [novel, id]);
-
-  // Handle comment or reply submission
-  const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
-
-    // Get the wallet address and ensure it's connected
-    const walletAddress = publicKey.toString();
-    if (!walletAddress) {
-      console.error("Wallet not connected.");
-      return;
-    }
-
-    try {
-      // Fetch user data by wallet address
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id, name") // Assuming 'name' holds the username
-        .eq("wallet_address", walletAddress)
-        .single();
-
-      if (userError) {
-        console.error("Error fetching user data:", userError.message);
-        return;
-      }
-
-      if (!userData) {
-        console.error("User not found for the provided wallet address.");
-        return;
-      }
-
-      const user_id = userData.id;
-      const username = userData.name;
-
-      // Insert the comment into Supabase
-      const { data, error } = await supabase
-        .from("comments")
-        .insert([
-          {
-            user_id,
-            username, // Store username if needed
-            novel_id: id,
-            chapter_key: null,
-            content: newComment,
-            parent_id: replyingTo, // Set parent_id for replies; null for top-level comments
-          },
-        ])
-        .select();
-
-      if (error) {
-        console.error("Error posting comment:", error.message);
-      } else {
-        setComments((prevComments) => [...prevComments, data[0]]);
-        setNewComment("");
-        setReplyingTo(null);
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error.message);
-    }
-  };
-
-  // Recursive function to render comments and their replies
-  // Recursive function to render comments and their replies
-const renderComments = (parentId = null) => {
-  const key = parentId === null ? "root" : String(parentId);
-
-  const filteredComments = comments.filter((comment) => comment.parent_id === parentId);
+  
+  
    
 
-  return (
-    <>
-      {filteredComments.map((comment) => (
-        <div
-          key={comment.id}
-          className="bg-dark text-white p-2 rounded mb-2"
-          style={{ marginLeft: parentId ? 15 : 0 }}
-        >
-          <p className="mb-1">
-            <strong>{formatUsername(comment.username)}</strong>: {comment.content}
-          </p>
-          <button
-            className="btn btn-sm btn-outline-light"
-            onClick={() => setReplyingTo(comment.id)}
-          >
-            Reply
-          </button>
-
-          {/* Reply Form */}
-          {replyingTo === comment.id && (
-            <div className="mt-2">
-              <textarea
-                className="form-control reply-box"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write your reply..."
-              />
-              <button className="btn btn-primary mt-2" onClick={handleCommentSubmit}>
-                Submit Reply
-              </button>
-            </div>
-          )}
-
-          {/* Show/Hide Replies */}
-          <div className="mt-2">
-            <button
-              className="btn btn-sm btn-outline-light"
-              onClick={() => toggleShowMoreReplies(comment.id)}
-            >
-              {showMoreReplies[comment.id] ? "Hide Replies" : "Show Replies"}
-            </button>
-          </div>
-
-          {/* Render Replies if the showMoreReplies is true for this comment */}
-          {showMoreReplies[comment.id] && (
-            <div className="ms-3">{renderComments(comment.id)}</div>
-          )}
-        </div>
-      ))}
-    </>
-  );
-};
-
+ 
   
   
   
@@ -277,26 +130,7 @@ if (loading) {
           ))}
         </div>
 
-        {/* Comments Section */}
-        <div className="mt-5">
-          <h3 className="text-white">Comments</h3>
-          <div className="comments-container">{renderComments()}</div>
-          {/* New Comment Form (only for top-level comments) */}
-          {!replyingTo && (
-            <div className="mt-3">
-              <textarea
-                className="form-control"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a comment..."
-              />
-              <button className="btn btn-primary mt-2" onClick={handleCommentSubmit}>
-                Submit Comment
-              </button>
-            </div>
-          )}
-        </div>
-
+        <NovelCommentSection novelId={id} />
       </div>
 
       {/* Footer */}

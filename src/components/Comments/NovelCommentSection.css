@@ -1,0 +1,47 @@
+.comment-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .comment-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .comment-section .comments-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 2rem;
+  }
+  
+  .comment-section .reply-box {
+    resize: none;
+    min-height: 100px;
+  }
+  
+  textarea {
+    border-radius: 8px;
+    padding: 10px;
+  }
+  
+  button {
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #ff8a00;
+  }
+  
+  h3 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #fff;
+  }
+  
+  .mt-2 {
+    margin-top: 1rem;
+  }
+  
+  .mt-3 {
+    margin-top: 1.5rem;
+  }
+  

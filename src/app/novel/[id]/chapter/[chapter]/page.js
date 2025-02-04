@@ -8,7 +8,8 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import { supabase } from '../../../../../services/supabase/supabaseClient';
-import LoadingPage from '../../../../../components/LoadingPage';
+import CommentSection from '../../../../../components/Comments/CommentSection';
+
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 
@@ -386,6 +387,8 @@ export default function ChapterPage() {
             <div />
           )}
         </div>
+        <CommentSection novelId={novel.id} chapter={chapterTitle} />
+
       </div>
       <footer className="bg-dark text-center py-3 mt-5">
         <p className="mb-0 text-light">&copy; 2025 Sempai HQ. All rights reserved.</p>
