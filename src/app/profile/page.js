@@ -127,9 +127,9 @@ export default function EditProfile() {
           <p className="wallet-connected">Wallet Connected: {formatUsername(publicKey.toString())}</p>
         )}
 
-        <form onSubmit={handleSubmit} className="profile-form">
+        <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="name">Name</label>
+            <label htmlFor="name">Username</label>
             <input
               type="text"
               id="name"
