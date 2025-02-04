@@ -5,10 +5,10 @@ import { supabase } from '../../services/supabase/supabaseClient';
 import { useWallet } from '@solana/wallet-adapter-react';
 import './CommentSection.css'; // Import CSS styles
 
-const Comment = ({ comment, replies, addReply, replyingTo, cancelReply }) => (
+const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible }) => (
   <div className="comment">
     <div className="comment-header">
-    <span className="username-text">{formatUsername(comment.username)}</span>
+      <span className="username-text">{formatUsername(comment.username)}</span>
     </div>
     <div className="comment-content">
       <p>{comment.content}</p>
@@ -20,9 +20,14 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply }) => (
       {replyingTo === comment.id && (
         <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
       )}
+      {replies.length > 0 && (
+        <button className="btn-toggle-replies" onClick={() => toggleRepliesVisibility(comment.id)}>
+          {areRepliesVisible[comment.id] ? 'Hide Replies' : 'Show Replies'}
+        </button>
+      )}
     </div>
 
-    {replies.length > 0 && (
+    {areRepliesVisible[comment.id] && replies.length > 0 && (
       <div className="replies">
         {replies.map((reply) => (
           <Comment
@@ -32,25 +37,28 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply }) => (
             addReply={addReply}
             replyingTo={replyingTo}
             cancelReply={cancelReply}
+            toggleRepliesVisibility={toggleRepliesVisibility}
+            areRepliesVisible={areRepliesVisible}
           />
         ))}
       </div>
     )}
   </div>
 );
+
 const formatUsername = (username) => {
-    if (username.length > 15) {
-      // Get the first two and last two characters, with '**' in between
-      return `${username.slice(0, 2)}**${username.slice(-2)}`;
-    }
-    return username;
-  };
-  
+  if (username.length > 15) {
+    return `${username.slice(0, 2)}**${username.slice(-2)}`;
+  }
+  return username;
+};
+
 export default function NovelCommentSection({ novelId }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
+  const [areRepliesVisible, setAreRepliesVisible] = useState({}); // New state to track visibility of replies
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -109,6 +117,13 @@ export default function NovelCommentSection({ novelId }) {
     setReplyingTo(null);
   };
 
+  const toggleRepliesVisibility = (parentId) => {
+    setAreRepliesVisible((prevState) => ({
+      ...prevState,
+      [parentId]: !prevState[parentId], // Toggle the visibility for this comment's replies
+    }));
+  };
+
   const buildThread = (comments) => {
     const map = {};
     comments.forEach((c) => (map[c.id] = { ...c, replies: [] }));
@@ -159,6 +174,8 @@ export default function NovelCommentSection({ novelId }) {
             addReply={addReply}
             replyingTo={replyingTo}
             cancelReply={cancelReply}
+            toggleRepliesVisibility={toggleRepliesVisibility}
+            areRepliesVisible={areRepliesVisible}
           />
         ))}
       </div>
