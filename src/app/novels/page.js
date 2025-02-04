@@ -249,21 +249,75 @@ const checkBalance = async () => {
           </p>
 
           {connected ? (
-          <h5 className="text-success">
-            Balance: {loading ? 'Loading...' : `${balance} SMP`}
-            <button onClick={checkBalance} className="btn btn-sm btn-outline-dark ms-2">
-              Refresh
-            </button>
-            <button onClick={handleWithdraw} className="btn btn-sm btn-outline-danger ms-2">
-              Withdraw
-            </button>
-
+          <div style={{
+            background: '#000',
+            padding: '20px',
+            borderRadius: '15px',
+            boxShadow: '0 4px 12px rgba(243, 99, 22, 0.7)',
+            color: '#fff',
+            fontFamily: 'Arial, sans-serif',
+            maxWidth: '400px',
+            margin: '20px auto',
+            textAlign: 'center',
+            border: '2px solid rgb(243, 99, 22)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+          }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.03)';
+              e.currentTarget.style.boxShadow = '0 6px 18px rgba(243, 99, 22, 1)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(243, 99, 22, 0.7)';
+            }}
+          >
+            <h5 style={{ color: 'rgb(0, 255, 127)', fontSize: '1.5rem', marginBottom: '15px' }}>
+              Balance: {loading ? 'Loading...' : `${balance} SMP`}
+            </h5>
+          
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
+              <button 
+                onClick={checkBalance} 
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#fff',
+                  border: '1px solid rgb(243, 99, 22)',
+                  padding: '8px 15px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgb(243, 99, 22)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                Refresh
+              </button>
+          
+              <button 
+                onClick={handleWithdraw} 
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#fff',
+                  border: '1px solid red',
+                  padding: '8px 15px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'red'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                Withdraw
+              </button>
+            </div>
+          
             {pendingWithdrawal > 0 && (
-              <p className="text-warning mt-2">
+              <p style={{ color: 'rgb(243, 156, 18)', fontWeight: 'bold', marginTop: '10px' }}>
                 Pending Withdrawal: {pendingWithdrawal} SMP (Processing)
               </p>
             )}
-          </h5>
+          </div>
+          
         ) : (
           <div className="alert alert-danger">
             Please connect your wallet to proceed.

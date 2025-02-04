@@ -122,6 +122,7 @@ export default function ChapterPage() {
       const newReaderBalance = (user.balance || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
       const newTeamBalance = (team.balance || 0) + teamReward;
+      console.log(newAuthorBalance)
   
       // Update user balances in a single batch update
       const { error: updateError } = await supabase

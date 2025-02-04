@@ -8,7 +8,11 @@ import './CommentSection.css'; // Import CSS styles
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible }) => (
   <div className="comment">
     <div className="comment-header">
-      <span className="username-text">{formatUsername(comment.username)}</span>
+    <span className="username-text">
+    {formatUsername(comment.username)} {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </span>
+
+
     </div>
     <div className="comment-content">
       <p>{comment.content}</p>

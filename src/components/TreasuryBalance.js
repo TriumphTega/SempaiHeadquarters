@@ -62,10 +62,48 @@ const TreasuryBalance = () => {
   }
 
   return (
-    <div>
-      <h3>Amethyst Treasury Balance: {balance} AMT</h3>
+    <div style={{
+      background: 'black',
+      padding: '20px',
+      borderRadius: '15px',
+      boxShadow: '0 4px 12px rgba(243, 99, 22, 0.7)',
+      textAlign: 'center',
+      maxWidth: '400px',
+      margin: '20px auto',
+      color: '#fff',
+      fontFamily: 'Arial, sans-serif',
+      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+      border: '2px solid rgb(243, 99, 22)'
+    }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'scale(1.05)';
+        e.currentTarget.style.boxShadow = '0 6px 18px rgba(243, 99, 22, 1)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(243, 99, 22, 0.7)';
+      }}
+    >
+      <h3 style={{
+        fontSize: '1.8rem',
+        margin: '0',
+        letterSpacing: '1px',
+        color: 'rgb(243, 99, 22)',
+      }}>
+        Amethyst Treasury Balance
+      </h3>
+      <p style={{
+        fontSize: '2.5rem',
+        fontWeight: 'bold',
+        margin: '10px 0 0',
+        color: '#FFFFFF',
+      }}>
+        {balance} AMT
+      </p>
     </div>
   );
+  
+  
 };
 
 export default TreasuryBalance;
