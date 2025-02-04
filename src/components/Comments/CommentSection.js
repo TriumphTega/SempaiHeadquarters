@@ -92,7 +92,7 @@ export default function CommentSection({ novelId, chapter }) {
 
   useEffect(() => {
     fetchComments();
-    const intervalId = setInterval(fetchComments, 1000);
+    const intervalId = setInterval(fetchComments, 5000);
     return () => clearInterval(intervalId);
   }, [novelId, chapter]);
 

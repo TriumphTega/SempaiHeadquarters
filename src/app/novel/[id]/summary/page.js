@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import Head from "next/head";
 import Link from "next/link";
 import DOMPurify from "dompurify";
+import NovelCommentSection from '../../../../components/Comments/NovelCommentSection';
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 
@@ -231,6 +232,10 @@ export default function NovelSummaryPage() {
         <Link href={`/novel/${id}`} className="btn btn-warning px-3 py-2">
             Back to Novel
           </Link>        </div>
+          <div className="container my-4 px-3">
+        {/* Novel summary content here */}
+        <NovelCommentSection novelId={id} />
+      </div>
       </div>
       <footer className="bg-dark text-center py-3 mt-5">
         <p className="mb-0 text-light">&copy; 2025 Sempai HQ. All rights reserved.</p>

@@ -72,7 +72,7 @@ export default function NovelCommentSection({ novelId }) {
     };
 
     fetchComments();
-    const intervalId = setInterval(fetchComments, 1000);
+    const intervalId = setInterval(fetchComments, 5000);
     return () => clearInterval(intervalId);
   }, [novelId]);
 
