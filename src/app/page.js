@@ -150,6 +150,11 @@ export default function Home() {
             Swap
           </Link>
         </li>
+        <li className="nav-item">
+          <Link href="/profile" className="nav-link text-light fw-semibold hover-effect">
+            Profile
+          </Link>
+        </li>
       </ul>
 
       {/* Wallet and Creator Dashboard Section */}
