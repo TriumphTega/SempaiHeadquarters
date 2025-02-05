@@ -143,7 +143,7 @@ export default function NovelCommentSection({ novelId }) {
         // Reward user
 
           let rewardAmount = 0; // Default value
-
+console.log(Number(balance)+1)
 
             if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
               rewardAmount = 1.2;  // Reward for 100k - 250k
@@ -159,7 +159,7 @@ export default function NovelCommentSection({ novelId }) {
               rewardAmount = 1;   // No reward if balance doesn't fit any range
             }
 
-
+console.log(rewardAmount)
         await supabase
           .from('wallet_balances')
           .update({ weekly_points: user.weekly_points + rewardAmount })
