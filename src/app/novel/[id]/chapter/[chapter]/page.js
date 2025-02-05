@@ -119,17 +119,17 @@ export default function ChapterPage() {
       let readerReward = 0;
       const authorReward = 50;
       const teamReward = 50;
-  
-      if (balance >= 100_000 && balance < 250_000) {
+
+      if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
         readerReward = 12;  // Reward for 100k - 250k
-      } else if (balance >= 250_000 && balance < 500_000) {
+      } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
         readerReward = 15;  // Reward for 250k - 500k
-      } else if (balance >= 500_000 && balance < 1_000_000) {
+      } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
         readerReward = 17;  // Reward for 500k - 1M
-      } else if (balance >= 1_000_000 && balance <= 5_000_000) {
+      } else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
         readerReward = 20; // Reward for 1M - 5M
       }
-      else if (balance >= 5_000_000) {
+      else if (Number(balance) >= 5_000_000) {
         readerReward = 25; // Reward for 5M and above
       } else {
         readerReward = 10;   // No reward if balance doesn't fit any range
