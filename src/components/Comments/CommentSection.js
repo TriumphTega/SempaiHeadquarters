@@ -156,7 +156,7 @@ export default function CommentSection({ novelId, chapter }) {
 
       // Reward the user if eligible
       if (!hasReachedDailyLimit) {
-        const rewardAmount = 40;
+        const rewardAmount = 25;
 
         await supabase
           .from('users')
