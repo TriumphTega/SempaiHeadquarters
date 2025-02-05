@@ -3,16 +3,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase/supabaseClient';
 import { useWallet } from '@solana/wallet-adapter-react';
-import './CommentSection.css'; // Import CSS styles
+import './CommentSection.css';
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible }) => (
   <div className="comment">
     <div className="comment-header">
-    <span className="username-text">
-    {formatUsername(comment.username)} {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-    </span>
-
-
+      <span className="username-text">
+        {formatUsername(comment.username)} {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </span>
     </div>
     <div className="comment-content">
       <p>{comment.content}</p>
@@ -62,7 +60,14 @@ export default function NovelCommentSection({ novelId }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
-  const [areRepliesVisible, setAreRepliesVisible] = useState({}); // New state to track visibility of replies
+  const [areRepliesVisible, setAreRepliesVisible] = useState({});
+  const [lastCommentTime, setLastCommentTime] = useState(0); // For rate limiting
+  const [rewardedCountToday, setRewardedCountToday] = useState(0); // Daily cap
+
+  const COMMENT_COOLDOWN = 60 * 1000; // 60 seconds
+  const DAILY_REWARD_LIMIT = 10; // Max 10 rewarded comments per day
+  const MIN_COMMENT_LENGTH = 2; // Minimum characters for a valid comment
+  const REWARD_AMOUNT = 40; // Tokens rewarded per comment
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -75,17 +80,39 @@ export default function NovelCommentSection({ novelId }) {
       if (!error) setComments(data);
     };
 
+    const fetchRewardedCommentsToday = async () => {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact' })
+        .eq('user_id', publicKey?.toString())
+        .gte('created_at', `${today}T00:00:00Z`);
+
+      if (!error) setRewardedCountToday(data.length);
+    };
+
     fetchComments();
+    fetchRewardedCommentsToday();
+
     const intervalId = setInterval(fetchComments, 5000);
     return () => clearInterval(intervalId);
-  }, [novelId]);
+  }, [novelId, publicKey]);
 
   const handleCommentSubmit = async () => {
-    if (!newComment) return;
+    if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
+      alert(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastCommentTime < COMMENT_COOLDOWN) {
+      alert(`Please wait for ${(60000 - (now - lastCommentTime))/1000} seconds before posting another comment.`);
+      return;
+    }
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, name')  // Fetch user id and name
+      .select('id, name, balance, wallet_address')
       .eq('wallet_address', publicKey.toString())
       .single();
 
@@ -94,22 +121,58 @@ export default function NovelCommentSection({ novelId }) {
       return;
     }
 
-    const { error } = await supabase
-      .from('comments')
-      .insert([{
-        novel_id: novelId,
-        user_id: user.id,
-        username: user.name,  // Use the fetched user name here
-        content: newComment,
-        parent_id: replyingTo || null,
-      }])
-      .single();
+    try {
+      const isRewardEligible = rewardedCountToday < DAILY_REWARD_LIMIT;
 
-    if (error) {
-      console.error('Error inserting comment:', error);
-    } else {
+      const { error: commentError } = await supabase
+        .from('comments')
+        .insert([{
+          novel_id: novelId,
+          user_id: user.id,
+          username: user.name,
+          content: newComment,
+          parent_id: replyingTo || null,
+          is_rewarded: isRewardEligible, // Track if this comment was rewarded
+        }])
+        .single();
+
+      if (commentError) throw new Error(`Comment Error: ${commentError.message}`);
+
+      if (isRewardEligible) {
+        // Reward user
+        await supabase
+          .from('users')
+          .update({ balance: user.balance + REWARD_AMOUNT })
+          .eq('id', user.id);
+
+        await supabase
+          .from('wallet_balances')
+          .update({ amount: user.balance + REWARD_AMOUNT })
+          .eq('user_id', user.id);
+
+        await supabase
+          .from('wallet_events')
+          .insert([{
+            destination_user_id: user.id,
+            event_type: 'credit',
+            amount_change: REWARD_AMOUNT,
+            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+            destination_chain: "SOL",
+            source_currency: "Token",
+            event_details: "comment_reward",
+            wallet_address: user.wallet_address,
+            source_chain: "SOL",
+          }]);
+
+        setRewardedCountToday((prev) => prev + 1); // Increment today's count
+      }
+
       setNewComment('');
-      setReplyingTo(null); // Reset reply state after posting
+      setReplyingTo(null);
+      setLastCommentTime(now); // Set cooldown timer
+
+    } catch (error) {
+      console.error('Error processing comment:', error.message);
     }
   };
 
@@ -124,7 +187,7 @@ export default function NovelCommentSection({ novelId }) {
   const toggleRepliesVisibility = (parentId) => {
     setAreRepliesVisible((prevState) => ({
       ...prevState,
-      [parentId]: !prevState[parentId], // Toggle the visibility for this comment's replies
+      [parentId]: !prevState[parentId],
     }));
   };
 
@@ -141,18 +204,7 @@ export default function NovelCommentSection({ novelId }) {
       }
     });
 
-    const sortComments = (a, b) => {
-      return new Date(b.created_at) - new Date(a.created_at); // Newest first
-    };
-
-    const sortNestedReplies = (comment) => {
-      comment.replies.sort(sortComments);
-      comment.replies.forEach(sortNestedReplies); // Recursively sort nested replies
-    };
-
-    roots.sort(sortComments);
-    roots.forEach(sortNestedReplies);
-
+    roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return roots;
   };
 
@@ -168,7 +220,6 @@ export default function NovelCommentSection({ novelId }) {
       <button className="btn-post" onClick={handleCommentSubmit}>
         {replyingTo ? 'Post Reply' : 'Post Comment'}
       </button>
-
       <div className="comments-container">
         {buildThread(comments).map((comment) => (
           <Comment

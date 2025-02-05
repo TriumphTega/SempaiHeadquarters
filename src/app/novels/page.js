@@ -13,7 +13,7 @@ export default function NovelsPage() {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [novels, setNovels] = useState([]); // Store novels
-
+  const [withdrawAmount, setWithdrawAmount] = useState('');  // For user input
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
 
 const checkBalance = async () => {
@@ -82,87 +82,88 @@ const checkBalance = async () => {
 };
 
 
-  const handleWithdraw = async () => {
-    if (!connected) {
-      alert("Please connect your wallet first.");
+const handleWithdraw = async () => {
+  if (!connected) {
+    alert("Please connect your wallet first.");
+    return;
+  }
+
+  const amount = parseFloat(withdrawAmount);
+
+  if (isNaN(amount) || amount <= 0) {
+    alert("Please enter a valid withdrawal amount.");
+    return;
+  }
+
+  if (amount < 2500) {
+    alert("You can withdraw a minimum of 2500.");
+    return;
+  }
+
+  if (amount > balance) {
+    alert("Insufficient balance for this withdrawal amount.");
+    return;
+  }
+
+  try {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', publicKey.toString())
+      .single();
+
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
       return;
     }
 
-    if (balance <= 2499) {
-      alert("You can withdraw minimum of 2500");
+    const userId = user.id;
+    const transactionid = uuidv4();
+
+    const { error: insertError } = await supabase.from('pending_withdrawals').insert([{
+      user_id: userId,
+      amount: amount,
+      transactionid,
+      status: 'pending',
+      createdat: new Date().toISOString(),
+    }]);
+
+    if (insertError) {
+      console.error('Error inserting withdrawal request:', insertError);
+      alert("Failed to initiate withdrawal.");
       return;
     }
 
-    try {
-      // Get the user_id from the 'users' table using the wallet address
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', publicKey.toString())
-        .single();
+    const { error: balanceError } = await supabase
+      .from('wallet_balances')
+      .update({ amount: balance - amount })
+      .eq('user_id', userId);
 
-      if (userError) {
-        console.error('Error fetching user from users table:', userError);
-        return;
-      }
-
-      if (!user) {
-        console.log('User not found in the users table.');
-        return;
-      }
-
-      const userId = user.id; // Use user.id as the user_id
-      const transactionid = uuidv4(); // Generate unique transaction ID
-
-      // Insert the withdrawal request into the 'pending_withdrawals' table
-      const { error: insertError } = await supabase.from('pending_withdrawals').insert([{
-        user_id: userId,
-        amount: balance,
-        transactionid,
-        status: 'pending',
-        createdat: new Date().toISOString(),
-      }]);
-
-      if (insertError) {
-        console.error('Error inserting withdrawal request:', insertError);
-        alert("Failed to initiate withdrawal.");
-        return;
-      }
-
-      // Deduct balance from 'wallet_balances' table
-      const { error: balanceError } = await supabase
-        .from('wallet_balances')
-        .update({ amount: 0 }) // Set balance to 0 (or reduce it)
-        .eq('user_id', userId);
-
-      if (balanceError) {
-        console.error('Error deducting balance from wallet_balances:', balanceError);
-        alert("Failed to deduct from wallet balance.");
-        return;
-      }
-
-      // Deduct balance from 'users' table
-      const { error: userBalanceError } = await supabase
-        .from('users')
-        .update({ balance: 0 }) // Set balance to 0 (or reduce it)
-        .eq('id', userId);
-
-      if (userBalanceError) {
-        console.error('Error deducting balance from users:', userBalanceError);
-        alert("Failed to update user balance.");
-        return;
-      }
-
-      // Successfully processed the withdrawal
-      alert("Withdrawal initiated successfully!");
-
-      // Refresh balance after withdrawal
-      checkBalance();
-    } catch (error) {
-      console.error("Error processing withdrawal:", error);
-      alert("Something went wrong. Please try again.");
+    if (balanceError) {
+      console.error('Error deducting balance from wallet_balances:', balanceError);
+      alert("Failed to deduct from wallet balance.");
+      return;
     }
-  };
+
+    const { error: userBalanceError } = await supabase
+      .from('users')
+      .update({ balance: balance - amount })
+      .eq('id', userId);
+
+    if (userBalanceError) {
+      console.error('Error deducting balance from users:', userBalanceError);
+      alert("Failed to update user balance.");
+      return;
+    }
+
+    alert("Withdrawal initiated successfully!");
+    setWithdrawAmount(''); // Clear the input
+    checkBalance();
+  } catch (error) {
+    console.error("Error processing withdrawal:", error);
+    alert("Something went wrong. Please try again.");
+  }
+};
 
   // Fetch novels from Supabase
   const fetchNovels = async () => {
@@ -275,47 +276,91 @@ const checkBalance = async () => {
               Balance: {loading ? 'Loading...' : `${balance} SMP`}
             </h5>
           
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-              <button 
-                onClick={checkBalance} 
+            <div 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: '15px', 
+                marginBottom: '20px', 
+                padding: '20px', 
+                backgroundColor: '#111', 
+                borderRadius: '10px', 
+                border: '2px solid rgba(243, 99, 22, 0.8)', 
+                boxShadow: '0 4px 12px rgba(243, 99, 22, 0.5)', 
+                width: '100%', 
+                maxWidth: '400px', 
+                margin: '0 auto' 
+              }}
+            >
+              <input
+                type="number"
+                min="2500"
+                max={balance}
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder="Enter amount to withdraw (Min: 2500)"
                 style={{
-                  backgroundColor: 'transparent',
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #f36316',
+                  backgroundColor: '#222',
                   color: '#fff',
-                  border: '1px solid rgb(243, 99, 22)',
-                  padding: '8px 15px',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  outline: 'none',
+                  transition: 'all 0.3s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgb(243, 99, 22)'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                Refresh
-              </button>
-          
-              <button 
-                onClick={handleWithdraw} 
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#fff',
-                  border: '1px solid red',
-                  padding: '8px 15px',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'red'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                Withdraw
-              </button>
+                onFocus={(e) => (e.target.style.border = '1px solid #feb47b')}
+                onBlur={(e) => (e.target.style.border = '1px solid #f36316')}
+              />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
+                <button
+                  onClick={handleWithdraw}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'transparent',
+                    color: '#fff',
+                    border: '1px solid red',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'red')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  Withdraw
+                </button>
+
+                <button
+                  onClick={checkBalance}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'transparent',
+                    color: '#fff',
+                    border: '1px solid rgb(243, 99, 22)',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgb(243, 99, 22)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {pendingWithdrawal > 0 && (
+                <p style={{ color: 'rgb(243, 156, 18)', fontWeight: 'bold', marginTop: '10px' }}>
+                  Pending Withdrawal: {pendingWithdrawal} SMP (Processing)
+                </p>
+              )}
             </div>
-          
-            {pendingWithdrawal > 0 && (
-              <p style={{ color: 'rgb(243, 156, 18)', fontWeight: 'bold', marginTop: '10px' }}>
-                Pending Withdrawal: {pendingWithdrawal} SMP (Processing)
-              </p>
-            )}
+
           </div>
           
         ) : (

@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase/supabaseClient';
 import { useWallet } from '@solana/wallet-adapter-react';
-import './CommentSection.css'; // Import CSS styles
-
+import './CommentSection.css';
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies }) => (
   <div className="comment">
@@ -21,17 +20,15 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
         {replyingTo === comment.id ? 'Replying...' : 'Reply'}
       </button>
       {replyingTo === comment.id && (
-        <button className="btn-toggle" onClick={cancelReply}>
+        <button className="btn-cancel" onClick={cancelReply}>
           Cancel
         </button>
       )}
-      {/* Button to toggle replies visibility */}
       <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
         {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
       </button>
     </div>
 
-    {/* Show replies if showReplies for this comment is true */}
     {showReplies[comment.id] && replies.length > 0 && (
       <div className="replies">
         {replies.map((reply) => (
@@ -53,7 +50,6 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
 
 const formatUsername = (username) => {
   if (username.length > 15) {
-    // Get the first two and last two characters, with '**' in between
     return `${username.slice(0, 2)}**${username.slice(-2)}`;
   }
   return username;
@@ -67,27 +63,18 @@ export default function CommentSection({ novelId, chapter }) {
   const [showReplies, setShowReplies] = useState({});
 
   const fetchComments = async () => {
-    const { data: comments, error: commentError } = await supabase
+    const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('novel_id', novelId)
       .eq('chapter', chapter)
       .order('created_at', { ascending: false });
 
-    if (commentError) {
-      console.error('Error fetching comments:', commentError);
+    if (error) {
+      console.error('Error fetching comments:', error);
       return;
     }
-
-    // Merge the comments with usernames, if not already included in the comments
-    const mergedComments = comments.map((comment) => {
-      return {
-        ...comment,
-        username: comment.username || 'Unknown User',  // Fallback if no username is present
-      };
-    });
-
-    setComments(mergedComments);
+    setComments(data);
   };
 
   useEffect(() => {
@@ -97,12 +84,11 @@ export default function CommentSection({ novelId, chapter }) {
   }, [novelId, chapter]);
 
   const handleCommentSubmit = async () => {
-    if (!newComment) return;
+    if (!newComment.trim()) return;
 
-    // Fetch the user details based on the wallet address
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, name')
+      .select('id, name, balance, wallet_address')
       .eq('wallet_address', publicKey.toString())
       .single();
 
@@ -111,31 +97,110 @@ export default function CommentSection({ novelId, chapter }) {
       return;
     }
 
-    const { error } = await supabase
-      .from('comments')
-      .insert([
-        {
+    try {
+      const now = new Date();
+      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
+      const today = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+
+      // 1️⃣ Rate Limiting: Check last comment timestamp
+      const { data: recentComments } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('created_at', oneMinuteAgo);
+
+      if (recentComments.length > 0) {
+        alert('You can only post one comment per minute.');
+        return;
+      }
+
+      // 2️⃣ Daily Reward Cap: Max 10 rewarded comments/day
+      const { data: rewardedToday } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_rewarded', true)
+        .gte('created_at', today);
+
+      const hasReachedDailyLimit = rewardedToday.length >= 10;
+
+      // 3️⃣ Duplicate Comment Check
+      const { data: duplicate } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('content', newComment.trim())
+        .single();
+
+      if (duplicate) {
+        alert('Duplicate comment detected.');
+        return;
+      }
+
+      // Insert the comment
+      const { data: comment, error: commentError } = await supabase
+        .from('comments')
+        .insert([{
           novel_id: novelId,
           chapter,
           user_id: user.id,
-          username: user.name,  // Save the username with the comment
+          username: user.name,
           content: newComment,
           parent_id: replyingTo || null,
-        },
-      ])
-      .single();
+          is_rewarded: !hasReachedDailyLimit
+        }])
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error inserting comment:', error);
-    } else {
+      if (commentError) throw commentError;
+
+      // Reward the user if eligible
+      if (!hasReachedDailyLimit) {
+        const rewardAmount = 40;
+
+        await supabase
+          .from('users')
+          .update({ balance: user.balance + rewardAmount })
+          .eq('id', user.id);
+
+        const { data: walletBalance } = await supabase
+          .from('wallet_balances')
+          .select('amount')
+          .eq('user_id', user.id)
+          .single();
+
+        await supabase
+          .from('wallet_balances')
+          .update({ amount: walletBalance.amount + rewardAmount })
+          .eq('user_id', user.id);
+
+        await supabase
+          .from('wallet_events')
+          .insert([{
+            destination_user_id: user.id,
+            event_type: 'credit',
+            amount_change: rewardAmount,
+            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+            destination_chain: "SOL",
+            source_currency: "Token",
+            event_details: "comment_reward",
+            wallet_address: user.wallet_address,
+            source_chain: "SOL",
+          }]);
+      }
+
       setNewComment('');
-      setReplyingTo(null); // Reset reply state after posting
+      setReplyingTo(null);
+      fetchComments();
+
+    } catch (error) {
+      console.error('Error submitting comment:', error.message);
     }
   };
 
   const addReply = (parentId) => {
     if (replyingTo === parentId) {
-      setReplyingTo(null); // Toggle off if clicking the same reply button
+      setReplyingTo(null);
     } else {
       setReplyingTo(parentId);
     }
@@ -152,11 +217,6 @@ export default function CommentSection({ novelId, chapter }) {
     }));
   };
 
-  const countReplies = (comment) => {
-    if (!comment.replies || comment.replies.length === 0) return 0;
-    return comment.replies.length + comment.replies.reduce((acc, reply) => acc + countReplies(reply), 0);
-  };
-
   const buildThread = (comments) => {
     const map = {};
     comments.forEach((c) => (map[c.id] = { ...c, replies: [] }));
@@ -170,25 +230,7 @@ export default function CommentSection({ novelId, chapter }) {
       }
     });
 
-    // Sort by number of replies (descending) and then by created_at (newest first)
-    const sortComments = (a, b) => {
-      const repliesA = countReplies(a);
-      const repliesB = countReplies(b);
-
-      if (repliesA !== repliesB) {
-        return repliesB - repliesA; // More replies come first
-      }
-      return new Date(b.created_at) - new Date(a.created_at); // Newer comments come first if replies are equal
-    };
-
-    const sortNestedReplies = (comment) => {
-      comment.replies.sort(sortComments);
-      comment.replies.forEach(sortNestedReplies); // Recursively sort nested replies
-    };
-
-    roots.sort(sortComments);
-    roots.forEach(sortNestedReplies);
-
+    roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return roots;
   };
 
@@ -210,7 +252,7 @@ export default function CommentSection({ novelId, chapter }) {
           <Comment
             key={comment.id}
             comment={comment}
-            replies={comment.replies}
+            replies={comment.replies || []}
             addReply={addReply}
             replyingTo={replyingTo}
             cancelReply={cancelReply}
