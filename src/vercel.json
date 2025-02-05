@@ -1,13 +1,18 @@
 {
-    "functions": {
-      "api/**/*.js": {
-        "runtime": "nodejs20.x"
-      }
-    },
-    "build": {
-      "env": {
-        "NODE_VERSION": "20.x.x"
-      }
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
     }
-  }
-  
+  },
+  "build": {
+    "env": {
+      "NODE_VERSION": "20.x.x"
+    }
+  },
+  "cron": [
+    {
+      "path": "/api/weekly-reward",
+      "schedule": "0 0 * * 1"
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import DOMPurify from "dompurify";
 import Head from "next/head";
 import { supabase } from '../../../../../services/supabase/supabaseClient';
 import CommentSection from '../../../../../components/Comments/CommentSection';
+import UseAmethystBalance from '../../../../../components/UseAmethystBalance';
 
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
@@ -21,6 +22,7 @@ export default function ChapterPage() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");  // Add this line
+  const { balance } = UseAmethystBalance();
 
 
   const updateTokenBalance = async () => {
@@ -34,7 +36,7 @@ export default function ChapterPage() {
       // Step 1: Fetch the user based on the connected wallet
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("id, wallet_address, balance")
+        .select("id, wallet_address, weekly_points")
         .eq("wallet_address", publicKey.toString())
         .single();  // We expect a single result
   
@@ -114,12 +116,26 @@ export default function ChapterPage() {
       console.log("No existing event. Proceeding with transaction...");
   
       // Define rewards
-      const readerReward = 100;
+      let readerReward = 0;
       const authorReward = 50;
       const teamReward = 50;
   
+      if (balance >= 100_000 && balance < 250_000) {
+        readerReward = 12;  // Reward for 100k - 250k
+      } else if (balance >= 250_000 && balance < 500_000) {
+        readerReward = 15;  // Reward for 250k - 500k
+      } else if (balance >= 500_000 && balance < 1_000_000) {
+        readerReward = 17;  // Reward for 500k - 1M
+      } else if (balance >= 1_000_000 && balance <= 5_000_000) {
+        readerReward = 20; // Reward for 1M - 5M
+      }
+      else if (balance >= 5_000_000) {
+        readerReward = 25; // Reward for 5M and above
+      } else {
+        readerReward = 10;   // No reward if balance doesn't fit any range
+      }
       // Update balances
-      const newReaderBalance = (user.balance || 0) + readerReward;
+      const newReaderBalance = (user.weekly_points || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
       const newTeamBalance = (team.balance || 0) + teamReward;
       console.log(newAuthorBalance)
@@ -128,7 +144,7 @@ export default function ChapterPage() {
       const { error: updateError } = await supabase
         .from("users")
         .upsert([
-          { id: user.id, balance: newReaderBalance },
+          { id: user.id, weekly_points: newReaderBalance },
           { id: novelOwner.id, balance: newAuthorBalance },
           { id: team.id, balance: newTeamBalance },
         ]);
@@ -142,14 +158,7 @@ export default function ChapterPage() {
   
       // Upsert wallet balances
       const walletBalancesData = [
-        {
-          user_id: user.id,
-          chain: "SOL",
-          currency: "Token",
-          amount: newReaderBalance,
-          decimals: 0,
-          wallet_address: publicKey.toString(),
-        },
+        
         {
           user_id: novelOwner.id,
           chain: "SOL",

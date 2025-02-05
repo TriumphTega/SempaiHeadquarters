@@ -5,6 +5,8 @@ import { supabase } from '../../services/supabase/supabaseClient';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import Link from 'next/link';
+import UseAmethystBalance from '../../components/UseAmethystBalance';
+
 
 export default function EditProfile() {
   const { connected, publicKey } = useWallet();

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase/supabaseClient';
 import { useWallet } from '@solana/wallet-adapter-react';
 import './CommentSection.css';
+import UseAmethystBalance from '../../components/UseAmethystBalance';
+
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies }) => (
   <div className="comment">
@@ -61,6 +63,7 @@ export default function CommentSection({ novelId, chapter }) {
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
+  const { balance } = UseAmethystBalance();
 
   const fetchComments = async () => {
     const { data, error } = await supabase
@@ -88,7 +91,7 @@ export default function CommentSection({ novelId, chapter }) {
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, name, balance, wallet_address')
+      .select('id, name, weekly_points, wallet_address')
       .eq('wallet_address', publicKey.toString())
       .single();
 
@@ -156,23 +159,30 @@ export default function CommentSection({ novelId, chapter }) {
 
       // Reward the user if eligible
       if (!hasReachedDailyLimit) {
-        const rewardAmount = 40;
+
+        let rewardAmount = 0; // Default value
+
+        if (balance >= 100_000 && balance < 250_000) {
+          rewardAmount = 1.2;  // Reward for 100k - 250k
+        } else if (balance >= 250_000 && balance < 500_000) {
+          rewardAmount = 1.5;  // Reward for 250k - 500k
+        } else if (balance >= 500_000 && balance < 1_000_000) {
+          rewardAmount = 1.7;  // Reward for 500k - 1M
+        } else if (balance >= 1_000_000 && balance < 5_000_000) {
+          rewardAmount = 2; // Reward for 1M - 5M
+        }
+         else if (balance >= 5_000_000) {
+          rewardAmount = 2.5; // Reward for 5M and above
+        } else {
+          rewardAmount = 1;   // No reward if balance doesn't fit any range
+        }
+
 
         await supabase
           .from('users')
-          .update({ balance: user.balance + rewardAmount })
+          .update({ weekly_points: user.weekly_points + rewardAmount })
           .eq('id', user.id);
 
-        const { data: walletBalance } = await supabase
-          .from('wallet_balances')
-          .select('amount')
-          .eq('user_id', user.id)
-          .single();
-
-        await supabase
-          .from('wallet_balances')
-          .update({ amount: walletBalance.amount + rewardAmount })
-          .eq('user_id', user.id);
 
         await supabase
           .from('wallet_events')

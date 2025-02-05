@@ -98,7 +98,7 @@ const TreasuryBalance = () => {
         margin: '10px 0 0',
         color: '#FFFFFF',
       }}>
-        {balance} AMT
+        {Number(balance)} AMT
       </p>
     </div>
   );
