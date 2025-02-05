@@ -67,7 +67,7 @@ export default function NovelCommentSection({ novelId }) {
   const COMMENT_COOLDOWN = 60 * 1000; // 60 seconds
   const DAILY_REWARD_LIMIT = 10; // Max 10 rewarded comments per day
   const MIN_COMMENT_LENGTH = 2; // Minimum characters for a valid comment
-  const REWARD_AMOUNT = 40; // Tokens rewarded per comment
+  const REWARD_AMOUNT = 25; // Tokens rewarded per comment
 
   useEffect(() => {
     const fetchComments = async () => {
