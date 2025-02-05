@@ -116,7 +116,7 @@ export default function ChapterPage() {
       // Define rewards
       const readerReward = 100;
       const authorReward = 50;
-      const teamReward = 50;
+      const teamReward = 10;
   
       // Update balances
       const newReaderBalance = (user.balance || 0) + readerReward;
