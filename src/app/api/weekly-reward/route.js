@@ -1,51 +1,91 @@
-import { supabase } from '../../../services/supabase/supabaseClient';
+import { supabase } from "@/services/supabase/supabaseClient";
 
 export async function POST(req) {
   try {
-    // Step 1: Fetch all users with weekly_points > 0
-    const { data: users, error: fetchError } = await supabase
-      .from('users')
-      .select('id, weekly_points, balance')
-      .gt('weekly_points', 0); // Only users with points
-
-    if (fetchError) {
-      console.error('Error fetching users:', fetchError);
-      return new Response(JSON.stringify({ error: 'Failed to fetch users.' }), { status: 500 });
+    const { amount } = await req.json(); // Get the amount to distribute
+    if (!amount || amount <= 0) {
+      return Response.json({ success: false, message: "Invalid reward amount." }, { status: 400 });
     }
+
+    console.log("🚀 Starting weekly reward distribution...");
+
+    // ✅ 1. Fetch users with weekly points > 0
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, weekly_points")
+      .gt("weekly_points", 0); // Get only users with points
+
+    if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
+
+    console.log("✅ Users fetched:", users.length);
 
     if (users.length === 0) {
-      return new Response(JSON.stringify({ message: 'No users with points this week.' }), { status: 200 });
+      return Response.json({ success: false, message: "No points to distribute." });
     }
 
-    // Step 2: Calculate total points
-    const totalPoints = users.reduce((acc, user) => acc + user.weekly_points, 0);
-    const totalReward = 100_000; // Total reward to distribute
+    // ✅ 2. Fetch wallets of these users
+    const userIds = users.map(user => user.id);
+    const { data: wallets, error: walletsError } = await supabase
+      .from("wallet_balances")
+      .select("user_id, amount")
+      .in("user_id", userIds)
+      .eq("chain", "SOL") // Ensure we target the correct chain
+      .eq("currency", "Amethyst");
 
-    // Step 3: Distribute rewards proportionally
-    const updates = users.map(user => {
-      const userShare = (user.weekly_points / totalPoints) * totalReward;
-      const newBalance = (user.balance || 0) + userShare;
+    if (walletsError) throw new Error(`Failed to fetch wallets: ${walletsError.message}`);
 
-      return {
-        id: user.id,
-        balance: newBalance,
-        weekly_points: 0, // Reset weekly points
-      };
+    console.log("✅ Wallets fetched:", wallets.length);
+
+    // ✅ 3. Create a user-wallet map
+    const walletMap = {};
+    wallets.forEach(wallet => {
+      walletMap[wallet.user_id] = wallet.amount;
     });
 
-    // Step 4: Update balances and reset points
-    const { error: updateError } = await supabase
-      .from('users')
-      .upsert(updates);
-
-    if (updateError) {
-      console.error('Error updating user balances:', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to update balances.' }), { status: 500 });
+    // ✅ 4. Calculate total points & reward per point
+    const totalPoints = users.reduce((sum, user) => sum + user.weekly_points, 0);
+    if (totalPoints === 0) {
+      return Response.json({ success: false, message: "No valid points for distribution." });
     }
 
-    return new Response(JSON.stringify({ message: '✅ Weekly rewards distributed successfully!' }), { status: 200 });
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'An unexpected error occurred.' }), { status: 500 });
+    const rewardPerPoint = amount / totalPoints;
+    console.log(`⚡ Reward per point: ${rewardPerPoint}`);
+
+    // ✅ 5. Distribute rewards (only updating wallets)
+    for (const user of users) {
+      const rewardAmount = user.weekly_points * rewardPerPoint;
+
+      if (walletMap[user.id] !== undefined) {
+        // ✅ Update existing wallet balance
+        const { error: updateError } = await supabase
+          .from("wallet_balances")
+          .update({ amount: walletMap[user.id] + rewardAmount })
+          .eq("user_id", user.id)
+          .eq("chain", "SOL")
+          .eq("currency", "Amethyst");
+
+        if (updateError) throw new Error(`Failed to update wallet balance: ${updateError.message}`);
+
+        console.log(`✅ Updated wallet for user ${user.id}: +${rewardAmount} Amethyst`);
+      } else {
+        console.error(`❌ ERROR: Wallet for user ${user.id} not found!`);
+      }
+    }
+
+    // ✅ 6. Reset weekly points
+    const { error: resetError } = await supabase
+      .from("users")
+      .update({ weekly_points: 0 })
+      .neq("weekly_points", 0);
+
+    if (resetError) throw new Error(`Failed to reset weekly points: ${resetError.message}`);
+
+    console.log("✅ Weekly points reset!");
+
+    return Response.json({ success: true, message: "Rewards distributed successfully!" });
+
+  } catch (err) {
+    console.error("🔥 Error:", err.message);
+    return Response.json({ success: false, message: `Failed: ${err.message}` }, { status: 500 });
   }
 }
