@@ -30,7 +30,7 @@ export async function POST(req) {
       .select("user_id, amount")
       .in("user_id", userIds)
       .eq("chain", "SOL") // Ensure we target the correct chain
-      .eq("currency", "Amethyst");
+      .eq("currency", "SMP");
 
     if (walletsError) throw new Error(`Failed to fetch wallets: ${walletsError.message}`);
 
@@ -62,11 +62,11 @@ export async function POST(req) {
           .update({ amount: walletMap[user.id] + rewardAmount })
           .eq("user_id", user.id)
           .eq("chain", "SOL")
-          .eq("currency", "Amethyst");
+          .eq("currency", "SMP");
 
         if (updateError) throw new Error(`Failed to update wallet balance: ${updateError.message}`);
 
-        console.log(`✅ Updated wallet for user ${user.id}: +${rewardAmount} Amethyst`);
+        console.log(`✅ Updated wallet for user ${user.id}: +${rewardAmount} SMP`);
       } else {
         console.error(`❌ ERROR: Wallet for user ${user.id} not found!`);
       }
