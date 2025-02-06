@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/services/supabase/supabaseClient";
+import { useWallet } from "@solana/wallet-adapter-react"; // Assuming you're using Solana wallets
 
 export default function WeeklyRewardPage() {
+  const { publicKey } = useWallet(); // Get connected wallet address
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
@@ -11,11 +13,19 @@ export default function WeeklyRewardPage() {
 
   useEffect(() => {
     async function fetchUser() {
+      if (!publicKey) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
+      const walletAddress = publicKey.toString(); // Convert wallet address to string
+
+      // ✅ Fetch the user based on their wallet address
       const { data: userData, error } = await supabase
         .from("users")
         .select("id, name, isSuperuser")
-        .limit(1)
+        .eq("wallet_address", walletAddress) // Ensure wallet matches
         .single();
 
       if (error || !userData || !userData.isSuperuser) {
@@ -27,7 +37,7 @@ export default function WeeklyRewardPage() {
     }
 
     fetchUser();
-  }, []);
+  }, [publicKey]); // Runs whenever wallet changes
 
   const handleDistributeRewards = async () => {
     setTriggering(true);
@@ -62,6 +72,7 @@ export default function WeeklyRewardPage() {
   };
 
   if (loading) return <p>Loading...</p>;
+  if (!publicKey) return <p>🔴 Connect your wallet to continue.</p>;
   if (!user) return <p>❌ Access Denied. Only superusers can view this page.</p>;
 
   return (
