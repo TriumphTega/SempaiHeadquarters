@@ -140,46 +140,49 @@ export default function NovelCommentSection({ novelId }) {
       if (commentError) throw new Error(`Comment Error: ${commentError.message}`);
 
       if (isRewardEligible) {
-        // Reward user
+        // Reward calculation
+let rewardAmount = 0; // Default value
+if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+  rewardAmount = 12;  // Reward for 100k - 250k
+} else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+  rewardAmount = 15;  // Reward for 250k - 500k
+} else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+  rewardAmount = 17;  // Reward for 500k - 1M
+} else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
+  rewardAmount = 20;  // Reward for 1M - 5M
+} else if (Number(balance) >= 5_000_000) {
+  rewardAmount = 25;  // Reward for 5M and above
+} else {
+  rewardAmount = 10;   // Default reward
+}
 
-          let rewardAmount = 0; // Default value
-console.log(Number(balance)+1)
+// Update `weekly_points` with decimal values
+const updatedWeeklyPoints = user.weekly_points + rewardAmount;
+console.log('Updated Weekly Points:', updatedWeeklyPoints);
 
-            if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-              rewardAmount = 1.2;  // Reward for 100k - 250k
-            } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-              rewardAmount = 1.5;  // Reward for 250k - 500k
-            } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-              rewardAmount = 1.7;  // Reward for 500k - 1M
-            } else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
-              rewardAmount = 2; // Reward for 1M - 5M
-            } else if (Number(balance) >= 5_000_000) {
-              rewardAmount = 2.5; // Reward for 5M and above
-            } else {
-              rewardAmount = 1;   // No reward if balance doesn't fit any range
-            }
+// Ensure the update happens with a valid number
+await supabase
+  .from('wallet_balances')
+  .update({ weekly_points: updatedWeeklyPoints })
+  .eq('user_id', user.id);
 
-console.log(rewardAmount)
-        await supabase
-          .from('wallet_balances')
-          .update({ weekly_points: user.weekly_points + rewardAmount })
-          .eq('user_id', user.id);
+// Insert wallet event (assuming it also needs to handle decimals)
+await supabase
+  .from('wallet_events')
+  .insert([{
+    destination_user_id: user.id,
+    event_type: 'credit',
+    amount_change: rewardAmount,  // Decimal value here
+    source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+    destination_chain: "SOL",
+    source_currency: "Token",
+    event_details: "comment_reward",
+    wallet_address: user.wallet_address,
+    source_chain: "SOL",
+  }]);
 
-        await supabase
-          .from('wallet_events')
-          .insert([{
-            destination_user_id: user.id,
-            event_type: 'credit',
-            amount_change: rewardAmount,
-            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-            destination_chain: "SOL",
-            source_currency: "Token",
-            event_details: "comment_reward",
-            wallet_address: user.wallet_address,
-            source_chain: "SOL",
-          }]);
+setRewardedCountToday((prev) => prev + 1); // Increment today's count
 
-        setRewardedCountToday((prev) => prev + 1); // Increment today's count
       }
 
       setNewComment('');
