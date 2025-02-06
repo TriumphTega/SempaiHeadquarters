@@ -163,18 +163,18 @@ export default function CommentSection({ novelId, chapter }) {
         let rewardAmount = 0; // Default value
 
         if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-          rewardAmount = 1.2;  // Reward for 100k - 250k
+          rewardAmount = 12;  // Reward for 100k - 250k
         } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-          rewardAmount = 1.5;  // Reward for 250k - 500k
+          rewardAmount = 15;  // Reward for 250k - 500k
         } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-          rewardAmount = 1.7;  // Reward for 500k - 1M
+          rewardAmount = 17;  // Reward for 500k - 1M
         } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
-          rewardAmount = 2; // Reward for 1M - 5M
+          rewardAmount = 20; // Reward for 1M - 5M
         }
          else if (Number(balance) >= 5_000_000) {
-          rewardAmount = 2.5; // Reward for 5M and above
+          rewardAmount = 25; // Reward for 5M and above
         } else {
-          rewardAmount = 1;   // No reward if balance doesn't fit any range
+          rewardAmount = 10;   // No reward if balance doesn't fit any range
         }
 
 
