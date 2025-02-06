@@ -92,8 +92,10 @@ export default function NovelCommentSection({ novelId }) {
       if (!error) setRewardedCountToday(data.length);
     };
 
-    fetchComments();
-    fetchRewardedCommentsToday();
+    if (publicKey) {
+      fetchComments();
+      fetchRewardedCommentsToday();
+    }
 
     const intervalId = setInterval(fetchComments, 5000);
     return () => clearInterval(intervalId);
@@ -114,7 +116,7 @@ export default function NovelCommentSection({ novelId }) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, name, weekly_points, wallet_address')
-      .eq('wallet_address', publicKey.toString())
+      .eq('wallet_address', publicKey?.toString())
       .single();
 
     if (userError || !user) {
@@ -137,53 +139,60 @@ export default function NovelCommentSection({ novelId }) {
         }])
         .single();
 
-      if (commentError) throw new Error(`Comment Error: ${commentError.message}`);
+      if (commentError) {
+        console.error('Error inserting comment:', commentError.message);
+        return;
+      }
 
       if (isRewardEligible) {
-        // Reward calculation
-let rewardAmount = 0; // Default value
-if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-  rewardAmount = 12;  // Reward for 100k - 250k
-} else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-  rewardAmount = 15;  // Reward for 250k - 500k
-} else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-  rewardAmount = 17;  // Reward for 500k - 1M
-} else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
-  rewardAmount = 20;  // Reward for 1M - 5M
-} else if (Number(balance) >= 5_000_000) {
-  rewardAmount = 25;  // Reward for 5M and above
-} else {
-  rewardAmount = 10;   // Default reward
-}
-
-// Update `weekly_points` with decimal values
-const updatedWeeklyPoints = user.weekly_points + rewardAmount;
-console.log('Updated Weekly Points:', updatedWeeklyPoints);
-
-// Ensure the update happens with a valid number
-await supabase
-  .from('wallet_balances')
-  .update({ weekly_points: updatedWeeklyPoints })
-  .eq('user_id', user.id);
-
-// Insert wallet event (assuming it also needs to handle decimals)
-await supabase
-  .from('wallet_events')
-  .insert([{
-    destination_user_id: user.id,
-    event_type: 'credit',
-    amount_change: rewardAmount,  // Decimal value here
-    source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-    destination_chain: "SOL",
-    source_currency: "Token",
-    event_details: "comment_reward",
-    wallet_address: user.wallet_address,
-    source_chain: "SOL",
-  }]);
-
-setRewardedCountToday((prev) => prev + 1); // Increment today's count
-
+        // Reward user
+        let rewardAmount = 0; // Default value
+      
+        console.log('Balance:', balance); // Debugging the balance value
+      
+        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+          rewardAmount = 1.2;  // Reward for 100k - 250k
+        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+          rewardAmount = 1.5;  // Reward for 250k - 500k
+        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+          rewardAmount = 1.7;  // Reward for 500k - 1M
+        } else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
+          rewardAmount = 2; // Reward for 1M - 5M
+        } else if (Number(balance) >= 5_000_000) {
+          rewardAmount = 2.5; // Reward for 5M and above
+        } else {
+          rewardAmount = 1;   // No reward if balance doesn't fit any range
+        }
+      
+        // Use upsert to update or insert the user's weekly_points
+        await supabase
+          .from('users')
+          .upsert([
+            {
+              id: user.id,
+              weekly_points: user.weekly_points + rewardAmount
+            }
+          ])
+          .eq('id', user.id);
+      
+        // Optional: Insert event log for the reward
+        await supabase
+          .from('wallet_events')
+          .insert([{
+            destination_user_id: user.id,
+            event_type: 'credit',
+            amount_change: rewardAmount,
+            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+            destination_chain: "SOL",
+            source_currency: "Token",
+            event_details: "comment_reward",
+            wallet_address: user.wallet_address,
+            source_chain: "SOL",
+          }]);
+      
+        setRewardedCountToday((prev) => prev + 1); // Increment today's count
       }
+      
 
       setNewComment('');
       setReplyingTo(null);
