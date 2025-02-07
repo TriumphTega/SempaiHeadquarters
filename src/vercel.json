@@ -8,11 +8,5 @@
     "env": {
       "NODE_VERSION": "20.x.x"
     }
-  },
-  "cron": [
-    {
-      "path": "/api/weekly-reward",
-      "schedule": "0 0 * * 1"
-    }
-  ]
+  }
 }

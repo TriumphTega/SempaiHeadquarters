@@ -127,19 +127,7 @@ export default function CommentSection({ novelId, chapter }) {
 
       const hasReachedDailyLimit = rewardedToday.length >= 10;
 
-      // 3️⃣ Duplicate Comment Check
-      const { data: duplicate } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('content', newComment.trim())
-        .single();
-
-      if (duplicate) {
-        alert('Duplicate comment detected.');
-        return;
-      }
-
+  
       // Insert the comment
       const { data: comment, error: commentError } = await supabase
         .from('comments')
