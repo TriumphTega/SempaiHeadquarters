@@ -56,18 +56,17 @@ const formatUsername = (username) => {
   return username;
 };
 
-export default function NovelCommentSection({ novelId }) {
+export default function NovelCommentSection({ novelId, novelTitle }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [areRepliesVisible, setAreRepliesVisible] = useState({});
-  const [lastCommentTime, setLastCommentTime] = useState(0); // For rate limiting
-  const [rewardedCountToday, setRewardedCountToday] = useState(0); // Daily cap
-
-  const COMMENT_COOLDOWN = 60 * 1000; // 60 seconds
-  const DAILY_REWARD_LIMIT = 10; // Max 10 rewarded comments per day
-  const MIN_COMMENT_LENGTH = 2; // Minimum characters for a valid comment
+  const [lastCommentTime, setLastCommentTime] = useState(0);
+  const [rewardedCountToday, setRewardedCountToday] = useState(0);
+  const COMMENT_COOLDOWN = 60 * 1000;
+  const DAILY_REWARD_LIMIT = 10;
+  const MIN_COMMENT_LENGTH = 2;
   const { balance } = UseAmethystBalance();
 
   useEffect(() => {
@@ -82,7 +81,7 @@ export default function NovelCommentSection({ novelId }) {
     };
 
     const fetchRewardedCommentsToday = async () => {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('comments')
         .select('*', { count: 'exact' })
@@ -101,6 +100,19 @@ export default function NovelCommentSection({ novelId }) {
     return () => clearInterval(intervalId);
   }, [novelId, publicKey]);
 
+  const sendNotification = async (receiverId, message) => {
+    if (!receiverId) return;
+
+    await supabase.from('notifications').insert([
+      {
+        user_id: receiverId,
+        message,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+  };
+
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
       alert(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
@@ -109,7 +121,7 @@ export default function NovelCommentSection({ novelId }) {
 
     const now = Date.now();
     if (now - lastCommentTime < COMMENT_COOLDOWN) {
-      alert(`Please wait for ${(60000 - (now - lastCommentTime))/1000} seconds before posting another comment.`);
+      alert(`Please wait for ${(60000 - (now - lastCommentTime)) / 1000} seconds before posting another comment.`);
       return;
     }
 
@@ -127,16 +139,19 @@ export default function NovelCommentSection({ novelId }) {
     try {
       const isRewardEligible = rewardedCountToday < DAILY_REWARD_LIMIT;
 
-      const { error: commentError } = await supabase
+      const { data: insertedComment, error: commentError } = await supabase
         .from('comments')
-        .insert([{
-          novel_id: novelId,
-          user_id: user.id,
-          username: user.name,
-          content: newComment,
-          parent_id: replyingTo || null,
-          is_rewarded: isRewardEligible, // Track if this comment was rewarded
-        }])
+        .insert([
+          {
+            novel_id: novelId,
+            user_id: user.id,
+            username: user.name,
+            content: newComment,
+            parent_id: replyingTo || null,
+            is_rewarded: isRewardEligible,
+          },
+        ])
+        .select()
         .single();
 
       if (commentError) {
@@ -144,60 +159,26 @@ export default function NovelCommentSection({ novelId }) {
         return;
       }
 
-      if (isRewardEligible) {
-        // Reward user
-        let rewardAmount = 0; // Default value
-      
-        console.log('Balance:', balance); // Debugging the balance value
-      
-        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-          rewardAmount = 12;  // Reward for 100k - 250k
-        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-          rewardAmount = 15;  // Reward for 250k - 500k
-        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-          rewardAmount = 17;  // Reward for 500k - 1M
-        } else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
-          rewardAmount = 20; // Reward for 1M - 5M
-        } else if (Number(balance) >= 5_000_000) {
-          rewardAmount = 25; // Reward for 5M and above
-        } else {
-          rewardAmount = 10;   // No reward if balance doesn't fit any range
+      if (replyingTo) {
+        const { data: parentComment } = await supabase
+          .from('comments')
+          .select('user_id')
+          .eq('id', replyingTo)
+          .single();
+
+        if (parentComment) {
+          await sendNotification(
+            parentComment.user_id,
+            `${user.name} replied to your comment on "${novelTitle}".`
+          );
         }
-      
-        // Use upsert to update or insert the user's weekly_points
-        await supabase
-          .from('users')
-          .upsert([
-            {
-              id: user.id,
-              weekly_points: user.weekly_points + rewardAmount
-            }
-          ])
-          .eq('id', user.id);
-      
-        // Optional: Insert event log for the reward
-        await supabase
-          .from('wallet_events')
-          .insert([{
-            destination_user_id: user.id,
-            event_type: 'credit',
-            amount_change: rewardAmount,
-            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-            destination_chain: "SOL",
-            source_currency: "Token",
-            event_details: "comment_reward",
-            wallet_address: user.wallet_address,
-            source_chain: "SOL",
-          }]);
-      
-        setRewardedCountToday((prev) => prev + 1); // Increment today's count
       }
-      
+
+      await sendNotification(user.id, `Your comment on "${novelTitle}" was posted successfully.`);
 
       setNewComment('');
       setReplyingTo(null);
-      setLastCommentTime(now); // Set cooldown timer
-
+      setLastCommentTime(now);
     } catch (error) {
       console.error('Error processing comment:', error.message);
     }
@@ -238,27 +219,13 @@ export default function NovelCommentSection({ novelId }) {
   return (
     <div className="comment-section">
       <h4 className="title">Comments</h4>
-      <textarea
-        className="textarea"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder={replyingTo ? 'Replying...' : 'Write a comment'}
-      />
+      <textarea className="textarea" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={replyingTo ? 'Replying...' : 'Write a comment'} />
       <button className="btn-post" onClick={handleCommentSubmit}>
         {replyingTo ? 'Post Reply' : 'Post Comment'}
       </button>
       <div className="comments-container">
         {buildThread(comments).map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            replies={comment.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleRepliesVisibility={toggleRepliesVisibility}
-            areRepliesVisible={areRepliesVisible}
-          />
+          <Comment key={comment.id} comment={comment} replies={comment.replies} addReply={addReply} replyingTo={replyingTo} cancelReply={cancelReply} toggleRepliesVisibility={toggleRepliesVisibility} areRepliesVisible={areRepliesVisible} />
         ))}
       </div>
     </div>
