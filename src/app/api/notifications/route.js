@@ -1,29 +1,61 @@
-import { NextResponse } from "next/server";
 import { supabase } from "@/services/supabase/supabaseClient";
 
-export async function GET(req) {
+export async function POST(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("user_id");
+    // Fetch all novels and their chapter count
+    const { data: novels, error: novelsError } = await supabase
+      .from("novels")
+      .select("id, chaptertitles");
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    if (novelsError) {
+      throw new Error("Error fetching novels: " + novelsError.message);
     }
 
-    // Fetch unread notifications
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("is_read", false)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!novels.length) {
+      return new Response(JSON.stringify({ message: "No novels found" }), { status: 200 });
     }
 
-    return NextResponse.json(data, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    // Fetch all users reading novels in one query
+    const { data: userReads, error: userReadsError } = await supabase
+      .from("user_read_novels")
+      .select("user_id, novel_id, last_read_chapter");
+
+    if (userReadsError) {
+      throw new Error("Error fetching user reading data: " + userReadsError.message);
+    }
+
+    // Prepare notifications to insert
+    const notifications = [];
+
+    for (const novel of novels) {
+      const { id: novelId, chaptertitles } = novel;
+      const totalChapters = Object.keys(chaptertitles).length;
+
+      // Find users who haven't read the latest chapter
+      const usersToNotify = userReads.filter(
+        (read) => read.novel_id === novelId && (read.last_read_chapter || 0) < totalChapters
+      );
+
+      usersToNotify.forEach(({ user_id }) => {
+        notifications.push({
+          user_id,
+          novel_id: novelId,
+          message: `A new chapter has been released for a novel you are reading!`,
+          read: false,
+        });
+      });
+    }
+
+    // Bulk insert notifications
+    if (notifications.length > 0) {
+      const { error: notificationsError } = await supabase.from("notifications").insert(notifications);
+      if (notificationsError) {
+        throw new Error("Error inserting notifications: " + notificationsError.message);
+      }
+    }
+
+    return new Response(JSON.stringify({ message: "Notifications sent successfully!" }), { status: 200 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }

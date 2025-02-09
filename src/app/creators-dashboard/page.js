@@ -219,40 +219,67 @@ const handleRemoveChapter = (index) => {
 };
 
 
-  const handleNovelSubmit = async (e) => {
-    e.preventDefault();
-  
-    // Prepare the data for submission
-    const novelData = {
+const handleNovelSubmit = async (e) => {
+  e.preventDefault();
+
+  const novelData = {
       user_id: currentUserId,
       title: novelTitle,
       image: imageText,
       summary: novelSummary,
-      chaptertitles: chaptertitles, // Use chaptertitles directly
-      chaptercontents: chaptercontents, // Use chaptercontents directly
-    };
-  
-    try {
-      const { error } = selectedNovel
-        ? await supabase
-            .from('novels')
-            .update(novelData)
-            .eq('id', selectedNovel.id)
-        : await supabase.from('novels').insert([novelData]);
-  
-      if (error) {
-        alert('Error submitting novel: ' + error.message);
-        return;
-      }
-  
-      alert('Novel submitted successfully!');
-      resetForm();
-    } catch (err) {
-      console.error('Error submitting novel:', err.message);
-      alert('An error occurred. Please try again later.');
-    }
+      chaptertitles: chaptertitles,
+      chaptercontents: chaptercontents,
   };
-  
+
+  try {
+      let novelId;
+      let message;
+
+      if (selectedNovel) {
+          // Updating existing novel
+          const { error } = await supabase
+              .from('novels')
+              .update(novelData)
+              .eq('id', selectedNovel.id);
+
+          if (error) throw new Error(error.message);
+
+          novelId = selectedNovel.id;
+          message = `A new chapter has been added to ${novelTitle}!`;
+      } else {
+          // Inserting a new novel
+          const { data, error } = await supabase
+              .from('novels')
+              .insert([novelData])
+              .select("id") // Get the inserted novel's ID
+              .single();
+
+          if (error) throw new Error(error.message);
+
+          novelId = data.id;
+          message = `A new novel "${novelTitle}" has been published!`;
+      }
+
+      // Insert a notification for all users
+      const { error: notifError } = await supabase.from("notifications").insert([
+          {
+              user_id: null, // Null means it's for all users
+              novel_id: novelId,
+              type: selectedNovel ? "new_chapter" : "new_novel",
+              message,
+          }
+      ]);
+
+      if (notifError) throw new Error(notifError.message);
+
+      alert("Novel submitted successfully!");
+      resetForm();
+  } catch (err) {
+      console.error("Error submitting novel:", err.message);
+      alert("An error occurred. Please try again later.");
+  }
+};
+
 
   const resetForm = () => {
     console.log("Resetting form...");
