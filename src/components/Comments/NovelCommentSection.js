@@ -101,9 +101,12 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
   }, [novelId, publicKey]);
 
   const sendNotification = async (receiverId, message) => {
-    if (!receiverId) return;
-
-    await supabase.from('notifications').insert([
+    if (!receiverId) {
+      console.log('No receiverId found for notification.');
+      return;
+    }
+  
+    const { error } = await supabase.from('notifications').insert([
       {
         user_id: receiverId,
         message,
@@ -111,7 +114,14 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
         created_at: new Date().toISOString(),
       },
     ]);
+  
+    if (error) {
+      console.error('Error inserting notification:', error.message);
+    } else {
+      console.log('Notification sent successfully to', receiverId);
+    }
   };
+  
 
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
@@ -161,10 +171,14 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
 
       if (replyingTo) {
         const { data: parentComment } = await supabase
-          .from('comments')
-          .select('user_id')
-          .eq('id', replyingTo)
-          .single();
+        .from('comments')
+        .select('user_id')
+        .eq('id', replyingTo)
+        .single();
+
+        console.log('Parent comment:', parentComment);
+
+        console.log(`Sending notification to ${parentComment?.user_id}: ${user.name} replied to your comment on "${novelTitle}".`);
 
         if (parentComment) {
           await sendNotification(

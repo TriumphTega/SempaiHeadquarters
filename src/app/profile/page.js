@@ -16,6 +16,8 @@ export default function EditProfile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [imageText, setImageText] = useState('');
+  const { balance } = UseAmethystBalance();
+
 
   // Fetch user data using wallet address
   useEffect(() => {
@@ -42,6 +44,24 @@ export default function EditProfile() {
 
     fetchUserData();
   }, [connected, publicKey]);
+
+  let rewardAmount = 0; // Default value
+
+        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+          rewardAmount = "X1.2";  // Reward for 100k - 250k
+        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+          rewardAmount = "X1.5";  // Reward for 250k - 500k
+        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+          rewardAmount = "x1.7";  // Reward for 500k - 1M
+        } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
+          rewardAmount = "2"; // Reward for 1M - 5M
+        }
+         else if (Number(balance) >= 5_000_000) {
+          rewardAmount = "X2.5"; // Reward for 5M and above
+        } else {
+          rewardAmount = "X1";   // No reward if balance doesn't fit any range
+        }
+        console.log(rewardAmount);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -118,7 +138,29 @@ export default function EditProfile() {
       </nav>
 
       <div className="form-wrapper">
-        <h2 className="text-center">Edit Your Profile</h2>
+      
+            <h2 className="text-center">Edit Your Profile</h2>
+
+            <h5
+          style={{
+            color: 'rgb(0, 255, 127)',
+            fontSize: '1.2rem',
+            marginBottom: '20px',
+            fontWeight: 'bold',
+          }}
+        >
+          Amethyst Balance: {`${balance}`}
+        </h5>
+        <p
+              style={{
+                color: 'rgb(243, 156, 18)',
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+                marginTop: '15px',
+              }}
+            >
+              Multiplier: {rewardAmount}
+            </p>   
 
         {!connected ? (
           <div className="connect-container">
