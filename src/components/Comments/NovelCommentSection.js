@@ -17,9 +17,13 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
       <p>{comment.content}</p>
     </div>
     <div className="comment-actions">
-      <button className="btn-reply" onClick={() => addReply(comment.id)}>
-        {replyingTo === comment.id ? 'Replying...' : 'Reply'}
-      </button>
+    <button
+      className={`btn-reply ${replyingTo === comment.id ? 'active' : ''}`}
+      onClick={() => addReply(comment.id)}
+    >
+      {replyingTo === comment.id ? 'Replying...' : 'Reply'}
+    </button>
+
       {replyingTo === comment.id && (
         <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
       )}
@@ -81,25 +85,20 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   };
 
   useEffect(() => {
-    const fetchRewardedCommentsToday = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('comments')
-        .select('*', { count: 'exact' })
-        .eq('user_id', publicKey?.toString())
-        .gte('created_at', `${today}T00:00:00Z`);
-
-      if (!error) setRewardedCountToday(data.length);
+    if (!publicKey) return;
+  
+    fetchComments();
+  
+    const subscription = supabase
+      .channel('comments')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, fetchComments)
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(subscription);
     };
-
-    if (publicKey) {
-      fetchComments();
-      fetchRewardedCommentsToday();
-    }
-
-    const intervalId = setInterval(fetchComments, 5000);
-    return () => clearInterval(intervalId);
   }, [novelId, publicKey]);
+  
 
   const sendNotification = async (receiverId, message, type = 'comment') => {
     if (!receiverId) {

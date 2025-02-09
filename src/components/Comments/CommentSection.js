@@ -72,13 +72,17 @@ export default function CommentSection({ novelId, chapter }) {
       .eq('novel_id', novelId)
       .eq('chapter', chapter)
       .order('created_at', { ascending: false });
-
+  
     if (error) {
       console.error('Error fetching comments:', error);
       return;
     }
-    setComments(data);
+  
+    // Remove duplicates using a Set
+    const uniqueComments = Array.from(new Map(data.map(c => [c.id, c])).values());
+    setComments(uniqueComments);
   };
+  
 
   useEffect(() => {
     fetchComments();
@@ -143,58 +147,65 @@ export default function CommentSection({ novelId, chapter }) {
         .select()
         .single();
 
-      if (commentError) throw commentError;
+        if (commentError) throw commentError;
 
-      // Reward the user if eligible
-      if (!hasReachedDailyLimit) {
-
-        let rewardAmount = 0; // Default value
-
-        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-          rewardAmount = 12;  // Reward for 100k - 250k
-        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-          rewardAmount = 15;  // Reward for 250k - 500k
-        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-          rewardAmount = 17;  // Reward for 500k - 1M
-        } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
-          rewardAmount = 20; // Reward for 1M - 5M
+        if (!hasReachedDailyLimit) {
+          let rewardAmount = balance >= 5000000 ? 25 :
+                             balance >= 1000000 ? 20 :
+                             balance >= 500000 ? 17 :
+                             balance >= 250000 ? 15 :
+                             balance >= 100000 ? 12 : 10;
+  
+          await supabase
+            .from('users')
+            .update({ weekly_points: user.weekly_points + rewardAmount })
+            .eq('id', user.id);
+  
+          await supabase
+            .from('wallet_events')
+            .insert([{
+              destination_user_id: user.id,
+              event_type: 'credit',
+              amount_change: rewardAmount,
+              source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+              destination_chain: "SOL",
+              source_currency: "Token",
+              event_details: "comment_reward",
+              wallet_address: user.wallet_address,
+              source_chain: "SOL",
+            }]);
         }
-         else if (Number(balance) >= 5_000_000) {
-          rewardAmount = 25; // Reward for 5M and above
-        } else {
-          rewardAmount = 10;   // No reward if balance doesn't fit any range
+  
+        if (replyingTo) {
+          const { data: parentComment } = await supabase
+            .from('comments')
+            .select('user_id')
+            .eq('id', replyingTo)
+            .single();
+  
+          if (parentComment && parentComment.user_id !== user.id) {
+            await supabase
+              .from('notifications')
+              .insert([{
+                user_id: parentComment.user_id,
+                novel_id: novelId,
+                chapter,
+                message: `${user.name} replied to your comment.`,
+                type: 'reply'
+              }]);
+          }
         }
-
-
-        await supabase
-          .from('users')
-          .update({ weekly_points: user.weekly_points + rewardAmount })
-          .eq('id', user.id);
-
-
-        await supabase
-          .from('wallet_events')
-          .insert([{
-            destination_user_id: user.id,
-            event_type: 'credit',
-            amount_change: rewardAmount,
-            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-            destination_chain: "SOL",
-            source_currency: "Token",
-            event_details: "comment_reward",
-            wallet_address: user.wallet_address,
-            source_chain: "SOL",
-          }]);
+  
+        setNewComment('');
+        setReplyingTo(null);
+        setComments((prev) => [comment, ...prev]);
+  
+      } catch (error) {
+        console.error('Error submitting comment:', error.message);
       }
+    };
 
-      setNewComment('');
-      setReplyingTo(null);
-      fetchComments();
-
-    } catch (error) {
-      console.error('Error submitting comment:', error.message);
-    }
-  };
+  
 
   const addReply = (parentId) => {
     if (replyingTo === parentId) {
