@@ -56,7 +56,7 @@ const formatUsername = (username) => {
   return username;
 };
 
-export default function NovelCommentSection({ novelId }) {
+export default function NovelCommentSection({ novelId, novelTitle }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -64,8 +64,6 @@ export default function NovelCommentSection({ novelId }) {
   const [areRepliesVisible, setAreRepliesVisible] = useState({});
   const [lastCommentTime, setLastCommentTime] = useState(0);
   const [rewardedCountToday, setRewardedCountToday] = useState(0);
-  const [notifications, setNotifications] = useState([]); // Store notifications
-
   const COMMENT_COOLDOWN = 60 * 1000;
   const DAILY_REWARD_LIMIT = 10;
   const MIN_COMMENT_LENGTH = 2;
@@ -93,37 +91,36 @@ export default function NovelCommentSection({ novelId }) {
       if (!error) setRewardedCountToday(data.length);
     };
 
-    const fetchNotifications = async () => {
-      if (!publicKey) return;
-
-      const walletAddress = publicKey.toString();
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', walletAddress)
-        .single();
-
-      if (userError || !user) return;
-
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_read', false)
-        .order('created_at', { ascending: false });
-
-      if (!error) setNotifications(data);
-    };
-
     if (publicKey) {
       fetchComments();
       fetchRewardedCommentsToday();
-      fetchNotifications();
     }
 
     const intervalId = setInterval(fetchComments, 5000);
     return () => clearInterval(intervalId);
   }, [novelId, publicKey]);
+
+  const sendNotification = async (receiverId, message) => {
+    if (!receiverId) {
+      console.log('No receiverId found for notification.');
+      return;
+    }
+
+    const { data, error } = await supabase.from('notifications').insert([
+      {
+        user_id: receiverId,
+        message,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Error inserting notification:', error.message);
+    } else {
+      console.log('Notification inserted successfully:', data);
+    }
+  };
 
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
@@ -133,81 +130,82 @@ export default function NovelCommentSection({ novelId }) {
 
     const now = Date.now();
     if (now - lastCommentTime < COMMENT_COOLDOWN) {
-      alert(`Please wait for ${(60000 - (now - lastCommentTime))/1000} seconds before posting another comment.`);
+      alert(`Please wait for ${(60000 - (now - lastCommentTime)) / 1000} seconds before posting another comment.`);
       return;
     }
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, name, wallet_address')
+      .select('id, name, weekly_points, wallet_address')
       .eq('wallet_address', publicKey?.toString())
       .single();
 
-    if (userError || !user) return;
-
-    const { data, error: commentError } = await supabase
-      .from('comments')
-      .insert([{
-        novel_id: novelId,
-        user_id: user.id,
-        username: user.name,
-        content: newComment,
-        parent_id: replyingTo || null,
-      }])
-      .single();
-
-    if (commentError) return;
-
-    if (replyingTo) {
-      const { data: parentComment, error: parentError } = await supabase
-        .from("comments")
-        .select("user_id")
-        .eq("id", replyingTo)
-        .single();
-
-      if (!parentError && parentComment) {
-        await supabase
-          .from("notifications")
-          .insert([
-            {
-              user_id: parentComment.user_id,
-              novel_id: novelId,
-              comment_id: replyingTo,
-              type: "reply",
-              is_read: false,
-            },
-          ]);
-      }
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
+      return;
     }
 
-    setNewComment('');
-    setReplyingTo(null);
-    setLastCommentTime(now);
+    try {
+      const isRewardEligible = rewardedCountToday < DAILY_REWARD_LIMIT;
+
+      const { data: insertedComment, error: commentError } = await supabase
+        .from('comments')
+        .insert([
+          {
+            novel_id: novelId,
+            user_id: user.id,
+            username: user.name,
+            content: newComment,
+            parent_id: replyingTo || null,
+            is_rewarded: isRewardEligible,
+          },
+        ])
+        .select()
+        .single();
+
+      if (commentError) {
+        console.error('Error inserting comment:', commentError.message);
+        return;
+      }
+
+      if (replyingTo) {
+        const { data: parentComment } = await supabase
+          .from('comments')
+          .select('user_id')
+          .eq('id', replyingTo)
+          .single();
+
+        if (parentComment?.user_id) {
+          console.log(`Sending notification to ${parentComment.user_id}: ${user.name} replied to your comment on "${novelTitle}".`);
+          await sendNotification(
+            parentComment.user_id,
+            `${user.name} replied to your comment on "${novelTitle}".`
+          );
+        } else {
+          console.log('Parent comment not found or has no valid user_id.');
+        }
+      }
+
+      await sendNotification(user.id, `Your comment on "${novelTitle}" was posted successfully.`);
+
+      setNewComment('');
+      setReplyingTo(null);
+      setLastCommentTime(now);
+    } catch (error) {
+      console.error('Error processing comment:', error.message);
+    }
   };
 
   return (
     <div className="comment-section">
       <h4 className="title">Comments</h4>
       <textarea className="textarea" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={replyingTo ? 'Replying...' : 'Write a comment'} />
-      <button className="btn-post" onClick={handleCommentSubmit}>{replyingTo ? 'Post Reply' : 'Post Comment'}</button>
-
-      <div className="notifications">
-        <h4>Notifications</h4>
-        {notifications.map(n => <p key={n.id}>You got a reply!</p>)}
-      </div>
-
+      <button className="btn-post" onClick={handleCommentSubmit}>
+        {replyingTo ? 'Post Reply' : 'Post Comment'}
+      </button>
       <div className="comments-container">
-        {buildThread(comments).map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            replies={comment.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleRepliesVisibility={toggleRepliesVisibility}
-            areRepliesVisible={areRepliesVisible}
-          />
+        {comments.map((comment) => (
+          <Comment key={comment.id} comment={comment} replies={[]} addReply={() => setReplyingTo(comment.id)} replyingTo={replyingTo} cancelReply={() => setReplyingTo(null)} toggleRepliesVisibility={() => {}} areRepliesVisible={{}} />
         ))}
       </div>
     </div>

@@ -100,7 +100,7 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
     return () => clearInterval(intervalId);
   }, [novelId, publicKey]);
 
-  const sendNotification = async (receiverId, message) => {
+  const sendNotification = async (receiverId, message, type = 'comment') => {
     if (!receiverId) {
       console.log('No receiverId found for notification.');
       return;
@@ -109,7 +109,8 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
     const { error } = await supabase.from('notifications').insert([
       {
         user_id: receiverId,
-        message,
+        message, // Ensure the correct column name (could be 'content' instead)
+        type, // Add a default 'type' value
         is_read: false,
         created_at: new Date().toISOString(),
       },
@@ -118,7 +119,7 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
     if (error) {
       console.error('Error inserting notification:', error.message);
     } else {
-      console.log('Notification sent successfully to', receiverId);
+      console.log('Notification inserted successfully');
     }
   };
   
@@ -171,20 +172,19 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
 
       if (replyingTo) {
         const { data: parentComment } = await supabase
-        .from('comments')
-        .select('user_id')
-        .eq('id', replyingTo)
-        .single();
+          .from('comments')
+          .select('user_id')
+          .eq('id', replyingTo)
+          .single();
 
-        console.log('Parent comment:', parentComment);
-
-        console.log(`Sending notification to ${parentComment?.user_id}: ${user.name} replied to your comment on "${novelTitle}".`);
-
-        if (parentComment) {
+        if (parentComment?.user_id) {
+          console.log(`Sending notification to ${parentComment.user_id}: ${user.name} replied to your comment on "${novelTitle}".`);
           await sendNotification(
             parentComment.user_id,
             `${user.name} replied to your comment on "${novelTitle}".`
           );
+        } else {
+          console.log('Parent comment not found or has no valid user_id.');
         }
       }
 
@@ -197,7 +197,6 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
       console.error('Error processing comment:', error.message);
     }
   };
-
   const addReply = (parentId) => {
     setReplyingTo(replyingTo === parentId ? null : parentId);
   };

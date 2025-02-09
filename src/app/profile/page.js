@@ -141,26 +141,17 @@ export default function EditProfile() {
       
             <h2 className="text-center">Edit Your Profile</h2>
 
-            <h5
-          style={{
-            color: 'rgb(0, 255, 127)',
-            fontSize: '1.2rem',
-            marginBottom: '20px',
-            fontWeight: 'bold',
-          }}
-        >
-          Amethyst Balance: {`${balance}`}
-        </h5>
-        <p
-              style={{
-                color: 'rgb(243, 156, 18)',
-                fontWeight: 'bold',
-                fontSize: '1.1rem',
-                marginTop: '15px',
-              }}
-            >
-              Multiplier: {rewardAmount}
-            </p>   
+            <div className="balance-card">
+  <div className="balance-content">
+    <h5 className="balance-text">
+      <span className="icon">💎</span> Amethyst: <span className="balance-amount">{`${balance}`}</span>
+    </h5>
+    <p className="multiplier-text">
+      <span className="icon">⚡</span> Multiplier: <span className="multiplier-value">{rewardAmount}</span>
+    </p>
+  </div>
+</div>
+
 
         {!connected ? (
           <div className="connect-container">
@@ -280,6 +271,65 @@ export default function EditProfile() {
           border-radius: 5px;
           border: 1px solid #ccc;
         }
+          .balance-card {
+    background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+    border-radius: 10px;
+    padding: 15px 20px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 255, 127, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 350px;
+  }
+
+  .balance-content {
+    width: 100%;
+  }
+
+  .balance-text {
+    color: #00ff7f;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-shadow: 0px 0px 8px rgba(0, 255, 127, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .multiplier-text {
+    color: #f39c12;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-top: 10px;
+    text-shadow: 0px 0px 6px rgba(243, 156, 18, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .icon {
+    font-size: 1.5rem;
+  }
+
+  .balance-amount,
+  .multiplier-value {
+    font-weight: bold;
+    font-size: 1.4rem;
+  }
+
+  @media (max-width: 768px) {
+    .balance-card {
+      max-width: 300px;
+      padding: 10px;
+    }
+
+    .balance-text, .multiplier-text {
+      font-size: 1.1rem;
+    }
       `}</style>
     </div>
   );
