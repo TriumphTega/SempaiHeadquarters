@@ -233,10 +233,11 @@ const handleNovelSubmit = async (e) => {
 
   try {
       let novelId;
+      let chapterNumber = null; // Default to NULL for new novels
       let message;
 
       if (selectedNovel) {
-          // Updating existing novel
+          // Updating existing novel (adding a chapter)
           const { error } = await supabase
               .from('novels')
               .update(novelData)
@@ -245,13 +246,14 @@ const handleNovelSubmit = async (e) => {
           if (error) throw new Error(error.message);
 
           novelId = selectedNovel.id;
-          message = `A new chapter has been added to ${novelTitle}!`;
+          chapterNumber = chaptertitles.length; // Use latest chapter number
+          message = `A new chapter (${chapterNumber}) has been added to ${novelTitle}!`;
       } else {
           // Inserting a new novel
           const { data, error } = await supabase
               .from('novels')
               .insert([novelData])
-              .select("id") // Get the inserted novel's ID
+              .select("id")
               .single();
 
           if (error) throw new Error(error.message);
@@ -260,25 +262,39 @@ const handleNovelSubmit = async (e) => {
           message = `A new novel "${novelTitle}" has been published!`;
       }
 
-      // Insert a notification for all users
-      const { error: notifError } = await supabase.from("notifications").insert([
-          {
-              user_id: null, // Null means it's for all users
-              novel_id: novelId,
-              type: selectedNovel ? "new_chapter" : "new_novel",
-              message,
-          }
-      ]);
+      // ✅ Step 1: Fetch all user IDs
+      const { data: users, error: usersError } = await supabase
+          .from("users")
+          .select("id"); // Assuming "id" is the primary key
+
+      if (usersError) throw new Error(usersError.message);
+
+      if (users.length === 0) {
+          console.warn("No users found, skipping notifications.");
+          return;
+      }
+
+      // ✅ Step 2: Insert a notification for each user
+      const notifications = users.map(user => ({
+          user_id: user.id,
+          novel_id: novelId,
+          type: selectedNovel ? "new_chapter" : "new_novel",
+          message,
+          chapter: chapterNumber, // Ensure this is provided
+      }));
+
+      const { error: notifError } = await supabase.from("notifications").insert(notifications);
 
       if (notifError) throw new Error(notifError.message);
 
-      alert("Novel submitted successfully!");
+      alert("Novel submitted successfully! Users have been notified.");
       resetForm();
   } catch (err) {
       console.error("Error submitting novel:", err.message);
       alert("An error occurred. Please try again later.");
   }
 };
+
 
 
   const resetForm = () => {
