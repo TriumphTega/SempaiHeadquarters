@@ -56,7 +56,7 @@ const formatUsername = (username) => {
   return username;
 };
 
-export default function NovelCommentSection({ novelId, novelTitle }) {
+export default function NovelCommentSection({ novelId, novelTitle = "Unknown Novel" }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -69,17 +69,18 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
   const MIN_COMMENT_LENGTH = 2;
   const { balance } = UseAmethystBalance();
 
+  // ✅ Move fetchComments outside of useEffect
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('novel_id', novelId)
+      .order('created_at', { ascending: false });
+
+    if (!error) setComments(data);
+  };
+
   useEffect(() => {
-    const fetchComments = async () => {
-      const { data, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('novel_id', novelId)
-        .order('created_at', { ascending: false });
-
-      if (!error) setComments(data);
-    };
-
     const fetchRewardedCommentsToday = async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
@@ -109,8 +110,8 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
     const { error } = await supabase.from('notifications').insert([
       {
         user_id: receiverId,
-        message, // Ensure the correct column name (could be 'content' instead)
-        type, // Add a default 'type' value
+        message,
+        type,
         is_read: false,
         created_at: new Date().toISOString(),
       },
@@ -123,80 +124,122 @@ export default function NovelCommentSection({ novelId, novelTitle }) {
     }
   };
   
-
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
       alert(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
       return;
     }
-
+  
     const now = Date.now();
     if (now - lastCommentTime < COMMENT_COOLDOWN) {
       alert(`Please wait for ${(60000 - (now - lastCommentTime)) / 1000} seconds before posting another comment.`);
       return;
     }
-
+  
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, name, weekly_points, wallet_address')
       .eq('wallet_address', publicKey?.toString())
       .single();
-
+  
     if (userError || !user) {
       console.error('Error fetching user:', userError);
       return;
     }
-
+  
     try {
-      const isRewardEligible = rewardedCountToday < DAILY_REWARD_LIMIT;
-
+      const hasReachedDailyLimit = rewardedCountToday >= DAILY_REWARD_LIMIT;
+      let rewardAmount = 10;
+  
+      if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+        rewardAmount = 12;
+      } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+        rewardAmount = 15;
+      } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+        rewardAmount = 17;
+      } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
+        rewardAmount = 20;
+      } else if (Number(balance) >= 5_000_000) {
+        rewardAmount = 25;
+      } else {
+        rewardAmount = 10;
+      }
+  
       const { data: insertedComment, error: commentError } = await supabase
         .from('comments')
-        .insert([
-          {
-            novel_id: novelId,
-            user_id: user.id,
-            username: user.name,
-            content: newComment,
-            parent_id: replyingTo || null,
-            is_rewarded: isRewardEligible,
-          },
-        ])
+        .insert([{
+          novel_id: novelId,
+          user_id: user.id,
+          username: user.name,
+          content: newComment,
+          parent_id: replyingTo || null,
+          is_rewarded: !hasReachedDailyLimit
+        }])
         .select()
         .single();
-
+  
       if (commentError) {
         console.error('Error inserting comment:', commentError.message);
         return;
       }
-
+  
       if (replyingTo) {
         const { data: parentComment } = await supabase
           .from('comments')
           .select('user_id')
           .eq('id', replyingTo)
           .single();
-
+  
         if (parentComment?.user_id) {
-          console.log(`Sending notification to ${parentComment.user_id}: ${user.name} replied to your comment on "${novelTitle}".`);
           await sendNotification(
             parentComment.user_id,
             `${user.name} replied to your comment on "${novelTitle}".`
           );
-        } else {
-          console.log('Parent comment not found or has no valid user_id.');
         }
       }
-
-      await sendNotification(user.id, `Your comment on "${novelTitle}" was posted successfully.`);
-
+  
+      await sendNotification(user.id, `Your comment on "${novelTitle || 'a novel'}" was posted successfully.`);
+  
+      if (!hasReachedDailyLimit) {
+        await supabase
+          .from('users')
+          .update({ weekly_points: user.weekly_points + rewardAmount })
+          .eq('id', user.id);
+  
+        await supabase
+          .from('wallet_events')
+          .insert([{
+            destination_user_id: user.id,
+            event_type: 'credit',
+            amount_change: rewardAmount,
+            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+            destination_chain: "SOL",
+            source_currency: "Token",
+            event_details: "comment_reward",
+            wallet_address: user.wallet_address,
+            source_chain: "SOL",
+          }]);
+      }
+  
       setNewComment('');
       setReplyingTo(null);
       setLastCommentTime(now);
+      setRewardedCountToday(rewardedCountToday + 1);
+      fetchComments();
+  
     } catch (error) {
-      console.error('Error processing comment:', error.message);
+      console.error('Error submitting comment:', error.message);
     }
   };
+  
+
+  
+
+
+
+
+
+
   const addReply = (parentId) => {
     setReplyingTo(replyingTo === parentId ? null : parentId);
   };
