@@ -1,7 +1,7 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 
 const TIMER_KEY = "weekly_reward_timer";
-const REWARD_AMOUNT = 100000; // Total SMP to distribute
+const REWARD_AMOUNT = 2000000; // Total SMP to distribute
 
 export async function GET(req) {
   try {

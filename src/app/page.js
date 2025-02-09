@@ -418,6 +418,47 @@ export default function Home() {
             )}
           </div>
           </div>
+          {/* Card Example */}
+          <div className="col-md-4">
+          <div className="image-container">
+            {/* Conditional Rendering Based on Connection Status */}
+            {connected ? (
+              <Link href="/dao-governance" className="text-decoration-none">
+                {/* Image */}
+                <img
+                  src="/images/novel-3.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
+                </div>
+              </Link>
+            ) : (
+              <div className="position-relative">
+                {/* Image */}
+                <img
+                  src="/images/novel-3.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
+                </div>
+
+                {/* Overlay for Disconnected Users */}
+                <div className="overlay d-flex align-items-center justify-content-center">
+                  <NovelConnectButton />
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
+
           </div>
         ) : (
           <p className="text-center text-white">No novels available at the moment.</p>
