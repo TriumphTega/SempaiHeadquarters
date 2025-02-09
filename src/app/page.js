@@ -208,32 +208,39 @@ export default function Home() {
             </button>
 
             {/* Dropdown for Notifications */}
-            {showDropdown && (
-              <div className="dropdown-menu show p-2">
-                {notifications.length > 0 ? (
-                  notifications.map((notif) => (
-                    <div key={notif.id} className="dropdown-item">
-                      {notif.type === "reply" ? (
-                        <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`}>
-                          📩 Someone replied to your comment
-                        </Link>
-                      ) : (
-                        <Link href={`/novel/${notif.novel_id}`}>
-                          📖 New chapter added to a novel you read
-                        </Link>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="dropdown-item">No new notifications</div>
-                )}
-                {notifications.length > 0 && (
-                  <button className="btn btn-sm btn-danger mt-2" onClick={markAsRead}>
-                    Mark as Read
-                  </button>
-                )}
-              </div>
-            )}
+{showDropdown && (
+  <div className="dropdown-menu show p-2">
+    {notifications.length > 0 ? (
+      notifications.map((notif) => (
+        <div key={notif.id} className="dropdown-item">
+          {notif.type === "reply" && notif.comment_id ? (
+            <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`}>
+              📩 Someone replied to your comment: "{notif.message}"
+            </Link>
+          ) : notif.type === "new_chapter" ? (
+            <Link href={`/novel/${notif.novel_id}`}>
+              📖 A new chapter has been added to "{notif.novel_title}"
+            </Link>
+          ) : notif.type === "reward" ? (
+            <Link href="/profile">
+              🎉 You've received a weekly reward! Check your balance.
+            </Link>
+          ) : (
+            <span>{notif.message || "You have a new notification"}</span>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className="dropdown-item">No new notifications</div>
+    )}
+    {notifications.length > 0 && (
+      <button className="btn btn-sm btn-danger mt-2" onClick={markAsRead}>
+        Mark as Read
+      </button>
+    )}
+  </div>
+)}
+
           </div>
     {/* Toggle Button for Mobile View */}
     <button
