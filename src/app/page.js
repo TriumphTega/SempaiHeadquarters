@@ -433,7 +433,7 @@ export default function Home() {
               <Link href="/dao-governance" className="text-decoration-none">
                 {/* Image */}
                 <img
-                  src="/images/novel-3.jpg"
+                  src="/images/dao.jpg"
                   className="img-fluid shadow rounded-3 hover-image"
                   alt="KISS (Keep it simple, stupid)"
                 />
@@ -447,7 +447,7 @@ export default function Home() {
               <div className="position-relative">
                 {/* Image */}
                 <img
-                  src="/images/novel-3.jpg"
+                  src="/images/dao.jpg"
                   className="img-fluid shadow rounded-3 hover-image"
                   alt="KISS (Keep it simple, stupid)"
                 />
