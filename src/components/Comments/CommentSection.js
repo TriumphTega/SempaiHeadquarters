@@ -7,48 +7,62 @@ import './CommentSection.css';
 import UseAmethystBalance from '../../components/UseAmethystBalance';
 
 
-const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies }) => (
-  <div className="comment">
-    <div className="comment-header">
-      <strong className="comment-username">
-        <span className="username-text">{formatUsername(comment.username)}</span>
-      </strong>
-    </div>
-    <div className="comment-content">
-      <p>{comment.content}</p>
-    </div>
-    <div className="comment-actions">
-      <button className="btn-reply" onClick={() => addReply(comment.id)}>
-        {replyingTo === comment.id ? 'Replying...' : 'Reply'}
-      </button>
-      {replyingTo === comment.id && (
-        <button className="btn-cancel" onClick={cancelReply}>
-          Cancel
-        </button>
-      )}
-      <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
-        {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
-      </button>
-    </div>
+const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies, deleteComment, currentUserId }) => {
+  const isOwner = comment.user_id === currentUserId; // Ensure ownership check is correct
 
-    {showReplies[comment.id] && replies.length > 0 && (
-      <div className="replies">
-        {replies.map((reply) => (
-          <Comment
-            key={reply.id}
-            comment={reply}
-            replies={reply.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleReplies={toggleReplies}
-            showReplies={showReplies}
-          />
-        ))}
+  return (
+    <div className="comment">
+      <div className="comment-header">
+        <strong className="comment-username">
+          <span className="username-text">{formatUsername(comment.username)}</span>
+        </strong>
       </div>
-    )}
-  </div>
-);
+      <div className="comment-content">
+        <p>{comment.content}</p>
+      </div>
+      <div className="comment-actions">
+        <button className="btn-reply" onClick={() => addReply(comment.id)}>
+          {replyingTo === comment.id ? 'Replying...' : 'Reply'}
+        </button>
+        {replyingTo === comment.id && (
+          <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
+        )}
+        <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
+          {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
+        </button>
+        {isOwner && (
+          <button className="btn-delete" onClick={() => deleteComment(comment.id)}>
+            Delete
+          </button>
+        )}
+      </div>
+
+      {showReplies[comment.id] && replies.length > 0 && (
+        <div className="replies">
+          {replies.map((reply) => (
+            <Comment
+              key={reply.id}
+              comment={reply}
+              replies={reply.replies}
+              addReply={addReply}
+              replyingTo={replyingTo}
+              cancelReply={cancelReply}
+              toggleReplies={toggleReplies}
+              showReplies={showReplies}
+              deleteComment={deleteComment}
+              currentUserId={currentUserId} 
+
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
+
 
 const formatUsername = (username) => {
   if (username.length > 15) {
@@ -64,6 +78,43 @@ export default function CommentSection({ novelId, chapter }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
   const { balance } = UseAmethystBalance();
+  const [currentUserId, setCurrentUserId] = useState(null); // Track logged-in user ID
+
+  useEffect(() => {
+    if (!publicKey) return;
+
+    const fetchUserId = async () => {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', publicKey.toString())
+        .single();
+
+      if (error || !user) {
+        console.error('Error fetching user ID:', error);
+        return;
+      }
+
+      setCurrentUserId(user.id); // Save user ID
+    };
+
+    fetchUserId();
+  }, [publicKey]); // Runs when wallet connects
+
+  const deleteComment = async (commentId) => {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', currentUserId); // Ensure only the owner can delete
+  
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return;
+    }
+  
+    setComments((prev) => prev.filter((c) => c.id !== commentId)); // Remove from UI
+  };
 
   const fetchComments = async () => {
     const { data, error } = await supabase
@@ -78,10 +129,9 @@ export default function CommentSection({ novelId, chapter }) {
       return;
     }
   
-    // Remove duplicates using a Set
-    const uniqueComments = Array.from(new Map(data.map(c => [c.id, c])).values());
-    setComments(uniqueComments);
+    setComments(data);
   };
+
   
 
   useEffect(() => {
@@ -215,16 +265,7 @@ export default function CommentSection({ novelId, chapter }) {
     }
   };
 
-  const cancelReply = () => {
-    setReplyingTo(null);
-  };
 
-  const toggleReplies = (commentId) => {
-    setShowReplies((prev) => ({
-      ...prev,
-      [commentId]: !prev[commentId],
-    }));
-  };
 
   const buildThread = (comments) => {
     const map = {};
@@ -258,16 +299,19 @@ export default function CommentSection({ novelId, chapter }) {
 
       <div className="comments-container">
         {buildThread(comments).map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            replies={comment.replies || []}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleReplies={toggleReplies}
-            showReplies={showReplies}
-          />
+         <Comment
+         key={comment.id}
+         comment={comment}
+         replies={comment.replies || []}
+         addReply={setReplyingTo}
+         replyingTo={replyingTo}
+         cancelReply={() => setReplyingTo(null)}
+         toggleReplies={() => setShowReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))}
+         showReplies={showReplies}
+         deleteComment={deleteComment}
+         currentUserId={currentUserId} 
+       />
+        
         ))}
       </div>
     </div>
