@@ -57,32 +57,48 @@ export default function CountdownTimer() {
 
   return (
     <div
+  style={{
+    background: "rgba(0, 0, 0, 0.8)",
+    padding: "15px 25px",
+    borderRadius: "12px",
+    display: "inline-block",
+    textAlign: "center",
+    marginTop: "20px",
+    color: "#fff",
+    fontSize: "1.3rem",
+    fontWeight: "bold",
+    fontFamily: "Open Sans, sans-serif",
+    border: "2px solid #f36316",
+    boxShadow: "0 0 12px rgba(243, 99, 22, 0.7)",
+    transition: "transform 0.3s ease",
+    animation: rewardDistributed ? "pulse 1.5s infinite" : "none",
+    position: "relative",
+  }}
+  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+>
+  {loading ? (
+    <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
+  ) : rewardDistributed ? (
+    <span style={{ color: "#0f0" }}>✅ Rewards Distributed!</span>
+  ) : (
+    <span style={{ color: "#ffb347" }}>⏳ Next Reward: {timeLeft || "Unknown"}</span>
+  )}
+  
+  {/* Reward Pool Display */}
+  {!rewardDistributed && (
+    <div
       style={{
-        background: "rgba(0, 0, 0, 0.8)",
-        padding: "15px 25px",
-        borderRadius: "12px",
-        display: "inline-block",
-        textAlign: "center",
-        marginTop: "20px",
-        color: "#fff",
-        fontSize: "1.3rem",
-        fontWeight: "bold",
-        fontFamily: "Open Sans, sans-serif",
-        border: "2px solid #f36316",
-        boxShadow: "0 0 12px rgba(243, 99, 22, 0.7)",
-        transition: "transform 0.3s ease",
-        animation: rewardDistributed ? "pulse 1.5s infinite" : "none",
+        marginTop: "10px",
+        fontSize: "1.1rem",
+        color: "#ffcc00",
+        textShadow: "0 0 8px rgba(255, 204, 0, 0.8)",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
-      {loading ? (
-        <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
-      ) : rewardDistributed ? (
-        <span style={{ color: "#0f0" }}>✅ Rewards Distributed!</span>
-      ) : (
-        <span style={{ color: "#ffb347" }}>⏳ Next Reward: {timeLeft || "Unknown"}</span>
-      )}
+      🏆 Total Reward Pool: <span style={{ color: "#FFD700" }}>2,000,000 SMP</span>
     </div>
+  )}
+</div>
+
   );
 }

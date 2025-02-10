@@ -25,13 +25,13 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
           {replyingTo === comment.id ? 'Replying...' : 'Reply'}
         </button>
         {replyingTo === comment.id && (
-          <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
+          <button className="btn btn-warning small-btn" onClick={cancelReply}>Cancel</button>
         )}
         <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
           {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
         </button>
         {isOwner && (
-          <button className="btn-delete" onClick={() => deleteComment(comment.id)}>
+          <button className="btn small-btn btn-danger" onClick={() => deleteComment(comment.id)}>
             Delete
           </button>
         )}

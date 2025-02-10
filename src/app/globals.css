@@ -747,3 +747,9 @@ h2 {
   max-height: 150px; /* Adjust this value */
   overflow-y: auto;
 }
+.small-btn {
+  font-size: 12px;  /* Smaller text */
+  padding: 4px 8px; /* Less padding */
+  height: auto;      /* Adjust height */
+  line-height: 1;    /* Compact spacing */
+}

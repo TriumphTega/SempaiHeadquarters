@@ -6,8 +6,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import './CommentSection.css';
 import UseAmethystBalance from '../../components/UseAmethystBalance';
 
-const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible }) => (
-  <div className="comment">
+const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible, deleteComment, currentUserId }) => {
+  const isOwner = comment.user_id === currentUserId; // Ensure ownership check is correct
+
+  return (
+    <div className="comment">
     <div className="comment-header">
       <span className="username-text">
         {formatUsername(comment.username)} {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -31,28 +34,39 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
         <button className="btn-toggle-replies" onClick={() => toggleRepliesVisibility(comment.id)}>
           {areRepliesVisible[comment.id] ? 'Hide Replies' : 'Show Replies'}
         </button>
+        
       )}
+      {isOwner && (
+          <button className="btn small-btn btn-danger" onClick={() => deleteComment(comment.id)}>
+            Delete
+          </button>
+        )}
     </div>
 
     {areRepliesVisible[comment.id] && replies.length > 0 && (
       <div className="replies">
         {replies.map((reply) => (
-          <Comment
-            key={reply.id}
-            comment={reply}
-            replies={reply.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleRepliesVisibility={toggleRepliesVisibility}
-            areRepliesVisible={areRepliesVisible}
-          />
+        <Comment
+        key={comment.id}
+        comment={comment}
+        replies={comment.replies}
+        addReply={addReply}
+        replyingTo={replyingTo}
+        cancelReply={cancelReply}
+        toggleRepliesVisibility={toggleRepliesVisibility}
+        areRepliesVisible={areRepliesVisible}
+        deleteComment={deleteComment} // ✅ Ensure this is passed
+        currentUserId={currentUserId}
+      />
+      
         ))}
       </div>
     )}
   </div>
 );
 
+};
+  
 const formatUsername = (username) => {
   if (username.length > 15) {
     return `${username.slice(0, 2)}**${username.slice(-2)}`;
@@ -72,6 +86,8 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   const DAILY_REWARD_LIMIT = 10;
   const MIN_COMMENT_LENGTH = 2;
   const { balance } = UseAmethystBalance();
+  const [currentUserId, setCurrentUserId] = useState(null); // Track logged-in user ID
+
 
   // ✅ Move fetchComments outside of useEffect
   const fetchComments = async () => {
@@ -82,6 +98,42 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       .order('created_at', { ascending: false });
 
     if (!error) setComments(data);
+  };
+
+  useEffect(() => {
+    if (!publicKey) return;
+
+    const fetchUserId = async () => {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', publicKey.toString())
+        .single();
+
+      if (error || !user) {
+        console.error('Error fetching user ID:', error);
+        return;
+      }
+
+      setCurrentUserId(user.id); // Save user ID
+    };
+
+    fetchUserId();
+  }, [publicKey]); // Runs when wallet connects
+
+  const deleteComment = async (commentId) => {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', currentUserId); // Ensure only the owner can delete
+  
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return;
+    }
+  
+    setComments((prev) => prev.filter((c) => c.id !== commentId)); // Remove from UI
   };
 
   useEffect(() => {
@@ -99,7 +151,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
     };
   }, [novelId, publicKey]);
   
-
+ 
   const sendNotification = async (receiverId, message, type = 'comment') => {
     if (!receiverId) {
       console.log('No receiverId found for notification.');
@@ -280,7 +332,8 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       </button>
       <div className="comments-container">
         {buildThread(comments).map((comment) => (
-          <Comment key={comment.id} comment={comment} replies={comment.replies} addReply={addReply} replyingTo={replyingTo} cancelReply={cancelReply} toggleRepliesVisibility={toggleRepliesVisibility} areRepliesVisible={areRepliesVisible} />
+          <Comment key={comment.id} comment={comment} replies={comment.replies} addReply={addReply} replyingTo={replyingTo} cancelReply={cancelReply} toggleRepliesVisibility={toggleRepliesVisibility} areRepliesVisible={areRepliesVisible} deleteComment={deleteComment}
+          currentUserId={currentUserId}  />
         ))}
       </div>
     </div>
