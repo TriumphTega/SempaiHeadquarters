@@ -1,252 +1,206 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from "react";
 import { supabase } from '../../services/supabase/supabaseClient';
-import { useWallet } from '@solana/wallet-adapter-react';
-import './CommentSection.css';
 import UseAmethystBalance from '../../components/UseAmethystBalance';
+import { useWallet } from "@solana/wallet-adapter-react";
 
-const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies, deleteComment, currentUserId }) => {
-  const isOwner = comment.user_id === currentUserId; // Ensure ownership check is correct
-
-  return (
-    <div className="comment">
-      <div className="comment-header">
-        <strong className="comment-username">
-          <span className="username-text">{formatUsername(comment.username)}</span>
-        </strong>
-      </div>
-      <div className="comment-content">
-        <p>{comment.content}</p>
-      </div>
-      <div className="comment-actions">
-        <button className="btn-reply" onClick={() => addReply(comment.id)}>
-          {replyingTo === comment.id ? 'Replying...' : 'Reply'}
-        </button>
-        {replyingTo === comment.id && (
-          <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
-        )}
-        <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
-          {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
-        </button>
-        {isOwner && (
-          <button className="btn-delete" onClick={() => deleteComment(comment.id)}>
-            Delete
-          </button>
-        )}
-      </div>
-
-      {showReplies[comment.id] && replies.length > 0 && (
-        <div className="replies">
-          {replies.map((reply) => (
-            <Comment
-              key={reply.id}
-              comment={reply}
-              replies={reply.replies}
-              addReply={addReply}
-              replyingTo={replyingTo}
-              cancelReply={cancelReply}
-              toggleReplies={toggleReplies}
-              showReplies={showReplies}
-              deleteComment={deleteComment}
-              currentUserId={currentUserId} 
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default function CommentSection({ novelId, chapter }) {
-  const { publicKey } = useWallet();
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [showReplies, setShowReplies] = useState({});
+export default function Polls() {
+  const [polls, setPolls] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState("");
+  const [options, setOptions] = useState(["", ""]);
+  const [expiresAt, setExpiresAt] = useState("");
   const { balance } = UseAmethystBalance();
-  const [currentUserId, setCurrentUserId] = useState(null); 
+  const { publicKey } = useWallet();
 
   useEffect(() => {
-    if (!publicKey) return;
+    fetchPolls();
+  }, []);
 
-    const fetchUserId = async () => {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', publicKey.toString())
-        .single();
+  async function fetchPolls() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("polls")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (error || !user) {
-        console.error('Error fetching user ID:', error);
-        return;
-      }
+    if (error) console.error(error);
+    else setPolls(data);
+    setLoading(false);
+  }
 
-      setCurrentUserId(user.id);
+  async function getUserId() {
+    if (!publicKey) return null;
+    const { data } = await supabase
+      .from("users")
+      .select("id")
+      .eq("wallet_address", publicKey.toString())
+      .single();
+    return data ? data.id : null;
+  }
+
+  async function createPoll() {
+    const userId = await getUserId();
+    if (!userId) {
+      alert("You must connect your wallet first!");
+      return;
+    }
+
+    if (question.trim() === "" || options.some((opt) => opt.trim() === "")) {
+      alert("Please fill in the question and all options.");
+      return;
+    }
+
+    const newPoll = {
+      user_id: userId,
+      question,
+      options,
+      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
     };
 
-    fetchUserId();
-  }, [publicKey]);
-
-  const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('novel_id', novelId)
-      .eq('chapter', chapter)
-      .order('created_at', { ascending: false });
-  
-    if (error) {
-      console.error('Error fetching comments:', error);
-      return;
+    const { error } = await supabase.from("polls").insert(newPoll);
+    if (error) alert("Error creating poll!");
+    else {
+      alert("Poll created successfully!");
+      fetchPolls();
+      setQuestion("");
+      setOptions(["", ""]);
+      setExpiresAt("");
     }
-  
-    setComments(data);
-  };
+  }
 
-  useEffect(() => {
-    fetchComments();
-    const intervalId = setInterval(fetchComments, 5000);
-    return () => clearInterval(intervalId);
-  }, [novelId, chapter]);
-
-  const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
-
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, name, weekly_points, wallet_address')
-      .eq('wallet_address', publicKey.toString())
-      .single();
-
-    if (userError || !user) {
-      console.error('Error fetching user:', userError);
+  async function vote(pollId, choice) {
+    const userId = await getUserId();
+    if (!userId) {
+      alert("You must connect your wallet first!");
       return;
     }
 
-    try {
-      const now = new Date();
-      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
-      const today = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+    const { error } = await supabase.from("votes").insert({
+      poll_id: pollId,
+      user_id: userId,
+      choice,
+    });
 
-      const { data: recentComments } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', oneMinuteAgo);
-
-      if (recentComments.length > 0) {
-        alert('You can only post one comment per minute.');
-        return;
-      }
-
-      const { data: rewardedToday } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_rewarded', true)
-        .gte('created_at', today);
-
-      const hasReachedDailyLimit = rewardedToday.length >= 10;
-
-      const { data: comment, error: commentError } = await supabase
-        .from('comments')
-        .insert([{
-          novel_id: novelId,
-          chapter,
-          user_id: user.id,
-          username: user.name,
-          content: newComment,
-          parent_id: replyingTo || null,
-          is_rewarded: !hasReachedDailyLimit
-        }])
-        .select()
-        .single();
-
-      if (commentError) throw commentError;
-
-      if (!hasReachedDailyLimit) {
-        let rewardAmount = balance >= 5000000 ? 25 :
-                           balance >= 1000000 ? 20 :
-                           balance >= 500000 ? 17 :
-                           balance >= 250000 ? 15 :
-                           balance >= 100000 ? 12 : 10;
-
-        await supabase
-          .from('users')
-          .update({ weekly_points: user.weekly_points + rewardAmount })
-          .eq('id', user.id);
-
-        await supabase
-          .from('wallet_events')
-          .insert([{
-            destination_user_id: user.id,
-            event_type: 'credit',
-            amount_change: rewardAmount,
-            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-            destination_chain: "SOL",
-            source_currency: "Token",
-            event_details: "comment_reward",
-            wallet_address: user.wallet_address,
-            source_chain: "SOL",
-          }]);
-      }
-
-      setNewComment('');
-      setReplyingTo(null);
-      setComments((prev) => [comment, ...prev]);
-
-    } catch (error) {
-      console.error('Error submitting comment:', error.message);
-    }
-  };
-
-  const deleteComment = async (commentId) => {
-    if (!currentUserId) return;
-
-    const { error } = await supabase
-      .from('comments')
-      .delete()
-      .eq('id', commentId)
-      .eq('user_id', currentUserId);
-
-    if (error) {
-      console.error('Error deleting comment:', error);
-      return;
-    }
-
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-  };
+    if (error) alert("You can only vote once per poll!");
+    else fetchPolls();
+  }
 
   return (
-    <div className="comment-section">
-      <h4 className="title">Comments</h4>
-      <textarea
-        className="textarea"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder={replyingTo ? 'Replying...' : 'Write a comment'}
+    <div className="poll-container">
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
+  <div className="container">
+    {/* Brand Logo & Name */}
+    <Link href="/" className="navbar-brand d-flex align-items-center">
+      <img
+        src="/images/logo.jpg" // Ensure the image is in the public folder
+        alt="Sempai HQ"
+        className="navbar-logo me-2"
+        style={{ width: "45px", height: "45px", borderRadius: "50%", objectFit: "cover" }}
       />
-      <button className="btn-post" onClick={handleCommentSubmit}>
-        {replyingTo ? 'Post Reply' : 'Post Comment'}
-      </button>
+      <span className="fs-5 fw-bold text-white">Sempai HQ</span>
+    </Link>
 
-      <div className="comments-container">
-        {comments.map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            replies={comment.replies || []}
-            addReply={setReplyingTo}
-            replyingTo={replyingTo}
-            cancelReply={() => setReplyingTo(null)}
-            toggleReplies={() => setShowReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))}
-            showReplies={showReplies}
-            deleteComment={deleteComment}
-            currentUserId={currentUserId} 
-          />
-        ))}
+    {/* Navbar Toggle Button for Mobile */}
+    <button
+      className="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span className="navbar-toggler-icon"></span>
+    </button>
+
+    {/* Navbar Links */}
+    <div className="collapse navbar-collapse" id="navbarNav">
+      <ul className="navbar-nav ms-auto">
+        <li className="nav-item">
+          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
+            Home
+          </Link>
+        </li>
+        <li className="nav-item">
+          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
+            Swap
+          </Link>
+        </li>
+      </ul>
+
+      {/* Wallet & Creator Dashboard Placeholder */}
+      <div className="d-flex align-items-center ms-lg-3">
+        <button className="btn btn-warning fw-semibold px-3 me-2">Connect Wallet</button>
+        <Link href="/dashboard" className="btn btn-outline-light fw-semibold px-3">
+          Creator Dashboard
+        </Link>
       </div>
+    </div>
+  </div>
+</nav>
+
+      <h2 className="title">🔥 Community Polls 🔥</h2>
+
+      {balance > 0 && (
+        <div className="poll-card">
+          <h4>Create a Poll</h4>
+          <input
+            type="text"
+            className="poll-input"
+            placeholder="Enter your question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+          />
+          {options.map((opt, index) => (
+            <input
+              key={index}
+              type="text"
+              className="poll-input"
+              placeholder={`Option ${index + 1}`}
+              value={opt}
+              onChange={(e) => {
+                const newOptions = [...options];
+                newOptions[index] = e.target.value;
+                setOptions(newOptions);
+              }}
+            />
+          ))}
+          <button className="poll-button" onClick={() => setOptions([...options, ""])}>
+            ➕ Add Option
+          </button>
+          <input
+            type="datetime-local"
+            className="poll-input"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+          />
+          <button className="poll-submit" onClick={createPoll}>
+            🚀 Create Poll
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="loading-text">⏳ Loading polls...</p>
+      ) : (
+        polls.map((poll) => (
+          <div key={poll.id} className="poll-card">
+            <h5>{poll.question}</h5>
+            {poll.options.map((opt, index) => (
+              <button
+                key={index}
+                className="poll-option"
+                onClick={() => vote(poll.id, opt)}
+                disabled={balance === 0}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        ))
+      )}
     </div>
   );
 }
