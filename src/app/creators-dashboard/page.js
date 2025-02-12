@@ -531,11 +531,11 @@ const handleNovelSubmit = async (e) => {
                   Home
                 </Link>
               </li>
-              <li className="nav-item">
+              {/* <li className="nav-item">
                 <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
                   Swap
                 </Link>
-              </li>
+              </li> */}
             </ul>
       </div>
 
