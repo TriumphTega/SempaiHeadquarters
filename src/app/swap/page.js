@@ -226,13 +226,14 @@ export default function SwapPage() {
                       </select>
                     </div>
 
-                    {/* <button
+                    <button
                       className="glass-button w-100"
                       onClick={handleSwap}
-                      disabled={loading}
+                      // disabled={loading}
+                      disabled
                     >
                       {loading ? 'Swapping...' : 'Swap Coins'}
-                    </button> */}
+                    </button>
                   </div>
                 )}
               </div>
