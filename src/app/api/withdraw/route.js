@@ -25,14 +25,11 @@ export async function POST(req) {
       return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
     }
 
-    const transactionId = uuidv4();
-
     // Insert into pending_withdrawals
     const { error: insertError } = await supabase.from("pending_withdrawals").insert([
       {
         user_id: userId,
         amount,
-        transactionId,
         status: "pending",
       },
     ]);
