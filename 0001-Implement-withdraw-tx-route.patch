@@ -1,0 +1,270 @@
+From 540143e1067c6dd84bca1107f9c8f57782743405 Mon Sep 17 00:00:00 2001
+From: a <a>
+Date: Fri, 14 Feb 2025 04:33:58 +0530
+Subject: [PATCH] Implement `/withdraw/tx` route
+
+---
+ src/app/api/withdraw/route.js    |   3 -
+ src/app/api/withdraw/tx/route.js | 231 +++++++++++++++++++++++++++++++
+ 2 files changed, 231 insertions(+), 3 deletions(-)
+ create mode 100644 src/app/api/withdraw/tx/route.js
+
+diff --git a/src/app/api/withdraw/route.js b/src/app/api/withdraw/route.js
+index c23a72d..ac9da22 100644
+--- a/src/app/api/withdraw/route.js
++++ b/src/app/api/withdraw/route.js
+@@ -25,14 +25,11 @@ export async function POST(req) {
+       return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
+     }
+ 
+-    const transactionId = uuidv4();
+-
+     // Insert into pending_withdrawals
+     const { error: insertError } = await supabase.from("pending_withdrawals").insert([
+       {
+         user_id: userId,
+         amount,
+-        transactionId,
+         status: "pending",
+       },
+     ]);
+diff --git a/src/app/api/withdraw/tx/route.js b/src/app/api/withdraw/tx/route.js
+new file mode 100644
+index 0000000..068e26c
+--- /dev/null
++++ b/src/app/api/withdraw/tx/route.js
+@@ -0,0 +1,231 @@
++import { NextResponse } from "next/server";
++import {
++  Connection,
++  ComputeBudgetProgram,
++  Keypair,
++  PublicKey,
++  SystemProgram,
++  Transaction,
++  TransactionInstruction,
++  LAMPORTS_PER_SOL,
++} from "@solana/web3.js";
++import {
++  createAssociatedTokenAccountIdempotentInstruction,
++  createTransferInstruction,
++  getAssociatedTokenAddressSync,
++  unpackAccount,
++} from "@solana/spl-token";
++import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
++import { supabase } from "@/services/supabase/supabaseClient";
++
++const TREASURY_WALLET = new PublicKey(
++  "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58",
++);
++
++const BACKEND_KEYPAIR = Keypair.fromSecretKey(
++  Uint8Array.from(JSON.parse(process.env.BACKEND_WALLET_KEYPAIR ?? "[]")),
++);
++
++const connection = new Connection(RPC_URL);
++
++export async function POST(req) {
++  const { withdrawalId } = await req.json();
++
++  if (!withdrawalId) {
++    return NextResponse.json(
++      { error: `Invalid withdrawal id: ${withdrawalId}` },
++      { status: 400 },
++    );
++  }
++
++  const { data: withdrawal, error: withdrawalError } = await supabase
++    .from("pending_withdrawals")
++    .select()
++    .eq("id", withdrawalId)
++    .single();
++  if (!withdrawal || withdrawalError) {
++    return NextResponse.json(
++      { error: "Could not find withdrawal", message: withdrawalError },
++      { status: 404 },
++    );
++  }
++
++  // check if already processed
++  if (withdrawal.status != "pending") {
++    return NextResponse.json(
++      { error: "Withdrawal not pending", data: withdrawal },
++      { status: 409 },
++    );
++  }
++
++  // check if pending
++  let idempotence_key;
++  if (withdrawal.idempotence_key) {
++    idempotence_key = new PublicKey(withdrawal.idempotence_key);
++  } else {
++    idempotence_key = Keypair.generate().publicKey;
++    // update withdrawal
++    const { error: idempotenceKeyError } = await supabase
++      .from("pending_withdrawals")
++      .update({ idempotence_key: idempotence_key.toString() })
++      .eq("id", withdrawal.id);
++    if (idempotenceKeyError) {
++      return NextResponse.json(
++        {
++          error: "Could not create idempotence key",
++          message: idempotenceKeyError,
++        },
++        { status: 500 },
++      );
++    }
++  }
++
++  const [confirmedTx] = await connection.getSignaturesForAddress(
++    idempotence_key,
++    { limit: 1 },
++    "confirmed",
++  );
++  if (confirmedTx) {
++    // update withdrawal
++    const { error: updateWithdrawalError } = await supabase
++      .from("pending_withdrawals")
++      .update({
++        status: "approved",
++        transaction_id: confirmedTx.signature,
++      })
++      .eq("id", withdrawal.id);
++    if (updateWithdrawalError) {
++      return NextResponse.json(
++        { error: "Could not update withdrawal", message: withdrawalError },
++        { status: 500 },
++      );
++    }
++
++    return NextResponse.json({
++      message: "Withdrawal successful",
++      transaction: confirmedTx,
++    });
++  }
++
++  const currentBlockheight = await connection.getBlockHeight();
++  if (currentBlockheight < withdrawal.last_valid_blockheight) {
++    return NextResponse.json(
++      {
++        message:
++          "Withdrawal pending: " +
++          `current height ${currentBlockheight}, pending till: ${withdrawal.last_valid_blockheight}`,
++        data: withdrawal,
++      },
++      { status: 202 },
++    );
++  }
++
++  // get user's wallet
++  const { data: userWallet, error: userError } = await supabase
++    .from("wallet_balances")
++    .select("wallet_address")
++    .eq("user_id, chain, currency", withdrawal.user_id, "SOL", "SMP")
++    .single();
++  if (!userWallet || userError) {
++    return NextResponse.json(
++      { error: "Could not load user", data: withdrawal, message: userError },
++      { status: 404 },
++    );
++  }
++
++  // create and return transaction
++  const { transaction, blockhashInfo } = await createWithdrawalTransaction({
++    user: new PublicKey(userWallet.wallet_address),
++    idempotenceKey: idempotence_key,
++    rawSmpAmount: Math.floor(withdrawal.amount * 1e6),
++  });
++
++  // update withdrawal
++  const { error: updateWithdrawalError } = await supabase
++    .from("pending_withdrawals")
++    .update({
++      idempotence_key: idempotence_key.toString(),
++      last_valid_blockheight: blockhashInfo.lastValidBlockHeight + 50,
++    })
++    .eq("id", withdrawal.id);
++  if (updateWithdrawalError) {
++    return NextResponse.json(
++      { error: "Could not update withdrawal", message: withdrawalError },
++      { status: 500 },
++    );
++  }
++
++  return Response.json({
++    blockhashInfo,
++    transaction: transaction
++      .serialize({ requireAllSignatures: false })
++      .toString("base64"),
++  });
++}
++
++async function createWithdrawalTransaction({
++  user,
++  idempotenceKey,
++  rawSmpAmount,
++}) {
++  const smpAta = {
++    treasury: getAssociatedTokenAddressSync(
++      SMP_MINT_ADDRESS,
++      BACKEND_KEYPAIR.publicKey,
++    ),
++    user: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, user),
++  };
++
++  const [userSmpAccountInfo] = await connection.getMultipleAccountsInfo([
++    smpAta.user,
++  ]);
++
++  const transaction = new Transaction();
++  // add priority fees
++  transaction.add(
++    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
++  );
++
++  // create smp ata if it doesn't exist
++  if (!userSmpAccountInfo)
++    transaction.add(
++      createAssociatedTokenAccountIdempotentInstruction(
++        user,
++        smpAta.user,
++        user,
++        SMP_MINT_ADDRESS,
++      ),
++    );
++
++  transaction.add(
++    // transfer smp from treasury -> user
++    createTransferInstruction(
++      smpAta.treasury,
++      smpAta.user,
++      BACKEND_KEYPAIR.publicKey,
++      rawSmpAmount,
++    ),
++
++    // add idempotence key
++    createNoopInstruction(idempotenceKey),
++  );
++
++  const blockhashInfo = await connection.getLatestBlockhash("finalized");
++  transaction.feePayer = user;
++  transaction.recentBlockhash = blockhashInfo.blockhash;
++  transaction.partialSign(BACKEND_KEYPAIR);
++
++  return { transaction, blockhashInfo };
++}
++
++function createNoopInstruction(...keys) {
++  return new TransactionInstruction({
++    programId: new PublicKey("noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV"),
++    keys: keys.map((pubkey) => ({
++      isSigner: false,
++      isWritable: false,
++      pubkey,
++    })),
++    data: Buffer.from([]),
++  });
++}
+-- 
+2.47.1.windows.1
+
