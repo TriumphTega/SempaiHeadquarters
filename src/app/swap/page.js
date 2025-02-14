@@ -229,7 +229,8 @@ export default function SwapPage() {
                     <button
                       className="glass-button w-100"
                       onClick={handleSwap}
-                      disabled={loading}
+                      // disabled={loading}
+                      disabled
                     >
                       {loading ? 'Swapping...' : 'Swap Coins'}
                     </button>

@@ -747,3 +747,103 @@ h2 {
   max-height: 150px; /* Adjust this value */
   overflow-y: auto;
 }
+.small-btn {
+  font-size: 12px;  /* Smaller text */
+  padding: 4px 8px; /* Less padding */
+  height: auto;      /* Adjust height */
+  line-height: 1;    /* Compact spacing */
+}
+.poll-container {
+  background: #000;
+  min-height: 100vh;
+  padding: 30px;
+  color: #fff;
+  text-align: center;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: rgb(243, 99, 22);
+  text-shadow: 0px 0px 10px rgba(243, 99, 22, 0.7);
+}
+
+.poll-card {
+  background: rgba(20, 20, 20, 0.9);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0px 0px 12px rgba(243, 99, 22, 0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.poll-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0px 0px 20px rgba(243, 99, 22, 0.9);
+}
+
+.poll-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid rgb(243, 99, 22);
+  background: #111;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.poll-button {
+  background: transparent;
+  border: 2px solid rgb(243, 99, 22);
+  padding: 8px 12px;
+  color: rgb(243, 99, 22);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.poll-button:hover {
+  background: rgb(243, 99, 22);
+  color: #000;
+}
+
+.poll-submit {
+  background: rgb(243, 99, 22);
+  padding: 12px;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.poll-submit:hover {
+  background: #ff7733;
+}
+
+.poll-option {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: black;
+  color: white;
+  border: 2px solid rgb(243, 99, 22);
+  border-radius: 6px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.poll-option:hover {
+  background: rgb(243, 99, 22);
+  color: black;
+}
+
+.loading-text {
+  font-size: 1.2rem;
+  color: #ff7733;
+  text-shadow: 0px 0px 10px rgba(243, 99, 22, 0.7);
+}

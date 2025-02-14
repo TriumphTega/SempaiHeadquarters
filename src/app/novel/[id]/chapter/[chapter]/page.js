@@ -10,6 +10,8 @@ import Head from "next/head";
 import { supabase } from '../../../../../services/supabase/supabaseClient';
 import CommentSection from '../../../../../components/Comments/CommentSection';
 import UseAmethystBalance from '../../../../../components/UseAmethystBalance';
+import { useRouter } from "next/navigation";
+
 
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
@@ -23,6 +25,7 @@ export default function ChapterPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");  // Add this line
   const { balance } = UseAmethystBalance();
+  const router = useRouter();
 
 
   const updateTokenBalance = async () => {
@@ -361,6 +364,24 @@ export default function ChapterPage() {
               <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
           )}        
+          <div className="my-3 text-center">
+      <label className="text-warning me-2">Jump to Chapter:</label>
+      <select
+        className="form-select d-inline-block w-auto bg-dark text-warning border-warning"
+        value={chapter}
+        onChange={(e) => {
+          const selectedChapter = e.target.value;
+          router.push(`/novel/${id}/chapter/${selectedChapter}`);
+        }}
+      >
+        {chapterKeys.map((ch, index) => (
+          <option key={ch} value={ch}>
+            {novel?.chaptertitles?.[ch] || `Chapter ${index + 1}`}
+          </option>
+        ))}
+      </select>
+    </div>
+
           <div className="p-4 rounded shadow-lg chapter-content">
           <h1 className="text-warning text-center fs-4">{chapterTitle}</h1>
           <div className="text-center my-3 ">
@@ -397,6 +418,7 @@ export default function ChapterPage() {
             <div />
           )}
         </div>
+        
         <CommentSection novelId={novel.id} chapter={chapterTitle} />
 
       </div>

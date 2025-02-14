@@ -6,8 +6,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import './CommentSection.css';
 import UseAmethystBalance from '../../components/UseAmethystBalance';
 
-const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible }) => (
-  <div className="comment">
+const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible, deleteComment, currentUserId }) => {
+  const isOwner = comment.user_id === currentUserId; // Ensure ownership check is correct
+
+  return (
+    <div className="comment">
     <div className="comment-header">
       <span className="username-text">
         {formatUsername(comment.username)} {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -17,9 +20,13 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
       <p>{comment.content}</p>
     </div>
     <div className="comment-actions">
-      <button className="btn-reply" onClick={() => addReply(comment.id)}>
-        {replyingTo === comment.id ? 'Replying...' : 'Reply'}
-      </button>
+    <button
+      className={`btn-reply ${replyingTo === comment.id ? 'active' : ''}`}
+      onClick={() => addReply(comment.id)}
+    >
+      {replyingTo === comment.id ? 'Replying...' : 'Reply'}
+    </button>
+
       {replyingTo === comment.id && (
         <button className="btn-cancel" onClick={cancelReply}>Cancel</button>
       )}
@@ -27,28 +34,39 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
         <button className="btn-toggle-replies" onClick={() => toggleRepliesVisibility(comment.id)}>
           {areRepliesVisible[comment.id] ? 'Hide Replies' : 'Show Replies'}
         </button>
+        
       )}
+      {isOwner && (
+          <button className="btn small-btn btn-danger" onClick={() => deleteComment(comment.id)}>
+            Delete
+          </button>
+        )}
     </div>
 
     {areRepliesVisible[comment.id] && replies.length > 0 && (
       <div className="replies">
         {replies.map((reply) => (
-          <Comment
-            key={reply.id}
-            comment={reply}
-            replies={reply.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleRepliesVisibility={toggleRepliesVisibility}
-            areRepliesVisible={areRepliesVisible}
-          />
+        <Comment
+        key={comment.id}
+        comment={comment}
+        replies={comment.replies}
+        addReply={addReply}
+        replyingTo={replyingTo}
+        cancelReply={cancelReply}
+        toggleRepliesVisibility={toggleRepliesVisibility}
+        areRepliesVisible={areRepliesVisible}
+        deleteComment={deleteComment} // ✅ Ensure this is passed
+        currentUserId={currentUserId}
+      />
+      
         ))}
       </div>
     )}
   </div>
 );
 
+};
+  
 const formatUsername = (username) => {
   if (username.length > 15) {
     return `${username.slice(0, 2)}**${username.slice(-2)}`;
@@ -56,78 +74,149 @@ const formatUsername = (username) => {
   return username;
 };
 
-export default function NovelCommentSection({ novelId }) {
+export default function NovelCommentSection({ novelId, novelTitle = "Unknown Novel" }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [areRepliesVisible, setAreRepliesVisible] = useState({});
-  const [lastCommentTime, setLastCommentTime] = useState(0); // For rate limiting
-  const [rewardedCountToday, setRewardedCountToday] = useState(0); // Daily cap
-
-  const COMMENT_COOLDOWN = 60 * 1000; // 60 seconds
-  const DAILY_REWARD_LIMIT = 10; // Max 10 rewarded comments per day
-  const MIN_COMMENT_LENGTH = 2; // Minimum characters for a valid comment
+  const [lastCommentTime, setLastCommentTime] = useState(0);
+  const [rewardedCountToday, setRewardedCountToday] = useState(0);
+  const COMMENT_COOLDOWN = 60 * 1000;
+  const DAILY_REWARD_LIMIT = 10;
+  const MIN_COMMENT_LENGTH = 2;
   const { balance } = UseAmethystBalance();
+  const [currentUserId, setCurrentUserId] = useState(null); // Track logged-in user ID
+
+
+  // ✅ Move fetchComments outside of useEffect
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('novel_id', novelId)
+      .order('created_at', { ascending: false });
+
+    if (!error) setComments(data);
+  };
 
   useEffect(() => {
-    const fetchComments = async () => {
-      const { data, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('novel_id', novelId)
-        .order('created_at', { ascending: false });
+    if (!publicKey) return;
 
-      if (!error) setComments(data);
+    const fetchUserId = async () => {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', publicKey.toString())
+        .single();
+
+      if (error || !user) {
+        console.error('Error fetching user ID:', error);
+        return;
+      }
+
+      setCurrentUserId(user.id); // Save user ID
     };
 
-    const fetchRewardedCommentsToday = async () => {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const { data, error } = await supabase
-        .from('comments')
-        .select('*', { count: 'exact' })
-        .eq('user_id', publicKey?.toString())
-        .gte('created_at', `${today}T00:00:00Z`);
+    fetchUserId();
+  }, [publicKey]); // Runs when wallet connects
 
-      if (!error) setRewardedCountToday(data.length);
-    };
-
-    if (publicKey) {
-      fetchComments();
-      fetchRewardedCommentsToday();
+  const deleteComment = async (commentId) => {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', currentUserId); // Ensure only the owner can delete
+  
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return;
     }
+  
+    setComments((prev) => prev.filter((c) => c.id !== commentId)); // Remove from UI
+  };
 
-    const intervalId = setInterval(fetchComments, 5000);
-    return () => clearInterval(intervalId);
+  useEffect(() => {
+    if (!publicKey) return;
+  
+    fetchComments();
+  
+    const subscription = supabase
+      .channel('comments')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, fetchComments)
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [novelId, publicKey]);
-
+  
+ 
+  const sendNotification = async (receiverId, message, type = 'comment') => {
+    if (!receiverId) {
+      console.log('No receiverId found for notification.');
+      return;
+    }
+  
+    const { error } = await supabase.from('notifications').insert([
+      {
+        user_id: receiverId,
+        message,
+        type,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+  
+    if (error) {
+      console.error('Error inserting notification:', error.message);
+    } else {
+      console.log('Notification inserted successfully');
+    }
+  };
+  
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
       alert(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
       return;
     }
-
+  
     const now = Date.now();
     if (now - lastCommentTime < COMMENT_COOLDOWN) {
-      alert(`Please wait for ${(60000 - (now - lastCommentTime))/1000} seconds before posting another comment.`);
+      alert(`Please wait for ${(60000 - (now - lastCommentTime)) / 1000} seconds before posting another comment.`);
       return;
     }
-
+  
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, name, weekly_points, wallet_address')
       .eq('wallet_address', publicKey?.toString())
       .single();
-
+  
     if (userError || !user) {
       console.error('Error fetching user:', userError);
       return;
     }
-
+  
     try {
-      const isRewardEligible = rewardedCountToday < DAILY_REWARD_LIMIT;
-
-      const { error: commentError } = await supabase
+      const hasReachedDailyLimit = rewardedCountToday >= DAILY_REWARD_LIMIT;
+      let rewardAmount = 10;
+  
+      if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+        rewardAmount = 12;
+      } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+        rewardAmount = 15;
+      } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+        rewardAmount = 17;
+      } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
+        rewardAmount = 20;
+      } else if (Number(balance) >= 5_000_000) {
+        rewardAmount = 25;
+      } else {
+        rewardAmount = 10;
+      }
+  
+      const { data: insertedComment, error: commentError } = await supabase
         .from('comments')
         .insert([{
           novel_id: novelId,
@@ -135,47 +224,39 @@ export default function NovelCommentSection({ novelId }) {
           username: user.name,
           content: newComment,
           parent_id: replyingTo || null,
-          is_rewarded: isRewardEligible, // Track if this comment was rewarded
+          is_rewarded: !hasReachedDailyLimit
         }])
+        .select()
         .single();
-
+  
       if (commentError) {
         console.error('Error inserting comment:', commentError.message);
         return;
       }
-
-      if (isRewardEligible) {
-        // Reward user
-        let rewardAmount = 0; // Default value
-      
-        console.log('Balance:', balance); // Debugging the balance value
-      
-        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
-          rewardAmount = 12;  // Reward for 100k - 250k
-        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
-          rewardAmount = 15;  // Reward for 250k - 500k
-        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
-          rewardAmount = 17;  // Reward for 500k - 1M
-        } else if (Number(balance) >= 1_000_000 && Number(balance) <= 5_000_000) {
-          rewardAmount = 20; // Reward for 1M - 5M
-        } else if (Number(balance) >= 5_000_000) {
-          rewardAmount = 25; // Reward for 5M and above
-        } else {
-          rewardAmount = 10;   // No reward if balance doesn't fit any range
+  
+      if (replyingTo) {
+        const { data: parentComment } = await supabase
+          .from('comments')
+          .select('user_id')
+          .eq('id', replyingTo)
+          .single();
+  
+        if (parentComment?.user_id) {
+          await sendNotification(
+            parentComment.user_id,
+            `${user.name} replied to your comment on "${novelTitle}".`
+          );
         }
-      
-        // Use upsert to update or insert the user's weekly_points
+      }
+  
+      await sendNotification(user.id, `Your comment on "${novelTitle || 'a novel'}" was posted successfully.`);
+  
+      if (!hasReachedDailyLimit) {
         await supabase
           .from('users')
-          .upsert([
-            {
-              id: user.id,
-              weekly_points: user.weekly_points + rewardAmount
-            }
-          ])
+          .update({ weekly_points: user.weekly_points + rewardAmount })
           .eq('id', user.id);
-      
-        // Optional: Insert event log for the reward
+  
         await supabase
           .from('wallet_events')
           .insert([{
@@ -189,19 +270,26 @@ export default function NovelCommentSection({ novelId }) {
             wallet_address: user.wallet_address,
             source_chain: "SOL",
           }]);
-      
-        setRewardedCountToday((prev) => prev + 1); // Increment today's count
       }
-      
-
+  
       setNewComment('');
       setReplyingTo(null);
-      setLastCommentTime(now); // Set cooldown timer
-
+      setLastCommentTime(now);
+      setRewardedCountToday(rewardedCountToday + 1);
+      fetchComments();
+  
     } catch (error) {
-      console.error('Error processing comment:', error.message);
+      console.error('Error submitting comment:', error.message);
     }
   };
+  
+
+  
+
+
+
+
+
 
   const addReply = (parentId) => {
     setReplyingTo(replyingTo === parentId ? null : parentId);
@@ -238,27 +326,14 @@ export default function NovelCommentSection({ novelId }) {
   return (
     <div className="comment-section">
       <h4 className="title">Comments</h4>
-      <textarea
-        className="textarea"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder={replyingTo ? 'Replying...' : 'Write a comment'}
-      />
+      <textarea className="textarea" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={replyingTo ? 'Replying...' : 'Write a comment'} />
       <button className="btn-post" onClick={handleCommentSubmit}>
         {replyingTo ? 'Post Reply' : 'Post Comment'}
       </button>
       <div className="comments-container">
         {buildThread(comments).map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            replies={comment.replies}
-            addReply={addReply}
-            replyingTo={replyingTo}
-            cancelReply={cancelReply}
-            toggleRepliesVisibility={toggleRepliesVisibility}
-            areRepliesVisible={areRepliesVisible}
-          />
+          <Comment key={comment.id} comment={comment} replies={comment.replies} addReply={addReply} replyingTo={replyingTo} cancelReply={cancelReply} toggleRepliesVisibility={toggleRepliesVisibility} areRepliesVisible={areRepliesVisible} deleteComment={deleteComment}
+          currentUserId={currentUserId}  />
         ))}
       </div>
     </div>

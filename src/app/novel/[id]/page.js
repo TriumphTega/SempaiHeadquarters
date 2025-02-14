@@ -130,8 +130,8 @@ if (loading) {
           ))}
         </div>
 
-        <NovelCommentSection novelId={id} />
-      </div>
+        <NovelCommentSection novelId={novel.id} novelTitle={novel.title} />
+        </div>
 
       {/* Footer */}
       <footer className="bg-dark text-white text-center py-4 mt-5">

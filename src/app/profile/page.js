@@ -16,6 +16,8 @@ export default function EditProfile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [imageText, setImageText] = useState('');
+  const { balance } = UseAmethystBalance();
+
 
   // Fetch user data using wallet address
   useEffect(() => {
@@ -42,6 +44,24 @@ export default function EditProfile() {
 
     fetchUserData();
   }, [connected, publicKey]);
+
+  let rewardAmount = 0; // Default value
+
+        if (Number(balance) >= 100_000 && Number(balance) < 250_000) {
+          rewardAmount = "X1.2";  // Reward for 100k - 250k
+        } else if (Number(balance) >= 250_000 && Number(balance) < 500_000) {
+          rewardAmount = "X1.5";  // Reward for 250k - 500k
+        } else if (Number(balance) >= 500_000 && Number(balance) < 1_000_000) {
+          rewardAmount = "x1.7";  // Reward for 500k - 1M
+        } else if (Number(balance) >= 1_000_000 && Number(balance) < 5_000_000) {
+          rewardAmount = "2"; // Reward for 1M - 5M
+        }
+         else if (Number(balance) >= 5_000_000) {
+          rewardAmount = "X2.5"; // Reward for 5M and above
+        } else {
+          rewardAmount = "X1";   // No reward if balance doesn't fit any range
+        }
+        console.log(rewardAmount);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -118,7 +138,20 @@ export default function EditProfile() {
       </nav>
 
       <div className="form-wrapper">
-        <h2 className="text-center">Edit Your Profile</h2>
+      
+            <h2 className="text-center">Edit Your Profile</h2>
+
+            <div className="balance-card">
+  <div className="balance-content">
+    <h5 className="balance-text">
+      <span className="icon">💎</span> Amethyst: <span className="balance-amount">{`${balance}`}</span>
+    </h5>
+    <p className="multiplier-text">
+      <span className="icon">⚡</span> Multiplier: <span className="multiplier-value">{rewardAmount}</span>
+    </p>
+  </div>
+</div>
+
 
         {!connected ? (
           <div className="connect-container">
@@ -238,6 +271,65 @@ export default function EditProfile() {
           border-radius: 5px;
           border: 1px solid #ccc;
         }
+          .balance-card {
+    background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+    border-radius: 10px;
+    padding: 15px 20px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 255, 127, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 350px;
+  }
+
+  .balance-content {
+    width: 100%;
+  }
+
+  .balance-text {
+    color: #00ff7f;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-shadow: 0px 0px 8px rgba(0, 255, 127, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .multiplier-text {
+    color: #f39c12;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-top: 10px;
+    text-shadow: 0px 0px 6px rgba(243, 156, 18, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .icon {
+    font-size: 1.5rem;
+  }
+
+  .balance-amount,
+  .multiplier-value {
+    font-weight: bold;
+    font-size: 1.4rem;
+  }
+
+  @media (max-width: 768px) {
+    .balance-card {
+      max-width: 300px;
+      padding: 10px;
+    }
+
+    .balance-text, .multiplier-text {
+      font-size: 1.1rem;
+    }
       `}</style>
     </div>
   );

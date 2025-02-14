@@ -219,40 +219,83 @@ const handleRemoveChapter = (index) => {
 };
 
 
-  const handleNovelSubmit = async (e) => {
-    e.preventDefault();
-  
-    // Prepare the data for submission
-    const novelData = {
+const handleNovelSubmit = async (e) => {
+  e.preventDefault();
+
+  const novelData = {
       user_id: currentUserId,
       title: novelTitle,
       image: imageText,
       summary: novelSummary,
-      chaptertitles: chaptertitles, // Use chaptertitles directly
-      chaptercontents: chaptercontents, // Use chaptercontents directly
-    };
-  
-    try {
-      const { error } = selectedNovel
-        ? await supabase
-            .from('novels')
-            .update(novelData)
-            .eq('id', selectedNovel.id)
-        : await supabase.from('novels').insert([novelData]);
-  
-      if (error) {
-        alert('Error submitting novel: ' + error.message);
-        return;
-      }
-  
-      alert('Novel submitted successfully!');
-      resetForm();
-    } catch (err) {
-      console.error('Error submitting novel:', err.message);
-      alert('An error occurred. Please try again later.');
-    }
+      chaptertitles: chaptertitles,
+      chaptercontents: chaptercontents,
   };
-  
+
+  try {
+      let novelId;
+      let chapterNumber = null; // Default to NULL for new novels
+      let message;
+
+      if (selectedNovel) {
+          // Updating existing novel (adding a chapter)
+          const { error } = await supabase
+              .from('novels')
+              .update(novelData)
+              .eq('id', selectedNovel.id);
+
+          if (error) throw new Error(error.message);
+
+          novelId = selectedNovel.id;
+          chapterNumber = chaptertitles.length; // Use latest chapter number
+          message = `A new chapter (${chapterNumber}) has been added to ${novelTitle}!`;
+      } else {
+          // Inserting a new novel
+          const { data, error } = await supabase
+              .from('novels')
+              .insert([novelData])
+              .select("id")
+              .single();
+
+          if (error) throw new Error(error.message);
+
+          novelId = data.id;
+          message = `A new novel "${novelTitle}" has been published!`;
+      }
+
+      // ✅ Step 1: Fetch all user IDs
+      const { data: users, error: usersError } = await supabase
+          .from("users")
+          .select("id"); // Assuming "id" is the primary key
+
+      if (usersError) throw new Error(usersError.message);
+
+      if (users.length === 0) {
+          console.warn("No users found, skipping notifications.");
+          return;
+      }
+
+      // ✅ Step 2: Insert a notification for each user
+      const notifications = users.map(user => ({
+          user_id: user.id,
+          novel_id: novelId,
+          type: selectedNovel ? "new_chapter" : "new_novel",
+          message,
+          chapter: chapterNumber, // Ensure this is provided
+      }));
+
+      const { error: notifError } = await supabase.from("notifications").insert(notifications);
+
+      if (notifError) throw new Error(notifError.message);
+
+      alert("Novel submitted successfully! Users have been notified.");
+      resetForm();
+  } catch (err) {
+      console.error("Error submitting novel:", err.message);
+      alert("An error occurred. Please try again later.");
+  }
+};
+
+
 
   const resetForm = () => {
     console.log("Resetting form...");

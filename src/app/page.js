@@ -11,6 +11,7 @@ import LoadingPage from '../components/LoadingPage';
 import BootstrapProvider from "../components/BootstrapProvider";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ConnectButton from '../components/ConnectButton';
+import Notifications from "@/components/Notifications";
 
 export default function Home() {
   const router = useRouter();
@@ -20,7 +21,76 @@ export default function Home() {
   const { connected, publicKey } = useWallet(); // Get wallet publicKey
 
   const [isWriter, setIsWriter] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!connected || !publicKey) return;
+  
+      const walletAddress = publicKey.toString();
+      
+      // Fetch the actual user_id from the `users` table
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("wallet_address", walletAddress)
+        .single();
+  
+      if (userError || !user) {
+        console.error("Error fetching user ID:", userError?.message);
+        return;
+      }
+  
+      const userId = user.id; // Get actual user_id
+  
+      // Fetch notifications for this user
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)  // Use dynamic user ID
+        .eq("is_read", false)
+        .order("created_at", { ascending: false });
+  
+      if (error) {
+        console.error("Error fetching notifications:", error.message);
+      } else {
+        setNotifications(data);
+      }
+    };
+  
+    fetchNotifications();
+  }, [connected, publicKey]); // Fetch notifications when wallet connects
+  
+  // Function to mark notifications as read
+  const markAsRead = async () => {
+    if (!connected || !publicKey) return;
+  
+    const walletAddress = publicKey.toString();
+  
+    // Fetch user ID
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("wallet_address", walletAddress)
+      .single();
+  
+    if (userError || !user) {
+      console.error("Error fetching user ID:", userError?.message);
+      return;
+    }
+  
+    const userId = user.id;
+  
+    // Mark all notifications as read
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", userId);
+  
+    setNotifications([]); // Clear notifications after marking as read
+  };
+  
   useEffect(() => {
     const fetchUserDetails = async () => {
       if (!connected || !publicKey) return;
@@ -123,7 +193,55 @@ export default function Home() {
 />
 
     </Link>
+{/* 🔔 Notification Icon */}
+          <div className="position-relative">
+            <button
+              className="btn btn-warning position-relative"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              🔔
+              {notifications.length > 0 && (
+                <span className="badge bg-danger position-absolute top-0 start-100 translate-middle">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
 
+            {/* Dropdown for Notifications */}
+{showDropdown && (
+  <div className="dropdown-menu show p-2">
+    {notifications.length > 0 ? (
+      notifications.map((notif) => (
+        <div key={notif.id} className="dropdown-item">
+          {notif.type === "reply" && notif.comment_id ? (
+            <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`}>
+              📩 Someone replied to your comment: "{notif.message}"
+            </Link>
+          ) : notif.type === "new_chapter" ? (
+            <Link href={`/novel/${notif.novel_id}`}>
+              📖 A new chapter has been added to "{notif.novel_title}"
+            </Link>
+          ) : notif.type === "reward" ? (
+            <Link href="/profile">
+              🎉 You've received a weekly reward! Check your balance.
+            </Link>
+          ) : (
+            <span>{notif.message || "You have a new notification"}</span>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className="dropdown-item">No new notifications</div>
+    )}
+    {notifications.length > 0 && (
+      <button className="btn btn-sm btn-danger mt-2" onClick={markAsRead}>
+        Mark as Read
+      </button>
+    )}
+  </div>
+)}
+
+          </div>
     {/* Toggle Button for Mobile View */}
     <button
       className="navbar-toggler"
@@ -307,6 +425,47 @@ export default function Home() {
             )}
           </div>
           </div>
+          {/* Card Example */}
+          <div className="col-md-4">
+          <div className="image-container">
+            {/* Conditional Rendering Based on Connection Status */}
+            {connected ? (
+              <Link href="/dao-governance" className="text-decoration-none">
+                {/* Image */}
+                <img
+                  src="/images/dao.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
+                </div>
+              </Link>
+            ) : (
+              <div className="position-relative">
+                {/* Image */}
+                <img
+                  src="/images/dao.jpg"
+                  className="img-fluid shadow rounded-3 hover-image"
+                  alt="KISS (Keep it simple, stupid)"
+                />
+
+                {/* Title */}
+                <div className="image-title">
+                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
+                </div>
+
+                {/* Overlay for Disconnected Users */}
+                <div className="overlay d-flex align-items-center justify-content-center">
+                  <NovelConnectButton />
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
+
           </div>
         ) : (
           <p className="text-center text-white">No novels available at the moment.</p>
