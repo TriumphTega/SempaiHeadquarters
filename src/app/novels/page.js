@@ -10,6 +10,7 @@ import LoadingPage from '../../components/LoadingPage';
 import CountdownTimer from '../../components/CountdownTimer';
 import { Transaction } from "@solana/web3.js";
 import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
 
 
 
@@ -21,7 +22,7 @@ export default function NovelsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');  // For user input
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(0); // State for weekly points
-  const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
+  const connection = new Connection(RPC_URL);
 
   
 
