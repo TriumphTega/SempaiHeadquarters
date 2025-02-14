@@ -12,9 +12,9 @@ export async function POST(req) {
 
     // Fetch user balance
     const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("balance")
-      .eq("id", userId)
+      .from("wallet_balances")
+      .select("amount")
+      .eq("user_id", userId)
       .single();
 
     if (userError || !user) {

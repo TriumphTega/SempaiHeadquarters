@@ -87,119 +87,108 @@ export default function NovelsPage() {
   };
 
 
-const handleWithdraw = async () => {
-  if (!connected) {
-    alert("Please connect your wallet first.");
-    return;
-  }
-
-  const amount = parseFloat(withdrawAmount);
-
-  if (isNaN(amount) || amount <= 0) {
-    alert("Please enter a valid withdrawal amount.");
-    return;
-  }
-
-  if (amount < 20) {
-    alert("You can withdraw a minimum of 2500.");
-    return;
-  }
-
-  if (amount > balance) {
-    alert("Insufficient balance for this withdrawal amount.");
-    return;
-  }
-
-  try {
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', publicKey.toString())
-      .single();
-
-    if (userError || !user) {
-      console.error('Error fetching user:', userError);
+  const handleWithdraw = async () => {
+    if (!connected) {
+      alert("Please connect your wallet first.");
       return;
     }
-
-    const userId = user.id;
-    const transactionid = uuidv4();
-
-    // Insert withdrawal request
-    const { data: withdrawal, error: insertError } = await supabase
-      .from('pending_withdrawals')
-      .insert([{
-        user_id: userId,
-        amount: amount,
-        transaction_id: transactionid,
-        status: 'pending',
-        createdat: new Date().toISOString(),
-      }])
-      .select('*')
-      .single(); // Fetch the inserted withdrawal entry
-
-    if (insertError || !withdrawal) {
-      console.error('Error inserting withdrawal request:', insertError);
-      alert("Failed to initiate withdrawal.");
+  
+    const amount = parseFloat(withdrawAmount);
+  
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid withdrawal amount.");
       return;
     }
-
-    const withdrawalId = withdrawal.transactionid; // Use correct ID
-
-    // Call API to get transaction details
-    const { transaction, blockhashInfo, error, message } = await fetch("/api/withdraw/tx", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        withdrawalId: withdrawalId,
-      }),
-    }).then((r) => r.json());
-
-    if (error) {
-      console.error("Withdrawal Error:", error);
-      alert(`Withdrawal failed: ${message || error}`);
+  
+    if (amount < 2500) {
+      alert("You can withdraw a minimum of 2500.");
       return;
     }
-
-    console.log("Transaction:", transaction);
-    console.log("Blockhash Info:", blockhashInfo);
-
-    // TODO: Sign and send the transaction with the connected wallet
-
-    // Deduct from wallet balances
-    const { error: balanceError } = await supabase
-      .from('wallet_balances')
-      .update({ amount: balance - amount })
-      .eq('user_id', userId);
-
-    if (balanceError) {
-      console.error('Error deducting balance from wallet_balances:', balanceError);
-      alert("Failed to deduct from wallet balance.");
+  
+    if (amount > balance) {
+      alert("Insufficient balance for this withdrawal amount.");
       return;
     }
-
-    // Deduct from users table
-    const { error: userBalanceError } = await supabase
-      .from('users')
-      .update({ balance: balance - amount })
-      .eq('id', userId);
-
-    if (userBalanceError) {
-      console.error('Error deducting balance from users:', userBalanceError);
-      alert("Failed to update user balance.");
-      return;
+  
+    try {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', publicKey.toString())
+        .single();
+  
+      if (userError || !user) {
+        console.error('Error fetching user:', userError);
+        return;
+      }
+  
+      const userId = user.id;
+      const transactionId = uuidv4();
+  
+      // Insert withdrawal request
+      const { data: withdrawal, error: insertError } = await supabase
+        .from("pending_withdrawals")
+        .insert([
+          {
+            user_id: userId,
+            amount: amount,
+            transaction_id: transactionId, // ✅ Corrected field name
+            status: "pending",
+            createdat: new Date().toISOString(), // ✅ Corrected field name
+          },
+        ])
+        .select("id, transaction_id") // ✅ Explicitly request `id`
+        .single();
+  
+      if (insertError || !withdrawal) {
+        console.error('Error inserting withdrawal request:', insertError);
+        alert("Failed to initiate withdrawal.");
+        return;
+      }
+  
+      const withdrawalId = withdrawal.id;
+      console.log("Inserted Withdrawal:", withdrawal);
+  
+      // Send withdrawal transaction request
+      const { transaction, blockhashInfo, error, message } = await fetch("/api/withdraw/tx", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ withdrawalId }), // ✅ Now correctly sends the ID
+      }).then((r) => r.json());
+  
+      if (error) {
+        console.error("Withdrawal Error:", error);
+        alert(`Withdrawal failed: ${message || error}`);
+        return;
+      }
+  
+      console.log("Transaction:", transaction);
+      console.log("Blockhash Info:", blockhashInfo);
+  
+      // TODO: Sign and send the transaction with the connected wallet
+      // Ensure transaction is successful before updating balances
+  
+      // Deduct from wallet balances
+      const { error: balanceError } = await supabase
+        .from('wallet_balances')
+        .update({ amount: balance - amount })
+        .eq('user_id', userId);
+  
+      if (balanceError) {
+        console.error('Error deducting balance from wallet_balances:', balanceError);
+        alert("Failed to deduct from wallet balance.");
+        return;
+      }
+  
+      alert("Withdrawal initiated successfully!");
+      setWithdrawAmount(''); // Clear the input
+      checkBalance();
+    } catch (error) {
+      console.error("Error processing withdrawal:", error);
+      alert("Something went wrong. Please try again.");
     }
-
-    alert("Withdrawal initiated successfully!");
-    setWithdrawAmount(''); // Clear the input
-    checkBalance();
-  } catch (error) {
-    console.error("Error processing withdrawal:", error);
-    alert("Something went wrong. Please try again.");
-  }
-};
+  };
+  
 
 
   // Fetch novels from Supabase
