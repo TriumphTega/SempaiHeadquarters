@@ -3,55 +3,60 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { supabase } from '../services/supabase/supabaseClient'; // Correct import
+import { supabase } from '../services/supabase/supabaseClient';
 
 export default function ConnectButton() {
   const { connected, publicKey } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [userCreated, setUserCreated] = useState(false); // To track user creation status
+  const [userCreated, setUserCreated] = useState(false); // Track user creation
 
   useEffect(() => {
     const createUserInSupabase = async () => {
       if (!connected || !publicKey) return;
-  
+
       setIsLoading(true);
-  
+
       try {
         const walletAddress = publicKey.toString();
-  
+        console.log("Wallet connected:", walletAddress);
+
+        // Store wallet address in localStorage
+        localStorage.setItem("walletAddress", walletAddress);
+
         // Check if the user already exists in the 'users' table
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
           .select('*')
           .eq('wallet_address', walletAddress);
-  
+
         if (fetchError) {
           console.error('Error fetching user:', fetchError.message);
           setError(fetchError.message);
           setIsLoading(false);
           return;
         }
-  
-        if (existingUser.length === 0) {
+
+        if (!existingUser || existingUser.length === 0) {
           // User does not exist, create a new user
           const { error: insertError } = await supabase
             .from('users')
             .insert([
               {
                 wallet_address: walletAddress,
-                name: walletAddress, // Set wallet address as name
-                email: walletAddress, // Set wallet address as email
-                isWriter: false, // Explicitly set isWriter to false
-                isSuperuser: false, // Explicitly set isSuperuser to false
+                name: walletAddress, // Use wallet address as name
+                email: walletAddress, // Use wallet address as email
+                isWriter: false, // Default to false
+                isSuperuser: false, // Default to false
               },
             ]);
-  
+
           if (insertError) {
-            console.error('Error creating new user:', insertError.message);
+            console.error('Error creating user:', insertError.message);
             setError(insertError.message);
           } else {
-            console.log('New user instance created with wallet address.');
+            console.log('New user created successfully.');
+            setUserCreated(true);
           }
         } else {
           console.log('User already exists:', existingUser);
@@ -63,10 +68,9 @@ export default function ConnectButton() {
         setIsLoading(false);
       }
     };
-  
+
     createUserInSupabase();
   }, [connected, publicKey]);
-  
 
   if (isLoading) {
     return (
@@ -85,8 +89,8 @@ export default function ConnectButton() {
   return (
     <div>
       <WalletMultiButton className="btn btn-warning text-dark" />
-      {connected}
-      {userCreated && <p>User successfully created!</p>}
+      {connected && <p className="mt-2">Wallet Connected!</p>}
+      {userCreated && <p className="mt-2 text-success">User successfully created!</p>}
     </div>
   );
 }

@@ -100,7 +100,7 @@ const handleWithdraw = async () => {
     return;
   }
 
-  if (amount < 2500) {
+  if (amount < 20) {
     alert("You can withdraw a minimum of 2500.");
     return;
   }
@@ -125,20 +125,50 @@ const handleWithdraw = async () => {
     const userId = user.id;
     const transactionid = uuidv4();
 
-    const { error: insertError } = await supabase.from('pending_withdrawals').insert([{
-      user_id: userId,
-      amount: amount,
-      transactionid,
-      status: 'pending',
-      createdat: new Date().toISOString(),
-    }]);
+    // Insert withdrawal request
+    const { data: withdrawal, error: insertError } = await supabase
+      .from('pending_withdrawals')
+      .insert([{
+        user_id: userId,
+        amount: amount,
+        transaction_id: transactionid,
+        status: 'pending',
+        createdat: new Date().toISOString(),
+      }])
+      .select('*')
+      .single(); // Fetch the inserted withdrawal entry
 
-    if (insertError) {
+    if (insertError || !withdrawal) {
       console.error('Error inserting withdrawal request:', insertError);
       alert("Failed to initiate withdrawal.");
       return;
     }
 
+    const withdrawalId = withdrawal.transactionid; // Use correct ID
+
+    // Call API to get transaction details
+    const { transaction, blockhashInfo, error, message } = await fetch("/api/withdraw/tx", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        withdrawalId: withdrawalId,
+      }),
+    }).then((r) => r.json());
+
+    if (error) {
+      console.error("Withdrawal Error:", error);
+      alert(`Withdrawal failed: ${message || error}`);
+      return;
+    }
+
+    console.log("Transaction:", transaction);
+    console.log("Blockhash Info:", blockhashInfo);
+
+    // TODO: Sign and send the transaction with the connected wallet
+
+    // Deduct from wallet balances
     const { error: balanceError } = await supabase
       .from('wallet_balances')
       .update({ amount: balance - amount })
@@ -150,6 +180,7 @@ const handleWithdraw = async () => {
       return;
     }
 
+    // Deduct from users table
     const { error: userBalanceError } = await supabase
       .from('users')
       .update({ balance: balance - amount })
@@ -169,6 +200,7 @@ const handleWithdraw = async () => {
     alert("Something went wrong. Please try again.");
   }
 };
+
 
   // Fetch novels from Supabase
   const fetchNovels = async () => {

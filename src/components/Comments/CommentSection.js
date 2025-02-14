@@ -205,6 +205,8 @@ export default function CommentSection({ novelId, chapter }) {
                              balance >= 500000 ? 17 :
                              balance >= 250000 ? 15 :
                              balance >= 100000 ? 12 : 10;
+
+          console.log(balance+1);
   
           await supabase
             .from('users')
