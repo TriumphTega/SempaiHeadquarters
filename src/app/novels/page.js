@@ -8,15 +8,20 @@ import ConnectButton from '../../components/ConnectButton'; // Ensure this compo
 import { v4 as uuidv4 } from 'uuid'; // To generate unique transaction IDs
 import LoadingPage from '../../components/LoadingPage';
 import CountdownTimer from '../../components/CountdownTimer';
+import { Transaction } from "@solana/web3.js";
+import { Connection, clusterApiUrl } from "@solana/web3.js";
+
+
 
 export default function NovelsPage() {
-  const { connected, publicKey } = useWallet(); // Solana wallet hook
+  const { connected, publicKey, sendTransaction } = useWallet(); // Solana wallet hook
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [novels, setNovels] = useState([]); // Store novels
   const [withdrawAmount, setWithdrawAmount] = useState('');  // For user input
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(0); // State for weekly points
+  const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 
   
 
@@ -100,7 +105,7 @@ export default function NovelsPage() {
       return;
     }
   
-    if (amount < 2500) {
+    if (amount < 20) {
       alert("You can withdraw a minimum of 2500.");
       return;
     }
@@ -123,7 +128,6 @@ export default function NovelsPage() {
       }
   
       const userId = user.id;
-      const transactionId = uuidv4();
   
       // Insert withdrawal request
       const { data: withdrawal, error: insertError } = await supabase
@@ -132,7 +136,6 @@ export default function NovelsPage() {
           {
             user_id: userId,
             amount: amount,
-            transaction_id: transactionId, // ✅ Corrected field name
             status: "pending",
             createdat: new Date().toISOString(), // ✅ Corrected field name
           },
@@ -165,20 +168,11 @@ export default function NovelsPage() {
       console.log("Transaction:", transaction);
       console.log("Blockhash Info:", blockhashInfo);
   
-      // TODO: Sign and send the transaction with the connected wallet
-      // Ensure transaction is successful before updating balances
-  
-      // Deduct from wallet balances
-      const { error: balanceError } = await supabase
-        .from('wallet_balances')
-        .update({ amount: balance - amount })
-        .eq('user_id', userId);
-  
-      if (balanceError) {
-        console.error('Error deducting balance from wallet_balances:', balanceError);
-        alert("Failed to deduct from wallet balance.");
-        return;
-      }
+      const signature = await sendTransaction(
+     Transaction.from(Buffer.from(transaction, "base64")),
+    connection,
+     );
+      console.log(`signature: ${signature}`);
   
       alert("Withdrawal initiated successfully!");
       setWithdrawAmount(''); // Clear the input
