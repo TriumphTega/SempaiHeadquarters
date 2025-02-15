@@ -1,55 +1,134 @@
 "use client";
 import { useState, useEffect } from "react";
-import GameList from "./GameList";
+import { useRouter } from "next/navigation";
 
 export default function GamePage() {
-  const [gameId, setGameId] = useState("");
-  const [player, setPlayer] = useState("");
-  const [board, setBoard] = useState(Array(9).fill(null));
   const [walletAddress, setWalletAddress] = useState("");
+  const [stakeAmount, setStakeAmount] = useState(10); // Default stake
+  const [games, setGames] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
-    // Fetch wallet address from localStorage or wallet provider
-    setWalletAddress(localStorage.getItem("walletAddress"));
+    // Fetch wallet address
+    try {
+      const storedWallet = localStorage.getItem("walletAddress");
+      if (storedWallet) setWalletAddress(storedWallet);
+    } catch (err) {
+      console.error("LocalStorage not available:", err);
+    }
+
+    // Fetch available games
+    fetchGames();
   }, []);
 
-  const handleStartGame = async (opponent) => {
-    const newGameId = Math.random().toString(36).substr(2, 7);
-    setGameId(newGameId);
-    setPlayer("X");
+  const fetchGames = async () => {
+    try {
+      const res = await fetch("/api/game/list");
+      const data = await res.json();
+      if (data.success) {
+        setGames(data.games);
+      }
+    } catch (error) {
+      console.error("Failed to fetch games:", error);
+    }
+  };
 
-    const response = await fetch("/api/game/stake", {
-      method: "POST",
-      body: JSON.stringify({ gameId: newGameId, walletAddress, amount: 10 }),
-    });
+  
 
-    const data = await response.json();
-    if (!data.success) {
-      alert(data.message);
+  const handleCreateGame = async () => {
+    if (!walletAddress) {
+      alert("Connect your wallet first!");
       return;
     }
-  };
+    if (stakeAmount <= 0) {
+      alert("Stake amount must be greater than zero!");
+      return;
+    }
 
-  const handleMove = (index) => {
-    if (!board[index]) {
-      const newBoard = [...board];
-      newBoard[index] = player;
-      setBoard(newBoard);
+    try {
+      const res = await fetch("/api/game/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player1_wallet: walletAddress, stake_amount: stakeAmount }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Game created! Waiting for opponent...");
+        fetchGames(); // Refresh game list
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error creating game:", error);
+      alert("Failed to create game.");
     }
   };
-
+  const handleJoinGame = async (gameId) => {
+    if (!walletAddress) {
+      alert("Connect your wallet first!");
+      return;
+    }
+  
+    if (!gameId) {
+      alert("Invalid game ID");
+      return;
+    }
+  
+    try {
+      console.log("Joining game with:", { gameId, player_wallet: walletAddress });
+  
+      const res = await fetch("/api/game/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId, player_wallet: walletAddress }), // Ensure gameId is correct
+      });
+  
+      const data = await res.json();
+      if (data.success) {
+        alert("Successfully joined the game!");
+        router.push(`/game/${gameId}`);
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error joining game:", error);
+      alert("Failed to join game.");
+    }
+  };
+  
   return (
     <div>
-      <h1>Game Page</h1>
-      <GameList onSelect={handleStartGame} />
+      <h1>Rock Paper Scissors</h1>
+      <p>Your Wallet: {walletAddress || "Not connected"}</p>
 
-      <div className="tic-tac-toe">
-        {board.map((cell, index) => (
-          <button key={index} onClick={() => handleMove(index)}>
-            {cell}
-          </button>
-        ))}
+      <div>
+        <label>Stake Amount (SMP): </label>
+        <input
+          type="number"
+          value={stakeAmount}
+          onChange={(e) => setStakeAmount(parseFloat(e.target.value))}
+        />
+        <button onClick={handleCreateGame}>Create Game</button>
       </div>
+
+      <h2>Available Games</h2>
+      <ul>
+  {games.length > 0 ? (
+    games.map((game) => (
+      <li key={game.id}>
+        Game ID: {game.id} | Stake: {game.stake_amount} SMP |
+        <button onClick={(e) => { e.stopPropagation(); handleJoinGame(game.id); }}>
+  Join
+</button>
+      </li>
+    ))
+  ) : (
+    <p>No games available.</p>
+  )}
+</ul>
+
+
     </div>
   );
 }

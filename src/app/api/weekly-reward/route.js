@@ -2,7 +2,7 @@ import { supabase } from "@/services/supabase/supabaseClient";
 
 export async function POST(req) {
   try {
-    const { amount } = await req.json(); // Get the amount to distribute
+    const { amount } = await req.json();
     if (!amount || amount <= 0) {
       return Response.json({ success: false, message: "Invalid reward amount." }, { status: 400 });
     }
@@ -13,13 +13,14 @@ export async function POST(req) {
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("id, weekly_points")
-      .gt("weekly_points", 0); // Get only users with points
+      .gt("weekly_points", 0);
 
     if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
 
     console.log("✅ Users fetched:", users.length);
-
+    
     if (users.length === 0) {
+      console.log("❌ No users with points, skipping distribution.");
       return Response.json({ success: false, message: "No points to distribute." });
     }
 
@@ -29,7 +30,7 @@ export async function POST(req) {
       .from("wallet_balances")
       .select("user_id, amount")
       .in("user_id", userIds)
-      .eq("chain", "SOL") // Ensure we target the correct chain
+      .eq("chain", "SOL")
       .eq("currency", "SMP");
 
     if (walletsError) throw new Error(`Failed to fetch wallets: ${walletsError.message}`);
@@ -51,7 +52,14 @@ export async function POST(req) {
     const rewardPerPoint = amount / totalPoints;
     console.log(`⚡ Reward per point: ${rewardPerPoint}`);
 
-    // ✅ 5. Distribute rewards (only updating wallets)
+    // ✅ 5. Log all affected users before updating
+    console.log("🔍 Users receiving rewards:");
+    users.forEach(user => {
+      const rewardAmount = user.weekly_points * rewardPerPoint;
+      console.log(`📌 User ID: ${user.id} | Weekly Points: ${user.weekly_points} | Reward: ${rewardAmount} SMP`);
+    });
+
+    // ✅ 6. Distribute rewards
     for (const user of users) {
       const rewardAmount = user.weekly_points * rewardPerPoint;
 
@@ -72,7 +80,7 @@ export async function POST(req) {
       }
     }
 
-    // ✅ 6. Reset weekly points
+    // ✅ 7. Reset weekly points
     const { error: resetError } = await supabase
       .from("users")
       .update({ weekly_points: 0 })
