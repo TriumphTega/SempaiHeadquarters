@@ -5,12 +5,12 @@ import { supabase } from "@/services/supabase/supabaseClient";
 export default function CountdownTimer() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [rewardDistributed, setRewardDistributed] = useState(false);
 
   useEffect(() => {
     async function fetchCountdown() {
       setLoading(true);
 
+      // Fetch the last stored reward time
       const { data, error } = await supabase
         .from("settings")
         .select("value")
@@ -20,11 +20,18 @@ export default function CountdownTimer() {
       if (error || !data) {
         setTimeLeft(null);
       } else {
-        const startTime = new Date(data.value);
-        const endTime = new Date(startTime.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from start
-        updateCountdown(endTime);
+        const lastResetTime = new Date(data.value);
+        const nextResetTime = getNextSundayMidnight(lastResetTime);
+        updateCountdown(nextResetTime);
       }
       setLoading(false);
+    }
+
+    function getNextSundayMidnight(lastResetTime) {
+      const nextSunday = new Date(lastResetTime);
+      nextSunday.setDate(lastResetTime.getDate() + ((7 - lastResetTime.getDay()) % 7 || 7)); // Move to next Sunday
+      nextSunday.setHours(0, 0, 0, 0); // Set to midnight
+      return nextSunday;
     }
 
     function updateCountdown(endTime) {
@@ -34,9 +41,8 @@ export default function CountdownTimer() {
 
         if (timeDiff <= 0) {
           clearInterval(interval);
-          setRewardDistributed(true);
-          setTimeLeft("⏳ Distributing rewards...");
-          distributeRewards();
+          setTimeLeft("🔄 Resetting timer...");
+          resetTimer(); // Reset countdown when it reaches 0
         } else {
           const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
           const hours = Math.floor((timeDiff / (1000 * 60 * 60)) % 24);
@@ -47,9 +53,20 @@ export default function CountdownTimer() {
       }, 1000);
     }
 
-    async function distributeRewards() {
-      await fetch("/api/weekly-reward", { method: "POST" });
-      setTimeLeft("✅ Rewards distributed!");
+    async function resetTimer() {
+      console.log("🔄 Resetting countdown...");
+      const newTime = new Date().toISOString(); // Now
+      const { error } = await supabase
+        .from("settings")
+        .update({ value: newTime }) // ✅ Reset stored time
+        .eq("key", "weekly_reward_timer");
+
+      if (error) {
+        console.error("❌ Timer reset failed:", error.message);
+      } else {
+        console.log("✅ Timer reset successfully!");
+        fetchCountdown(); // Restart countdown
+      }
     }
 
     fetchCountdown();
@@ -57,37 +74,32 @@ export default function CountdownTimer() {
 
   return (
     <div
-  style={{
-    background: "rgba(0, 0, 0, 0.8)",
-    padding: "15px 25px",
-    borderRadius: "12px",
-    display: "inline-block",
-    textAlign: "center",
-    marginTop: "20px",
-    color: "#fff",
-    fontSize: "1.3rem",
-    fontWeight: "bold",
-    fontFamily: "Open Sans, sans-serif",
-    border: "2px solid #f36316",
-    boxShadow: "0 0 12px rgba(243, 99, 22, 0.7)",
-    transition: "transform 0.3s ease",
-    animation: rewardDistributed ? "pulse 1.5s infinite" : "none",
-    position: "relative",
-  }}
-  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
->
-  {loading ? (
-    <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
-  ) : rewardDistributed ? (
-    <span style={{ color: "#0f0" }}>✅ Rewards Distributed!</span>
-  ) : (
-    <span style={{ color: "#ffb347" }}>⏳ Next Reward: {timeLeft || "Unknown"}</span>
-  )}
-  
-  {/* Reward Pool Display */}
-  {!rewardDistributed && (
-    <div
+      style={{
+        background: "rgba(0, 0, 0, 0.8)",
+        padding: "15px 25px",
+        borderRadius: "12px",
+        display: "inline-block",
+        textAlign: "center",
+        marginTop: "20px",
+        color: "#fff",
+        fontSize: "1.3rem",
+        fontWeight: "bold",
+        fontFamily: "Open Sans, sans-serif",
+        border: "2px solid #f36316",
+        boxShadow: "0 0 12px rgba(243, 99, 22, 0.7)",
+        transition: "transform 0.3s ease",
+        position: "relative",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+    >
+      {loading ? (
+        <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
+      ) : (
+        <span style={{ color: "#ffb347" }}>⏳ Next Reset: {timeLeft || "Unknown"}</span>
+      )}
+
+<div
       style={{
         marginTop: "10px",
         fontSize: "1.1rem",
@@ -97,8 +109,6 @@ export default function CountdownTimer() {
     >
       🏆 Total Reward Pool: <span style={{ color: "#FFD700" }}>2,000,000 SMP</span>
     </div>
-  )}
-</div>
-
+    </div>
   );
 }
