@@ -59,7 +59,17 @@ export async function POST(req) {
         updatedGame.player2_wallet
       );
 
-      // Update the game with the winner
+      // If it's a tie, reset player choices and allow replay
+      if (winner === "tie") {
+        await supabase
+          .from("rock_paper_scissors")
+          .update({ player1_choice: null, player2_choice: null })
+          .eq("id", gameId);
+
+        return Response.json({ success: true, message: "It's a tie! Play again." }, { status: 200 });
+      }
+
+      // Update the game with the winner and set status to "completed"
       const { error: winnerUpdateError } = await supabase
         .from("rock_paper_scissors")
         .update({ winner, status: "completed" })
@@ -82,7 +92,7 @@ export async function POST(req) {
 
 // Function to determine the winner
 function determineWinner(choice1, choice2, player1, player2) {
-  if (choice1 === choice2) return "Draw";
+  if (choice1 === choice2) return "tie"; // Handle tie condition
 
   const winningMoves = {
     rock: "scissors",

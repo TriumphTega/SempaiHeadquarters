@@ -68,6 +68,7 @@ export default function GameRoom() {
       setLoading(false);
     }
   };
+  
 
   if (!game) return <p>Loading game...</p>;
 

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-export default function GameLobby() {
-  const [games, setGames] = useState([]);
-  const [walletAddress, setWalletAddress] = useState("");
+export default function GameRoom() {
+  const { gameId } = useParams();
   const router = useRouter();
+  const [game, setGame] = useState(null);
+  const [choice, setChoice] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -16,61 +19,103 @@ export default function GameLobby() {
       console.error("LocalStorage not available:", err);
     }
 
-    fetchGames();
-  }, []);
+    fetchGame();
+  }, [gameId]);
 
-  async function fetchGames() {
+  async function fetchGame() {
+    if (!gameId) return;
     try {
-      const res = await fetch("/api/game/list");
+      const res = await fetch(`/api/game/${gameId}`);
       const data = await res.json();
       if (data.success) {
-        setGames(data.games);
+        setGame(data.game);
+      } else {
+        console.error("Failed to fetch game:", data.message);
       }
     } catch (error) {
-      console.error("Error fetching games:", error);
+      console.error("Error fetching game:", error);
     }
   }
 
-  const handleJoinGame = async (gameId) => {
+  const handleChoice = async (selection) => {
+    if (!gameId || !walletAddress) {
+      alert("Invalid game state. Try refreshing the page.");
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+    setChoice(selection);
+
     try {
-      const res = await fetch("/api/game/join", {
+      const res = await fetch(`/api/game/move`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId, player_wallet: walletAddress }),
+        body: JSON.stringify({ gameId, walletAddress, choice: selection }),
       });
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/game/${gameId}`);
+        fetchGame(); // Refresh the game after move
+
+        // If both players have played, resolve the game
+        if (data.game.player1_choice && data.game.player2_choice) {
+          await resolveGame();
+        }
       } else {
         alert(data.message);
       }
     } catch (error) {
-      console.error("Error joining game:", error);
-      alert("Failed to join game.");
+      console.error("Error submitting move:", error);
+      alert("Failed to submit move.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  async function resolveGame() {
+    try {
+      const res = await fetch(`/api/game/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        fetchGame();
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error resolving game:", error);
+    }
+  }
+
+  if (!game) return <p>Loading game...</p>;
+
   return (
     <div>
-      <h1>Available Games</h1>
-      {games.length === 0 ? <p>No active games.</p> : null}
-      {games.map((game) => (
-        <div key={game.id} style={{ border: "1px solid gray", padding: "10px", margin: "10px 0" }}>
-          <p>Game ID: {game.id}</p>
-          <p>Stake: {game.stake_amount} SMP</p>
-          <p>Creator: {game.player1_wallet}</p>
-          <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
+      <h1>Game Room: {gameId}</h1>
+      <p>Stake: {game.stake_amount} SMP</p>
+      <p>Creator: {game.player1_wallet}</p>
+      <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
 
-          {walletAddress === game.player1_wallet ? (
-            <button onClick={() => router.push(`/game/${game.id}`)}>Enter Room</button>
-          ) : !game.player2_wallet ? (
-            <button onClick={() => handleJoinGame(game.id)}>Join Game</button>
-          ) : (
-            <button onClick={() => router.push(`/game/${game.id}`)}>Watch / Play</button>
-          )}
-        </div>
-      ))}
+      {game.winner && <h2>Winner: {game.winner === game.player1_wallet ? "Creator" : "Opponent"}</h2>}
+      {game.winner === "tie" && <h2>It's a tie! Play again.</h2>}
+
+      <button onClick={fetchGame} disabled={loading}>
+        {loading ? "Refreshing..." : "Refresh Game"}
+      </button>
+
+      {game.player2_wallet && !game.winner && (
+        <>
+          <h2>Pick your move:</h2>
+          <button onClick={() => handleChoice("rock")} disabled={loading}>Rock</button>
+          <button onClick={() => handleChoice("paper")} disabled={loading}>Paper</button>
+          <button onClick={() => handleChoice("scissors")} disabled={loading}>Scissors</button>
+        </>
+      )}
     </div>
   );
 }
