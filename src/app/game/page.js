@@ -6,10 +6,10 @@ export default function GamePage() {
   const [walletAddress, setWalletAddress] = useState("");
   const [stakeAmount, setStakeAmount] = useState(10); // Default stake
   const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Fetch wallet address
     try {
       const storedWallet = localStorage.getItem("walletAddress");
       if (storedWallet) setWalletAddress(storedWallet);
@@ -17,11 +17,11 @@ export default function GamePage() {
       console.error("LocalStorage not available:", err);
     }
 
-    // Fetch available games
     fetchGames();
   }, []);
 
   const fetchGames = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/game/list");
       const data = await res.json();
@@ -31,9 +31,8 @@ export default function GamePage() {
     } catch (error) {
       console.error("Failed to fetch games:", error);
     }
+    setLoading(false);
   };
-
-  
 
   const handleCreateGame = async () => {
     if (!walletAddress) {
@@ -64,29 +63,27 @@ export default function GamePage() {
       alert("Failed to create game.");
     }
   };
+
   const handleJoinGame = async (gameId) => {
     if (!walletAddress) {
       alert("Connect your wallet first!");
       return;
     }
-  
+
     if (!gameId) {
       alert("Invalid game ID");
       return;
     }
-  
+
     try {
-      console.log("Joining game with:", { gameId, player_wallet: walletAddress });
-  
       const res = await fetch("/api/game/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId, player_wallet: walletAddress }), // Ensure gameId is correct
+        body: JSON.stringify({ gameId, player_wallet: walletAddress }),
       });
-  
+
       const data = await res.json();
       if (data.success) {
-        alert("Successfully joined the game!");
         router.push(`/game/${gameId}`);
       } else {
         alert(data.message);
@@ -96,7 +93,7 @@ export default function GamePage() {
       alert("Failed to join game.");
     }
   };
-  
+
   return (
     <div>
       <h1>Rock Paper Scissors</h1>
@@ -112,23 +109,29 @@ export default function GamePage() {
         <button onClick={handleCreateGame}>Create Game</button>
       </div>
 
-      <h2>Available Games</h2>
-      <ul>
-  {games.length > 0 ? (
-    games.map((game) => (
-      <li key={game.id}>
-        Game ID: {game.id} | Stake: {game.stake_amount} SMP |
-        <button onClick={(e) => { e.stopPropagation(); handleJoinGame(game.id); }}>
-  Join
-</button>
-      </li>
-    ))
-  ) : (
-    <p>No games available.</p>
-  )}
-</ul>
+      <div>
+        <h1>Available Games</h1>
+        <button onClick={fetchGames} disabled={loading}>
+          {loading ? "Refreshing..." : "Refresh Games"}
+        </button>
+        {games.length === 0 ? <p>No active games.</p> : null}
+        {games.map((game) => (
+          <div key={game.id} style={{ border: "1px solid gray", padding: "10px", margin: "10px 0" }}>
+            <p>Game ID: {game.id}</p>
+            <p>Stake: {game.stake_amount} SMP</p>
+            <p>Creator: {game.player1_wallet}</p>
+            <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
 
-
+            {walletAddress === game.player1_wallet ? (
+              <button onClick={() => router.push(`/game/${game.id}`)}>Enter Room</button>
+            ) : !game.player2_wallet ? (
+              <button onClick={() => handleJoinGame(game.id)}>Join Game</button>
+            ) : (
+              <button onClick={() => router.push(`/game/${game.id}`)}>Watch / Play</button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

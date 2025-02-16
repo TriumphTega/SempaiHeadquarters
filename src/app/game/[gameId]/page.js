@@ -9,10 +9,9 @@ export default function GameRoom() {
   const [game, setGame] = useState(null);
   const [choice, setChoice] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
-  const [loading, setLoading] = useState(false); // Prevent duplicate submissions
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch wallet address from localStorage
     try {
       const storedWallet = localStorage.getItem("walletAddress");
       if (storedWallet) setWalletAddress(storedWallet);
@@ -20,7 +19,7 @@ export default function GameRoom() {
       console.error("LocalStorage not available:", err);
     }
 
-    fetchGame(); // Fetch game data when the component mounts
+    fetchGame();
   }, [gameId]);
 
   async function fetchGame() {
@@ -38,47 +37,13 @@ export default function GameRoom() {
     }
   }
 
-  const handleJoinGame = async () => {
-    if (!walletAddress) {
-      alert("Connect your wallet first!");
-      return;
-    }
-
-    if (!gameId) {
-      alert("Invalid game ID");
-      return;
-    }
-
-    try {
-      console.log("Joining game with:", { gameId, player_wallet: walletAddress });
-
-      const res = await fetch("/api/game/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId, player_wallet: walletAddress }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        alert("Successfully joined the game!");
-        fetchGame(); // Refetch game data after joining
-        router.push(`/game/${gameId}`);
-      } else {
-        alert(data.message);
-      }
-    } catch (error) {
-      console.error("Error joining game:", error);
-      alert("Failed to join game.");
-    }
-  };
-
   const handleChoice = async (selection) => {
     if (!gameId || !walletAddress) {
       alert("Invalid game state. Try refreshing the page.");
       return;
     }
 
-    if (loading) return; // Prevent multiple submissions
+    if (loading) return;
     setLoading(true);
     setChoice(selection);
 
@@ -92,7 +57,7 @@ export default function GameRoom() {
       const data = await res.json();
       if (data.success) {
         alert("Move submitted!");
-        fetchGame(); // Refetch game data after a move to update the winner
+        fetchGame(); // Refresh the game after move
       } else {
         alert(data.message);
       }
@@ -113,15 +78,11 @@ export default function GameRoom() {
       <p>Creator: {game.player1_wallet}</p>
       <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
 
-      {game.winner && (
-        <h2>Winner: {game.winner === game.player1_wallet ? "Creator" : "Opponent"}</h2>
-      )}
+      {game.winner && <h2>Winner: {game.winner === game.player1_wallet ? "Creator" : "Opponent"}</h2>}
 
-      {!game.player2_wallet && walletAddress !== game.player1_wallet && (
-        <button onClick={handleJoinGame} disabled={loading}>
-          Join Game
-        </button>
-      )}
+      <button onClick={fetchGame} disabled={loading}>
+        {loading ? "Refreshing..." : "Refresh Game"}
+      </button>
 
       {game.player2_wallet && !game.winner && (
         <>

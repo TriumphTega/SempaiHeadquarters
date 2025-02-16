@@ -1,151 +1,76 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; 
-import { supabase } from '../../services/supabase/supabaseClient';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function GameList() {
+export default function GameLobby() {
   const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [gameType, setGameType] = useState("tic-tac-toe"); // Default game type
-  const [stake, setStake] = useState(0); // Default stake
-  const router = useRouter(); 
+  const [walletAddress, setWalletAddress] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
-    const storedWallet = localStorage.getItem("walletAddress");
-    if (!storedWallet) {
-      console.error("⚠️ No wallet address found. Connect your wallet first.");
-      setLoading(false);
-      return;
+    try {
+      const storedWallet = localStorage.getItem("walletAddress");
+      if (storedWallet) setWalletAddress(storedWallet);
+    } catch (err) {
+      console.error("LocalStorage not available:", err);
     }
-
-    setWalletAddress(storedWallet);
-    console.log("🔗 Using wallet address:", storedWallet);
-
-    const fetchGames = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("games")
-          .select("*")
-          .eq("status", "waiting");
-
-        if (error) {
-          console.error("Error fetching games:", error.message);
-        } else {
-          setGames(data);
-          console.log("🎮 Games loaded:", data);
-        }
-      } catch (err) {
-        console.error("Error fetching games:", err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchGames();
   }, []);
 
-  // ✅ Create a new game
-  const createGame = async () => {
-    if (!walletAddress) {
-      console.error("⚠️ No wallet connected.");
-      return;
-    }
-
+  async function fetchGames() {
     try {
-      const { data, error } = await supabase
-        .from('games')
-        .insert([{ player1: walletAddress, game_type: gameType, stake, status: 'waiting' }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating game:', error.message);
-        return;
+      const res = await fetch("/api/game/list");
+      const data = await res.json();
+      if (data.success) {
+        setGames(data.games);
       }
-
-      console.log('🎉 Game created successfully:', data);
-      router.push(`/game/${data.id}`);
-    } catch (err) {
-      console.error('Game creation failed:', err.message);
+    } catch (error) {
+      console.error("Error fetching games:", error);
     }
-  };
-
-  // ✅ Join a game
-  const joinGame = async (gameId) => {
-    if (!walletAddress) {
-      console.error("⚠️ No wallet connected.");
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .update({ player2: walletAddress, status: 'ongoing' })
-        .eq('id', gameId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error joining game:', error.message);
-        return;
-      }
-
-      console.log('🎉 Joined game successfully:', data);
-      router.push(`/game/${gameId}`);
-    } catch (err) {
-      console.error('Join game failed:', err.message);
-    }
-  };
-
-  if (loading) {
-    return <p>Loading games...</p>;
   }
 
-  if (!walletAddress) {
-    return <p className="text-danger">⚠️ No wallet connected. Please connect your wallet.</p>;
-  }
+  const handleJoinGame = async (gameId) => {
+    try {
+      const res = await fetch("/api/game/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId, player_wallet: walletAddress }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/game/${gameId}`);
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error joining game:", error);
+      alert("Failed to join game.");
+    }
+  };
 
   return (
     <div>
-      <h2>Game List</h2>
+      <h1>Available Games</h1>
+      {games.length === 0 ? <p>No active games.</p> : null}
+      {games.map((game) => (
+        <div key={game.id} style={{ border: "1px solid gray", padding: "10px", margin: "10px 0" }}>
+          <p>Game ID: {game.id}</p>
+          <p>Stake: {game.stake_amount} SMP</p>
+          <p>Creator: {game.player1_wallet}</p>
+          <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
 
-      {/* ✅ Game Creation Form */}
-      <div className="mb-3">
-        <label>Choose Game Type:</label>
-        <select value={gameType} onChange={(e) => setGameType(e.target.value)} className="form-select">
-          <option value="tic-tac-toe">Tic-Tac-Toe</option>
-          <option value="rock-paper-scissors">Rock-Paper-Scissors</option>
-        </select>
-      </div>
-
-      <div className="mb-3">
-        <label>Stake (SMP):</label>
-        <input 
-          type="number" 
-          value={stake} 
-          onChange={(e) => setStake(Number(e.target.value))} 
-          className="form-control"
-          min="0"
-        />
-      </div>
-
-      <button onClick={createGame} className="btn btn-primary mb-3">Create Game</button>
-
-      {/* ✅ Available Games */}
-      {games.length === 0 ? (
-        <p>No games available...</p>
-      ) : (
-        <ul>
-          {games.map((game) => (
-            <li key={game.id}>
-              {game.player1} created a {game.game_type} game with {game.stake} SMP! 
-              <button onClick={() => joinGame(game.id)} className="btn btn-success ms-2">Join Game</button>
-            </li>
-          ))}
-        </ul>
-      )}
+          {walletAddress === game.player1_wallet ? (
+            <button onClick={() => router.push(`/game/${game.id}`)}>Enter Room</button>
+          ) : !game.player2_wallet ? (
+            <button onClick={() => handleJoinGame(game.id)}>Join Game</button>
+          ) : (
+            <button onClick={() => router.push(`/game/${game.id}`)}>Watch / Play</button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
