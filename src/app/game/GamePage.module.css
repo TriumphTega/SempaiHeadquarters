@@ -1,0 +1,74 @@
+/* GamePage.module.css */
+.container {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+}
+
+.header {
+  color: rgba(243, 99, 22, 0.7);
+  text-align: center;
+  font-weight: bold;
+  font-size: 2rem;
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+.walletInfo {
+  text-align: center;
+  color: #f3f3f3;
+  font-size: 1.1rem;
+}
+
+.card {
+  background: black;
+  border: 1px solid rgba(243, 99, 22, 0.7);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(243, 99, 22, 0.4);
+  animation: slideUp 0.8s ease-out;
+}
+
+.input {
+  background: rgba(243, 99, 22, 0.1);
+  color: white;
+  border: 1px solid rgba(243, 99, 22, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.button {
+  background: rgba(243, 99, 22, 0.7);
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.button:hover {
+  transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

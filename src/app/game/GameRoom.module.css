@@ -1,0 +1,118 @@
+/* Container styling */
+.container {
+    text-align: center;
+    color: white;
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(243, 99, 22, 0.6);
+    animation: fadeIn 1.5s ease-in-out;
+  }
+  
+  /* Game Title */
+  .gameTitle {
+    font-size: 2rem;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(243, 99, 22, 0.8);
+    animation: titleGlow 1.5s infinite alternate;
+  }
+  
+  /* Player info */
+  .gameInfo {
+    margin-top: 10px;
+    font-size: 1.1rem;
+    color: #f3f3f3;
+  }
+  
+  /* Glowing Button Effects */
+  .choiceButton {
+    background: rgba(243, 99, 22, 0.9);
+    color: white;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    width: 100px;
+    height: 100px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px;
+  }
+  
+  .choiceButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 0px 15px rgba(243, 99, 22, 1);
+  }
+  
+  .choiceButton:active {
+    transform: scale(0.9);
+  }
+  
+  /* Choice-Specific Colors */
+  .rock {
+    background: linear-gradient(45deg, #333, #666);
+  }
+  .paper {
+    background: linear-gradient(45deg, #0073e6, #3399ff);
+  }
+  .scissors {
+    background: linear-gradient(45deg, #d9534f, #ff6666);
+  }
+  
+  /* Animation for move submission */
+  @keyframes moveBounce {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  /* Fade-in effect */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Glowing title */
+  @keyframes titleGlow {
+    from {
+      text-shadow: 0 0 8px rgba(243, 99, 22, 0.8);
+    }
+    to {
+      text-shadow: 0 0 15px rgba(243, 99, 22, 1);
+    }
+  }
+  
+  
+  .selected {
+    transform: scale(1.2); /* Slightly enlarges the selected choice */
+    animation: bounce 0.5s ease infinite;
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: scale(1.2); }
+    50% { transform: scale(1.4); }
+  }
+  .choiceAnimation {
+    width: 80px;  /* Adjust as needed */
+    height: 80px;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  

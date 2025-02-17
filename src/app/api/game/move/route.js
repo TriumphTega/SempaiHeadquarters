@@ -69,17 +69,65 @@ export async function POST(req) {
         return Response.json({ success: true, message: "It's a tie! Play again." }, { status: 200 });
       }
 
-      // Update the game with the winner and set status to "completed"
+      // Find the loser
+      const loser = winner === updatedGame.player1_wallet ? updatedGame.player2_wallet : updatedGame.player1_wallet;
+      const stakeAmount = updatedGame.stake_amount;
+
+      // Deduct stake from loser
+      const { data: loserBalance, error: fetchLoserError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", loser)
+        .single();
+
+      if (fetchLoserError || !loserBalance || loserBalance.amount < stakeAmount) {
+        return Response.json({ success: false, message: "Loser has insufficient balance" }, { status: 400 });
+      }
+
+      const newLoserBalance = loserBalance.amount - stakeAmount;
+
+      const { error: loserDeductError } = await supabase
+        .from("wallet_balances")
+        .update({ amount: newLoserBalance })
+        .eq("wallet_address", loser);
+
+      if (loserDeductError) {
+        return Response.json({ success: false, message: "Failed to deduct from loser" }, { status: 500 });
+      }
+
+      // Credit stake to the winner
+      const { data: winnerBalance, error: fetchWinnerError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", winner)
+        .single();
+
+      if (fetchWinnerError || !winnerBalance) {
+        return Response.json({ success: false, message: "Failed to fetch winner balance" }, { status: 500 });
+      }
+
+      const newWinnerBalance = winnerBalance.amount + stakeAmount;
+
+      const { error: creditError } = await supabase
+        .from("wallet_balances")
+        .update({ amount: newWinnerBalance })
+        .eq("wallet_address", winner);
+
+      if (creditError) {
+        return Response.json({ success: false, message: "Failed to credit winner" }, { status: 500 });
+      }
+
+      // Update game status to "completed"
       const { error: winnerUpdateError } = await supabase
         .from("rock_paper_scissors")
         .update({ winner, status: "completed" })
         .eq("id", gameId);
 
       if (winnerUpdateError) {
-        return Response.json({ success: false, message: "Failed to update winner" }, { status: 500 });
+        return Response.json({ success: false, message: "Failed to update game status" }, { status: 500 });
       }
 
-      return Response.json({ success: true, message: `Game completed! Winner: ${winner}` }, { status: 200 });
+      return Response.json({ success: true, message: `Game completed! Winner: ${winner} credited with ${stakeAmount} SMP` }, { status: 200 });
     }
 
     return Response.json({ success: true, message: "Move submitted!" }, { status: 200 });

@@ -1,20 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+import styles from "../GameRoom.module.css"; // Importing the new CSS module
+import { supabase } from "@/services/supabase/supabaseClient";
+
+
 
 export default function GameRoom() {
   const { gameId } = useParams();
-  const router = useRouter();
   const [game, setGame] = useState(null);
   const [choice, setChoice] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userBalance, setUserBalance] = useState(0);
 
   useEffect(() => {
     try {
       const storedWallet = localStorage.getItem("walletAddress");
-      if (storedWallet) setWalletAddress(storedWallet);
+      if (storedWallet) {
+        setWalletAddress(storedWallet);
+        fetchUserBalance(storedWallet);
+      }
     } catch (err) {
       console.error("LocalStorage not available:", err);
     }
@@ -25,15 +33,29 @@ export default function GameRoom() {
   async function fetchGame() {
     if (!gameId) return;
     try {
-      const res = await fetch(`/api/game/${gameId}`);
-      const data = await res.json();
-      if (data.success) {
-        setGame(data.game);
-      } else {
-        console.error("Failed to fetch game:", data.message);
-      }
+      const { data, error } = await supabase.from("rock_paper_scissors").select("*").eq("id", gameId).single();
+      if (error) throw error;
+      setGame(data);
     } catch (error) {
       console.error("Error fetching game:", error);
+    }
+  }
+
+  async function fetchUserBalance(wallet) {
+    try {
+      const { data, error } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", wallet)
+        .single();
+
+      if (error) {
+        console.error("Failed to fetch balance:", error.message);
+      } else {
+        setUserBalance(data.amount);
+      }
+    } catch (error) {
+      console.error("Error fetching balance:", error);
     }
   }
 
@@ -43,7 +65,7 @@ export default function GameRoom() {
       return;
     }
 
-    if (loading) return;
+    if (loading || choice) return; // Prevents multiple selections
     setLoading(true);
     setChoice(selection);
 
@@ -57,7 +79,8 @@ export default function GameRoom() {
       const data = await res.json();
       if (data.success) {
         alert("Move submitted!");
-        fetchGame(); // Refresh the game after move
+        fetchGame();
+        fetchUserBalance(walletAddress); // Update balance after the move
       } else {
         alert(data.message);
       }
@@ -68,29 +91,61 @@ export default function GameRoom() {
       setLoading(false);
     }
   };
-  
 
-  if (!game) return <p>Loading game...</p>;
+  if (!game) return <p className={styles.gameInfo}>Loading game...</p>;
 
   return (
-    <div>
-      <h1>Game Room: {gameId}</h1>
-      <p>Stake: {game.stake_amount} SMP</p>
-      <p>Creator: {game.player1_wallet}</p>
-      <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
+    <div className={styles.container}>
+      <h1 className={styles.gameTitle}>Game Room: {gameId}</h1>
+      <p className={styles.gameInfo}>
+        <strong>Stake:</strong> {game.stake_amount} SMP
+      </p>
+      <p className={styles.gameInfo}>
+        <strong>Your Balance:</strong> {userBalance} SMP
+      </p>
+      <p className={styles.gameInfo}>
+        <strong>Creator:</strong> {game.player1_wallet}
+      </p>
+      <p className={styles.gameInfo}>
+        <strong>Opponent:</strong> {game.player2_wallet || "Waiting for opponent..."}
+      </p>
 
-      {game.winner && <h2>Winner: {game.winner === game.player1_wallet ? "Creator" : "Opponent"}</h2>}
+      {game.winner && (
+        <h2 className={styles.gameTitle}>
+          🎉 Winner: {game.winner === game.player1_wallet ? "Creator" : "Opponent"} 🎉
+        </h2>
+      )}
 
-      <button onClick={fetchGame} disabled={loading}>
+      <button onClick={fetchGame} disabled={loading} className={styles.choiceButton}>
         {loading ? "Refreshing..." : "Refresh Game"}
       </button>
 
       {game.player2_wallet && !game.winner && (
         <>
-          <h2>Pick your move:</h2>
-          <button onClick={() => handleChoice("rock")} disabled={loading}>Rock</button>
-          <button onClick={() => handleChoice("paper")} disabled={loading}>Paper</button>
-          <button onClick={() => handleChoice("scissors")} disabled={loading}>Scissors</button>
+          <h2 className={styles.gameTitle}>🔥 Choose Your Move 🔥</h2>
+          <div className={styles.choiceContainer}>
+            <button
+              onClick={() => handleChoice("rock")}
+              disabled={loading || choice !== ""}
+              className={`${styles.choiceButton} ${styles.rock} ${choice === "rock" ? styles.selected : ""}`}
+            >
+              <img src="/animations/rock.svg" alt="Rock" className={styles.choiceAnimation} />
+            </button>
+            <button
+              onClick={() => handleChoice("paper")}
+              disabled={loading || choice !== ""}
+              className={`${styles.choiceButton} ${styles.paper} ${choice === "paper" ? styles.selected : ""}`}
+            >
+              <img src="/animations/paper.svg" alt="Paper" className={styles.choiceAnimation} />
+            </button>
+            <button
+              onClick={() => handleChoice("scissors")}
+              disabled={loading || choice !== ""}
+              className={`${styles.choiceButton} ${styles.scissors} ${choice === "scissors" ? styles.selected : ""}`}
+            >
+              <img src="/animations/scissors.svg" alt="Scissors" className={styles.choiceAnimation} />
+            </button>
+          </div>
         </>
       )}
     </div>

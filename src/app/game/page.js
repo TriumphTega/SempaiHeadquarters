@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./GamePage.module.css"; // Import the CSS module
 
 export default function GamePage() {
   const [walletAddress, setWalletAddress] = useState("");
-  const [stakeAmount, setStakeAmount] = useState(10); // Default stake
+  const [stakeAmount, setStakeAmount] = useState(10);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function GamePage() {
       const data = await res.json();
       if (data.success) {
         alert("Game created! Waiting for opponent...");
-        fetchGames(); // Refresh game list
+        fetchGames();
       } else {
         alert(data.message);
       }
@@ -95,42 +96,70 @@ export default function GamePage() {
   };
 
   return (
-    <div>
-      <h1>Rock Paper Scissors</h1>
-      <p>Your Wallet: {walletAddress || "Not connected"}</p>
+    <div className={styles.container}>
+      <h1 className={styles.header}>Rock Paper Scissors</h1>
+      <p className={styles.walletInfo}>
+        Your Wallet: <span className="fw-bold">{walletAddress || "Not connected"}</span>
+      </p>
 
-      <div>
-        <label>Stake Amount (SMP): </label>
-        <input
-          type="number"
-          value={stakeAmount}
-          onChange={(e) => setStakeAmount(parseFloat(e.target.value))}
-        />
-        <button onClick={handleCreateGame}>Create Game</button>
+      {/* Create Game Section */}
+      <div className={styles.card}>
+        <label className="text-light mb-2 fw-bold">Stake Amount (SMP):</label>
+        <div className="input-group">
+          <input
+            type="number"
+            className={`${styles.input} form-control`}
+            value={stakeAmount}
+            onChange={(e) => setStakeAmount(parseFloat(e.target.value))}
+            placeholder="Enter stake amount"
+          />
+          <button className={`${styles.button} btn fw-bold`} onClick={handleCreateGame}>
+            Create Game
+          </button>
+        </div>
       </div>
 
-      <div>
-        <h1>Available Games</h1>
-        <button onClick={fetchGames} disabled={loading}>
+      {/* Available Games Section */}
+      <div className={styles.card}>
+        <h2 className="text-light text-center">Available Games</h2>
+        <button className={`${styles.button} btn mb-3 w-100 fw-bold`} onClick={fetchGames} disabled={loading}>
           {loading ? "Refreshing..." : "Refresh Games"}
         </button>
-        {games.length === 0 ? <p>No active games.</p> : null}
-        {games.map((game) => (
-          <div key={game.id} style={{ border: "1px solid gray", padding: "10px", margin: "10px 0" }}>
-            <p>Game ID: {game.id}</p>
-            <p>Stake: {game.stake_amount} SMP</p>
-            <p>Creator: {game.player1_wallet}</p>
-            <p>Opponent: {game.player2_wallet || "Waiting for opponent..."}</p>
 
-            {walletAddress === game.player1_wallet ? (
-              <button onClick={() => router.push(`/game/${game.id}`)}>Enter Room</button>
-            ) : !game.player2_wallet ? (
-              <button onClick={() => handleJoinGame(game.id)}>Join Game</button>
-            ) : (
-              <button onClick={() => router.push(`/game/${game.id}`)}>Watch / Play</button>
-            )}
-          </div>
-        ))}
+        {games.length === 0 ? (
+          <p className="text-center text-danger">No active games.</p>
+        ) : (
+          games.map((game) => (
+            <div key={game.id} className={`${styles.card} mb-3`}>
+              <p className="text-light">
+                <strong>Game ID:</strong> {game.id}
+              </p>
+              <p className="text-light">
+                <strong>Stake:</strong> {game.stake_amount} SMP
+              </p>
+              <p className="text-light">
+                <strong>Creator:</strong> {game.player1_wallet}
+              </p>
+              <p className="text-warning">
+                <strong>Opponent:</strong> {game.player2_wallet || "Waiting for opponent..."}
+              </p>
+
+              {walletAddress === game.player1_wallet ? (
+                <button className={`${styles.button} btn-success fw-bold w-100`} onClick={() => router.push(`/game/${game.id}`)}>
+                  Enter Room
+                </button>
+              ) : !game.player2_wallet ? (
+                <button className={`${styles.button} btn-primary fw-bold w-100`} onClick={() => handleJoinGame(game.id)}>
+                  Join Game
+                </button>
+              ) : (
+                <button className={`${styles.button} btn-info fw-bold w-100`} onClick={() => router.push(`/game/${game.id}`)}>
+                  Watch / Play
+                </button>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
