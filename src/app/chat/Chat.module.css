@@ -1,0 +1,189 @@
+.chatContainer {
+  background-color: #000;
+  color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 800px;
+  margin: 20px auto;
+  box-shadow: 0 4px 10px rgba(243, 99, 22, 0.7);
+}
+
+.title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #ffb347;
+  font-family: 'Lora', serif;
+}
+
+.messages {
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 10px;
+}
+
+.message {
+  background-color: rgba(243, 99, 22, 0.7);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.profileImage {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffb347;
+}
+
+.profilePlaceholder {
+  width: 40px;
+  height: 40px;
+  background-color: gray;
+  border-radius: 50%;
+}
+
+.userName {
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.messageContent {
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.mediaImage {
+  max-width: 100%;
+  border-radius: 5px;
+  margin-top: 5px;
+  height: 200px; /* fixed height for media images */
+  object-fit: cover;
+}
+
+.replyInfo {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.replyButton {
+  background: none;
+  border: 1px solid #ffb347;
+  color: #ffb347;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
+
+.replyButton:hover {
+  background: #ffb347;
+  color: #000;
+}
+
+.replyIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #222;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.replyingTo {
+  font-size: 0.9rem;
+  color: #ffcc00;
+}
+
+.cancelReplyButton {
+  background: transparent;
+  border: 1px solid #ff3b3b;
+  color: #ff3b3b;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  transition: background 0.2s ease;
+}
+
+.cancelReplyButton:hover {
+  background: #ff3b3b;
+  color: #fff;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #f36316;
+  background: #222;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  filter: brightness(1);
+}
+
+.iconButton:hover {
+  transform: scale(1.1);
+  filter: brightness(1.3);
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  fill: #ffb347; /* If using inline SVG fill */
+}
+
+/* Optionally, if you want to add custom animations to the icons */
+@keyframes iconPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.uploadIcon {
+  animation: iconPulse 2s infinite;
+}
+
+.sendIcon {
+  animation: iconPulse 2s infinite;
+}
