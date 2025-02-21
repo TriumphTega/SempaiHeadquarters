@@ -23,7 +23,6 @@ async function fetchUserDetails(walletAddress) {
     // Check if profile_image already starts with a data URL prefix; if not, add one.
     let profile_image = data.image;
     if (profile_image && !profile_image.startsWith("data:image/")) {
-      // Adjust MIME type as necessary (e.g., "jpeg" or "png")
       profile_image = `data:image/jpeg;base64,${profile_image}`;
     }
     return { name, profile_image };
@@ -42,6 +41,14 @@ export default function ChatPage() {
   const [file, setFile] = useState(null);
   const [initialLoad, setInitialLoad] = useState(true);
   const messagesEndRef = useRef(null);
+
+  // State for GIF picker
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifSearchTerm, setGifSearchTerm] = useState("");
+  const [gifResults, setGifResults] = useState([]);
+
+  // Giphy API key using the public beta key
+  const GIPHY_API_KEY = "Dc6zaTOxFJmzC";
 
   // Fetch wallet address from localStorage on mount
   useEffect(() => {
@@ -76,9 +83,13 @@ export default function ChatPage() {
   useEffect(() => {
     const subscription = supabase
       .channel("messages_channel")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        setMessages((prevMessages) => [...prevMessages, payload.new]);
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          setMessages((prevMessages) => [...prevMessages, payload.new]);
+        }
+      )
       .subscribe();
 
     return () => {
@@ -86,7 +97,7 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Scroll to bottom on initial load only
+  // Scroll to bottom on new messages
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -109,13 +120,11 @@ export default function ChatPage() {
         throw uploadError;
       }
       const result = supabase.storage.from("chat-media").getPublicUrl(filePath);
-      console.log("getPublicUrl result:", result);
       const publicUrl = result.data?.publicUrl;
       if (!publicUrl) {
         console.error("No public URL returned. Check bucket settings and policies.");
         throw new Error("Public URL is undefined");
       }
-      console.log("File uploaded successfully. Public URL:", publicUrl);
       return publicUrl;
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -123,8 +132,8 @@ export default function ChatPage() {
     }
   }
 
-  async function sendMessage() {
-    if (!message.trim() && !file) return; // require text or file
+  async function sendMessage({ gifUrl = null } = {}) {
+    if (!message.trim() && !file && !gifUrl) return;
     if (!walletAddress) return;
     setUploading(true);
     let media_url = null;
@@ -136,6 +145,9 @@ export default function ChatPage() {
         return;
       }
     }
+    if (gifUrl) {
+      media_url = gifUrl;
+    }
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -144,7 +156,7 @@ export default function ChatPage() {
           wallet_address: walletAddress,
           content: message,
           media_url,
-          parent_id: replyingTo, // Will be null if not replying
+          parent_id: replyingTo,
         }),
       });
       const data = await res.json();
@@ -152,7 +164,7 @@ export default function ChatPage() {
         setMessage("");
         setFile(null);
         if (replyingTo) setReplyingTo(null);
-        // New messages will be appended via the real‑time subscription.
+        setShowGifPicker(false);
       } else {
         console.error("Failed to send message:", data.message);
       }
@@ -169,14 +181,27 @@ export default function ChatPage() {
     }
   }
 
-  const formatUsername = (address) => {
-    if (address.length > 15) {
-      return `${address.slice(0, 2)}**${address.slice(-2)}`;
+  // Function to search GIFs using the Giphy API
+  async function searchGifs(query) {
+    if (!query.trim()) {
+      setGifResults([]);
+      return;
     }
-    return address;
-  };
+    try {
+      const res = await fetch(
+        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(
+          query
+        )}&limit=25`
+      );
+      const data = await res.json();
+      console.log("GIF API response:", data);
+      setGifResults(data.data);
+    } catch (error) {
+      console.error("Error fetching GIFs:", error);
+    }
+  }
 
-  // Render a single message with user details
+  // Render a single message with user details and apply styling based on ownership.
   function RenderMessage({ msg }) {
     const [userDetails, setUserDetails] = useState({
       name: msg.name,
@@ -191,12 +216,17 @@ export default function ChatPage() {
       fetchUser();
     }, [msg.wallet_address]);
 
-    // Find parent message (if this message is a reply)
     const parentMessage =
       msg.parent_id && messages.find((m) => m.id === msg.parent_id);
+    const isOwnMessage = msg.wallet_address === walletAddress;
 
     return (
-      <div key={msg.id} className={styles.message}>
+      <div
+        key={msg.id}
+        className={`${styles.message} ${
+          isOwnMessage ? styles.ownMessage : styles.otherMessage
+        }`}
+      >
         <div className={styles.messageHeader}>
           {userDetails.profile_image ? (
             <img
@@ -211,7 +241,7 @@ export default function ChatPage() {
         </div>
         <p className={styles.messageContent}>{msg.content}</p>
         {msg.media_url && (
-          <div>
+          <div className={styles.mediaContainer}>
             <img
               src={msg.media_url}
               alt="Attached Media"
@@ -269,7 +299,6 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Input Row: Text input, file upload icon, and send icon in one row */}
       <div className={styles.inputRow}>
         <input
           type="text"
@@ -294,7 +323,23 @@ export default function ChatPage() {
           onChange={handleFileChange}
           className={styles.hiddenFileInput}
         />
-        <button onClick={sendMessage} disabled={uploading} className={styles.iconButton}>
+        <button
+          onClick={() => setShowGifPicker((prev) => !prev)}
+          className={styles.iconButton}
+        >
+          <svg
+            className={`${styles.icon}`}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 2a10 10 0 1 0 10 10A10.0114 10.0114 0 0 0 12 2Zm1 14.93V17h-2v-.07A8.0134 8.0134 0 0 1 4.07 13H5v-2H4.07A8.0134 8.0134 0 0 1 11 5.07V5h2v.07A8.0134 8.0134 0 0 1 19.93 11H19v2h.93A8.0134 8.0134 0 0 1 13 16.93Z" />
+          </svg>
+        </button>
+        <button
+          onClick={() => sendMessage()}
+          disabled={uploading}
+          className={styles.iconButton}
+        >
           <svg
             className={`${styles.icon} ${styles.sendIcon}`}
             xmlns="http://www.w3.org/2000/svg"
@@ -304,6 +349,43 @@ export default function ChatPage() {
           </svg>
         </button>
       </div>
+
+      {showGifPicker && (
+        <div className={styles.gifPickerModal}>
+          <div className={styles.gifPickerHeader}>
+            <input
+              type="text"
+              placeholder="Search GIFs..."
+              value={gifSearchTerm}
+              onChange={(e) => {
+                setGifSearchTerm(e.target.value);
+                searchGifs(e.target.value);
+              }}
+              className={styles.gifSearchInput}
+            />
+            <button
+              onClick={() => setShowGifPicker(false)}
+              className={styles.closeGifPicker}
+            >
+              Close
+            </button>
+          </div>
+          <div className={styles.gifResults}>
+            {gifResults.map((gif) => (
+              <img
+                key={gif.id}
+                src={gif.images.fixed_height_small.url}
+                alt={gif.title}
+                className={styles.gifImage}
+                onClick={() => {
+                  sendMessage({ gifUrl: gif.images.fixed_height.url });
+                  setShowGifPicker(false);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

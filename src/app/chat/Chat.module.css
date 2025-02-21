@@ -23,12 +23,25 @@
   padding-right: 10px;
 }
 
+/* Base message styling */
 .message {
-  background-color: rgba(243, 99, 22, 0.7);
   padding: 10px;
   border-radius: 8px;
   margin-bottom: 10px;
   position: relative;
+  max-width: 70%;
+}
+
+/* Own messages (sent by the logged-in user) aligned right */
+.ownMessage {
+  margin-left: auto;
+  background-color: rgba(170, 71, 17, 0.7);
+}
+
+/* Other messages aligned left */
+.otherMessage {
+  margin-right: auto;
+  background-color: rgba(243, 99, 22, 0.7);
 }
 
 .messageHeader {
@@ -167,7 +180,7 @@
   fill: #ffb347; /* If using inline SVG fill */
 }
 
-/* Optionally, if you want to add custom animations to the icons */
+/* Custom icon animations */
 @keyframes iconPulse {
   0% {
     transform: scale(1);
@@ -186,4 +199,56 @@
 
 .sendIcon {
   animation: iconPulse 2s infinite;
+}
+
+/* GIF Picker Modal Styles */
+.gifPickerModal {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  right: 10px;
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 10px;
+}
+
+.gifPickerHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.gifSearchInput {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.closeGifPicker {
+  margin-left: 10px;
+  background: #f44336;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.gifResults {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gifImage {
+  width: 100px;
+  height: auto;
+  cursor: pointer;
+  border-radius: 4px;
 }
