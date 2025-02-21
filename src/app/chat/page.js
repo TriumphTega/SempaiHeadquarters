@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/services/supabase/supabaseClient";
 import styles from "./Chat.module.css";
@@ -8,18 +9,24 @@ async function fetchUserDetails(walletAddress) {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("name, profile_image")
+      .select("name, image")
       .eq("wallet_address", walletAddress)
       .single();
     if (error || !data) {
       console.error("Error fetching user details:", error);
-      return { name: walletAddress, profile_image: null };
+      return { name: walletAddress, image: null };
     }
     let { name } = data;
     if (name.length > 15) {
       name = `${name.slice(0, 3)}***${name.slice(-3)}`;
     }
-    return { name, profile_image: data.profile_image };
+    // Check if profile_image already starts with a data URL prefix; if not, add one.
+    let profile_image = data.image;
+    if (profile_image && !profile_image.startsWith("data:image/")) {
+      // Adjust MIME type as necessary (e.g., "jpeg" or "png")
+      profile_image = `data:image/jpeg;base64,${profile_image}`;
+    }
+    return { name, profile_image };
   } catch (err) {
     console.error("Unexpected error fetching user details:", err);
     return { name: walletAddress, profile_image: null };
@@ -33,6 +40,7 @@ export default function ChatPage() {
   const [walletAddress, setWalletAddress] = useState("");
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
+  const [initialLoad, setInitialLoad] = useState(true);
   const messagesEndRef = useRef(null);
 
   // Fetch wallet address from localStorage on mount
@@ -52,7 +60,7 @@ export default function ChatPage() {
         const res = await fetch("/api/chat", { method: "GET" });
         const data = await res.json();
         if (data.success) {
-          // Order messages so the newest are at the bottom
+          // Order messages so that the newest are at the bottom
           setMessages(data.messages);
         } else {
           console.error("Failed to fetch messages:", data.message);
@@ -64,12 +72,11 @@ export default function ChatPage() {
     fetchMessages();
   }, []);
 
-  // Subscribe to real‑time inserts on the "messages" table
+  // Subscribe to real‑time inserts on the "messages" table so new messages are appended
   useEffect(() => {
     const subscription = supabase
       .channel("messages_channel")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        // Append new message
         setMessages((prevMessages) => [...prevMessages, payload.new]);
       })
       .subscribe();
@@ -79,10 +86,11 @@ export default function ChatPage() {
     };
   }, []);
 
-   // Scroll to bottom when messages change
-   useEffect(() => {
+  // Scroll to bottom on initial load only
+  useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      setInitialLoad(false);
     }
   }, [messages]);
 
@@ -143,10 +151,8 @@ export default function ChatPage() {
       if (data.success) {
         setMessage("");
         setFile(null);
-        if (replyingTo) {
-          setReplyingTo(null);
-        }
-        // The real‑time subscription will update the messages, so no need to re‑fetch all messages.
+        if (replyingTo) setReplyingTo(null);
+        // New messages will be appended via the real‑time subscription.
       } else {
         console.error("Failed to send message:", data.message);
       }
@@ -163,10 +169,17 @@ export default function ChatPage() {
     }
   }
 
+  const formatUsername = (address) => {
+    if (address.length > 15) {
+      return `${address.slice(0, 2)}**${address.slice(-2)}`;
+    }
+    return address;
+  };
+
   // Render a single message with user details
   function RenderMessage({ msg }) {
     const [userDetails, setUserDetails] = useState({
-      name: msg.wallet_address,
+      name: msg.name,
       profile_image: null,
     });
 
@@ -208,7 +221,8 @@ export default function ChatPage() {
         )}
         {parentMessage && (
           <p className={styles.replyInfo}>
-            Replied to <strong>{parentMessage.wallet_address}</strong>: {parentMessage.content}
+            Replied to <strong>{parentMessage.wallet_address}</strong>:{" "}
+            {parentMessage.content}
           </p>
         )}
         <button
@@ -224,7 +238,6 @@ export default function ChatPage() {
   return (
     <div className={styles.chatContainer}>
       <h1 className={styles.title}>Live Chat</h1>
-
       <div className={styles.messages}>
         {messages.map((msg) => (
           <RenderMessage key={msg.id} msg={msg} />
@@ -238,7 +251,8 @@ export default function ChatPage() {
             const parentMessage = messages.find((msg) => msg.id === replyingTo);
             return parentMessage ? (
               <p className={styles.replyingTo}>
-                Replying to <strong>{parentMessage.wallet_address}</strong>: {parentMessage.content}
+                Replying to <strong>{parentMessage.wallet_address}</strong>:{" "}
+                {parentMessage.content}
               </p>
             ) : (
               <p className={styles.replyingTo}>
@@ -265,7 +279,13 @@ export default function ChatPage() {
           className={styles.input}
         />
         <label htmlFor="fileInput" className={styles.iconButton}>
-          <img src="/animations/image.svg" alt="Upload" className={styles.icon} />
+          <svg
+            className={`${styles.icon} ${styles.uploadIcon}`}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm7 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+          </svg>
         </label>
         <input
           type="file"
@@ -275,7 +295,13 @@ export default function ChatPage() {
           className={styles.hiddenFileInput}
         />
         <button onClick={sendMessage} disabled={uploading} className={styles.iconButton}>
-          <img src="/animations/send.svg" alt="Send" className={styles.icon} />
+          <svg
+            className={`${styles.icon} ${styles.sendIcon}`}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+          </svg>
         </button>
       </div>
     </div>
