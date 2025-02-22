@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
 import styles from "./Chat.module.css";
-
 import { supabase } from "@/services/supabase/supabaseClient";
-
 
 function Message({ msg, walletAddress, onReply }) {
   const isOwnMessage = msg.wallet_address === walletAddress;
 
   return (
     <div
-      className={`${styles.message} ${isOwnMessage ? styles.ownMessage : styles.otherMessage}`}
+      className={`${styles.message} ${
+        isOwnMessage ? styles.ownMessage : styles.otherMessage
+      }`}
     >
       <div className={styles.messageHeader}>
         {msg.profile_image ? (
@@ -46,10 +45,16 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
-  const [walletAddress] = useState(() => localStorage.getItem("walletAddress") || "");
+  const [walletAddress, setWalletAddress] = useState(""); // Initialize to empty string
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // Set walletAddress only on client-side.
+  useEffect(() => {
+    const storedWallet = localStorage.getItem("walletAddress") || "";
+    setWalletAddress(storedWallet);
+  }, []);
 
   const fetchMessages = useCallback(async () => {
     const res = await fetch("/api/chat", { method: "GET" });
