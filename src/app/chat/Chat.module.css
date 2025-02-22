@@ -1,80 +1,59 @@
-/* Chat.module.css */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes buttonClick {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.9) rotate(5deg);
-  }
-  100% {
-    transform: scale(1);
-  }
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
 }
 
 .chatContainer {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #F5F5F5; /* Light neutral background */
+  background-color: #F5F5F5;
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
 .header {
-  background-color: #F28C38; /* Vibrant orange */
+  background-color: #F28C38;
   color: white;
-  padding: 15px;
-  text-align: center;
+  padding: 12px;
   font-size: 20px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  position: fixed;
+  font-weight: 600;
+  text-align: center;
+  position: sticky;
   top: 0;
-  width: 100%;
   z-index: 10;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 70px 10px 70px; /* Space for header and input */
+  padding: 10px;
+  background-color: #ECEFF1;
 }
 
 .message {
-  animation: slideIn 0.3s ease-out;
+  margin: 8px 0;
+  padding: 10px;
+  border-radius: 8px;
   max-width: 70%;
-  border-radius: 10px;
-  padding: 8px 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .ownMessage {
-  margin: 10px 10px 10px auto;
-  background-color: #FFD8A8; /* Light orange for own messages */
+  background-color: #FFD8A8;
+  margin-left: auto;
 }
 
 .otherMessage {
-  margin: 10px auto 10px 10px;
   background-color: #FFFFFF;
+  margin-right: auto;
 }
 
 .messageHeader {
@@ -84,203 +63,129 @@
 }
 
 .profileImage {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 .profilePlaceholder {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: #ccc;
-  margin-right: 10px;
+  background-color: #B0BEC5;
+  margin-right: 8px;
 }
 
 .userName {
   font-size: 14px;
-  font-weight: bold;
-  color: #F28C38; /* Orange for usernames */
+  font-weight: 600;
+  color: #F28C38;
 }
 
 .messageContent {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  color: #212121;
 }
 
 .mediaImage {
-  max-width: 200px;
-  border-radius: 10px;
+  max-width: 180px;
+  border-radius: 8px;
   margin-top: 5px;
 }
 
 .replyInfo {
   font-size: 12px;
-  color: #666;
-  background-color: #f0f0f0;
-  padding: 5px;
-  border-radius: 5px;
-  margin-top: 5px;
+  color: #757575;
+  background-color: #F5F5F5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 5px 0;
 }
 
-.replyButton {
+.replyButton,
+.cancelButton {
   background: none;
   border: none;
-  cursor: pointer;
   padding: 5px;
-  transition: transform 0.2s;
+  cursor: pointer;
 }
 
-.replyButton:active {
-  animation: buttonClick 0.2s ease;
+.replyButton:active,
+.cancelButton:active {
+  animation: pulse 0.2s ease;
 }
 
 .replyIcon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   fill: #F28C38;
 }
 
-.inputRow {
+.cancelIcon {
+  width: 16px;
+  height: 16px;
+  fill: #EF5350;
+}
+
+.replyIndicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #FFF3E0;
+  padding: 8px 12px;
+  margin: 10px;
+  border-left: 4px solid #F28C38;
+  border-radius: 4px;
+}
+
+.replyingTo {
+  font-size: 14px;
+  color: #424242;
+}
+
+.inputArea {
   display: flex;
   align-items: center;
   padding: 10px;
-  background-color: #F0F0F0;
-  border-top: 1px solid #ccc;
-  position: fixed;
+  background-color: #FFFFFF;
+  border-top: 1px solid #E0E0E0;
+  position: sticky;
   bottom: 0;
-  width: 100%;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 }
 
 .input {
   flex: 1;
-  padding: 10px;
+  padding: 10px 15px;
   border: none;
   border-radius: 20px;
-  margin-right: 10px;
+  background-color: #F5F5F5;
   font-size: 16px;
-  background-color: white;
+  margin-right: 10px;
   outline: none;
 }
 
-.iconButton {
+.iconButton,
+.sendButton {
   background: none;
   border: none;
+  padding: 8px;
   cursor: pointer;
-  padding: 10px;
-  transition: transform 0.2s;
 }
 
-.iconButton:hover {
-  transform: scale(1.1);
-}
-
-.iconButton:active {
-  animation: buttonClick 0.2s ease;
+.iconButton:active,
+.sendButton:active {
+  animation: pulse 0.2s ease;
 }
 
 .icon {
   width: 24px;
   height: 24px;
-  fill: #F28C38; /* Orange for icons */
-}
-
-.sendButton .icon {
   fill: #F28C38;
 }
 
-.hiddenFileInput {
+.hiddenInput {
   display: none;
-}
-
-.replyIndicator {
-  background-color: #F0F0F0;
-  padding: 5px 10px;
-  border-left: 4px solid #F28C38; /* Orange accent */
-  font-size: 14px;
-  margin: 10px;
-  border-radius: 5px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.replyingTo {
-  margin: 0;
-}
-
-.cancelReplyButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  transition: transform 0.2s;
-}
-
-.cancelReplyButton:active {
-  animation: buttonClick 0.2s ease;
-}
-
-.cancelIcon {
-  width: 18px;
-  height: 18px;
-  fill: #FF4444; /* Red for cancel, keeping it distinct */
-}
-
-.gifPickerModal {
-  position: fixed;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  background-color: white;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-  animation: slideUp 0.3s ease-out;
-  max-height: 50vh;
-  overflow-y: auto;
-}
-
-.gifPickerHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.gifSearchInput {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  margin-right: 10px;
-  outline: none;
-}
-
-.closeGifPicker {
-  background: none;
-  border: none;
-  color: #F28C38;
-  cursor: pointer;
-}
-
-.gifResults {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
-}
-
-.gifImage {
-  width: 100%;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.gifImage:hover {
-  transform: scale(1.05);
 }
