@@ -273,6 +273,11 @@ export default function Home() {
             Profile
           </Link>
         </li>
+        <li className="nav-item">
+          <Link href="/chat" className="nav-link text-light fw-semibold hover-effect">
+            Chat
+          </Link>
+        </li>
       </ul>
 
       {/* Wallet and Creator Dashboard Section */}
