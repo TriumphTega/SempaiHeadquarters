@@ -1,17 +1,15 @@
- "use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import styles from "./Chat.module.css";
 import { supabase } from "@/services/supabase/supabaseClient";
+import styles from "./Chat.module.css";
 
 function Message({ msg, walletAddress, onReply }) {
   const isOwnMessage = msg.wallet_address === walletAddress;
 
   return (
     <div
-      className={`${styles.message} ${
-        isOwnMessage ? styles.ownMessage : styles.otherMessage
-      }`}
+      className={`${styles.message} ${isOwnMessage ? styles.ownMessage : styles.otherMessage}`}
     >
       <div className={styles.messageHeader}>
         {msg.profile_image ? (
@@ -41,16 +39,87 @@ function Message({ msg, walletAddress, onReply }) {
   );
 }
 
+function GifPicker({ onSelect, onClose }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [gifs, setGifs] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchGifs = useCallback(async (query) => {
+    if (!query.trim()) {
+      setGifs([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      // Note: using backticks around the search pattern
+      const { data, error } = await supabase
+        .from("gifs")
+        .select("id, title, url")
+        .ilike("title", `%${query}%`)
+        .limit(20); // Limit for performance
+      if (error) throw error;
+      setGifs(data || []);
+    } catch (error) {
+      console.error("Error fetching GIFs:", error);
+      setGifs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const debounce = setTimeout(() => fetchGifs(searchTerm), 300); // Debounce search
+    return () => clearTimeout(debounce);
+  }, [searchTerm, fetchGifs]);
+
+  return (
+    <div className={styles.gifPicker}>
+      <div className={styles.gifPickerHeader}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search GIFs..."
+          className={styles.gifSearchInput}
+          autoFocus
+        />
+        <button onClick={onClose} className={styles.closeButton}>
+          <svg className={styles.closeIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
+        </button>
+      </div>
+      <div className={styles.gifGrid}>
+        {loading ? (
+          <p className={styles.loadingText}>Loading...</p>
+        ) : gifs.length > 0 ? (
+          gifs.map((gif) => (
+            <img
+              key={gif.id}
+              src={gif.url}
+              alt={gif.title}
+              className={styles.gifImage}
+              onClick={() => onSelect(gif.url)}
+            />
+          ))
+        ) : (
+          <p className={styles.noResults}>No GIFs found</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
-  const [walletAddress, setWalletAddress] = useState(""); // Initialize to empty string
+  const [walletAddress, setWalletAddress] = useState("");
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Set walletAddress only on client-side.
   useEffect(() => {
     const storedWallet = localStorage.getItem("walletAddress") || "";
     setWalletAddress(storedWallet);
@@ -88,9 +157,8 @@ export default function ChatPage() {
                   ? userData.image
                   : `data:image/jpeg;base64,${userData.image}`
                 : null,
-              // If replying, fetch parent name for display
               parent_name: payload.new.parent_id
-                ? (await supabase
+                ? await supabase
                     .from("messages")
                     .select("wallet_address")
                     .eq("id", payload.new.parent_id)
@@ -102,7 +170,7 @@ export default function ChatPage() {
                         .eq("wallet_address", data.wallet_address)
                         .single();
                       return parentUser?.name || data.wallet_address;
-                    }))
+                    })
                 : null,
             };
             setMessages((prev) => [...prev, newMessage]);
@@ -118,42 +186,53 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = useCallback(async () => {
-    if ((!input.trim() && !file) || !walletAddress || uploading) return;
+  const handleSend = useCallback(
+    async (gifUrl = null) => {
+      if ((!input.trim() && !file && !gifUrl) || !walletAddress || uploading) return;
 
-    setUploading(true);
-    let mediaUrl = null;
+      setUploading(true);
+      let mediaUrl = gifUrl;
 
-    if (file) {
-      const fileName = `${Date.now()}.${file.name.split(".").pop()}`;
-      const { error } = await supabase.storage.from("chat-media").upload(fileName, file);
-      if (!error) {
-        const { data } = supabase.storage.from("chat-media").getPublicUrl(fileName);
-        mediaUrl = data.publicUrl;
+      if (file && !gifUrl) {
+        const fileName = `${Date.now()}.${file.name.split(".").pop()}`;
+        const { error } = await supabase.storage.from("chat-media").upload(fileName, file);
+        if (!error) {
+          const { data } = supabase.storage.from("chat-media").getPublicUrl(fileName);
+          mediaUrl = data.publicUrl;
+        } else {
+          console.error("File upload failed:", error);
+          setUploading(false);
+          return;
+        }
       }
-    }
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        wallet_address: walletAddress,
-        content: input.trim() || null,
-        media_url: mediaUrl,
-        parent_id: replyingTo,
-      }),
-    });
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          content: input.trim() || null,
+          media_url: mediaUrl,
+          parent_id: replyingTo,
+        }),
+      });
 
-    if (res.ok) {
-      setInput("");
-      setFile(null);
-      setReplyingTo(null);
-    }
-    setUploading(false);
-  }, [input, file, walletAddress, uploading, replyingTo]);
+      if (res.ok) {
+        setInput("");
+        setFile(null);
+        setReplyingTo(null);
+        setShowGifPicker(false);
+      } else {
+        console.error("Failed to send message:", await res.text());
+      }
+      setUploading(false);
+    },
+    [input, file, walletAddress, uploading, replyingTo]
+  );
 
   const handleFileChange = (e) => setFile(e.target.files?.[0] || null);
   const handleReply = (id) => setReplyingTo(id);
+  const handleGifSelect = (url) => handleSend(url);
 
   return (
     <div className={styles.chatContainer}>
@@ -208,12 +287,23 @@ export default function ChatPage() {
           className={styles.hiddenInput}
           disabled={uploading}
         />
-        <button onClick={handleSend} className={styles.sendButton} disabled={uploading}>
+        <button
+          onClick={() => setShowGifPicker((prev) => !prev)}
+          className={styles.iconButton}
+          disabled={uploading}
+        >
+          <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-2 10h-3v3h-2v-3H9v-2h3V9h2v3h3v2z" />
+          </svg>
+        </button>
+        <button onClick={() => handleSend()} className={styles.sendButton} disabled={uploading}>
           <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path d="M2 21L23 12 2 3v7l15 2-15 2z" />
           </svg>
         </button>
       </footer>
+
+      {showGifPicker && <GifPicker onSelect={handleGifSelect} onClose={() => setShowGifPicker(false)} />}
     </div>
   );
 }
