@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-
 import { supabase } from "@/services/supabase/supabaseClient";
-
 
 export async function GET() {
   try {
@@ -51,9 +49,31 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
     }
 
+    // Lookup the user_id from the users table using the wallet_address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', wallet_address)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching user id:', userError);
+      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+
+    const user_id = userData.id;
+
+    // Insert the new message, including the user_id field
     const { data, error } = await supabase
       .from('messages')
-      .insert([{ wallet_address, content, media_url, parent_id, created_at: new Date().toISOString() }])
+      .insert([{
+        wallet_address,
+        user_id, // new field
+        content,
+        media_url,
+        parent_id,
+        created_at: new Date().toISOString()
+      }])
       .select(`
         id,
         wallet_address,

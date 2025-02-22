@@ -206,15 +206,31 @@ export default function ChatPage() {
         }
       }
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          content: input.trim() || null,
-          media_url: mediaUrl,
-          parent_id: replyingTo,
-        }),
+      const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("wallet_address", walletAddress)
+      .single();
+    
+    if (userError || !userData) {
+      console.error("User not found", userError);
+      setUploading(false);
+      return;
+    }
+    
+    const user_id = userData.id;
+    
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        user_id, // now sending the user_id
+        content: input.trim() || null,
+        media_url: mediaUrl,
+        parent_id: replyingTo,
+      }),
+    
       });
 
       if (res.ok) {
