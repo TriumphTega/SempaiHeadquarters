@@ -1,0 +1,227 @@
+.navbar {
+  background: linear-gradient(135deg, #1a1a1a, #333) !important;
+  transition: all 0.3s ease;
+}
+
+.navbar:hover {
+  box-shadow: 0 4px 16px rgba(255, 98, 0, 0.3);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.logo:hover {
+  transform: rotate(360deg) scale(1.1);
+  box-shadow: 0 0 10px #ff6200;
+}
+
+.notificationWrapper {
+  position: relative;
+  margin-right: 15px;
+}
+
+.notificationButton {
+  background: #ff6200;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.notificationButton:hover {
+  transform: scale(1.15);
+  background: #e55a00;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: #fff;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #fff;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 10px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownItem {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.dropdownItem:hover {
+  background: #f8f9fa;
+}
+
+.dropdownItem a {
+  color: #ff6200;
+  text-decoration: none;
+}
+
+.dropdownItem a:hover {
+  text-decoration: underline;
+}
+
+.markReadButton {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+  margin-top: 10px;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.markReadButton:hover {
+  background: #c82333;
+  transform: scale(1.05);
+}
+
+.navLink {
+  color: #fff !important;
+  font-weight: 600;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.navLink:hover {
+  color: #ff6200 !important;
+  transform: translateX(5px);
+}
+
+.icon {
+  margin-right: 8px;
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.navLink:hover .icon {
+  transform: rotate(20deg);
+}
+
+.connectButton {
+  background: #fff;
+  color: #000 !important;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.connectButton:hover {
+  background: #ff6200;
+  color: #fff !important;
+  transform: scale(1.05);
+}
+
+.creatorButton {
+  background: #ff6200;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.creatorButton:hover {
+  background: #e55a00;
+  transform: scale(1.05);
+}
+
+.applyButton {
+  background: #007bff;
+  color: #fff !important;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.applyButton:hover {
+  background: #0056b3;
+  transform: scale(1.05);
+}
+
+.disabledButton {
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+/* Default: display as row */
+.rightSide {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  /* Mobile: stack items vertically */
+  @media (max-width: 576px) {
+    .rightSide {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-end; /* or center if you prefer */
+    }
+    
+    /* Optionally, adjust font size and padding */
+    .connectButton,
+    .creatorButton,
+    .applyButton,
+    .disabledButton {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+  

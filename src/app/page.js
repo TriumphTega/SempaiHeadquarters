@@ -1,485 +1,384 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { NovelConnectButton } from '../components/NovelConnectButton';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { supabase } from '../services/supabase/supabaseClient';
-import LoadingPage from '../components/LoadingPage';
-import BootstrapProvider from "../components/BootstrapProvider";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import ConnectButton from '../components/ConnectButton';
-import Notifications from "@/components/Notifications";
+import { useState, useEffect, useCallback } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../services/supabase/supabaseClient";
+import { FaHome, FaExchangeAlt, FaUser, FaComments, FaBell, FaBookOpen, FaSun, FaMoon, FaChevronLeft, FaChevronRight, FaBars } from "react-icons/fa";
+import Link from "next/link";
+import LoadingPage from "../components/LoadingPage";
+import ConnectButton from "../components/ConnectButton";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import styles from "./page.module.css";
 
 export default function Home() {
+  const { connected, publicKey } = useWallet();
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
-  const [novels, setNovels] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { connected, publicKey } = useWallet(); // Get wallet publicKey
-
   const [isWriter, setIsWriter] = useState(false);
+  const [novels, setNovels] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [theme, setTheme] = useState("dark");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false); // New state for notification dropdown
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!connected || !publicKey) return;
-  
+  // Toggle theme
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
+  // Toggle mobile menu
+  const toggleMenu = () => {
+    setMenuOpen((prev) => !prev);
+    setNotificationsOpen(false); // Close notifications if open
+  };
+
+  // Toggle notifications dropdown
+  const toggleNotifications = () => {
+    setNotificationsOpen((prev) => !prev);
+    setMenuOpen(false); // Close menu if open
+  };
+
+  // Enhanced fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!connected || !publicKey) return;
+
+    const walletAddress = publicKey.toString();
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    const fetchWithRetry = async () => {
+      try {
+        const { data: user, error: userError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("wallet_address", walletAddress)
+          .single();
+
+        if (userError || !user) throw new Error("User not found");
+
+        const { data, error } = await supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_read", false)
+          .order("created_at", { ascending: false });
+
+        if (error) throw new Error(`Failed to fetch notifications: ${error.message}`);
+        setNotifications(data || []);
+      } catch (err) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.warn(`Retry ${retryCount}/${maxRetries}: ${err.message}`);
+          await new Promise((res) => setTimeout(res, 1000 * retryCount));
+          return fetchWithRetry();
+        }
+        console.error(err.message);
+        setError("Failed to load notifications.");
+      }
+    };
+
+    await fetchWithRetry();
+  }, [connected, publicKey]);
+
+  // Enhanced mark notifications as read
+  const markAsRead = useCallback(async () => {
+    if (!connected || !publicKey) return;
+
+    try {
       const walletAddress = publicKey.toString();
-      
-      // Fetch the actual user_id from the `users` table
       const { data: user, error: userError } = await supabase
         .from("users")
         .select("id")
         .eq("wallet_address", walletAddress)
         .single();
-  
-      if (userError || !user) {
-        console.error("Error fetching user ID:", userError?.message);
-        return;
-      }
-  
-      const userId = user.id; // Get actual user_id
-  
-      // Fetch notifications for this user
-      const { data, error } = await supabase
+
+      if (userError || !user) throw new Error("User not found");
+
+      const { error } = await supabase
         .from("notifications")
-        .select("*")
-        .eq("user_id", userId)  // Use dynamic user ID
-        .eq("is_read", false)
-        .order("created_at", { ascending: false });
-  
-      if (error) {
-        console.error("Error fetching notifications:", error.message);
-      } else {
-        setNotifications(data);
-      }
-    };
-  
-    fetchNotifications();
-  }, [connected, publicKey]); // Fetch notifications when wallet connects
-  
-  // Function to mark notifications as read
-  const markAsRead = async () => {
-    if (!connected || !publicKey) return;
-  
-    const walletAddress = publicKey.toString();
-  
-    // Fetch user ID
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("wallet_address", walletAddress)
-      .single();
-  
-    if (userError || !user) {
-      console.error("Error fetching user ID:", userError?.message);
-      return;
+        .update({ is_read: true })
+        .eq("user_id", user.id);
+
+      if (error) throw new Error("Failed to mark notifications as read");
+      setNotifications([]);
+      setNotificationsOpen(false); // Close dropdown after marking as read
+    } catch (err) {
+      console.error(err.message);
+      setError("Failed to update notifications.");
     }
-  
-    const userId = user.id;
-  
-    // Mark all notifications as read
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", userId);
-  
-    setNotifications([]); // Clear notifications after marking as read
-  };
-  
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      if (!connected || !publicKey) return;
-  
-      const walletAddress = publicKey.toString();
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('isWriter')
-        .eq('wallet_address', walletAddress)
-        .single();
-  
-      if (error) {
-        console.error('Error fetching user details:', error.message);
-        return;
-      }
-  
-      setIsWriter(user?.isWriter || false);
-    };
-  
-    fetchUserDetails();
   }, [connected, publicKey]);
-  
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setIsCreatorLoggedIn(true);
-      }
-    };
+  // Enhanced fetch user details
+  const fetchUserDetails = useCallback(async () => {
+    if (!connected || !publicKey) return;
 
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    fetchNovels();
-  }, []);
-  
-  const fetchNovels = async () => {
-    const { data, error } = await supabase.from('novels').select('*');
-    if (error) {
-      console.error('Error fetching novels:', error);
-    } else {
-      setNovels(data);
-    }
-    setLoading(false); // Set loading to false after data is fetched
-  };
-
-  const handleCreatorAccess = async () => {
-    if (!connected || !publicKey) {
-      alert('Please connect your wallet first.');
-      return;
-    }
-  
     try {
       const walletAddress = publicKey.toString();
-  
-      // Fetch the user's details from the `users` table
       const { data: user, error } = await supabase
-        .from('users')
-        .select('isWriter')
-        .eq('wallet_address', walletAddress)
+        .from("users")
+        .select("isWriter")
+        .eq("wallet_address", walletAddress)
         .single();
-  
-      if (error) {
-        console.error('Error fetching user:', error.message);
-        alert('Unable to verify user. Please try again later.');
-        return;
-      }
-  
-      if (user?.isWriter) {
-        router.push('/creators-dashboard'); // Redirect to Creator Dashboard
+
+      if (error) throw new Error("Failed to fetch user details");
+      setIsWriter(user?.isWriter || false);
+    } catch (err) {
+      console.error(err.message);
+      setError("Failed to verify writer status.");
+    }
+  }, [connected, publicKey]);
+
+  // Check creator login status
+  const checkCreatorLogin = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsCreatorLoggedIn(!!user);
+  }, []);
+
+  // Enhanced fetch novels
+  const fetchNovels = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from("novels").select("*");
+      if (error) throw new Error("Failed to fetch novels");
+      setNovels(data || []);
+    } catch (err) {
+      console.error(err.message);
+      setError("Failed to load novels.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Handle creator access with loading
+  const handleCreatorAccess = useCallback(async () => {
+    if (!connected || !publicKey) {
+      setError("Please connect your wallet first.");
+      return;
+    }
+
+    setPageLoading(true);
+    try {
+      const walletAddress = publicKey.toString();
+      const { data: user, error } = await supabase
+        .from("users")
+        .select("isWriter")
+        .eq("wallet_address", walletAddress)
+        .single();
+
+      if (error || !user) throw new Error("User not found or not a writer");
+      if (user.isWriter) {
+        router.push("/creators-dashboard");
       } else {
-        alert('Access denied. You must be a creator to access this page.');
+        setError("Access denied. You must be a creator.");
+        setPageLoading(false);
       }
     } catch (err) {
-      console.error('Error handling creator access:', err.message);
-      alert('An error occurred. Please try again later.');
+      console.error(err.message);
+      setError(err.message);
+      setPageLoading(false);
     }
-  };
-  
+  }, [connected, publicKey, router]);
 
-  if (loading) {
-    return <LoadingPage />;
-  }
+  // Handle navigation with immediate loading
+  const handleNavigation = (path) => {
+    setPageLoading(true);
+    setMenuOpen(false);
+    setNotificationsOpen(false); // Close notifications on navigation
+    router.push(path);
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    checkCreatorLogin();
+    fetchUserDetails();
+    fetchNovels();
+    fetchNotifications();
+  }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications]);
+
+  // Carousel settings optimized for mobile
+  const carouselSettings = {
+    dots: true,
+    infinite: true,
+    speed: 700,
+    slidesToShow: 3,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 2500,
+    arrows: true,
+    prevArrow: <FaChevronLeft className={styles.carouselArrow} />,
+    nextArrow: <FaChevronRight className={styles.carouselArrow} />,
+    centerMode: true,
+    centerPadding: "20px",
+    responsive: [
+      { breakpoint: 1024, settings: { slidesToShow: 2, centerPadding: "30px" } },
+      { breakpoint: 768, settings: { slidesToShow: 2, centerPadding: "20px" } },
+      { breakpoint: 480, settings: { slidesToShow: 1, centerPadding: "10px" } },
+    ],
+  };
+
+  if (loading || pageLoading) return <LoadingPage />;
 
   return (
-    <div className="bg-black">
-      <BootstrapProvider />
+    <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark} ${menuOpen ? styles.menuActive : ""}`}>
       {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-  <div className="container">
-    {/* Brand Logo */}
-    <Link href="/" className="navbar-brand">
-    <img
-  src="/images/logo.jpg"  // The path is correct if the image is in the public folder
-  alt="Sempai HQ"
-  className="navbar-logo"
-  style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-/>
-
-    </Link>
-{/* 🔔 Notification Icon */}
-          <div className="position-relative">
-            <button
-              className="btn btn-warning position-relative"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              🔔
-              {notifications.length > 0 && (
-                <span className="badge bg-danger position-absolute top-0 start-100 translate-middle">
-                  {notifications.length}
-                </span>
-              )}
-            </button>
-
-            {/* Dropdown for Notifications */}
-{showDropdown && (
-  <div className="dropdown-menu show p-2">
-    {notifications.length > 0 ? (
-      notifications.map((notif) => (
-        <div key={notif.id} className="dropdown-item">
-          {notif.type === "reply" && notif.comment_id ? (
-            <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`}>
-              📩 Someone replied to your comment: "{notif.message}"
+      <nav className={styles.navbar}>
+        <div className={styles.navContainer}>
+          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
+            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <span className={styles.logoText}>Sempai HQ</span>
+          </Link>
+          <button className={styles.menuToggle} onClick={toggleMenu}>
+            <FaBars />
+          </button>
+          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+              <FaHome className={styles.navIcon} /> Home
             </Link>
-          ) : notif.type === "new_chapter" ? (
-            <Link href={`/novel/${notif.novel_id}`}>
-              📖 A new chapter has been added to "{notif.novel_title}"
+            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
+              <FaExchangeAlt className={styles.navIcon} /> Swap
             </Link>
-          ) : notif.type === "reward" ? (
-            <Link href="/profile">
-              🎉 You've received a weekly reward! Check your balance.
+            <Link href="/profile" onClick={() => handleNavigation("/profile")} className={styles.navLink}>
+              <FaUser className={styles.navIcon} /> Profile
             </Link>
-          ) : (
-            <span>{notif.message || "You have a new notification"}</span>
-          )}
-        </div>
-      ))
-    ) : (
-      <div className="dropdown-item">No new notifications</div>
-    )}
-    {notifications.length > 0 && (
-      <button className="btn btn-sm btn-danger mt-2" onClick={markAsRead}>
-        Mark as Read
-      </button>
-    )}
-  </div>
-)}
-
-          </div>
-    {/* Toggle Button for Mobile View */}
-    <button
-      className="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarNav"
-      aria-controls="navbarNav"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span className="navbar-toggler-icon"></span>
-    </button>
-
-    {/* Navbar Links */}
-    <div className="collapse navbar-collapse" id="navbarNav">
-      <ul className="navbar-nav me-auto text-center">
-        <li className="nav-item">
-          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-            Home
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-            Swap
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/profile" className="nav-link text-light fw-semibold hover-effect">
-            Profile
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/chat" className="nav-link text-light fw-semibold hover-effect">
-            Chat
-          </Link>
-        </li>
-      </ul>
-
-      {/* Wallet and Creator Dashboard Section */}
-      <ul className="navbar-nav ms-auto text-center">
-        {/* Wallet Connect Button */}
-        <li className="nav-item me-lg-3 mb-3 mb-lg-0">
-          <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
-        </li>
-
-        {/* Conditional Rendering for Creator Dashboard & Writer Application */}
-        <li className="nav-item">
-          {connected ? (
-            isWriter ? (
-              <button
-                onClick={handleCreatorAccess}
-                className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-              >
-                Creator Dashboard
-              </button>
+            <Link href="/chat" onClick={() => handleNavigation("/chat")} className={styles.navLink}>
+              <FaComments className={styles.navIcon} /> Chat
+            </Link>
+              {/* Conditional Rendering for Creator Dashboard & Writer Application */}
+            {connected ? (
+              isWriter ? (
+                <button
+                  onClick={handleCreatorAccess}
+                  className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
+                >
+                  Creator Dashboard
+                </button>
+              ) : (
+                <Link href="/apply" className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
+                    Apply to be a Creator
+                </Link>
+              )
             ) : (
-              <Link href="/apply" className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
-                  Apply to be a Creator
-              </Link>
-            )
-          ) : (
-            <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
-              Connect Wallet to Access
+              <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
+                Connect Wallet to Access
+              </button>
+            )}
+            <div className={styles.notificationWrapper}>
+              <button onClick={toggleNotifications} className={styles.notificationButton}>
+                <FaBell className={styles.bellIcon} />
+                {notifications.length > 0 && (
+                  <span className={styles.notificationBadge}>{notifications.length}</span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className={styles.notificationDropdown}>
+                  {notifications.length > 0 ? (
+                    <>
+                      {notifications.map((notif) => (
+                        <div key={notif.id} className={styles.notificationItem}>
+                          {notif.type === "reply" && notif.comment_id ? (
+                            <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                              📩 Someone replied: "{notif.message}"
+                            </Link>
+                          ) : notif.type === "new_chapter" ? (
+                            <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                              📖 New chapter: "{notif.novel_title}"
+                            </Link>
+                          ) : notif.type === "reward" ? (
+                            <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                              🎉 Weekly reward received!
+                            </Link>
+                          ) : (
+                            <span>{notif.message || "New notification"}</span>
+                          )}
+                        </div>
+                      ))}
+                      <button onClick={markAsRead} className={styles.markReadButton}>
+                        Mark All as Read
+                      </button>
+                    </>
+                  ) : (
+                    <div className={styles.noNotifications}>No new notifications</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button onClick={toggleTheme} className={styles.themeToggle}>
+              {theme === "dark" ? <FaSun /> : <FaMoon />}
             </button>
-          )}
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
-
+            <ConnectButton className={styles.connectButton} />
+          </div>
+        </div>
+      </nav>
 
       {/* Hero Section */}
-      <header className="bg-orange py-5 text-center text-white" style={{ background: 'linear-gradient(135deg,rgb(243, 99, 22), #feb47b)' }}>
-        <div className="container">
-          <h1 className="display-4 fw-bold">Welcome to Sempai HQ</h1>
-          <p className="lead fs-4">Explore your favorite novels and earn tokens!</p>
+      <header className={styles.hero}>
+        <div className={styles.heroContent}>
+          <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
+          <p className={styles.heroSubtitle}>Discover Novels, Earn Tokens, Unleash Your Imagination</p>
+          <button onClick={() => handleNavigation("/novels")} className={styles.heroButton}>
+            <FaBookOpen className={styles.heroIcon} /> Explore Now
+          </button>
         </div>
       </header>
 
-      {/* Novels Grid */}
-      <div className="container my-5">
-        {novels.length > 0 ? (
-          <div className="row g-4">
-            {novels.map((novel) => (
-              <div key={novel.id} className="col-md-4">
-                <div className="image-container">
-                  <Link href={`/novel/${novel.id}`} className="text-decoration-none">
-                    <img
-                      src={novel.image}
-                      className="img-fluid shadow rounded-3 hover-image"
-                      alt={novel.title}
-                    />
-                    <div className="image-title">
-                      <h5 className="fw-bold text-uppercase">{novel.title}</h5>
-                    </div>
-                  </Link>
-                  {!connected && (
-                    <div className="overlay d-flex align-items-center justify-content-center">
-                      <NovelConnectButton />
-                    </div>
-                  )}
-                </div>
+      {/* Novels Carousel */}
+      <section className={styles.novelsSection}>
+        <h2 className={styles.sectionTitle}>Featured Novels</h2>
+        {error && <div className={styles.errorAlert}>{error}</div>}
+        <Slider {...carouselSettings} className={styles.carousel}>
+          {novels.map((novel) => (
+            <div key={novel.id} className={styles.carouselItem}>
+              <div className={styles.novelCard}>
+                <Link href={`/novel/${novel.id}`} onClick={() => handleNavigation(`/novel/${novel.id}`)}>
+                  <img src={novel.image} alt={novel.title} className={styles.novelImage} />
+                  <div className={styles.novelOverlay}>
+                    <h3 className={styles.novelTitle}>{novel.title}</h3>
+                  </div>
+                </Link>
               </div>
-            ))}
-
-             {/* Additional Hoard Example */}
-    <div className="col-md-4">
-          <div className="image-container">
-            {/* Conditional Rendering Based on Connection Status */}
-            {connected ? (
-              <Link href="/novels" className="text-decoration-none">
-                {/* Image */}
-                <img
-                  src="/images/novel-3.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="Hoard"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">Hoard</h5>
+            </div>
+          ))}
+          <div className={styles.carouselItem}>
+            <div className={styles.novelCard}>
+              <Link href="/novels" onClick={() => handleNavigation("/novels")}>
+                <img src="/images/novel-3.jpg" alt="Hoard" className={styles.novelImage} />
+                <div className={styles.novelOverlay}>
+                  <h3 className={styles.novelTitle}>Hoard</h3>
                 </div>
               </Link>
-            ) : (
-              <div className="position-relative">
-                {/* Image */}
-                <img
-                  src="/images/novel-3.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="Hoard"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">Hoard</h5>
-                </div>
-
-                {/* Overlay for Disconnected Users */}
-                <div className="overlay d-flex align-items-center justify-content-center">
-                  <NovelConnectButton />
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-
-
-      {/* Card Example */}
-      <div className="col-md-4">
-          <div className="image-container">
-            {/* Conditional Rendering Based on Connection Status */}
-            {connected ? (
-              <Link href="/keep-it-simple" className="text-decoration-none">
-                {/* Image */}
-                <img
-                  src="/images/novel-4.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="KISS (Keep it simple, stupid)"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">KISS (Keep it simple, stupid)</h5>
+          <div className={styles.carouselItem}>
+            <div className={styles.novelCard}>
+              <Link href="/keep-it-simple" onClick={() => handleNavigation("/keep-it-simple")}>
+                <img src="/images/novel-4.jpg" alt="KISS" className={styles.novelImage} />
+                <div className={styles.novelOverlay}>
+                  <h3 className={styles.novelTitle}>KISS</h3>
                 </div>
               </Link>
-            ) : (
-              <div className="position-relative">
-                {/* Image */}
-                <img
-                  src="/images/novel-4.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="KISS (Keep it simple, stupid)"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">KISS (Keep it simple, stupid)</h5>
-                </div>
-
-                {/* Overlay for Disconnected Users */}
-                <div className="overlay d-flex align-items-center justify-content-center">
-                  <NovelConnectButton />
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-          </div>
-          {/* Card Example */}
-          <div className="col-md-4">
-          <div className="image-container">
-            {/* Conditional Rendering Based on Connection Status */}
-            {connected ? (
-              <Link href="/dao-governance" className="text-decoration-none">
-                {/* Image */}
-                <img
-                  src="/images/dao.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="KISS (Keep it simple, stupid)"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
+          <div className={styles.carouselItem}>
+            <div className={styles.novelCard}>
+              <Link href="/dao-governance" onClick={() => handleNavigation("/dao-governance")}>
+                <img src="/images/dao.jpg" alt="DAO Governance" className={styles.novelImage} />
+                <div className={styles.novelOverlay}>
+                  <h3 className={styles.novelTitle}>DAO Governance</h3>
                 </div>
               </Link>
-            ) : (
-              <div className="position-relative">
-                {/* Image */}
-                <img
-                  src="/images/dao.jpg"
-                  className="img-fluid shadow rounded-3 hover-image"
-                  alt="KISS (Keep it simple, stupid)"
-                />
-
-                {/* Title */}
-                <div className="image-title">
-                  <h5 className="fw-bold text-uppercase">DAO Governance</h5>
-                </div>
-
-                {/* Overlay for Disconnected Users */}
-                <div className="overlay d-flex align-items-center justify-content-center">
-                  <NovelConnectButton />
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-          </div>
-
-          </div>
-        ) : (
-          <p className="text-center text-white">No novels available at the moment.</p>
-        )}
-      </div>
+        </Slider>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-dark py-4 text-center text-white shadow-lg">
-        <p>&copy; 2025 Sempai HQ. All rights reserved.</p>
+      <footer className={styles.footer}>
+        <p>© 2025 Sempai HQ. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -89,7 +89,7 @@ export default function ConnectButton() {
   return (
     <div>
       <WalletMultiButton className="btn btn-warning text-dark" />
-      {connected && <p className="mt-2">Wallet Connected!</p>}
+      {connected }
       {userCreated && <p className="mt-2 text-success">User successfully created!</p>}
     </div>
   );

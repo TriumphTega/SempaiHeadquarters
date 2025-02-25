@@ -1,170 +1,811 @@
 .page {
-
-  --gray-rgb: 0, 0, 0;
-  --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
-  --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
-  
-
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-
-  display: grid;
-  grid-template-rows: 20px 1fr 20px;
-  align-items: center;
-  justify-items: center;
-  min-height: 100svh;
-  padding: 80px;
-  gap: 64px;
-  font-family: var(--font-geist-sans);
+  min-height: 100vh;
+  transition: background 0.5s ease, color 0.5s ease;
+  position: relative;
 }
 
-@media (prefers-color-scheme: dark) {
-  .page {
-    --gray-rgb: 255, 255, 255;
-    --gray-alpha-200: rgba(var(--gray-rgb), 0.145);
-    --gray-alpha-100: rgba(var(--gray-rgb), 0.06);
+.dark {
+  background: #000;
+  color: #fff;
+}
 
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
+.light {
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* Darken and blur when menu is open */
+.menuActive::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 998;
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .menuActive::before {
+    display: block;
   }
 }
 
-.main {
+.navbar {
+  padding: 10px 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(243, 99, 22, 0.2);
+  animation: slideIn 0.6s ease-out;
+}
+
+.dark .navbar {
+  background: rgba(243, 99, 22, 0.1);
+}
+
+.light .navbar {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.navContainer {
   display: flex;
-  flex-direction: column;
-  gap: 32px;
-  grid-row-start: 2;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 15px;
 }
 
-.main ol {
-  font-family: var(--font-geist-mono);
-  padding-left: 0;
-  margin: 0;
-  font-size: 14px;
-  line-height: 24px;
-  letter-spacing: -0.01em;
-  list-style-position: inside;
-}
-
-.main li:not(:last-of-type) {
-  margin-bottom: 8px;
-}
-
-.main code {
-  font-family: inherit;
-  background: var(--gray-alpha-100);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.ctas {
+.logoLink {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  text-decoration: none;
 }
 
-.ctas a {
-  appearance: none;
-  border-radius: 128px;
-  height: 48px;
-  padding: 0 20px;
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(243, 99, 22, 0.8);
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.logo:hover {
+  transform: rotate(360deg) scale(1.1);
+}
+
+.dark .logo:hover {
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+.light .logo:hover {
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.5);
+}
+
+.logoText {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-left: 10px;
+  transition: color 0.3s ease;
+}
+
+.dark .logoText {
+  color: #ff6200;
+  text-shadow: 0 2px 4px rgba(243, 99, 22, 0.5);
+}
+
+.light .logoText {
+  color: #e55a00;
+  text-shadow: 0 2px 4px rgba(243, 99, 22, 0.3);
+}
+
+.menuToggle {
+  background: transparent;
   border: none;
-  border: 1px solid transparent;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  font-size: 1.5rem;
+  color: #ff6200;
+  display: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.menuToggle:hover {
+  transform: scale(1.2);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.navLink {
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+}
+
+.dark .navLink {
+  color: #fff;
+}
+
+.light .navLink {
+  color: #333;
+}
+
+.navLink:hover {
+  transform: translateY(-2px);
+}
+
+.dark .navLink:hover {
+  background: rgba(243, 99, 22, 0.4);
+  color: #ff6200;
+}
+
+.light .navLink:hover {
+  background: rgba(243, 99, 22, 0.2);
+  color: #e55a00;
+}
+
+.navIcon {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.navLink:hover .navIcon {
+  transform: scale(1.2) rotate(10deg);
+}
+
+.actionButton {
+  padding: 6px 15px;
+  border: none;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark .actionButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff;
+}
+
+.light .actionButton {
+  background: rgba(243, 99, 22, 0.6);
+  color: #fff;
+}
+
+.actionButton:hover {
+  transform: scale(1.05);
+}
+
+.dark .actionButton:hover {
+  background: #ff6200;
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.8);
+}
+
+.light .actionButton:hover {
+  background: #e55a00;
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.5);
+}
+
+.connectButton {
+  padding: 6px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.dark .connectButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff !important;
+}
+
+.light .connectButton {
+  background: rgba(243, 99, 22, 0.6);
+  color: #fff !important;
+}
+
+.connectButton:hover {
+  transform: scale(1.05);
+}
+
+.dark .connectButton:hover {
+  background: #ff6200;
+}
+
+.light .connectButton:hover {
+  background: #e55a00;
+}
+
+.notificationWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notificationButton {
+  background: transparent;
+  border: none;
+  padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 500;
 }
 
-a.primary {
-  background: var(--foreground);
-  color: var(--background);
-  gap: 8px;
+.bellIcon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
 }
 
-a.secondary {
-  border-color: var(--gray-alpha-200);
-  min-width: 180px;
+.dark .bellIcon {
+  color: #ff6200;
+}
+
+.light .bellIcon {
+  color: #e55a00;
+}
+
+.notificationButton:hover .bellIcon {
+  transform: scale(1.2) rotate(15deg);
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: #fff;
+  border-radius: 50%;
+  padding: 2px 5px;
+  font-size: 0.7rem;
+  animation: bouncePulse 1.5s infinite;
+}
+
+@keyframes bouncePulse {
+  0%, 20%, 50%, 80%, 100% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  60% { transform: scale(1.1); }
+}
+
+.notificationDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: rgba(20, 20, 20, 0.95); /* Dark background */
+  border: 1px solid rgba(243, 99, 22, 0.8);
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.3);
+  padding: 15px;
+  z-index: 1000;
+  animation: slideDownMenu 0.3s ease-out;
+}
+
+.light .notificationDropdown {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(243, 99, 22, 0.6);
+  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+}
+
+@keyframes slideDownMenu {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notificationItem {
+  padding: 10px;
+  border-bottom: 1px solid rgba(243, 99, 22, 0.2);
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+.dark .notificationItem {
+  color: #fff;
+}
+
+.light .notificationItem {
+  color: #333;
+}
+
+.notificationItem:hover {
+  background: rgba(243, 99, 22, 0.2);
+}
+
+.notificationItem a {
+  color: #ff6200;
+  text-decoration: none;
+  display: block;
+}
+
+.notificationItem a:hover {
+  text-decoration: underline;
+}
+
+.noNotifications {
+  padding: 10px;
+  font-size: 0.9rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.dark .noNotifications {
+  color: #fff;
+}
+
+.light .noNotifications {
+  color: #555;
+}
+
+.markReadButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  width: 100%;
+  margin-top: 10px;
+  font-weight: bold;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.markReadButton:hover {
+  background: #ff6200;
+  transform: scale(1.05);
+}
+
+.themeToggle {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.dark .themeToggle {
+  color: #ff6200;
+}
+
+.light .themeToggle {
+  color: #e55a00;
+}
+
+.themeToggle:hover {
+  transform: scale(1.2) rotate(20deg);
+}
+
+.hero {
+  padding: 60px 0;
+  text-align: center;
+  animation: fadeInHero 1.2s ease-out;
+}
+
+@keyframes fadeInHero {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dark .hero {
+  background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(0, 0, 0, 0.9));
+}
+
+.light .hero {
+  background: linear-gradient(135deg, rgba(243, 99, 22, 0.6), rgba(240, 240, 240, 0.9));
+}
+
+.heroContent {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.heroTitle {
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+  margin-bottom: 20px;
+  animation: float 3s infinite ease-in-out;
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+.dark .heroTitle {
+  color: #fff;
+}
+
+.light .heroTitle {
+  color: #e55a00;
+}
+
+.heroSubtitle {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.dark .heroSubtitle {
+  color: #fff;
+}
+
+.light .heroSubtitle {
+  color: #555;
+}
+
+.heroButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.heroButton:hover {
+  background: #ff6200;
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(243, 99, 22, 0.7);
+}
+
+.heroIcon {
+  font-size: 1.3rem;
+  animation: spin 2s infinite linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.novelsSection {
+  padding: 40px 10px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.dark .novelsSection {
+  background: #000;
+}
+
+.light .novelsSection {
+  background: #f5f5f5;
+}
+
+.sectionTitle {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 8px rgba(243, 99, 22, 0.5);
+  animation: fadeInSection 1s ease-out;
+}
+
+@keyframes fadeInSection {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dark .sectionTitle {
+  color: #ff6200;
+}
+
+.light .sectionTitle {
+  color: #e55a00;
+}
+
+.errorAlert {
+  background: rgba(220, 53, 69, 0.9);
+  color: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1rem;
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.carousel {
+  position: relative;
+  padding: 0 20px;
+}
+
+.carouselItem {
+  padding: 5px;
+  outline: none;
+}
+
+.novelCard {
+  position: relative;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.novelCard:hover {
+  transform: scale(1.05);
+}
+
+.dark .novelCard {
+  background: rgba(243, 99, 22, 0.1);
+}
+
+.light .novelCard {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.novelCard:hover {
+  box-shadow: 0 8px 25px rgba(243, 99, 22, 0.5);
+}
+
+.novelCard a {
+  text-decoration: none;
+  display: block;
+}
+
+.novelImage {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.novelCard:hover .novelImage {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.novelOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.novelCard:hover .novelOverlay {
+  background: rgba(243, 99, 22, 0.8);
+}
+
+.novelTitle {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.dark .novelTitle {
+  color: #fff;
+}
+
+.light .novelTitle {
+  color: #333;
+}
+
+.novelCard:hover .novelTitle {
+  color: #ff6200;
+}
+
+.carouselArrow {
+  font-size: 1.5rem;
+  color: rgba(243, 99, 22, 0.8);
+  transition: transform 0.3s ease, color 0.3s ease;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.carouselArrow:hover {
+  color: #ff6200;
+  transform: scale(1.2) translateY(-50%);
+}
+
+.slick-prev {
+  left: 0;
+}
+
+.slick-next {
+  right: 0;
+}
+
+.dark .slick-dots li button:before {
+  color: rgba(243, 99, 22, 0.8);
+}
+
+.light .slick-dots li button:before {
+  color: rgba(243, 99, 22, 0.6);
+}
+
+.slick-dots li.slick-active button:before {
+  color: #ff6200;
 }
 
 .footer {
-  grid-row-start: 3;
-  display: flex;
-  gap: 24px;
+  padding: 30px 0;
+  text-align: center;
+  box-shadow: 0 -2px 10px rgba(243, 99, 22, 0.2);
 }
 
-.footer a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.dark .footer {
+  background: rgba(243, 99, 22, 0.1);
 }
 
-.footer img {
-  flex-shrink: 0;
+.light .footer {
+  background: rgba(255, 255, 255, 0.9);
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
-
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
-  }
-
-  .footer a:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
+.footer p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
-@media (max-width: 600px) {
-  .page {
-    padding: 32px;
-    padding-bottom: 80px;
+.dark .footer p {
+  color: #fff;
+}
+
+.light .footer p {
+  color: #555;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .navContainer {
+    padding: 10px 15px;
+    position: relative;
+    flex-wrap: nowrap;
   }
 
-  .main {
-    align-items: center;
+  .menuToggle {
+    display: block;
   }
 
-  .main ol {
-    text-align: center;
-  }
-
-  .ctas {
+  .navLinks {
+    display: none;
     flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    padding: 15px;
+    background: inherit;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+    z-index: 999;
   }
 
-  .ctas a {
-    font-size: 14px;
-    height: 40px;
-    padding: 0 16px;
+  .navLinksOpen {
+    display: flex;
+    animation: slideDownMenu 0.3s ease-out;
   }
 
-  a.secondary {
-    min-width: auto;
+  @keyframes slideDownMenu {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  .footer {
-    flex-wrap: wrap;
-    align-items: center;
+  .navLink, .actionButton, .connectButton {
+    width: 100%;
     justify-content: center;
+    padding: 10px 0;
+  }
+
+  .notificationWrapper {
+    margin: 10px 0;
+  }
+
+  .notificationDropdown {
+    width: 100%;
+    max-width: 300px;
+    right: 0;
+    left: auto;
+    transform: translateX(0);
+  }
+
+  .hero {
+    padding: 40px 0;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+
+  .heroButton {
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+
+  .heroIcon {
+    font-size: 1.2rem;
+  }
+
+  .novelsSection {
+    padding: 30px 10px;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+  }
+
+  .carousel {
+    padding: 0 10px;
+  }
+
+  .novelImage {
+    height: 200px;
+  }
+
+  .novelTitle {
+    font-size: 1rem;
+  }
+
+  .carouselArrow {
+    font-size: 1.2rem;
   }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (max-width: 480px) {
   .logo {
-    filter: invert();
+    width: 35px;
+    height: 35px;
+  }
+
+  .logoText {
+    font-size: 1.2rem;
+  }
+
+  .navLink, .actionButton, .connectButton {
+    font-size: 0.8rem;
+    padding: 8px 0;
+  }
+
+  .navIcon, .bellIcon, .themeToggle {
+    font-size: 1rem;
+  }
+
+  .notificationBadge {
+    padding: 1px 4px;
+    font-size: 0.6rem;
   }
 }
