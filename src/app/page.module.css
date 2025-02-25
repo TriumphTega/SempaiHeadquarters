@@ -293,7 +293,7 @@
   width: 300px;
   max-height: 400px;
   overflow-y: auto;
-  background: rgba(20, 20, 20, 0.95); /* Dark background */
+  background: rgba(20, 20, 20, 0.95);
   border: 1px solid rgba(243, 99, 22, 0.8);
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(243, 99, 22, 0.3);
@@ -686,6 +686,103 @@
   color: #555;
 }
 
+/* Connect Wallet Pop-up */
+.connectPopupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 1001;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.connectPopup {
+  background: rgba(20, 20, 20, 0.95);
+  border: 2px solid rgba(243, 99, 22, 0.8);
+  border-radius: 15px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: popupFadeIn 0.3s ease-out;
+  position: relative;
+}
+
+.light .connectPopup {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(243, 99, 22, 0.6);
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.closePopupButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #ff6200;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.closePopupButton:hover {
+  transform: scale(1.2) rotate(90deg);
+}
+
+.popupTitle {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
+}
+
+.dark .popupTitle {
+  color: #ff6200;
+}
+
+.light .popupTitle {
+  color: #e55a00;
+}
+
+.popupMessage {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
+.dark .popupMessage {
+  color: #fff;
+}
+
+.light .popupMessage {
+  color: #555;
+}
+
+.connectWalletButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff !important;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.connectWalletButton:hover {
+  background: #ff6200;
+  transform: scale(1.05);
+}
+
 /* Mobile Styles */
 @media (max-width: 768px) {
   .navContainer {
@@ -782,6 +879,24 @@
 
   .carouselArrow {
     font-size: 1.2rem;
+  }
+
+  .connectPopup {
+    width: 85%;
+    padding: 15px;
+  }
+
+  .popupTitle {
+    font-size: 1.5rem;
+  }
+
+  .popupMessage {
+    font-size: 1rem;
+  }
+
+  .connectWalletButton {
+    padding: 8px 15px;
+    font-size: 0.9rem;
   }
 }
 

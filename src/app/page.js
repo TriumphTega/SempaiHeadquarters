@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
-import { FaHome, FaExchangeAlt, FaUser, FaComments, FaBell, FaBookOpen, FaSun, FaMoon, FaChevronLeft, FaChevronRight, FaBars } from "react-icons/fa";
+import { FaHome, FaExchangeAlt, FaUser, FaComments, FaBell, FaBookOpen, FaSun, FaMoon, FaChevronLeft, FaChevronRight, FaBars, FaTimes } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
@@ -25,7 +26,8 @@ export default function Home() {
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("dark");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false); // New state for notification dropdown
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [showConnectPopup, setShowConnectPopup] = useState(false); // New state for connect pop-up
 
   // Toggle theme
   const toggleTheme = () => {
@@ -35,13 +37,22 @@ export default function Home() {
   // Toggle mobile menu
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
-    setNotificationsOpen(false); // Close notifications if open
+    setNotificationsOpen(false);
+    setShowConnectPopup(false); // Close pop-up if open
   };
 
   // Toggle notifications dropdown
   const toggleNotifications = () => {
     setNotificationsOpen((prev) => !prev);
-    setMenuOpen(false); // Close menu if open
+    setMenuOpen(false);
+    setShowConnectPopup(false); // Close pop-up if open
+  };
+
+  // Toggle connect pop-up
+  const toggleConnectPopup = () => {
+    setShowConnectPopup((prev) => !prev);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
   };
 
   // Enhanced fetch notifications
@@ -107,7 +118,7 @@ export default function Home() {
 
       if (error) throw new Error("Failed to mark notifications as read");
       setNotifications([]);
-      setNotificationsOpen(false); // Close dropdown after marking as read
+      setNotificationsOpen(false);
     } catch (err) {
       console.error(err.message);
       setError("Failed to update notifications.");
@@ -157,7 +168,7 @@ export default function Home() {
   // Handle creator access with loading
   const handleCreatorAccess = useCallback(async () => {
     if (!connected || !publicKey) {
-      setError("Please connect your wallet first.");
+      setShowConnectPopup(true); // Show pop-up if not connected
       return;
     }
 
@@ -184,12 +195,17 @@ export default function Home() {
     }
   }, [connected, publicKey, router]);
 
-  // Handle navigation with immediate loading
+  // Handle navigation with immediate loading or pop-up
   const handleNavigation = (path) => {
-    setPageLoading(true);
-    setMenuOpen(false);
-    setNotificationsOpen(false); // Close notifications on navigation
-    router.push(path);
+    if (connected) {
+      setPageLoading(true);
+      setMenuOpen(false);
+      setNotificationsOpen(false);
+      setShowConnectPopup(false);
+      router.push(path);
+    } else {
+      setShowConnectPopup(true); // Show pop-up if not connected
+    }
   };
 
   // Initial data fetch
@@ -248,25 +264,9 @@ export default function Home() {
             <Link href="/chat" onClick={() => handleNavigation("/chat")} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
             </Link>
-              {/* Conditional Rendering for Creator Dashboard & Writer Application */}
-            {connected ? (
-              isWriter ? (
-                <button
-                  onClick={handleCreatorAccess}
-                  className="btn btn-warning btn-sm rounded-pill text-dark fw-bold px-4 py-2"
-                >
-                  Creator Dashboard
-                </button>
-              ) : (
-                <Link href="/apply" className="btn btn-primary btn-sm rounded-pill px-4 py-2 text-dark fw-bold">
-                    Apply to be a Creator
-                </Link>
-              )
-            ) : (
-              <button className="btn btn-light btn-sm rounded-pill text-dark fw-bold px-4 py-2" disabled>
-                Connect Wallet to Access
-              </button>
-            )}
+            <button onClick={handleCreatorAccess} className={styles.actionButton}>
+              {isWriter ? "Creator Dashboard" : "Become a Creator"}
+            </button>
             <div className={styles.notificationWrapper}>
               <button onClick={toggleNotifications} className={styles.notificationButton}>
                 <FaBell className={styles.bellIcon} />
@@ -328,13 +328,13 @@ export default function Home() {
 
       {/* Novels Carousel */}
       <section className={styles.novelsSection}>
-        <h2 className={styles.sectionTitle}>Featured Novels</h2>
+        <h2 className={styles.sectionTitle}>Featured</h2>
         {error && <div className={styles.errorAlert}>{error}</div>}
         <Slider {...carouselSettings} className={styles.carousel}>
           {novels.map((novel) => (
             <div key={novel.id} className={styles.carouselItem}>
               <div className={styles.novelCard}>
-                <Link href={`/novel/${novel.id}`} onClick={() => handleNavigation(`/novel/${novel.id}`)}>
+                <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNavigation(`/novel/${novel.id}`); }}>
                   <img src={novel.image} alt={novel.title} className={styles.novelImage} />
                   <div className={styles.novelOverlay}>
                     <h3 className={styles.novelTitle}>{novel.title}</h3>
@@ -345,7 +345,7 @@ export default function Home() {
           ))}
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/novels" onClick={() => handleNavigation("/novels")}>
+              <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>
                 <img src="/images/novel-3.jpg" alt="Hoard" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>Hoard</h3>
@@ -355,7 +355,7 @@ export default function Home() {
           </div>
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/keep-it-simple" onClick={() => handleNavigation("/keep-it-simple")}>
+              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); handleNavigation("/keep-it-simple"); }}>
                 <img src="/images/novel-4.jpg" alt="KISS" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>KISS</h3>
@@ -365,7 +365,7 @@ export default function Home() {
           </div>
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/dao-governance" onClick={() => handleNavigation("/dao-governance")}>
+              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); handleNavigation("/dao-governance"); }}>
                 <img src="/images/dao.jpg" alt="DAO Governance" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>DAO Governance</h3>
@@ -375,6 +375,20 @@ export default function Home() {
           </div>
         </Slider>
       </section>
+
+      {/* Connect Wallet Pop-up */}
+      {showConnectPopup && (
+        <div className={styles.connectPopupOverlay}>
+          <div className={styles.connectPopup}>
+            <button onClick={toggleConnectPopup} className={styles.closePopupButton}>
+              <FaTimes />
+            </button>
+            <h3 className={styles.popupTitle}>Connect Your Wallet</h3>
+            <p className={styles.popupMessage}>Please connect your wallet to access this content.</p>
+            <WalletMultiButton className={styles.connectWalletButton} />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className={styles.footer}>
