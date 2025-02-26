@@ -1,0 +1,589 @@
+.page {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    font-family: "Arial", sans-serif;
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* Navbar */
+  .navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 15px 0;
+    background: rgba(20, 20, 20, 0.95);
+    box-shadow: 0 2px 15px rgba(243, 99, 22, 0.3);
+    z-index: 1000;
+    animation: navFadeIn 0.6s ease-out;
+  }
+  
+  @keyframes navFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .navContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .logoLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+  }
+  
+  .logo:hover {
+    transform: rotate(360deg) scale(1.1);
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
+  }
+  
+  .logoText {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-left: 15px;
+    color: #ff6200;
+    text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
+    transition: color 0.3s ease;
+  }
+  
+  .logoText:hover {
+    color: #ff8345;
+  }
+  
+  .menuToggle {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    color: #ff6200;
+    display: none;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  
+  .menuToggle:hover {
+    transform: scale(1.2);
+  }
+  
+  .navLinks {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .navLink {
+    font-size: 1rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border-radius: 25px;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .navLink:hover {
+    background: rgba(243, 99, 22, 0.4);
+    transform: translateY(-2px);
+    color: #ff6200;
+  }
+  
+  .connectButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff !important;
+    padding: 8px 15px;
+    border-radius: 25px;
+    font-weight: bold;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .connectButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  /* Header */
+  .header {
+    padding: 60px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(0, 0, 0, 0.9));
+  }
+  
+  .headerTitle {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    animation: titleGlow 2s infinite alternate;
+  }
+  
+  @keyframes titleGlow {
+    0% { text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8); }
+    100% { text-shadow: 0 4px 25px rgba(243, 99, 22, 1); }
+  }
+  
+  .headerSubtitle {
+    font-size: 1.4rem;
+    color: #ccc;
+    margin-top: 10px;
+    opacity: 0.9;
+  }
+  
+  /* Main */
+  .main {
+    padding: 40px 20px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+  
+  .connectPrompt, .accessDenied {
+    text-align: center;
+    padding: 40px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(243, 99, 22, 0.6);
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  .connectIcon, .deniedIcon {
+    font-size: 2.5rem;
+    color: #ff6200;
+    margin-bottom: 15px;
+  }
+  
+  .connectPrompt p, .accessDenied p {
+    font-size: 1.2rem;
+    color: #ccc;
+    margin-bottom: 20px;
+  }
+  
+  .connectButtonPrompt {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff !important;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .connectButtonPrompt:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  .backLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ff6200;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+  }
+  
+  .backLink:hover {
+    color: #ff8345;
+  }
+  
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  /* Form Section */
+  .formSection {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(243, 99, 22, 0.6);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+    color: #ff6200;
+    text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .novelForm {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .label {
+    font-size: 1.1rem;
+    color: #ff6200;
+    font-weight: bold;
+  }
+  
+  .input, .textarea {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(243, 99, 22, 0.6);
+    border-radius: 10px;
+    padding: 10px;
+    color: #e0e0e0;
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .input:focus, .textarea:focus {
+    border-color: #ff6200;
+    box-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+    outline: none;
+  }
+  
+  .fileInput {
+    padding: 5px;
+  }
+  
+  .imagePreview {
+    max-width: 200px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .chapterSection {
+    border-top: 1px solid rgba(243, 99, 22, 0.4);
+    padding-top: 20px;
+  }
+  
+  .chapterTitle {
+    font-size: 1.6rem;
+    color: #ff6200;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .addChapterButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .addChapterButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  .chapterList {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+  
+  .chapterItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 30, 30, 0.9);
+    border: 1px solid rgba(243, 99, 22, 0.4);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .chapterItem:hover {
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.3);
+  }
+  
+  .chapterText {
+    flex: 1;
+  }
+  
+  .chapterText strong {
+    color: #ff6200;
+  }
+  
+  .chapterText p {
+    color: #ccc;
+    margin: 5px 0 0;
+  }
+  
+  .chapterActions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .editButton, .deleteButton {
+    background: rgba(243, 99, 22, 0.6);
+    color: #fff;
+    border: none;
+    padding: 8px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .editButton:hover {
+    background: #ff6200;
+    transform: scale(1.1);
+  }
+  
+  .deleteButton {
+    background: rgba(220, 53, 69, 0.6);
+  }
+  
+  .deleteButton:hover {
+    background: #dc3545;
+    transform: scale(1.1);
+  }
+  
+  .submitButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .submitButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+  }
+  
+  /* Novels Section */
+  .novelsSection {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(243, 99, 22, 0.6);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  }
+  
+  .noNovels {
+    text-align: center;
+    color: #ccc;
+    font-size: 1.2rem;
+  }
+  
+  .novelsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .novelCard {
+    background: rgba(30, 30, 30, 0.9);
+    border: 1px solid rgba(243, 99, 22, 0.4);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .novelCard:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(243, 99, 22, 0.5);
+  }
+  
+  .novelImage {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+  }
+  
+  .novelInfo {
+    padding: 15px;
+  }
+  
+  .novelTitle {
+    font-size: 1.4rem;
+    color: #ff6200;
+    margin-bottom: 10px;
+  }
+  
+  .novelSummary {
+    font-size: 1rem;
+    color: #ccc;
+    margin-bottom: 15px;
+  }
+  
+  .editNovelButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .editNovelButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  /* Writers Section */
+  .writersSection {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(243, 99, 22, 0.6);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  }
+  
+  .noWriters {
+    text-align: center;
+    color: #ccc;
+    font-size: 1.2rem;
+  }
+  
+  .writersList {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .writerItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: rgba(30, 30, 30, 0.9);
+    border: 1px solid rgba(243, 99, 22, 0.4);
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .writerId {
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 40px 0;
+    text-align: center;
+    background: rgba(20, 20, 20, 0.9);
+    box-shadow: 0 -2px 15px rgba(243, 99, 22, 0.2);
+  }
+  
+  .footerText {
+    font-size: 1rem;
+    color: #fff;
+    opacity: 0.8;
+    text-shadow: 0 1px 4px rgba(243, 99, 22, 0.3);
+  }
+  
+  /* Mobile Styles */
+  @media (max-width: 768px) {
+    .navbar {
+      padding: 10px 0;
+    }
+  
+    .menuToggle {
+      display: block;
+    }
+  
+    .navLinks {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      padding: 15px;
+      background: rgba(20, 20, 20, 0.9);
+      box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+    }
+  
+    .navLinksOpen {
+      display: flex;
+      animation: slideDown 0.3s ease-out;
+    }
+  
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  
+    .navLink, .connectButton {
+      width: 100%;
+      justify-content: center;
+      padding: 10px 0;
+    }
+  
+    .headerTitle {
+      font-size: 2rem;
+    }
+  
+    .headerSubtitle {
+      font-size: 1.2rem;
+    }
+  
+    .formSection, .novelsSection, .writersSection {
+      padding: 20px;
+    }
+  
+    .sectionTitle {
+      font-size: 1.5rem;
+    }
+  
+    .input, .textarea {
+      font-size: 0.9rem;
+    }
+  
+    .novelCard {
+      margin-bottom: 20px;
+    }
+  
+    .novelImage {
+      height: 150px;
+    }
+  }

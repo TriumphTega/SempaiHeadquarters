@@ -185,8 +185,8 @@ export default function Home() {
       if (user.isWriter) {
         router.push("/creators-dashboard");
       } else {
-        setError("Access denied. You must be a creator.");
-        setPageLoading(false);
+        router.push("/apply");
+
       }
     } catch (err) {
       console.error(err.message);

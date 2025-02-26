@@ -1,558 +1,491 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import BootstrapProvider from "../../components/BootstrapProvider";
-import { supabase } from '../../services/supabase/supabaseClient';
-import LoadingPage from '../../components/LoadingPage';
-import { useWallet } from '@solana/wallet-adapter-react'; // Assuming you're using Solana wallet adapter
-import Link from 'next/link';
-import ConnectButton from '../../components/ConnectButton';
-import {NovelConnectButton} from '../../components/NovelConnectButton';
-
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../services/supabase/supabaseClient";
+import { useWallet } from "@solana/wallet-adapter-react";
+import Link from "next/link";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem } from "react-icons/fa";
+import LoadingPage from "../../components/LoadingPage";
+import ConnectButton from "../../components/ConnectButton";
+import styles from "../../styles/CreatorsDashboard.module.css";
 
 export default function CreatorsDashboard() {
-  const [novelTitle, setNovelTitle] = useState('');
-  const [novelImage, setNovelImage] = useState('');
-  const [novelSummary, setNovelSummary] = useState('');
-  const [newChapterTitle, setNewChapterTitle] = useState('');
-  const [newChapterContent, setNewChapterContent] = useState('');
+  const { connected, publicKey } = useWallet();
+  const [novelTitle, setNovelTitle] = useState("");
+  const [novelImage, setNovelImage] = useState("");
+  const [novelSummary, setNovelSummary] = useState("");
+  const [newChapterTitle, setNewChapterTitle] = useState("");
+  const [newChapterContent, setNewChapterContent] = useState("");
   const [novelsList, setNovelsList] = useState([]);
   const [selectedNovel, setSelectedNovel] = useState(null);
-  const [imageText, setImageText] = useState('');
+  const [chapterTitles, setChapterTitles] = useState([]);
+  const [chapterContents, setChapterContents] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [isWriter, setIsWriter] = useState(false); // Store the isWriter state here
-  const [loading, setLoading] = useState(true);
-  const [writers, setWriters] = useState([]); // Define the writers state
-  const [editChapterIndex, setEditChapterIndex] = useState(null); // Define editChapterIndex state
-  const [chaptertitles, setChapterTitles] = useState([]);
-  const [chaptercontents, setChapterContents] = useState([]);
+  const [isWriter, setIsWriter] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
-
-  const router = useRouter();
+  const [writers, setWriters] = useState([]);
+  const [editChapterIndex, setEditChapterIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const chapterTitleRef = useRef(null);
-  const { connected, publicKey } = useWallet(); // Wallet connection details
-  
-  
-  
+  const router = useRouter();
+
+  // Check creator access and fetch user details
   const handleCreatorAccess = async () => {
     if (!connected || !publicKey) {
-      alert('Please connect your wallet first.');
+      setLoading(false);
       return;
     }
-  
+
+    setLoading(true);
     try {
       const walletAddress = publicKey.toString();
-  
-      // Fetch the user's details from the `users` table
       const { data, error } = await supabase
-        .from('users')
-        .select('id, isWriter, isSuperuser')  // Ensure you're fetching the 'id', 'isWriter', and 'isSuperuser' fields
-        .eq('wallet_address', walletAddress)
+        .from("users")
+        .select("id, isWriter, isSuperuser")
+        .eq("wallet_address", walletAddress)
         .single();
-  
-      if (error) {
-        console.error('Error fetching user:', error.message);
-        alert('Unable to verify user. Please try again later.');
+
+      if (error || !data) {
+        console.error("Error fetching user:", error?.message || "No user data");
+        router.push("/error");
         return;
       }
-  
-      if (data?.isSuperuser || data?.isWriter) {  // Check for both isSuperuser and isWriter
-        setCurrentUserId(data.id);  // Set currentUserId to the fetched user's ID
-        setIsWriter(data.isWriter);  // Set the isWriter state
-        setIsSuperuser(data.isSuperuser); // Set the isSuperuser state
-        setLoading(false);  // Allow access to the dashboard
-      } else {
-        alert('Access denied. You must be a creator or superuser to access this page.');
-        router.push('/error');  // Redirect non-creators and non-superusers to the error page
+
+      if (!data.isWriter && !data.isSuperuser) {
+        console.warn("User is neither a writer nor superuser.");
+        router.push("/error");
+        return;
       }
+
+      setCurrentUserId(data.id);
+      setIsWriter(data.isWriter);
+      setIsSuperuser(data.isSuperuser);
     } catch (err) {
-      console.error('Error handling creator access:', err.message);
-      alert('An error occurred. Please try again later.');
-    }
-  };
-  
-  
-  
-  
-  
-  useEffect(() => {
-    const fetchWriters = async () => {
-      setLoading(true);
-
-      // Fetch the writers (users with isWriter: true)
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, isWriter')
-        .eq('isWriter', true);
-
-      if (error) {
-        console.error('Error fetching writers:', error.message);
-      } else {
-        setWriters(data);
-      }
-
+      console.error("Error in creator access:", err.message);
+      router.push("/error");
+    } finally {
       setLoading(false);
-    };
-
-    fetchWriters();
-  }, []);
-
-  useEffect(() => {
-    // Run the creator access check when the wallet state changes
-    if (connected && publicKey) {
-      handleCreatorAccess();
-    }
-  }, [connected, publicKey]); // Re-run when wallet state changes
-
-  useEffect(() => {
-    if (currentUserId && isWriter) {
-      console.log(currentUserId)
-      fetchNovels(currentUserId);
-    }
-    
-  }, [currentUserId, isWriter]);
-  
-  const fetchNovels = async () => {
-    if (!currentUserId) {
-      console.error('No user ID available');
-      return;
-    }
-  
-    setLoading(true); // Set loading to true while fetching data
-  
-    let query = supabase
-      .from('novels')
-      .select('*');
-  
-    // If the user is not a superuser, filter by their user_id
-    if (!isSuperuser) {
-      query = query.eq('user_id', currentUserId);
-    }
-  
-    try {
-      const { data, error } = await query;
-  
-      if (error) {
-        console.error('Error fetching novels:', error.message);
-        setLoading(false); // Set loading to false even if there's an error
-      } else {
-        setNovelsList(data); // Set the fetched novels in state
-        setLoading(false); // Set loading to false after data is fetched
-      }
-    } catch (err) {
-      console.error('Error in fetching novels:', err.message);
-      setLoading(false); // Set loading to false in case of error
     }
   };
-  
-  
-  
-  
 
+  // Fetch novels based on user role
+  const fetchNovels = async () => {
+    if (!currentUserId) return;
+
+    setLoading(true);
+    try {
+      let query = supabase.from("novels").select("*");
+      if (!isSuperuser) query = query.eq("user_id", currentUserId);
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      setNovelsList(data || []);
+    } catch (err) {
+      console.error("Error fetching novels:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch writers (for superusers)
+  const fetchWriters = async () => {
+    if (!isSuperuser) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, isWriter")
+        .eq("isWriter", true);
+
+      if (error) throw new Error(error.message);
+      setWriters(data || []);
+    } catch (err) {
+      console.error("Error fetching writers:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleCreatorAccess();
+  }, [connected, publicKey]);
+
+  useEffect(() => {
+    if (currentUserId && (isWriter || isSuperuser)) {
+      fetchNovels();
+      if (isSuperuser) fetchWriters();
+    }
+  }, [currentUserId, isWriter, isSuperuser]);
+
+  // Handle image upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) { // Check if it's an image file
+    if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
-      reader.onloadend = () => setImageText(reader.result);
+      reader.onloadend = () => setNovelImage(reader.result);
       reader.readAsDataURL(file);
     } else {
-      alert('Please upload a valid image file.');
+      alert("Please upload a valid image file.");
     }
   };
 
+  // Add or update chapter
   const handleAddChapter = () => {
-    if (newChapterTitle && newChapterContent) {
-        if (editChapterIndex !== null) {
-            setChapterTitles((prevTitles) => {
-                const updatedTitles = [...prevTitles];
-                updatedTitles[editChapterIndex] = newChapterTitle;
-                return updatedTitles;
-            });
+    if (!newChapterTitle.trim() || !newChapterContent.trim()) {
+      alert("Please provide both a chapter title and content.");
+      return;
+    }
 
-            setChapterContents((prevContents) => {
-                const updatedContents = [...prevContents];
-                updatedContents[editChapterIndex] = newChapterContent;
-                return updatedContents;
-            });
-
-            setEditChapterIndex(null);
-        } else {
-            setChapterTitles((prevTitles) => [...prevTitles, newChapterTitle]);
-            setChapterContents((prevContents) => [...prevContents, newChapterContent]);
-        }
-        setNewChapterTitle('');
-        setNewChapterContent('');
+    if (editChapterIndex !== null) {
+      setChapterTitles((prev) => {
+        const updated = [...prev];
+        updated[editChapterIndex] = newChapterTitle;
+        return updated;
+      });
+      setChapterContents((prev) => {
+        const updated = [...prev];
+        updated[editChapterIndex] = newChapterContent;
+        return updated;
+      });
+      setEditChapterIndex(null);
     } else {
-        alert('Please fill in both chapter title and content.');
+      setChapterTitles((prev) => [...prev, newChapterTitle]);
+      setChapterContents((prev) => [...prev, newChapterContent]);
     }
-};
 
+    setNewChapterTitle("");
+    setNewChapterContent("");
+  };
 
+  // Edit chapter
   const handleEditChapter = (index) => {
-    const titleToEdit = chaptertitles[index];
-    const contentToEdit = chaptercontents[index];
-
-    setNewChapterTitle(titleToEdit);
-    setNewChapterContent(contentToEdit);
+    setNewChapterTitle(chapterTitles[index]);
+    setNewChapterContent(chapterContents[index]);
     setEditChapterIndex(index);
-
-    // Scroll to the chapter title input field
     if (chapterTitleRef.current) {
-        chapterTitleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        chapterTitleRef.current.focus(); // Optional: Focus the input for better UX
+      chapterTitleRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      chapterTitleRef.current.focus();
     }
-};
+  };
 
-const handleEditNovel = (novel) => {
-  setSelectedNovel(novel);
-  setNovelTitle(novel.title);
-  setImageText(novel.image);
-  setNovelSummary(novel.summary);
-  setChapterTitles(novel.chaptertitles || []); // Use chaptertitles instead of chapters
-  setChapterContents(novel.chaptercontents || []); // Use chaptercontents instead of chapters
-};
+  // Remove chapter
+  const handleRemoveChapter = (index) => {
+    setChapterTitles((prev) => prev.filter((_, i) => i !== index));
+    setChapterContents((prev) => prev.filter((_, i) => i !== index));
+    if (editChapterIndex === index) setEditChapterIndex(null);
+  };
 
-const handleRemoveChapter = (index) => {
-  setChapterTitles((prevTitles) => prevTitles.filter((_, i) => i !== index));
-  setChapterContents((prevContents) => prevContents.filter((_, i) => i !== index));
-};
+  // Edit existing novel
+  const handleEditNovel = (novel) => {
+    setSelectedNovel(novel);
+    setNovelTitle(novel.title);
+    setNovelImage(novel.image);
+    setNovelSummary(novel.summary);
+    setChapterTitles(novel.chaptertitles || []);
+    setChapterContents(novel.chaptercontents || []);
+  };
 
+  // Submit novel
+  const handleNovelSubmit = async (e) => {
+    e.preventDefault();
 
-const handleNovelSubmit = async (e) => {
-  e.preventDefault();
+    if (!novelTitle.trim() || !novelImage || !novelSummary.trim()) {
+      alert("Please fill in all novel details.");
+      return;
+    }
 
-  const novelData = {
+    const novelData = {
       user_id: currentUserId,
       title: novelTitle,
-      image: imageText,
+      image: novelImage,
       summary: novelSummary,
-      chaptertitles: chaptertitles,
-      chaptercontents: chaptercontents,
-  };
+      chaptertitles: chapterTitles,
+      chaptercontents: chapterContents,
+    };
 
-  try {
-      let novelId;
-      let chapterNumber = null; // Default to NULL for new novels
-      let message;
+    setLoading(true);
+    try {
+      let novelId, chapterNumber, message;
 
       if (selectedNovel) {
-          // Updating existing novel (adding a chapter)
-          const { error } = await supabase
-              .from('novels')
-              .update(novelData)
-              .eq('id', selectedNovel.id);
+        const { error } = await supabase.from("novels").update(novelData).eq("id", selectedNovel.id);
+        if (error) throw new Error(error.message);
 
-          if (error) throw new Error(error.message);
-
-          novelId = selectedNovel.id;
-          chapterNumber = chaptertitles.length; // Use latest chapter number
-          message = `A new chapter (${chapterNumber}) has been added to ${novelTitle}!`;
+        novelId = selectedNovel.id;
+        chapterNumber = chapterTitles.length;
+        message = `A new chapter (${chapterNumber}) has been added to "${novelTitle}"!`;
       } else {
-          // Inserting a new novel
-          const { data, error } = await supabase
-              .from('novels')
-              .insert([novelData])
-              .select("id")
-              .single();
+        const { data, error } = await supabase.from("novels").insert([novelData]).select("id").single();
+        if (error) throw new Error(error.message);
 
-          if (error) throw new Error(error.message);
-
-          novelId = data.id;
-          message = `A new novel "${novelTitle}" has been published!`;
+        novelId = data.id;
+        message = `A new novel "${novelTitle}" has been published!`;
       }
 
-      // ✅ Step 1: Fetch all user IDs
-      const { data: users, error: usersError } = await supabase
-          .from("users")
-          .select("id"); // Assuming "id" is the primary key
-
+      const { data: users, error: usersError } = await supabase.from("users").select("id");
       if (usersError) throw new Error(usersError.message);
 
-      if (users.length === 0) {
-          console.warn("No users found, skipping notifications.");
-          return;
-      }
-
-      // ✅ Step 2: Insert a notification for each user
-      const notifications = users.map(user => ({
+      if (users.length > 0) {
+        const notifications = users.map((user) => ({
           user_id: user.id,
           novel_id: novelId,
           type: selectedNovel ? "new_chapter" : "new_novel",
           message,
-          chapter: chapterNumber, // Ensure this is provided
-      }));
+          chapter: selectedNovel ? chapterNumber : null,
+        }));
 
-      const { error: notifError } = await supabase.from("notifications").insert(notifications);
-
-      if (notifError) throw new Error(notifError.message);
+        const { error: notifError } = await supabase.from("notifications").insert(notifications);
+        if (notifError) throw new Error(notifError.message);
+      }
 
       alert("Novel submitted successfully! Users have been notified.");
       resetForm();
-  } catch (err) {
+      fetchNovels();
+    } catch (err) {
       console.error("Error submitting novel:", err.message);
-      alert("An error occurred. Please try again later.");
-  }
-};
-
-
-
-  const resetForm = () => {
-    console.log("Resetting form...");
-  
-    setNovelTitle('');
-    setNovelImage('');
-    setNovelSummary('');
-    setNewChapterTitle('');
-    setNewChapterContent('');
-    setChapterTitles([]); // Clear chapter titles
-    setChapterContents([]); // Clear chapter contents
-    setSelectedNovel(null);
-  
-    setTimeout(() => {
-      console.log("Form reset:", {
-        novelTitle,
-        novelImage,
-        novelSummary,
-        newChapterTitle,
-        newChapterContent,
-        chaptertitles, // Check if empty
-        chaptercontents, // Check if empty
-        selectedNovel,
-      });
-    }, 100); // Delay to allow state updates
-  };
-  
-
-  const renderWritersContent = () => {
-    if (writers.length > 0) {
-      return (
-        
-        <div className="container my-5 text-white">
-
-          {/* Render Writers List */}
-          {/* <ul className="list-group">
-            {writers.map((writer, index) => (
-              <li key={writer.uid || index} className="list-group-item">
-                <h5>{writer.name}</h5>
-                <p>Email: {writer.email}</p>
-                <p>UID: {writer.id}</p>
-              </li>
-            ))}
-          </ul> */}
-  
-          {/* Render the Form (only once) */}
-          <h2 className="text-center section-title">
-            {selectedNovel ? "Edit Novel" : "Upload Novel"}
-          </h2>
-          {!connected && (
-          <div className="overlay d-flex align-items-center justify-content-center">
-            <NovelConnectButton />
-          </div>
-        )}
-          <form onSubmit={handleNovelSubmit} className="novel-form">
-            <div className="form-group">
-              <label htmlFor="novelTitle">Title</label>
-              <input
-                type="text"
-                id="novelTitle"
-                value={novelTitle}
-                onChange={(e) => setNovelTitle(e.target.value)}
-                required
-              />
-            </div>
-  
-            <div className="form-group">
-              <label htmlFor="novelImage">Image</label>
-              {imageText && (
-                <div className="mb-2">
-                  <img
-                    src={imageText}
-                    alt="Current Novel"
-                    className="img-thumbnail"
-                    style={{ maxWidth: "200px" }}
-                  />
-                  <p>Current Image</p>
-                </div>
-              )}
-              <input
-                type="file"
-                id="novelImage"
-                onChange={handleImageChange}
-                required={!selectedNovel}
-              />
-            </div>
-  
-            <div className="form-group">
-              <label htmlFor="novelSummary">Summary</label>
-              <textarea
-                id="novelSummary"
-                rows="3"
-                value={novelSummary}
-                onChange={(e) => setNovelSummary(e.target.value)}
-                required
-              ></textarea>
-            </div>
-  
-            <h4 className="chapter-heading">Add Chapters</h4>
-            <div className="form-group">
-              <label htmlFor="chapterTitle">Chapter Title</label>
-              <input
-                type="text"
-                id="chapterTitle"
-                ref={chapterTitleRef}
-                value={newChapterTitle}
-                onChange={(e) => setNewChapterTitle(e.target.value)}
-              />
-            </div>
-  
-            <div className="form-group">
-              <label htmlFor="chapterContent">Chapter Content</label>
-              <textarea
-                id="chapterContent"
-                rows="3"
-                value={newChapterContent}
-                onChange={(e) => setNewChapterContent(e.target.value)}
-              ></textarea>
-            </div>
-  
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleAddChapter}
-            >
-              {editChapterIndex !== null ? "Update Chapter" : "Add Chapter"}
-            </button>
-  
-            <ul className="list-group my-3 text-white">
-              {chaptertitles.map((title, index) => (
-                <li key={title || index} className="list-group-item chapter-item">
-                  <div className="text-white">
-                    <strong>{title}</strong>
-                    <p>
-                      {chaptercontents[index].length > 50
-                        ? `${chaptercontents[index].slice(0, 50)}...`
-                        : chaptercontents[index]}
-                    </p>
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm me-2"
-                      onClick={() => handleEditChapter(index)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleRemoveChapter(index)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-  
-            <button type="submit" className="btn btn-primary">
-              Submit
-            </button>
-          </form>
-  
-          {/* Uploaded Novels Section */}
-          <div className="container my-5">
-            <h2 className="text-center section-title text-white">Uploaded Novels</h2>
-            <div className="row">
-              {novelsList.map((novel, index) => (
-                <div key={novel.id || index} className="col-md-4">
-                  <div className="card novel-card">
-                    <img
-                      src={novel.image}
-                      className="card-img-top"
-                      alt={novel.title}
-                    />
-                    <div className="card-body">
-                      <h5 className="card-title">{novel.title}</h5>
-                      <p className="card-text">
-                        {novel.summary.length > 60
-                          ? `${novel.summary.slice(0, 70)}...`
-                          : novel.summary}
-                      </p>
-                      <button
-                        onClick={() => handleEditNovel(novel)}
-                        className="btn btn-primary"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    } else {
-      return <p className="text-center text-white">No writers found.</p>;
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
-  
 
-  if (loading) {
-    return <LoadingPage />;
-  }
+  // Reset form
+  const resetForm = () => {
+    setNovelTitle("");
+    setNovelImage("");
+    setNovelSummary("");
+    setNewChapterTitle("");
+    setNewChapterContent("");
+    setChapterTitles([]);
+    setChapterContents([]);
+    setSelectedNovel(null);
+    setEditChapterIndex(null);
+  };
 
-  return     <div className="bg-black">
-<BootstrapProvider />
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-      <div className="container">
-        <Link href="/" className="navbar-brand">
-          <img src="images/ursa.jpg" alt="Sempai HQ" className="navbar-logo" />
-        </Link>
-         {/* Toggle Button for Mobile View */}
-         <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
+  // Toggle mobile menu
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
+
+  if (loading) return <LoadingPage />;
+
+  return (
+    <div className={styles.page}>
+      {/* Navbar */}
+      <nav className={styles.navbar}>
+        <div className={styles.navContainer}>
+          <Link href="/" className={styles.logoLink}>
+            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <span className={styles.logoText}>Sempai HQ</span>
+          </Link>
+          <button className={styles.menuToggle} onClick={toggleMenu}>
+            <FaBars />
           </button>
+          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Link href="/" className={styles.navLink}>
+              <FaHome /> Home
+            </Link>
+            <ConnectButton className={styles.connectButton} />
+          </div>
+        </div>
+      </nav>
 
-          <div className="collapse navbar-collapse" id="navbarNav">
+      {/* Header */}
+      <header className={styles.header}>
+        <h1 className={styles.headerTitle}>
+          <FaUserShield /> Creator’s Vault
+        </h1>
+        <p className={styles.headerSubtitle}>Craft and curate your literary masterpieces.</p>
+      </header>
 
-        <ul className="navbar-nav me-auto text-center">
-              <li className="nav-item">
-                <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-                  Home
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-                  Swap
-                </Link>
-              </li>
-            </ul>
-      </div>
+      {/* Main Content */}
+      <main className={styles.main}>
+        {!connected ? (
+          <div className={styles.connectPrompt}>
+            <FaGem className={styles.connectIcon} />
+            <p>Connect your wallet to access the Creator’s Vault.</p>
+            <ConnectButton className={styles.connectButtonPrompt} />
+          </div>
+        ) : !isWriter && !isSuperuser ? (
+          <div className={styles.accessDenied}>
+            <FaTimes className={styles.deniedIcon} />
+            <p>Access Denied. Only creators and superusers may enter.</p>
+            <Link href="/" className={styles.backLink}>
+              <FaHome /> Return Home
+            </Link>
+          </div>
+        ) : (
+          <div className={styles.dashboard}>
+            {/* Novel Form */}
+            <section className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>
+                <FaBookOpen /> {selectedNovel ? "Edit Manuscript" : "Create New Manuscript"}
+              </h2>
+              <form onSubmit={handleNovelSubmit} className={styles.novelForm}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Title</label>
+                  <input
+                    type="text"
+                    value={novelTitle}
+                    onChange={(e) => setNovelTitle(e.target.value)}
+                    placeholder="Enter novel title"
+                    className={styles.input}
+                    required
+                  />
+                </div>
 
-        {/* Navbar Links */}
-        <div className="collapse navbar-collapse" id="navbarNav">
-            
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Cover Image</label>
+                  {novelImage && (
+                    <img src={novelImage} alt="Preview" className={styles.imagePreview} />
+                  )}
+                  <input
+                    type="file"
+                    onChange={handleImageChange}
+                    className={styles.fileInput}
+                    required={!selectedNovel}
+                  />
+                </div>
 
-            {/* Wallet and Creator Dashboard */}
-            <ul className="navbar-nav ms-auto text-center">
-              <li className="nav-item me-lg-3 mb-3 mb-lg-0">
-                <ConnectButton className="btn btn-light btn-sm rounded-pill px-3 py-2 text-dark" />
-              </li>
-            </ul>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Summary</label>
+                  <textarea
+                    value={novelSummary}
+                    onChange={(e) => setNovelSummary(e.target.value)}
+                    placeholder="Write a brief summary"
+                    className={styles.textarea}
+                    rows="3"
+                    required
+                  />
+                </div>
 
+                <div className={styles.chapterSection}>
+                  <h3 className={styles.chapterTitle}>
+                    <FaPlus /> Chapters
+                  </h3>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Chapter Title</label>
+                    <input
+                      type="text"
+                      ref={chapterTitleRef}
+                      value={newChapterTitle}
+                      onChange={(e) => setNewChapterTitle(e.target.value)}
+                      placeholder="Enter chapter title"
+                      className={styles.input}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Chapter Content</label>
+                    <textarea
+                      value={newChapterContent}
+                      onChange={(e) => setNewChapterContent(e.target.value)}
+                      placeholder="Write chapter content"
+                      className={styles.textarea}
+                      rows="5"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddChapter}
+                    className={styles.addChapterButton}
+                  >
+                    <FaPlus /> {editChapterIndex !== null ? "Update Chapter" : "Add Chapter"}
+                  </button>
+                </div>
 
-            </div>
-            </div>
-            </nav>
-    {renderWritersContent()}</div>;
+                {chapterTitles.length > 0 && (
+                  <ul className={styles.chapterList}>
+                    {chapterTitles.map((title, index) => (
+                      <li key={index} className={styles.chapterItem}>
+                        <span className={styles.chapterText}>
+                          <strong>{title}</strong>
+                          <p>{chapterContents[index].slice(0, 50)}...</p>
+                        </span>
+                        <div className={styles.chapterActions}>
+                          <button
+                            onClick={() => handleEditChapter(index)}
+                            className={styles.editButton}
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveChapter(index)}
+                            className={styles.deleteButton}
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <button type="submit" className={styles.submitButton}>
+                  <FaUpload /> {selectedNovel ? "Update Novel" : "Publish Novel"}
+                </button>
+              </form>
+            </section>
+
+            {/* Novels List */}
+            <section className={styles.novelsSection}>
+              <h2 className={styles.sectionTitle}>
+                <FaBookOpen /> Your Manuscripts
+              </h2>
+              {novelsList.length === 0 ? (
+                <p className={styles.noNovels}>No manuscripts found. Start creating!</p>
+              ) : (
+                <div className={styles.novelsGrid}>
+                  {novelsList.map((novel) => (
+                    <div key={novel.id} className={styles.novelCard}>
+                      <img src={novel.image} alt={novel.title} className={styles.novelImage} />
+                      <div className={styles.novelInfo}>
+                        <h3 className={styles.novelTitle}>{novel.title}</h3>
+                        <p className={styles.novelSummary}>
+                          {novel.summary.slice(0, 70)}...
+                        </p>
+                        <button
+                          onClick={() => handleEditNovel(novel)}
+                          className={styles.editNovelButton}
+                        >
+                          <FaEdit /> Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Writers List (Superuser Only) */}
+            {isSuperuser && (
+              <section className={styles.writersSection}>
+                <h2 className={styles.sectionTitle}>
+                  <FaUserShield /> Writers
+                </h2>
+                {writers.length === 0 ? (
+                  <p className={styles.noWriters}>No writers found.</p>
+                ) : (
+                  <ul className={styles.writersList}>
+                    {writers.map((writer) => (
+                      <li key={writer.id} className={styles.writerItem}>
+                        <span>{writer.name} ({writer.email})</span>
+                        <span className={styles.writerId}>ID: {writer.id}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className={styles.footer}>
+        <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
+      </footer>
+    </div>
+  );
 }
