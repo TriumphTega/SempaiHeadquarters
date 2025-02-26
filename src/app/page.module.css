@@ -547,6 +547,36 @@
   padding: 5px;
   outline: none;
 }
+/* page.module.css (example additions if not present) */
+.carousel {
+  padding: 20px 0;
+}
+
+.carouselItem {
+  padding: 0 10px;
+}
+
+.carouselArrow {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #ff6200;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.carouselArrow:first-child {
+  left: 0;
+}
+
+.carouselArrow:last-child {
+  right: 0;
+}
+
+/* Add other necessary styles from your design */
 
 .novelCard {
   position: relative;

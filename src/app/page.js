@@ -11,8 +11,21 @@ import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
+import "slick-carousel/slick-theme.css";
 import styles from "./page.module.css";
+
+// Custom arrow components to avoid passing invalid props to DOM
+const PrevArrow = ({ onClick }) => (
+  <button className={styles.carouselArrow} onClick={onClick}>
+    <FaChevronLeft />
+  </button>
+);
+
+const NextArrow = ({ onClick }) => (
+  <button className={styles.carouselArrow} onClick={onClick}>
+    <FaChevronRight />
+  </button>
+);
 
 export default function Home() {
   const { connected, publicKey } = useWallet();
@@ -27,7 +40,7 @@ export default function Home() {
   const [theme, setTheme] = useState("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [showConnectPopup, setShowConnectPopup] = useState(false); // New state for connect pop-up
+  const [showConnectPopup, setShowConnectPopup] = useState(false);
 
   // Toggle theme
   const toggleTheme = () => {
@@ -38,14 +51,14 @@ export default function Home() {
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
     setNotificationsOpen(false);
-    setShowConnectPopup(false); // Close pop-up if open
+    setShowConnectPopup(false);
   };
 
   // Toggle notifications dropdown
   const toggleNotifications = () => {
     setNotificationsOpen((prev) => !prev);
     setMenuOpen(false);
-    setShowConnectPopup(false); // Close pop-up if open
+    setShowConnectPopup(false);
   };
 
   // Toggle connect pop-up
@@ -55,7 +68,7 @@ export default function Home() {
     setNotificationsOpen(false);
   };
 
-  // Enhanced fetch notifications
+  // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     if (!connected || !publicKey) return;
 
@@ -97,7 +110,7 @@ export default function Home() {
     await fetchWithRetry();
   }, [connected, publicKey]);
 
-  // Enhanced mark notifications as read
+  // Mark notifications as read
   const markAsRead = useCallback(async () => {
     if (!connected || !publicKey) return;
 
@@ -125,7 +138,7 @@ export default function Home() {
     }
   }, [connected, publicKey]);
 
-  // Enhanced fetch user details
+  // Fetch user details
   const fetchUserDetails = useCallback(async () => {
     if (!connected || !publicKey) return;
 
@@ -151,7 +164,7 @@ export default function Home() {
     setIsCreatorLoggedIn(!!user);
   }, []);
 
-  // Enhanced fetch novels
+  // Fetch novels
   const fetchNovels = useCallback(async () => {
     try {
       const { data, error } = await supabase.from("novels").select("*");
@@ -165,10 +178,10 @@ export default function Home() {
     }
   }, []);
 
-  // Handle creator access with loading
+  // Handle creator access
   const handleCreatorAccess = useCallback(async () => {
     if (!connected || !publicKey) {
-      setShowConnectPopup(true); // Show pop-up if not connected
+      setShowConnectPopup(true);
       return;
     }
 
@@ -186,7 +199,6 @@ export default function Home() {
         router.push("/creators-dashboard");
       } else {
         router.push("/apply");
-
       }
     } catch (err) {
       console.error(err.message);
@@ -195,7 +207,7 @@ export default function Home() {
     }
   }, [connected, publicKey, router]);
 
-  // Handle navigation with immediate loading or pop-up
+  // Handle navigation
   const handleNavigation = (path) => {
     if (connected) {
       setPageLoading(true);
@@ -204,7 +216,7 @@ export default function Home() {
       setShowConnectPopup(false);
       router.push(path);
     } else {
-      setShowConnectPopup(true); // Show pop-up if not connected
+      setShowConnectPopup(true);
     }
   };
 
@@ -216,7 +228,7 @@ export default function Home() {
     fetchNotifications();
   }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications]);
 
-  // Carousel settings optimized for mobile
+  // Carousel settings
   const carouselSettings = {
     dots: true,
     infinite: true,
@@ -226,8 +238,8 @@ export default function Home() {
     autoplay: true,
     autoplaySpeed: 2500,
     arrows: true,
-    prevArrow: <FaChevronLeft className={styles.carouselArrow} />,
-    nextArrow: <FaChevronRight className={styles.carouselArrow} />,
+    prevArrow: <PrevArrow />,
+    nextArrow: <NextArrow />,
     centerMode: true,
     centerPadding: "20px",
     responsive: [
@@ -249,7 +261,7 @@ export default function Home() {
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
+            {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
             <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
