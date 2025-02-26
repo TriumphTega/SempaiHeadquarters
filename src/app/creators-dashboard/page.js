@@ -5,7 +5,21 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem } from "react-icons/fa";
+import {
+  FaHome,
+  FaBars,
+  FaTimes,
+  FaBookOpen,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaUpload,
+  FaUserShield,
+  FaGem,
+  FaSun,
+  FaMoon,
+  FaImage,
+} from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
 import styles from "../../styles/CreatorsDashboard.module.css";
@@ -28,6 +42,7 @@ export default function CreatorsDashboard() {
   const [editChapterIndex, setEditChapterIndex] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -47,14 +62,9 @@ export default function CreatorsDashboard() {
         .eq("wallet_address", walletAddress)
         .single();
 
-      if (error || !data) {
-        console.error("Error fetching user:", error?.message || "No user data");
-        router.push("/error");
-        return;
-      }
+      if (error || !data) throw new Error(error?.message || "No user data");
 
       if (!data.isWriter && !data.isSuperuser) {
-        console.warn("User is neither a writer nor superuser.");
         router.push("/error");
         return;
       }
@@ -242,7 +252,7 @@ export default function CreatorsDashboard() {
         if (notifError) throw new Error(notifError.message);
       }
 
-      alert("Novel submitted successfully! Users have been notified.");
+      alert("Novel submitted successfully! Users notified.");
       resetForm();
       fetchNovels();
     } catch (err) {
@@ -269,28 +279,37 @@ export default function CreatorsDashboard() {
   // Toggle mobile menu
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
+  // Toggle light/dark mode
+  const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
   if (loading) return <LoadingPage />;
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
       {/* Navbar */}
-      <nav className={styles.navbar}>
+      <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
             <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
+            {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
             <Link href="/" className={styles.navLink}>
               <FaHome /> Home
             </Link>
+            <button onClick={toggleTheme} className={styles.themeToggle}>
+              {isDarkMode ? <FaSun /> : <FaMoon />}
+            </button>
             <ConnectButton className={styles.connectButton} />
           </div>
         </div>
       </nav>
+
+      {/* Overlay for mobile menu blur */}
+      {menuOpen && <div className={styles.blurOverlay}></div>}
 
       {/* Header */}
       <header className={styles.header}>
@@ -321,7 +340,7 @@ export default function CreatorsDashboard() {
             {/* Novel Form */}
             <section className={styles.formSection}>
               <h2 className={styles.sectionTitle}>
-                <FaBookOpen /> {selectedNovel ? "Edit Manuscript" : "Create New Manuscript"}
+                <FaBookOpen /> {selectedNovel ? "Edit Manuscript" : "New Manuscript"}
               </h2>
               <form onSubmit={handleNovelSubmit} className={styles.novelForm}>
                 <div className={styles.inputGroup}>
@@ -337,7 +356,9 @@ export default function CreatorsDashboard() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label className={styles.label}>Cover Image</label>
+                  <label className={styles.label}>
+                    <FaImage /> Cover Image
+                  </label>
                   {novelImage && (
                     <img src={novelImage} alt="Preview" className={styles.imagePreview} />
                   )}
@@ -383,7 +404,7 @@ export default function CreatorsDashboard() {
                       onChange={(e) => setNewChapterContent(e.target.value)}
                       placeholder="Write chapter content"
                       className={styles.textarea}
-                      rows="5"
+                      rows="4"
                     />
                   </div>
                   <button
@@ -391,7 +412,7 @@ export default function CreatorsDashboard() {
                     onClick={handleAddChapter}
                     className={styles.addChapterButton}
                   >
-                    <FaPlus /> {editChapterIndex !== null ? "Update Chapter" : "Add Chapter"}
+                    <FaPlus /> {editChapterIndex !== null ? "Update" : "Add"}
                   </button>
                 </div>
 
@@ -423,7 +444,7 @@ export default function CreatorsDashboard() {
                 )}
 
                 <button type="submit" className={styles.submitButton}>
-                  <FaUpload /> {selectedNovel ? "Update Novel" : "Publish Novel"}
+                  <FaUpload /> {selectedNovel ? "Update" : "Publish"}
                 </button>
               </form>
             </section>
@@ -434,7 +455,7 @@ export default function CreatorsDashboard() {
                 <FaBookOpen /> Your Manuscripts
               </h2>
               {novelsList.length === 0 ? (
-                <p className={styles.noNovels}>No manuscripts found. Start creating!</p>
+                <p className={styles.noNovels}>No manuscripts yet. Start creating!</p>
               ) : (
                 <div className={styles.novelsGrid}>
                   {novelsList.map((novel) => (
@@ -443,7 +464,7 @@ export default function CreatorsDashboard() {
                       <div className={styles.novelInfo}>
                         <h3 className={styles.novelTitle}>{novel.title}</h3>
                         <p className={styles.novelSummary}>
-                          {novel.summary.slice(0, 70)}...
+                          {novel.summary.slice(0, 50)}...
                         </p>
                         <button
                           onClick={() => handleEditNovel(novel)}
