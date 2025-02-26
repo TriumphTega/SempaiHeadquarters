@@ -1,0 +1,484 @@
+.page {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    font-family: "Arial", sans-serif;
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  .dark {
+    background: #000;
+  }
+  
+  /* Navbar */
+  .navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 15px 0;
+    background: rgba(20, 20, 20, 0.9);
+    box-shadow: 0 2px 15px rgba(243, 99, 22, 0.3);
+    z-index: 1000;
+    animation: navFadeIn 0.6s ease-out;
+  }
+  
+  @keyframes navFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .navContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .logoLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+  }
+  
+  .logo:hover {
+    transform: rotate(360deg) scale(1.1);
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
+  }
+  
+  .logoText {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-left: 15px;
+    color: #ff6200;
+    text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
+    transition: color 0.3s ease;
+  }
+  
+  .logoText:hover {
+    color: #ff8345;
+  }
+  
+  .menuToggle {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    color: #ff6200;
+    display: none;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  
+  .menuToggle:hover {
+    transform: scale(1.2);
+  }
+  
+  .navLinks {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .navLink {
+    font-size: 1rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border-radius: 25px;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .navLink:hover {
+    background: rgba(243, 99, 22, 0.4);
+    transform: translateY(-2px);
+    color: #ff6200;
+  }
+  
+  .navIcon {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+  }
+  
+  .navLink:hover .navIcon {
+    transform: scale(1.2) rotate(10deg);
+  }
+  
+  /* Summary Content */
+  .summaryContainer {
+    padding: 100px 20px 40px;
+    max-width: 1300px;
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  .headerSection {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .summaryTitle {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #ff6200;
+    text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+    animation: titleGlow 2s infinite alternate;
+  }
+  
+  @keyframes titleGlow {
+    0% { text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8); }
+    100% { text-shadow: 0 4px 25px rgba(243, 99, 22, 1); }
+  }
+  
+  .audioControls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .audioButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .audioButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  .successMessage, .warningMessage, .errorMessage {
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 20px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeInMessage 0.5s ease-out;
+  }
+  
+  .successMessage {
+    background: rgba(40, 167, 69, 0.9);
+    color: #fff;
+  }
+  
+  .warningMessage {
+    background: rgba(255, 193, 7, 0.9);
+    color: #fff;
+  }
+  
+  .errorMessage {
+    background: rgba(220, 53, 69, 0.9);
+    color: #fff;
+  }
+  
+  @keyframes fadeInMessage {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .summaryContent {
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(243, 99, 22, 0.8);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+    margin-bottom: 40px;
+  }
+  
+  .contentText {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #fff;
+    font-weight: 500;
+  }
+  
+  .navigation {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  
+  .navButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .navButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  /* Error Container */
+  .errorContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #000;
+  }
+  
+  .errorText {
+    font-size: 2.5rem;
+    color: #dc3545;
+    text-shadow: 0 2px 10px rgba(220, 53, 69, 0.8);
+    animation: errorFlicker 1.5s infinite alternate;
+  }
+  
+  @keyframes errorFlicker {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+  
+  .backHomeButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    margin-top: 20px;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .backHomeButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
+  /* Connect Wallet Pop-up */
+  .connectPopupOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 1001;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .connectPopup {
+    background: rgba(20, 20, 20, 0.95);
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    border-radius: 15px;
+    padding: 25px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    animation: popupFadeIn 0.5s ease-out;
+    position: relative;
+  }
+  
+  @keyframes popupFadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  .closePopupButton {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    color: #ff6200;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  
+  .closePopupButton:hover {
+    transform: scale(1.2) rotate(90deg);
+  }
+  
+  .popupTitle {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ff6200;
+    text-shadow: 0 2px 8px rgba(243, 99, 22, 0.8);
+    margin-bottom: 20px;
+  }
+  
+  .popupMessage {
+    font-size: 1.2rem;
+    color: #fff;
+    opacity: 0.9;
+    margin-bottom: 25px;
+  }
+  
+  .connectWalletButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff !important;
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .connectWalletButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+  }
+  
+  .backHomeLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    color: #ff6200;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+  }
+  
+  .backHomeLink:hover {
+    color: #ff8345;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 40px 0;
+    text-align: center;
+    background: rgba(20, 20, 20, 0.9);
+    box-shadow: 0 -2px 15px rgba(243, 99, 22, 0.2);
+  }
+  
+  .footerText {
+    font-size: 1rem;
+    color: #fff;
+    opacity: 0.8;
+    text-shadow: 0 1px 4px rgba(243, 99, 22, 0.3);
+  }
+  
+  /* Mobile Styles */
+  @media (max-width: 768px) {
+    .navContainer {
+      padding: 10px 15px;
+      flex-wrap: nowrap;
+    }
+  
+    .menuToggle {
+      display: block;
+    }
+  
+    .navLinks {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      padding: 15px;
+      background: inherit;
+      box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+      z-index: 999;
+    }
+  
+    .navLinksOpen {
+      display: flex;
+      animation: slideDownMenu 0.3s ease-out;
+    }
+  
+    @keyframes slideDownMenu {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  
+    .navLink {
+      width: 100%;
+      justify-content: center;
+      padding: 10px 0;
+    }
+  
+    .summaryTitle {
+      font-size: 2rem;
+    }
+  
+    .audioControls {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  
+    .audioButton {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+  
+    .summaryContent {
+      padding: 20px;
+    }
+  
+    .contentText {
+      font-size: 1rem;
+    }
+  
+    .navigation {
+      flex-direction: column;
+      gap: 15px;
+    }
+  
+    .navButton {
+      width: 100%;
+      justify-content: center;
+    }
+  
+    .connectPopup {
+      width: 85%;
+      padding: 20px;
+    }
+  
+    .popupTitle {
+      font-size: 1.6rem;
+    }
+  
+    .popupMessage {
+      font-size: 1rem;
+    }
+  
+    .connectWalletButton {
+      padding: 8px 20px;
+      font-size: 1rem;
+    }
+  }

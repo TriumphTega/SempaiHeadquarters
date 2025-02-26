@@ -1,57 +1,68 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabase/supabaseClient';
-import { useWallet } from '@solana/wallet-adapter-react';
-import './CommentSection.css';
-import UseAmethystBalance from '../../components/UseAmethystBalance';
-
+import { useEffect, useState } from "react";
+import { supabase } from "../../services/supabase/supabaseClient";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { FaComment, FaReply, FaTimes, FaTrash, FaEye, FaEyeSlash } from "react-icons/fa";
+import UseAmethystBalance from "../../components/UseAmethystBalance";
+import styles from "./CommentSection.module.css";
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies, deleteComment, currentUserId }) => {
-  const isOwner = comment.user_id === currentUserId; // Ensure ownership check is correct
+  const isOwner = comment.user_id === currentUserId;
 
   return (
-    <div className="comment">
-      <div className="comment-header">
-        <strong className="comment-username">
-          <span className="username-text">{formatUsername(comment.username)}</span>
-        </strong>
+    <div className={styles.comment}>
+      <div className={styles.commentHeader}>
+        <span className={styles.commentUsername}>{formatUsername(comment.username)}</span>
+        <span className={styles.commentTimestamp}>
+          {new Date(comment.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+        </span>
       </div>
-      <div className="comment-content">
+      <div className={styles.commentContent}>
         <p>{comment.content}</p>
       </div>
-      <div className="comment-actions">
-        <button className="btn-reply" onClick={() => addReply(comment.id)}>
-          {replyingTo === comment.id ? 'Replying...' : 'Reply'}
+      <div className={styles.commentActions}>
+        <button
+          className={`${styles.actionButton} ${replyingTo === comment.id ? styles.active : ""}`}
+          onClick={() => addReply(comment.id)}
+          title={replyingTo === comment.id ? "Replying..." : "Reply"}
+        >
+          <FaReply /> {replyingTo === comment.id ? "Replying" : "Reply"}
         </button>
         {replyingTo === comment.id && (
-          <button className="btn btn-warning small-btn" onClick={cancelReply}>Cancel</button>
+          <button className={`${styles.actionButton} ${styles.cancelButton}`} onClick={cancelReply} title="Cancel Reply">
+            <FaTimes /> Cancel
+          </button>
         )}
-        <button className="btn-toggle-replies" onClick={() => toggleReplies(comment.id)}>
-          {showReplies[comment.id] ? 'Hide Replies' : 'Show Replies'}
-        </button>
+        {replies.length > 0 && (
+          <button
+            className={styles.actionButton}
+            onClick={() => toggleReplies(comment.id)}
+            title={showReplies[comment.id] ? "Hide Replies" : "Show Replies"}
+          >
+            {showReplies[comment.id] ? <FaEyeSlash /> : <FaEye />} {showReplies[comment.id] ? "Hide" : "Show"} ({replies.length})
+          </button>
+        )}
         {isOwner && (
-          <button className="btn small-btn btn-danger" onClick={() => deleteComment(comment.id)}>
-            Delete
+          <button className={`${styles.actionButton} ${styles.deleteButton}`} onClick={() => deleteComment(comment.id)} title="Delete Comment">
+            <FaTrash /> Delete
           </button>
         )}
       </div>
-
       {showReplies[comment.id] && replies.length > 0 && (
-        <div className="replies">
+        <div className={styles.replies}>
           {replies.map((reply) => (
             <Comment
               key={reply.id}
               comment={reply}
-              replies={reply.replies}
+              replies={reply.replies || []}
               addReply={addReply}
               replyingTo={replyingTo}
               cancelReply={cancelReply}
               toggleReplies={toggleReplies}
               showReplies={showReplies}
               deleteComment={deleteComment}
-              currentUserId={currentUserId} 
-
+              currentUserId={currentUserId}
             />
           ))}
         </div>
@@ -60,79 +71,68 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
   );
 };
 
-
-
-
-
 const formatUsername = (username) => {
-  if (username.length > 15) {
-    return `${username.slice(0, 2)}**${username.slice(-2)}`;
-  }
+  if (username.length > 15) return `${username.slice(0, 2)}**${username.slice(-2)}`;
   return username;
 };
 
 export default function CommentSection({ novelId, chapter }) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
   const { balance } = UseAmethystBalance();
-  const [currentUserId, setCurrentUserId] = useState(null); // Track logged-in user ID
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     if (!publicKey) return;
 
     const fetchUserId = async () => {
       const { data: user, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', publicKey.toString())
+        .from("users")
+        .select("id")
+        .eq("wallet_address", publicKey.toString())
         .single();
 
       if (error || !user) {
-        console.error('Error fetching user ID:', error);
+        console.error("Error fetching user ID:", error);
         return;
       }
-
-      setCurrentUserId(user.id); // Save user ID
+      setCurrentUserId(user.id);
     };
 
     fetchUserId();
-  }, [publicKey]); // Runs when wallet connects
+  }, [publicKey]);
 
   const deleteComment = async (commentId) => {
     const { error } = await supabase
-      .from('comments')
+      .from("comments")
       .delete()
-      .eq('id', commentId)
-      .eq('user_id', currentUserId); // Ensure only the owner can delete
-  
+      .eq("id", commentId)
+      .eq("user_id", currentUserId);
+
     if (error) {
-      console.error('Error deleting comment:', error);
+      console.error("Error deleting comment:", error);
       return;
     }
-  
-    setComments((prev) => prev.filter((c) => c.id !== commentId)); // Remove from UI
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
   const fetchComments = async () => {
     const { data, error } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('novel_id', novelId)
-      .eq('chapter', chapter)
-      .order('created_at', { ascending: false });
-  
+      .from("comments")
+      .select("*")
+      .eq("novel_id", novelId)
+      .eq("chapter", chapter)
+      .order("created_at", { ascending: false });
+
     if (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching comments:", error);
       return;
     }
-  
     setComments(data);
   };
-
-  
 
   useEffect(() => {
     fetchComments();
@@ -144,13 +144,13 @@ export default function CommentSection({ novelId, chapter }) {
     if (!newComment.trim()) return;
 
     const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, name, weekly_points, wallet_address')
-      .eq('wallet_address', publicKey.toString())
+      .from("users")
+      .select("id, name, weekly_points, wallet_address")
+      .eq("wallet_address", publicKey.toString())
       .single();
 
     if (userError || !user) {
-      console.error('Error fetching user:', userError);
+      console.error("Error fetching user:", userError);
       return;
     }
 
@@ -159,115 +159,82 @@ export default function CommentSection({ novelId, chapter }) {
       const oneMinuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
       const today = new Date(now.setHours(0, 0, 0, 0)).toISOString();
 
-      // 1️⃣ Rate Limiting: Check last comment timestamp
       const { data: recentComments } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', oneMinuteAgo);
+        .from("comments")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("created_at", oneMinuteAgo);
 
       if (recentComments.length > 0) {
-        alert('You can only post one comment per minute.');
+        alert("You can only post one comment per minute.");
         return;
       }
 
-      // 2️⃣ Daily Reward Cap: Max 10 rewarded comments/day
       const { data: rewardedToday } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_rewarded', true)
-        .gte('created_at', today);
+        .from("comments")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_rewarded", true)
+        .gte("created_at", today);
 
       const hasReachedDailyLimit = rewardedToday.length >= 10;
 
-  
-      // Insert the comment
       const { data: comment, error: commentError } = await supabase
-        .from('comments')
-        .insert([{
-          novel_id: novelId,
-          chapter,
-          user_id: user.id,
-          username: user.name,
-          content: newComment,
-          parent_id: replyingTo || null,
-          is_rewarded: !hasReachedDailyLimit
-        }])
+        .from("comments")
+        .insert([{ novel_id: novelId, chapter, user_id: user.id, username: user.name, content: newComment, parent_id: replyingTo || null, is_rewarded: !hasReachedDailyLimit }])
         .select()
         .single();
 
-        if (commentError) throw commentError;
+      if (commentError) throw commentError;
 
-        if (!hasReachedDailyLimit) {
-          let rewardAmount = balance >= 5000000 ? 25 :
-                             balance >= 1000000 ? 20 :
-                             balance >= 500000 ? 17 :
-                             balance >= 250000 ? 15 :
-                             balance >= 100000 ? 12 : 10;
+      if (!hasReachedDailyLimit) {
+        let rewardAmount = balance >= 5000000 ? 25 : balance >= 1000000 ? 20 : balance >= 500000 ? 17 : balance >= 250000 ? 15 : balance >= 100000 ? 12 : 10;
 
-          console.log(balance+1);
-  
-          await supabase
-            .from('users')
-            .update({ weekly_points: user.weekly_points + rewardAmount })
-            .eq('id', user.id);
-  
-          await supabase
-            .from('wallet_events')
-            .insert([{
-              destination_user_id: user.id,
-              event_type: 'credit',
-              amount_change: rewardAmount,
-              source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-              destination_chain: "SOL",
-              source_currency: "Token",
-              event_details: "comment_reward",
-              wallet_address: user.wallet_address,
-              source_chain: "SOL",
-            }]);
-        }
-  
-        if (replyingTo) {
-          const { data: parentComment } = await supabase
-            .from('comments')
-            .select('user_id')
-            .eq('id', replyingTo)
-            .single();
-  
-          if (parentComment && parentComment.user_id !== user.id) {
-            await supabase
-              .from('notifications')
-              .insert([{
-                user_id: parentComment.user_id,
-                novel_id: novelId,
-                chapter,
-                message: `${user.name} replied to your comment.`,
-                type: 'reply'
-              }]);
-          }
-        }
-  
-        setNewComment('');
-        setReplyingTo(null);
-        setComments((prev) => [comment, ...prev]);
-  
-      } catch (error) {
-        console.error('Error submitting comment:', error.message);
+        await supabase.from("users").update({ weekly_points: user.weekly_points + rewardAmount }).eq("id", user.id);
+
+        await supabase.from("wallet_events").insert([
+          {
+            destination_user_id: user.id,
+            event_type: "credit",
+            amount_change: rewardAmount,
+            source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+            destination_chain: "SOL",
+            source_currency: "Token",
+            event_details: "comment_reward",
+            wallet_address: user.wallet_address,
+            source_chain: "SOL",
+          },
+        ]);
       }
-    };
 
-  
+      if (replyingTo) {
+        const { data: parentComment } = await supabase.from("comments").select("user_id").eq("id", replyingTo).single();
+        if (parentComment && parentComment.user_id !== user.id) {
+          await supabase.from("notifications").insert([
+            { user_id: parentComment.user_id, novel_id: novelId, chapter, message: `${user.name} replied to your comment.`, type: "reply" },
+          ]);
+        }
+      }
 
-  const addReply = (parentId) => {
-    if (replyingTo === parentId) {
+      setNewComment("");
       setReplyingTo(null);
-    } else {
-      setReplyingTo(parentId);
+      setComments((prev) => [comment, ...prev]);
+    } catch (error) {
+      console.error("Error submitting comment:", error.message);
     }
   };
 
+  const addReply = (parentId) => {
+    setReplyingTo(parentId);
+  };
 
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const toggleReplies = (parentId) => {
+    setShowReplies((prev) => ({ ...prev, [parentId]: !prev[parentId] }));
+  };
 
   const buildThread = (comments) => {
     const map = {};
@@ -275,11 +242,8 @@ export default function CommentSection({ novelId, chapter }) {
     const roots = [];
 
     comments.forEach((c) => {
-      if (c.parent_id) {
-        map[c.parent_id]?.replies.push(map[c.id]);
-      } else {
-        roots.push(map[c.id]);
-      }
+      if (c.parent_id) map[c.parent_id]?.replies.push(map[c.id]);
+      else roots.push(map[c.id]);
     });
 
     roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -287,33 +251,33 @@ export default function CommentSection({ novelId, chapter }) {
   };
 
   return (
-    <div className="comment-section">
-      <h4 className="title">Comments</h4>
+    <div className={styles.commentSection}>
+      <h4 className={styles.title}>
+        <FaComment /> Comments
+      </h4>
       <textarea
-        className="textarea"
+        className={styles.textarea}
         value={newComment}
         onChange={(e) => setNewComment(e.target.value)}
-        placeholder={replyingTo ? 'Replying...' : 'Write a comment'}
+        placeholder={replyingTo ? "Type your reply..." : "Add your comment..."}
       />
-      <button className="btn-post" onClick={handleCommentSubmit}>
-        {replyingTo ? 'Post Reply' : 'Post Comment'}
+      <button className={styles.postButton} onClick={handleCommentSubmit}>
+        <FaComment /> {replyingTo ? "Post Reply" : "Post Comment"}
       </button>
-
-      <div className="comments-container">
+      <div className={styles.commentsContainer}>
         {buildThread(comments).map((comment) => (
-         <Comment
-         key={comment.id}
-         comment={comment}
-         replies={comment.replies || []}
-         addReply={setReplyingTo}
-         replyingTo={replyingTo}
-         cancelReply={() => setReplyingTo(null)}
-         toggleReplies={() => setShowReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))}
-         showReplies={showReplies}
-         deleteComment={deleteComment}
-         currentUserId={currentUserId} 
-       />
-        
+          <Comment
+            key={comment.id}
+            comment={comment}
+            replies={comment.replies}
+            addReply={addReply}
+            replyingTo={replyingTo}
+            cancelReply={cancelReply}
+            toggleReplies={toggleReplies}
+            showReplies={showReplies}
+            deleteComment={deleteComment}
+            currentUserId={currentUserId}
+          />
         ))}
       </div>
     </div>
