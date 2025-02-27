@@ -16,7 +16,7 @@ import styles from "../../../../../styles/ChapterPage.module.css";
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 
-export default function ChapterPage() {
+export default function ChapterPage({ params }) {
   const { id, chapter } = useParams();
   const router = useRouter();
   const { connected, publicKey } = useWallet();
@@ -28,6 +28,29 @@ export default function ChapterPage() {
   const { balance } = UseAmethystBalance();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    async function checkUnlock() {
+        const res = await fetch("/api/unlock-chapter", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId: "USER_ID", // Replace with actual user ID
+                novelId: id,
+                chapterNumber: chapter,
+            }),
+        });
+
+        const data = await res.json();
+        if (data.error) {
+            setIsLocked(true);
+        }
+        setLoading(false);
+    }
+
+    checkUnlock();
+}, [id, chapter]);
 
   // Toggle mobile menu
   const toggleMenu = () => {
@@ -235,6 +258,7 @@ export default function ChapterPage() {
     .join(""); // Join back into a single string
 
   return (
+    
     <div className={`${styles.page} ${styles.dark}`}>
       <Head>
         <title>{`${novel.title} - ${chapterTitle}`}</title>

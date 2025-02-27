@@ -1,11 +1,11 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './globals.css';
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./globals.css";
 
-import WalletProvider from '../components/WalletProvider'; // Adjust the path if necessary
+import WalletProvider from "../components/WalletProvider"; // Adjust path if necessary
 
 export const metadata = {
-  title: 'Sempai HQ',
-  description: 'Explore novels and chapters',
+  title: "Sempai HQ",
+  description: "Explore novels and chapters",
 };
 
 export default function RootLayout({ children }) {
@@ -19,12 +19,8 @@ export default function RootLayout({ children }) {
         {/* Add additional head elements like favicon or fonts here */}
       </head>
       <body>
-        <WalletProvider>
-          {children}
-        </WalletProvider>
+        <WalletProvider>{children}</WalletProvider>
       </body>
-
-
     </html>
   );
 }

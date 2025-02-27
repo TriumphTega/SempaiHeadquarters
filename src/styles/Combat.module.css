@@ -1,0 +1,446 @@
+/* Futuristic Base */
+.page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    overflow-y: auto;
+    position: relative;
+  }
+  
+  /* HUD Layout */
+  .hud {
+    padding: 60px 20px 100px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .leaderboardBtn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+    background: rgba(243, 99, 22, 0.8);
+    border: 2px solid #f36316;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+  }
+  
+  .leaderboardBtn:hover {
+    background: #f36316;
+    box-shadow: 0 0 15px rgba(243, 99, 22, 1);
+  }
+  
+  .mainCard {
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 25px rgba(243, 99, 22, 0.4);
+  }
+  
+  .playerTitle {
+    font-size: 2.5rem;
+    color: #f36316;
+    text-shadow: 0 0 10px rgba(243, 99, 22, 0.7);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .avatar {
+    border: 2px solid #f36316;
+    border-radius: 50%;
+  }
+  
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+  
+  .stats span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(243, 99, 22, 0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
+  }
+  
+  .xpBar {
+    width: 60%;
+    height: 12px;
+    margin: 20px auto;
+    background: #111;
+    border: 1px solid rgba(243, 99, 22, 0.8);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .xpFill {
+    height: 100%;
+    background: linear-gradient(90deg, #f36316, #feb47b);
+    transition: width 0.5s ease;
+  }
+  
+  .xpLabel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.9rem;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.8);
+  }
+  
+  .townInfo {
+    font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .eventText {
+    color: #feb47b;
+    font-size: 1.1rem;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    background: rgba(243, 99, 22, 0.1);
+    padding: 5px 10px;
+    border-radius: 5px;
+  }
+  
+  .gameMessage {
+    color: #ccc;
+    font-size: 1.1rem;
+    font-style: italic;
+    margin-bottom: 25px;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  }
+  
+  .sectionTitle {
+    font-size: 1.6rem;
+    color: #f36316;
+    text-align: center;
+    margin: 25px 0 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-shadow: 0 0 8px rgba(243, 99, 22, 0.6);
+  }
+  
+  .inventoryControls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .controlBtn {
+    background: rgba(243, 99, 22, 0.8);
+    border: 1px solid #f36316;
+    padding: 8px 15px;
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .controlBtn:hover {
+    background: #f36316;
+    box-shadow: 0 0 12px rgba(243, 99, 22, 0.8);
+  }
+  
+  .inventoryList, .ingredientsList {
+    max-width: 450px;
+    margin: 0 auto;
+    max-height: 30vh;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(243, 99, 22, 0.8);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  
+  .inventoryItem, .ingredientItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid rgba(243, 99, 22, 0.2);
+  }
+  
+  .actionBtn {
+    background: rgba(243, 99, 22, 0.8);
+    border: 1px solid #f36316;
+    padding: 6px 12px;
+    border-radius: 5px;
+    color: #fff;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .actionBtn:hover {
+    background: #f36316;
+    box-shadow: 0 0 10px rgba(243, 99, 22, 0.8);
+  }
+  
+  /* Actions Footer */
+  .actionsFooter {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(243, 99, 22, 0.2));
+    border-top: 2px solid rgba(243, 99, 22, 0.8);
+    padding: 15px 0;
+    z-index: 900;
+    box-shadow: 0 -5px 15px rgba(243, 99, 22, 0.3);
+  }
+  
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .actionDropdown {
+    position: relative;
+  }
+  
+  .dropdownBtn {
+    background: rgba(243, 99, 22, 0.8);
+    border: 2px solid #f36316;
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: #fff;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+  }
+  
+  .dropdownBtn:hover {
+    background: #f36316;
+    box-shadow: 0 0 15px rgba(243, 99, 22, 1);
+  }
+  
+  .dropdownContent {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 0 15px rgba(243, 99, 22, 0.5);
+    z-index: 1000;
+  }
+  
+  .actionDropdown:hover .dropdownContent {
+    display: block;
+  }
+  
+  .dropdownContent button {
+    display: block;
+    width: 100%;
+    background: rgba(243, 99, 22, 0.6);
+    border: none;
+    padding: 8px 15px;
+    color: #fff;
+    text-align: left;
+    transition: background-color 0.3s ease;
+  }
+  
+  .dropdownContent button:hover {
+    background: #f36316;
+  }
+  
+  .dropdownHeader {
+    color: #f36316;
+    font-size: 1rem;
+    margin: 5px 0;
+    text-align: center;
+  }
+  
+  .countdown {
+    text-align: center;
+    font-size: 1rem;
+    color: #feb47b;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .icon {
+    color: #f36316;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.7);
+  }
+  
+  /* Modal Styles */
+  .modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .modal {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid rgba(243, 99, 22, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 0 25px rgba(243, 99, 22, 0.5);
+    color: #fff;
+  }
+  
+  .modalHeader {
+    font-size: 1.8rem;
+    color: #f36316;
+    text-shadow: 0 0 8px rgba(243, 99, 22, 0.6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .closeBtn {
+    background: transparent;
+    border: none;
+    color: #f36316;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .closeBtn:hover {
+    color: #feb47b;
+  }
+  
+  .modalBody {
+    font-size: 1.1rem;
+  }
+  
+  .modalBody h5 {
+    color: #f36316;
+    margin-top: 15px;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.5);
+  }
+  
+  .list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .list li {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(243, 99, 22, 0.2);
+  }
+  
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0;
+  }
+  
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+  }
+  
+  .tabs button {
+    background: rgba(243, 99, 22, 0.6);
+    border: 1px solid #f36316;
+    padding: 8px 15px;
+    border-radius: 5px;
+    color: #fff;
+    transition: background-color 0.3s ease;
+  }
+  
+  .tabs button:hover {
+    background: #f36316;
+  }
+  
+  .activeTab {
+    background: #f36316 !important;
+    box-shadow: 0 0 10px rgba(243, 99, 22, 0.8);
+  }
+  
+  .tabContent {
+    margin-top: 15px;
+  }
+  
+  .tabContent ul {
+    padding-left: 20px;
+  }
+  
+  .tradeItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(243, 99, 22, 0.2);
+  }
+  
+  .gatherCard {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(243, 99, 22, 0.8);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .gatherOptions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .combatModal {
+    width: 800px;
+    max-width: 90%;
+  }
+  
+  .combatHeader {
+    background: linear-gradient(90deg, #ff3b3b,

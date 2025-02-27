@@ -11,10 +11,10 @@ import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick-theme.css";
+import "slick-carousel/slick/slick-theme.css";
 import styles from "./page.module.css";
 
-// Custom arrow components to avoid passing invalid props to DOM
+// Custom arrow components
 const PrevArrow = ({ onClick }) => (
   <button className={styles.carouselArrow} onClick={onClick}>
     <FaChevronLeft />
@@ -42,36 +42,25 @@ export default function Home() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
 
-  // Toggle theme
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
-
-  // Toggle mobile menu
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
   };
-
-  // Toggle notifications dropdown
   const toggleNotifications = () => {
     setNotificationsOpen((prev) => !prev);
     setMenuOpen(false);
     setShowConnectPopup(false);
   };
-
-  // Toggle connect pop-up
   const toggleConnectPopup = () => {
     setShowConnectPopup((prev) => !prev);
     setMenuOpen(false);
     setNotificationsOpen(false);
   };
 
-  // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     if (!connected || !publicKey) return;
-
     const walletAddress = publicKey.toString();
     let retryCount = 0;
     const maxRetries = 3;
@@ -110,10 +99,8 @@ export default function Home() {
     await fetchWithRetry();
   }, [connected, publicKey]);
 
-  // Mark notifications as read
   const markAsRead = useCallback(async () => {
     if (!connected || !publicKey) return;
-
     try {
       const walletAddress = publicKey.toString();
       const { data: user, error: userError } = await supabase
@@ -138,10 +125,8 @@ export default function Home() {
     }
   }, [connected, publicKey]);
 
-  // Fetch user details
   const fetchUserDetails = useCallback(async () => {
     if (!connected || !publicKey) return;
-
     try {
       const walletAddress = publicKey.toString();
       const { data: user, error } = await supabase
@@ -158,13 +143,11 @@ export default function Home() {
     }
   }, [connected, publicKey]);
 
-  // Check creator login status
   const checkCreatorLogin = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setIsCreatorLoggedIn(!!user);
   }, []);
 
-  // Fetch novels
   const fetchNovels = useCallback(async () => {
     try {
       const { data, error } = await supabase.from("novels").select("*");
@@ -178,13 +161,11 @@ export default function Home() {
     }
   }, []);
 
-  // Handle creator access
   const handleCreatorAccess = useCallback(async () => {
     if (!connected || !publicKey) {
       setShowConnectPopup(true);
       return;
     }
-
     setPageLoading(true);
     try {
       const walletAddress = publicKey.toString();
@@ -207,7 +188,6 @@ export default function Home() {
     }
   }, [connected, publicKey, router]);
 
-  // Handle navigation
   const handleNavigation = (path) => {
     if (connected) {
       setPageLoading(true);
@@ -220,7 +200,6 @@ export default function Home() {
     }
   };
 
-  // Initial data fetch
   useEffect(() => {
     checkCreatorLogin();
     fetchUserDetails();
@@ -228,7 +207,6 @@ export default function Home() {
     fetchNotifications();
   }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications]);
 
-  // Carousel settings
   const carouselSettings = {
     dots: true,
     infinite: true,
@@ -253,7 +231,6 @@ export default function Home() {
 
   return (
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark} ${menuOpen ? styles.menuActive : ""}`}>
-      {/* Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
@@ -327,7 +304,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <header className={styles.hero}>
         <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
@@ -338,7 +314,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Novels Carousel */}
       <section className={styles.novelsSection}>
         <h2 className={styles.sectionTitle}>Featured</h2>
         {error && <div className={styles.errorAlert}>{error}</div>}
@@ -388,7 +363,6 @@ export default function Home() {
         </Slider>
       </section>
 
-      {/* Connect Wallet Pop-up */}
       {showConnectPopup && (
         <div className={styles.connectPopupOverlay}>
           <div className={styles.connectPopup}>
@@ -402,7 +376,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Footer */}
       <footer className={styles.footer}>
         <p>© 2025 Sempai HQ. All rights reserved.</p>
       </footer>
