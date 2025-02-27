@@ -1,1090 +1,1711 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import Head from "next/head";
 import Image from "next/image";
-import styles from "../../styles/Combat.module.css";
 import {
-  FaUser, FaHeart, FaCoins, FaTrophy, FaShieldAlt, FaBook, FaStore, FaMap, FaTasks,
-  FaChartBar, FaUsers, FaCog, FaHourglassHalf, FaPlay, FaPlus, FaGem, FaLock, FaDragon, FaFlask,
-  FaShoppingCart, FaRoad, FaExclamationTriangle, FaStar
-} from "react-icons/fa";
-import { GiCrossedSwords } from "react-icons/gi";
+  Container,
+  Row,
+  Col,
+  Button,
+  Card,
+  ListGroup,
+  Modal,
+  Form,
+  ProgressBar,
+  Alert,
+  Tabs,
+  Tab,
+  Dropdown,
+} from "react-bootstrap";
+import { useWallet } from "@solana/wallet-adapter-react";
+import styles from '../../styles/Combat.module.css';
+import debounce from 'lodash/debounce';
+import { supabase } from "../../services/supabase/supabaseClient";
 
 
-// Initial Player State
-const initialPlayer = {
-  name: "Kaito",
-  level: 1,
-  health: 100,
-  maxHealth: 100,
+
+// ---- Constants Section ----
+const defaultPlayer = {
+  name: "Kaito Brewmaster",
   gold: 5,
+  health: 100,
+  max_health: 100,
   xp: 0,
-  inventory: [{ name: "Water", quantity: 2 }, { name: "Herbs", quantity: 1 }],
-  inventorySlots: 5,
-  rareItems: [],
+  level: 1,
+  inventory: [
+    { name: "Water", quantity: 2 },
+    { name: "Herbs", quantity: 1 }, 
+  ],
+  inventory_slots: 10,
+  rare_items: [],
+  recipes: [
+    { name: "Herbal Tea", ingredients: ["Water", "Herbs"], type: "sell", baseGold: 20 },
+    { name: "Spicy Sake", ingredients: ["Water", "Pepper"], type: "sell", baseGold: 20 },
+    { name: "Mist Potion", ingredients: ["Mist Essence", "Herbs"], type: "sell", baseGold: 20 },
+    { name: "Golden Elixir", ingredients: ["Golden Herb", "Mist Essence"], type: "sell", baseGold: 50 },
+    { name: "Weak Healing Potion", ingredients: ["Water", "Herbs"], type: "heal", healPercent: 0.2, sellValue: 15 },
+    { name: "Medium Healing Potion", ingredients: ["Water", "Mist Essence"], type: "heal", healPercent: 0.4, sellValue: 25 },
+    { name: "Strong Healing Potion", ingredients: ["Mist Essence", "Shadow Root"], type: "heal", healPercent: 0.6, sellValue: 40 },
+    { name: "Lucky Gather Potion", ingredients: ["Herbs", "Golden Herb"], type: "gather", effect: { rareChanceBoost: 0.1, duration: 300000 } },
+    { name: "Swift Gather Potion", ingredients: ["Pepper", "Mist Essence"], type: "gather", effect: { cooldownReduction: 0.2, duration: 300000 } },
+    { name: "Combat Blade", ingredients: ["Iron Ore", "Wood"], type: "equip", bonus: { damage: 5 } },
+    { name: "Steel Axe", ingredients: ["Iron Ore", "Iron Ore"], type: "equip", bonus: { damage: 8 } },
+    { name: "Shadow Dagger", ingredients: ["Shadow Root", "Iron Ore"], type: "equip", bonus: { damage: 6 } },
+    { name: "Leather Armor", ingredients: ["Herbs", "Wood"], type: "armor", bonus: { defense: 5 }, unlockLevel: 10 },
+    { name: "Chainmail", ingredients: ["Iron Ore", "Shadow Root"], type: "armor", bonus: { defense: 10 }, unlockLevel: 10 },
+    { name: "Plate Armor", ingredients: ["Iron Ore", "Mist Crystal"], type: "armor", bonus: { defense: 15 }, unlockLevel: 10 },
+  ],
   equipment: { weapon: null, armor: null },
   quests: [],
-  recipes: [
-    { name: "Herbal Tea", type: "sell", ingredients: ["Water", "Herbs"], baseGold: 10 },
-    { name: "Weak Healing Potion", type: "heal", ingredients: ["Water", "Herbs"], healPercent: 0.25, sellValue: 5 },
+  skills: [
+    { name: "Basic Attack", uses: 0, level: 1, effect: { damage: 10 }, tree: "Warrior" },
   ],
   stats: { enemiesDefeated: 0, potionsCrafted: 0, itemsSold: 0, gathers: 0 },
+  last_login: null,
+  daily_tasks: [],
+  weekly_tasks: [],
   guild: null,
-  skills: [],
-  dailyTasks: [],
-  weeklyTasks: [],
   avatar: "default",
   trait: null,
 };
 
-// Game Constants
 const towns = [
-  { name: "Sakura Nexus", ingredients: ["Water", "Herbs"], rewardMultiplier: 1.0, demand: { "Herbal Tea": 1.1 }, npcs: [{ name: "Elder", dialogue: "Gather herbs, young one.", quest: { id: 1, description: "Gather 5 Herbs", target: 5, progress: 0, reward: { gold: 10, xp: 20 } } }], level: 1, gatherCooldown: 30000 },
-  { name: "Iron Grid", ingredients: ["Iron", "Coal"], rewardMultiplier: 1.1, demand: { "Iron Sword": 1.2 }, npcs: [{ name: "Blacksmith", dialogue: "Forge me a blade!", quest: { id: 2, description: "Craft 1 Iron Sword", target: 1, progress: 0, reward: { gold: 20, xp: 30 } } }], level: 2, gatherCooldown: 45000 },
-  { name: "Mist Circuit", ingredients: ["Mist Essence"], rewardMultiplier: 1.2, demand: { "Strong Healing Potion": 1.2 }, npcs: [{ name: "Mystic", dialogue: "The mist awaits...", quest: { id: 3, description: "Gather 3 Mist Essence", target: 3, progress: 0, reward: { gold: 30, xp: 40 } } }], level: 3, gatherCooldown: 60000 },
+  {
+    name: "Sakura Village",
+    ingredients: ["Water", "Herbs", "Wood"],
+    rareIngredients: [{ name: "Golden Herb", chance: 0.1 }],
+    gatherCooldown: 0.5,
+    rewardMultiplier: 1,
+    demand: { "Herbal Tea": 1.0, "Spicy Sake": 0.8, "Mist Potion": 0.5, "Golden Elixir": 1.5 },
+    npcOffers: [{ ingredient: "Pepper", price: 5 }, { ingredient: "Mist Essence", price: 7 }],
+    npcs: [
+      { name: "Hana the Herbalist", dialogue: "Greetings! I need Herbs for my remedies. Can you gather 5 for me?", quest: { id: "herbQuest", description: "Gather 5 Herbs for Hana", progress: 0, target: 5, reward: { gold: 60, xp: 60 } } },
+    ],
+  },
+  {
+    name: "Iron Port",
+    ingredients: ["Pepper", "Sugar", "Iron Ore"],
+    rareIngredients: [{ name: "Iron Shard", chance: 0.1 }],
+    gatherCooldown: 1,
+    rewardMultiplier: 2,
+    demand: { "Herbal Tea": 0.7, "Spicy Sake": 1.2, "Mist Potion": 0.9, "Golden Elixir": 1.2 },
+    npcOffers: [{ ingredient: "Water", price: 5 }, { ingredient: "Shadow Root", price: 8 }],
+    npcs: [
+      { name: "Captain Toru", dialogue: "Ahoy! We need a sturdy Combat Blade for our next voyage. Craft one for us!", quest: { id: "bladeQuest", description: "Craft a Combat Blade for Toru", progress: 0, target: 1, reward: { gold: 80, xp: 80 } } },
+    ],
+  },
+  {
+    name: "Mist Hollow",
+    ingredients: ["Mist Essence", "Shadow Root"],
+    rareIngredients: [{ name: "Mist Crystal", chance: 0.2 }],
+    gatherCooldown: 2,
+    rewardMultiplier: 4,
+    demand: { "Herbal Tea": 0.6, "Spicy Sake": 0.9, "Mist Potion": 1.5, "Golden Elixir": 1.8 },
+    npcOffers: [{ ingredient: "Herbs", price: 6 }, { ingredient: "Sugar", price: 5 }],
+    npcs: [
+      { name: "Mystic Rei", dialogue: "The shadows grow restless. Defeat 3 Bandits to restore peace.", quest: { id: "banditQuest", description: "Defeat 3 Bandits for Rei", progress: 0, target: 3, reward: { gold: 100, xp: 100 } } },
+    ],
+  },
+];
+
+const allIngredients = ["Water", "Herbs", "Pepper", "Sugar", "Mist Essence", "Shadow Root", "Iron Ore", "Wood", "Golden Herb", "Iron Shard", "Mist Crystal"];
+const rare_items = ["Golden Herb", "Iron Shard", "Mist Crystal"];
+
+const weatherTypes = [
+  { type: "sunny", gatherBonus: null, combatModifier: 1.0, demandBonus: { "Spicy Sake": 1.1 } },
+  { type: "rainy", gatherBonus: { ingredient: "Water", chance: 0.5 }, combatModifier: 0.9, demandBonus: { "Herbal Tea": 1.2 } },
+  { type: "foggy", gatherBonus: { ingredient: "Mist Essence", chance: 0.3 }, combatModifier: 0.8, demandBonus: { "Mist Potion": 1.3 } },
+];
+
+const enemies = [
+  { name: "Bandit", health: 80, damage: 10, gold: 10, drop: "Shadow Root", dropChance: 0.2 },
+  { name: "Shadow Ninja", health: 60, damage: 15, gold: 15, drop: "Mist Essence", dropChance: 0.3 },
+  { name: "Golem", health: 120, damage: 8, gold: 20, drop: "Iron Ore", dropChance: 0.25 },
 ];
 
 const skillTrees = {
-  CyberWarrior: [
-    { name: "Neon Slash", level: 0, uses: 0, effect: { damage: 10 }, cost: { gold: 20 }, tree: "CyberWarrior" },
-    { name: "Swift Harvest", level: 0, uses: 0, effect: { cooldownReduction: 0.2 }, cost: { gold: 30 }, tree: "CyberWarrior" },
+  Warrior: [
+    { name: "Double Strike", uses: 0, level: 0, effect: { damage: 10 }, cost: { gold: 50 } },
+    { name: "Stun", uses: 0, level: 0, effect: { damage: 5, stunChance: 0.2 }, cost: { gold: 75 } },
   ],
-  TechCraftsman: [
-    { name: "Nano Brew", level: 0, uses: 0, effect: { costReduction: 0.1 }, cost: { gold: 25 }, tree: "TechCraftsman" },
+  Herbalist: [
+    { name: "Efficient Brewing", uses: 0, level: 0, effect: { costReduction: 0.2 }, cost: { gold: 50 } },
+    { name: "Potent Mix", uses: 0, level: 0, effect: { healBonus: 10 }, cost: { gold: 75 } },
+  ],
+  Explorer: [
+    { name: "Quick Gather", uses: 0, level: 0, effect: { cooldownReduction: 0.1 }, cost: { gold: 50 } },
+    { name: "Lucky Find", uses: 0, level: 0, effect: { rareChance: 0.05 }, cost: { gold: 75 } },
   ],
 };
 
-const enemies = [
-  { name: "Cyber Bandit", health: 50, damage: 5, goldReward: 10, xpReward: 20, dropChance: 0.3, rareDrop: "Plasma Dagger" },
-  { name: "Stealth Drone", health: 70, damage: 7, goldReward: 15, xpReward: 30, dropChance: 0.2, rareDrop: "Stealth Module" },
-  { name: "Titan Mech", health: 100, damage: 10, goldReward: 20, xpReward: 40, dropChance: 0.1, rareDrop: "Core Circuit" },
-];
-
-const recipes = [
-  { name: "Herbal Tea", type: "sell", ingredients: ["Water", "Herbs"], baseGold: 10 },
-  { name: "Weak Healing Potion", type: "heal", ingredients: ["Water", "Herbs"], healPercent: 0.25, sellValue: 5 },
-  { name: "Iron Blade", type: "equip", ingredients: ["Iron", "Coal"], bonus: { damage: 10 }, unlockLevel: 5 },
-  { name: "Nano Armor", type: "armor", ingredients: ["Herbs", "Herbs"], bonus: { defense: 5 }, unlockLevel: 10 },
-  { name: "Strong Healing Potion", type: "heal", ingredients: ["Mist Essence", "Water"], healPercent: 0.5, sellValue: 15, unlockLevel: 5 },
-  { name: "Mist Amplifier", type: "gather", ingredients: ["Mist Essence"], effect: { rareChanceBoost: 0.2, duration: 300000 }, unlockLevel: 3 },
-];
-
-const weatherTypes = [
-  { type: "Neon Clear", gatherBonus: null, demandBonus: {} },
-  { type: "Digital Rain", gatherBonus: { ingredient: "Water", chance: 0.3 }, demandBonus: { "Herbal Tea": 1.1 } },
-  { type: "Quantum Fog", gatherBonus: { ingredient: "Mist Essence", chance: 0.2 }, demandBonus: { "Strong Healing Potion": 1.2 } },
-];
-
-const events = [
-  { type: "Neon Fest", description: "A digital festival boosts demand!", multiplier: 1.5, duration: 300000 },
-  { type: "Cyber Raid", description: "A raid looms! Prepare your defenses!", multiplier: 0 },
-  { type: "Data Storm", description: "A storm disrupts gathering!", multiplier: 0.5, duration: 180000 },
-];
-
-export default function KaitoAdventure() {
-  const [player, setPlayer] = useState(() => {
-    const saved = localStorage.getItem("kaitoAdventurePlayer");
-    return saved ? JSON.parse(saved) : initialPlayer;
+// ---- Home Component ----
+const Home = () => {
+  const { publicKey, connected } = useWallet();
+  const defaultPlayerMemo = useMemo(() => ({
+    ...defaultPlayer,
+    wallet_address: publicKey ? publicKey.toString() : null,
+  }), [publicKey]);
+  const [player, setPlayer] = useState(defaultPlayerMemo);
+  const [currentTown, setCurrentTown] = useState("Sakura Village");
+  const [gameMessage, setGameMessage] = useState("Welcome to Kaito's Adventure!");
+  const [modals, setModals] = useState({
+    craft: false,
+    healing: false,
+    market: false,
+    gather: false,
+    combat: false,
+    leaderboard: false,
+    quests: false,
+    daily: false,
+    stats: false,
+    community: false,
+    customize: false,
+    npc: false,
+    travel: false,
+    skills: false,
+    events: false,
+    guild: false,
+    guide: false,
   });
-  const [currentTown, setCurrentTown] = useState("Sakura Nexus");
+  const [selectedIngredients, setSelectedIngredients] = useState([]);
+  const [lastGatherTimes, setLastGatherTimes] = useState({});
+  const [lastQueuedGatherTime, setLastQueuedGatherTime] = useState(null);
+  const [countdown, setCountdown] = useState(null);
+  const [queuedCountdown, setQueuedCountdown] = useState(null);
+  const [combatState, setCombatState] = useState(null);
+  const [combatResult, setCombatResult] = useState(null);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [townLevels, setTownLevels] = useState({ "Sakura Village": 1, "Iron Port": 1, "Mist Hollow": 1 });
+  const [activeTab, setActiveTab] = useState("drinks");
   const [weather, setWeather] = useState(weatherTypes[0]);
   const [currentEvent, setCurrentEvent] = useState(null);
   const [eventTimer, setEventTimer] = useState(null);
-  const [gameMessage, setGameMessage] = useState("Initializing Cyber Adventure...");
-  const [modals, setModals] = useState({
-    leaderboard: false, quests: false, craft: false, healing: false, gather: false, combat: false,
-    market: false, npc: false, daily: false, stats: false, community: false, customize: false,
-    events: false, guild: false, skills: false, travel: false, guide: true,
-  });
-  const [combatState, setCombatState] = useState(null);
-  const [combatResult, setCombatResult] = useState(null);
-  const [selectedIngredients, setSelectedIngredients] = useState([]);
-  const [activeTab, setActiveTab] = useState("drinks");
-  const [countdown, setCountdown] = useState(null);
-  const [queuedCountdown, setQueuedCountdown] = useState(null);
-  const [travelDestination, setTravelDestination] = useState(null);
   const [selectedNPC, setSelectedNPC] = useState(null);
-  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [travelDestination, setTravelDestination] = useState(null);
+  const [gatherBuff, setGatherBuff] = useState(null);
 
-  // Utility Functions
-  const xpProgress = (player.xp / (150 * player.level)) * 100;
-  const townLevels = towns.reduce((acc, town) => ({ ...acc, [town.name]: town.level }), {});
-  const getAvailableIngredients = [
-    ...player.inventory,
-    ...towns.find(t => t.name === currentTown).ingredients.map(name => ({ name, owned: false, quantity: 0 })),
-  ].filter((item, idx, self) => self.findIndex(i => i.name === item.name) === idx);
+  // ---- Persistence and Supabase Sync ----
+  useEffect(() => {
+    if (!connected || !publicKey) {
+      setPlayer(defaultPlayerMemo);
+      setModals(prev => ({ ...prev, guide: true }));
+      return;
+    }
 
-  const toggleModal = useCallback((modal) => {
-    setModals(prev => ({ ...prev, [modal]: !prev[modal] }));
+    const loadPlayer = async () => {
+      try {
+        const walletAddress = publicKey.toString();
+        const { data, error } = await supabase
+          .from('players')
+          .select('*')
+          .eq('wallet_address', walletAddress)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error("Error loading from Supabase:", error);
+          return;
+        }
+
+        let playerData = defaultPlayerMemo;
+        if (data) {
+          playerData = { ...defaultPlayerMemo, ...data, recipes: defaultPlayerMemo.recipes };
+        } else {
+          // New player
+          playerData = { ...defaultPlayerMemo, wallet_address: walletAddress };
+          const { error: insertError } = await supabase
+            .from('players')
+            .insert([playerData]);
+          if (insertError) {
+            console.error("Error inserting new player:", insertError);
+            return;
+          }
+          setModals(prev => ({ ...prev, guide: true }));
+        }
+
+        setPlayer({
+          ...defaultPlayerMemo,
+          ...playerData,
+          skills: playerData.skills || defaultPlayerMemo.skills,
+          weekly_tasks: playerData.weekly_tasks || [],
+          inventory_slots: playerData.inventory_slots || 10,
+          rare_items: playerData.rare_items || [],
+        });
+
+        setCurrentTown(localStorage.getItem("currentTown") || "Sakura Village");
+        setLastGatherTimes(JSON.parse(localStorage.getItem("lastGatherTimes")) || {});
+        setLastQueuedGatherTime(parseInt(localStorage.getItem("lastQueuedGatherTime"), 10) || null);
+        setTownLevels(JSON.parse(localStorage.getItem("townLevels")) || { "Sakura Village": 1, "Iron Port": 1, "Mist Hollow": 1 });
+      } catch (e) {
+        console.error("Error loading player:", e);
+      }
+    };
+
+    loadPlayer();
+  }, [connected, publicKey, defaultPlayerMemo]);
+
+  const saveToLocalStorage = useCallback(
+    debounce(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("currentTown", currentTown);
+        localStorage.setItem("lastGatherTimes", JSON.stringify(lastGatherTimes));
+        localStorage.setItem("lastQueuedGatherTime", lastQueuedGatherTime ? lastQueuedGatherTime.toString() : null);
+        localStorage.setItem("townLevels", JSON.stringify(townLevels));
+      }
+    }, 500),
+    [currentTown, lastGatherTimes, lastQueuedGatherTime, townLevels]
+  );
+
+  const syncPlayerToSupabase = useCallback(
+    debounce(async () => {
+      if (!connected || !publicKey || !player.wallet_address || typeof window === "undefined") {
+        console.warn("Cannot sync to Supabase: Wallet not connected or wallet_address is null");
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('players')
+          .upsert({
+            wallet_address: player.wallet_address,
+            name: player.name,
+            level: player.level,
+            gold: player.gold,
+            xp: player.xp,
+            health: player.health,
+            max_health: player.max_health,
+            inventory: player.inventory,
+            inventory_slots: player.inventory_slots,
+            rare_items: player.rare_items,
+            recipes: player.recipes,
+            equipment: player.equipment,
+            quests: player.quests,
+            skills: player.skills,
+            stats: player.stats,
+            last_login: new Date().toISOString(),
+            daily_tasks: player.dailyTasks,
+            weekly_tasks: player.weekly_tasks,
+            guild: player.guild,
+            avatar: player.avatar,
+            trait: player.trait,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: ['wallet_address'] });
+
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error syncing to Supabase:", error);
+      }
+    }, 1000),
+    [player, connected, publicKey]
+  );
+
+  useEffect(() => {
+    if (connected && publicKey && player.wallet_address) {
+      syncPlayerToSupabase();
+      saveToLocalStorage();
+    }
+    return () => {
+      syncPlayerToSupabase.cancel();
+      saveToLocalStorage.cancel();
+    };
+  }, [syncPlayerToSupabase, saveToLocalStorage, player, connected, publicKey]);
+
+  // ---- Weather System ----
+  useEffect(() => {
+    const changeWeather = () => {
+      const newWeather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+      setWeather(newWeather);
+      setGameMessage(`The weather changes to ${newWeather.type}!`);
+    };
+    if (typeof window !== "undefined") {
+      changeWeather();
+      const interval = setInterval(changeWeather, 300000);
+      return () => clearInterval(interval);
+    }
   }, []);
 
-  const formatCountdown = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-
-  // State Persistence
+  // ---- Dynamic Events ----
   useEffect(() => {
-    localStorage.setItem("kaitoAdventurePlayer", JSON.stringify(player));
-  }, [player]);
+    const triggerEvent = () => {
+      if (Math.random() < 0.3) {
+        const events = [
+          { type: "festival", description: "A festival boosts demand for 24 hours!", effect: () => setTownLevels(prev => ({ ...prev, [currentTown]: prev[currentTown] + 0.5 })), duration: 24 * 60 * 60 * 1000 },
+          { type: "raid", description: "Bandits raid the town for 1 hour!", effect: () => setModals(prev => ({ ...prev, combat: true })), duration: 60 * 60 * 1000 },
+          { type: "storm", description: "A storm reduces gathering for 12 hours!", effect: () => {}, duration: 12 * 60 * 60 * 1000 },
+        ];
+        const event = events[Math.floor(Math.random() * events.length)];
+        setCurrentEvent(event);
+        setGameMessage(event.description);
+        event.effect();
+        setEventTimer(Date.now() + event.duration);
+      }
+    };
+    if (typeof window !== "undefined") {
+      triggerEvent();
+      const interval = setInterval(triggerEvent, 300000);
+      return () => clearInterval(interval);
+    }
+  }, [currentTown]);
 
-  // Game Logic Functions
-  const sortInventory = () => {
+  useEffect(() => {
+    if (eventTimer && Date.now() >= eventTimer) {
+      setCurrentEvent(null);
+      setEventTimer(null);
+      setGameMessage("The event has ended!");
+    }
+  }, [eventTimer]);
+
+  // ---- XP and Leveling ----
+  const updateXP = useCallback((xpGain) => {
+    setPlayer(prev => {
+      const newXP = prev.xp + xpGain;
+      const newLevel = Math.floor(newXP / 150) + 1;
+      let updatedPlayer = { ...prev, xp: newXP, level: newLevel };
+      if (newLevel > prev.level) {
+        updatedPlayer.max_health = 100 + (newLevel - 1) * 10;
+        updatedPlayer.health = updatedPlayer.max_health;
+        setGameMessage(`Level up! Reached Level ${newLevel}. Max Health increased to ${updatedPlayer.max_health}!`);
+      }
+      return updatedPlayer;
+    });
+  }, []);
+
+  const xpProgress = useMemo(() => {
+    const xpForNext = player.level * 150;
+    const xpForCurrent = (player.level - 1) * 150;
+    return Math.min(((player.xp - xpForCurrent) / (xpForNext - xpForCurrent)) * 100, 100);
+  }, [player.xp, player.level]);
+
+  // ---- Quests ----
+  const addQuest = useCallback((quest) => {
+    setPlayer(prev => ({
+      ...prev,
+      quests: prev.quests.length < 3 ? [...prev.quests, quest] : prev.quests,
+    }));
+  }, []);
+
+  const completeQuest = useCallback((questId) => {
+    setPlayer(prev => {
+      const quest = prev.quests.find(q => q.id === questId);
+      if (!quest || quest.progress < quest.target) return prev;
+      setGameMessage(`Quest "${quest.description}" completed!`);
+      return {
+        ...prev,
+        gold: prev.gold + quest.reward.gold,
+        xp: prev.xp + quest.reward.xp,
+        level: Math.floor((prev.xp + quest.reward.xp) / 150) + 1,
+        quests: prev.quests.filter(q => q.id !== questId),
+      };
+    });
+  }, []);
+
+  // ---- Daily and Weekly Tasks ----
+  const completeDailyTask = useCallback((taskId) => {
+    setPlayer(prev => {
+      const task = prev.daily_tasks.find(t => t.id === taskId);
+      if (!task || task.progress < task.target) return prev;
+      setGameMessage(`${task.description} completed!`);
+      return {
+        ...prev,
+        gold: prev.gold + (task.reward.gold || 0),
+        xp: prev.xp + (task.reward.xp || 0),
+        level: Math.floor((prev.xp + (task.reward.xp || 0)) / 150) + 1,
+        daily_tasks: prev.daily_tasks.map(t => t.id === taskId ? { ...t, completed: true } : t),
+      };
+    });
+  }, []);
+
+  const completeWeeklyTask = useCallback((taskId) => {
+    setPlayer(prev => {
+      const task = prev.weekly_tasks.find(t => t.id === taskId);
+      if (!task || task.progress < task.target) return prev;
+      setGameMessage(`${task.description} completed!`);
+      return {
+        ...prev,
+        gold: prev.gold + (task.reward.gold || 0),
+        xp: prev.xp + (task.reward.xp || 0),
+        level: Math.floor((prev.xp + (task.reward.xp || 0)) / 150) + 1,
+        weekly_tasks: prev.weekly_tasks.map(t => t.id === taskId ? { ...t, completed: true } : t),
+      };
+    });
+  }, []);
+
+  // ---- Skills Progression ----
+  const updateSkillLevel = useCallback((skillName) => {
+    setPlayer(prev => {
+      const skills = prev.skills.map(skill => {
+        if (skill.name === skillName) {
+          const newUses = skill.uses + 1;
+          const newLevel = Math.min(Math.floor(newUses / 5) + 1, 5);
+          return {
+            ...skill,
+            uses: newUses,
+            level: newLevel,
+            effect: {
+              ...skill.effect,
+              damage: skill.effect.damage ? skill.effect.damage * (1 + (newLevel - 1) * 0.05) : undefined,
+              healBonus: skill.effect.healBonus ? skill.effect.healBonus + (newLevel - 1) * 2 : undefined,
+              costReduction: skill.effect.costReduction ? skill.effect.costReduction + (newLevel - 1) * 0.05 : undefined,
+              cooldownReduction: skill.effect.cooldownReduction ? skill.effect.cooldownReduction + (newLevel - 1) * 0.02 : undefined,
+              rareChance: skill.effect.rareChance ? skill.effect.rareChance + (newLevel - 1) * 0.01 : undefined,
+              stunChance: skill.effect.stunChance ? skill.effect.stunChance + (newLevel - 1) * 0.05 : undefined,
+            },
+          };
+        }
+        return skill;
+      });
+      return { ...prev, skills };
+    });
+  }, []);
+
+  const unlockSkill = useCallback((skillName, tree) => {
+    setPlayer(prev => {
+      const skill = skillTrees[tree].find(s => s.name === skillName);
+      if (prev.gold < skill.cost.gold || prev.skills.some(s => s.name === skillName)) {
+        setGameMessage("Not enough gold or skill already unlocked!");
+        return prev;
+      }
+      return {
+        ...prev,
+        gold: prev.gold - skill.cost.gold,
+        skills: [...prev.skills, { ...skill, level: 1 }],
+      };
+    });
+    setGameMessage(`${skillName} unlocked!`);
+  }, []);
+
+  // ---- Crafting ----
+  const toggleIngredient = useCallback((item) => {
+    setSelectedIngredients(prev => {
+      const countInSelection = prev.filter(i => i === item).length;
+      const ownedItem = player.inventory.find(i => i.name === item);
+      const maxAllowed = ownedItem ? ownedItem.quantity : 0;
+      if (countInSelection < maxAllowed) {
+        return [...prev, item];
+      } else {
+        return prev.filter((i, idx) => i !== item || prev.indexOf(i) !== idx);
+      }
+    });
+  }, [player.inventory]);
+
+  const getAvailableIngredients = useMemo(() => {
+    return allIngredients.map(name => {
+      const item = player.inventory.find(i => i.name === name);
+      return {
+        name,
+        quantity: item?.quantity ?? 0,
+        owned: !!item,
+      };
+    });
+  }, [player.inventory]);
+
+  const craftItem = useCallback((type, onSuccess) => {
+    const recipe = player.recipes.find(r =>
+      r.type === type &&
+      r.ingredients.every(ing => selectedIngredients.includes(ing)) &&
+      r.ingredients.length === selectedIngredients.length &&
+      (!r.unlockLevel || player.level >= r.unlockLevel)
+    );
+    if (!recipe) {
+      setGameMessage(`No matching ${type === "heal" ? "healing potion" : type === "gather" ? "gathering potion" : "item"} recipe for these ingredients${type !== "heal" && type !== "gather" && player.level < 10 ? " or level too low" : ""}!`);
+      return;
+    }
+
+    const available = getAvailableIngredients;
+    const hasEnough = recipe.ingredients.every(ing => {
+      const item = available.find(i => i.name === ing);
+      return item && item.owned && item.quantity > 0;
+    });
+    if (!hasEnough) {
+      setGameMessage("You don’t have enough of the required ingredients!");
+      return;
+    }
+
+    setPlayer(prev => {
+      const costReduction = prev.skills.some(s => s.name === "Efficient Brewing") ? prev.skills.find(s => s.name === "Efficient Brewing").effect.costReduction : 0;
+      const newInventory = prev.inventory.map(item =>
+        recipe.ingredients.includes(item.name) ? { ...item, quantity: item.quantity - (Math.random() < costReduction ? 0 : 1) } : item
+      ).filter(item => item.quantity > 0);
+
+      const task = prev.daily_tasks.find(t => t.description === "Craft 3 potions");
+      const updatedTasks = task
+        ? prev.daily_tasks.map(t => t.description === "Craft 3 potions" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
+        : prev.daily_tasks;
+      if (task && task.progress + 1 >= task.target) completeDailyTask("craftPotions");
+
+      const traitBonus = player.trait === "craftsman" ? 0.1 : 0;
+      const successChance = 0.8 + traitBonus;
+      const isSuccess = Math.random() < successChance;
+
+      if (isSuccess) {
+        const existingItem = prev.inventory.find(item => item.name === recipe.name);
+        const updatedInventory = existingItem
+          ? newInventory.map(item => item.name === recipe.name ? { ...item, quantity: Math.min(item.quantity + 1, prev.inventory_slots) } : item)
+          : [...newInventory, { name: recipe.name, quantity: 1 }];
+        const bladeQuest = prev.quests.find(q => q.id === "bladeQuest" && recipe.name === "Combat Blade");
+        const updatedQuests = bladeQuest
+          ? prev.quests.map(q => q.id === "bladeQuest" ? { ...q, progress: Math.min(q.progress + 1, q.target) } : q)
+          : prev.quests;
+
+        if (recipe.type === "gather") {
+          setGatherBuff({
+            type: recipe.effect.rareChanceBoost ? "rareChanceBoost" : "cooldownReduction",
+            value: recipe.effect.rareChanceBoost || recipe.effect.cooldownReduction,
+            expires: Date.now() + recipe.effect.duration,
+          });
+          setGameMessage(`You crafted ${recipe.name}! It’s in your inventory and boosts gathering for ${recipe.effect.duration / 60000} minutes!`);
+        }
+
+        return {
+          ...prev,
+          inventory: updatedInventory,
+          stats: { ...prev.stats, potionsCrafted: prev.stats.potionsCrafted + 1 },
+          daily_tasks: updatedTasks,
+          quests: updatedQuests,
+        };
+      }
+      return { ...prev, inventory: newInventory };
+    });
+
+    const isSuccess = Math.random() < (0.8 + (player.trait === "craftsman" ? 0.1 : 0));
+    if (isSuccess) {
+      updateXP(type === "heal" || type === "gather" ? 10 : 20);
+      if (recipe.type !== "gather") {
+        setGameMessage(`You crafted ${recipe.name}! It is now in your inventory. (+${type === "heal" || type === "gather" ? 10 : 20} XP)`);
+      }
+    } else {
+      setGameMessage(`Crafting ${recipe.name} failed! Ingredients lost.`);
+    }
+
+    setSelectedIngredients([]);
+    setModals(prev => ({ ...prev, [type === "heal" || type === "gather" ? "craft" : "craft"]: false }));
+    if (onSuccess && type !== "heal" && type !== "gather") onSuccess(recipe);
+  }, [player.recipes, player.trait, player.skills, player.inventory_slots, player.level, selectedIngredients, getAvailableIngredients, updateXP, completeDailyTask, completeQuest]);
+
+  const useGatherPotion = useCallback((potionName) => {
+    const potion = player.inventory.find(item => item.name === potionName);
+    if (!potion || potion.quantity === 0) {
+      setGameMessage("You don’t have this potion!");
+      return;
+    }
+    const recipe = player.recipes.find(r => r.name === potionName && r.type === "gather");
+    if (!recipe) {
+      setGameMessage("This isn’t a gathering potion!");
+      return;
+    }
+    setPlayer(prev => ({
+      ...prev,
+      inventory: prev.inventory.map(item => item.name === potionName ? { ...item, quantity: item.quantity - 1 } : item).filter(item => item.quantity > 0),
+    }));
+    setGatherBuff({
+      type: recipe.effect.rareChanceBoost ? "rareChanceBoost" : "cooldownReduction",
+      value: recipe.effect.rareChanceBoost || recipe.effect.cooldownReduction,
+      expires: Date.now() + recipe.effect.duration,
+    });
+    setGameMessage(`Used ${potionName}! Gathering boosted for ${recipe.effect.duration / 60000} minutes.`);
+  }, [player.inventory, player.recipes]);
+
+  // ---- Combat ----
+  const startCombat = useCallback(() => {
+    if (player.health <= 0) {
+      setGameMessage("You’re at 0 health! Craft a healing potion in combat to survive.");
+    }
+    const enemy = enemies[Math.floor(Math.random() * enemies.length)];
+    const levelScaleHealth = 1 + (player.level - 1) * 0.15;
+    const levelScaleDamage = 1 + (player.level - 1) * 0.05;
+    const weatherMod = weather.combatModifier;
+    setCombatState({
+      playerHealth: player.health > player.max_health ? player.max_health : player.health,
+      enemy: {
+        ...enemy,
+        health: Math.round(enemy.health * levelScaleHealth * weatherMod),
+        damage: Math.round(enemy.damage * levelScaleDamage * weatherMod),
+        gold: Math.round(enemy.gold * levelScaleHealth),
+      },
+      enemyHealth: Math.round(enemy.health * levelScaleHealth * weatherMod),
+      isAttacking: false,
+      log: player.health <= 0 ? ["You’re at 0 health! Craft a potion quickly!"] : [],
+    });
+    setCombatResult(null);
+    setModals(prev => ({ ...prev, combat: true }));
+    if (player.health > 0) {
+      setGameMessage(`Combat started against ${enemy.name} (HP: ${Math.round(enemy.health * levelScaleHealth * weatherMod)}, Damage: ${Math.round(enemy.damage * levelScaleDamage * weatherMod)})`);
+    }
+  }, [player.health, player.level, player.max_health, weather]);
+
+  const attackEnemy = useCallback((skillName = "Basic Attack") => {
+    if (!combatState || combatState.isAttacking) return;
+    setCombatState(prev => ({ ...prev, isAttacking: true }));
+    setTimeout(() => {
+      setCombatState(prev => {
+        if (!prev) return null;
+        const skill = player.skills.find(s => s.name === skillName) || { name: "Basic Attack", effect: { damage: 10 }, level: 1 };
+        const weaponDamage = player.equipment.weapon ? player.recipes.find(r => r.name === player.equipment.weapon)?.bonus.damage || 0 : 0;
+        const armorDefense = player.equipment.armor ? player.recipes.find(r => r.name === player.equipment.armor)?.bonus.defense || 0 : 0;
+        const traitBonus = player.trait === "warrior" ? 5 : 0;
+        const baseDamage = skill.effect.damage || 10;
+        const doubledDamage = skill.name === "Double Strike" ? baseDamage * 2 : baseDamage;
+        const scaledDamage = doubledDamage * (1 + (skill.level - 1) * 0.05);
+        const cappedDamage = Math.min(scaledDamage, 50);
+        const totalDamage = Math.round(cappedDamage + weaponDamage + traitBonus);
+        const newEnemyHealth = Math.max(prev.enemyHealth - totalDamage, 0);
+        const attackMessage = `Kaito uses ${skill.name} for ${totalDamage} damage (Base: ${baseDamage}, Doubled: ${doubledDamage}, Scaled: ${scaledDamage.toFixed(1)}, Capped: ${cappedDamage}, +Weapon: ${weaponDamage}, +Trait: ${traitBonus})`;
+        let newLog = [...prev.log, attackMessage];
+
+        if (skill.effect.stunChance && Math.random() < skill.effect.stunChance) {
+          newLog.push(`${prev.enemy.name} is stunned!`);
+        }
+
+        if (newEnemyHealth <= 0) {
+          const dropChance = Math.random() < prev.enemy.dropChance * (player.skills.some(s => s.name === "Lucky Find") ? 1 + player.skills.find(s => s.name === "Lucky Find").effect.rareChance : 1);
+          const drop = dropChance ? prev.enemy.drop : null;
+          const baseXP = prev.enemy.name === "Bandit" ? 20 : prev.enemy.name === "Shadow Ninja" ? 25 : 30;
+          const xpGain = baseXP + (player.level - 1) * 2;
+          setPlayer(p => {
+            let newInventory = [...p.inventory];
+            let newrare_items = [...p.rare_items];
+            if (drop) {
+              const existingItem = newInventory.find(item => item.name === drop);
+              newInventory = existingItem
+                ? newInventory.map(item => item.name === drop ? { ...item, quantity: Math.min(item.quantity + 1, p.inventory_slots) } : item)
+                : [...newInventory, { name: drop, quantity: 1 }];
+              if (rare_items.includes(drop)) newrare_items.push(drop);
+            }
+            const enemyTask = p.daily_tasks.find(t => t.id === "defeatEnemies");
+            const updatedTasks = enemyTask && !enemyTask.completed
+              ? p.daily_tasks.map(t => t.id === "defeatEnemies" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
+              : p.daily_tasks;
+            if (enemyTask && enemyTask.progress + 1 >= enemyTask.target) completeDailyTask("defeatEnemies");
+            return {
+              ...p,
+              gold: p.gold + prev.enemy.gold,
+              inventory: newInventory,
+              rare_items: newrare_items,
+              stats: { ...p.stats, enemiesDefeated: p.stats.enemiesDefeated + 1 },
+              daily_tasks: updatedTasks,
+            };
+          });
+          updateXP(xpGain);
+          updateSkillLevel(skillName);
+          setGameMessage(`You defeated ${prev.enemy.name} and earned ${prev.enemy.gold} gold!${drop ? " Dropped: " + drop : ""} (+${xpGain} XP)`);
+          setCombatResult({ type: "win", message: `Victory! You defeated ${prev.enemy.name}!` });
+          setTimeout(() => setModals(m => ({ ...m, combat: false })), 1500);
+          return null;
+        }
+
+        const rawDamage = skill.effect.stunChance && Math.random() < skill.effect.stunChance ? 0 : prev.enemy.damage;
+        const reducedDamage = Math.max(rawDamage - armorDefense, 0);
+        const newPlayerHealth = Math.max(prev.playerHealth - reducedDamage, 0);
+        newLog.push(`${prev.enemy.name} deals ${reducedDamage} damage to Kaito!`);
+
+        if (newPlayerHealth <= 0) {
+          setPlayer(p => ({ ...p, health: newPlayerHealth }));
+          setGameMessage("You were defeated!");
+          setCombatResult({ type: "fail", message: `Defeat! ${prev.enemy.name} overpowered you!` });
+          setTimeout(() => setModals(m => ({ ...m, combat: false })), 1500);
+          return null;
+        }
+
+        setPlayer(p => ({ ...p, health: newPlayerHealth }));
+        updateXP(15);
+        updateSkillLevel(skillName);
+        return { ...prev, playerHealth: newPlayerHealth, enemyHealth: newEnemyHealth, log: newLog, isAttacking: false };
+      });
+    }, 1000);
+  }, [combatState, player.equipment, player.recipes, player.trait, player.skills, player.inventory, player.max_health, updateXP, updateSkillLevel, completeDailyTask]);
+
+  const craftPotionInCombat = useCallback((potionName) => {
+    if (!combatState || combatState.isAttacking) return;
+    setCombatState(prev => ({ ...prev, isAttacking: true }));
+    setTimeout(() => {
+      setPlayer(prev => {
+        const recipe = prev.recipes.find(r => r.name === potionName && r.type === "heal");
+        if (!recipe) {
+          setGameMessage("No such healing potion recipe!");
+          setCombatState(prevState => ({ ...prevState, isAttacking: false }));
+          return prev;
+        }
+        const available = getAvailableIngredients;
+        const hasEnough = recipe.ingredients.every(ing => {
+          const item = available.find(i => i.name === ing);
+          return item && item.owned && item.quantity > 0;
+        });
+        if (!hasEnough) {
+          setGameMessage("Not enough ingredients to craft this potion!");
+          setCombatState(prevState => ({ ...prevState, isAttacking: false }));
+          return prev;
+        }
+        const costReduction = prev.skills.some(s => s.name === "Efficient Brewing") ? prev.skills.find(s => s.name === "Efficient Brewing").effect.costReduction : 0;
+        const healBonus = prev.skills.some(s => s.name === "Potent Mix") ? prev.skills.find(s => s.name === "Potent Mix").effect.healBonus : 0;
+        const newInventory = prev.inventory.map(item =>
+          recipe.ingredients.includes(item.name) ? { ...item, quantity: item.quantity - (Math.random() < costReduction ? 0 : 1) } : item
+        ).filter(item => item.quantity > 0);
+        const healAmount = Math.round(prev.max_health * recipe.healPercent) + healBonus;
+        const newHealth = Math.min(prev.health + healAmount, prev.max_health);
+        setGameMessage(`Crafted and used ${potionName} to heal ${healAmount} HP!`);
+        setCombatState(prevState => ({
+          ...prevState,
+          playerHealth: newHealth,
+          log: [...prevState.log, `Kaito crafts and uses ${potionName} to heal ${healAmount} HP`],
+          isAttacking: false,
+        }));
+        return { ...prev, health: newHealth, inventory: newInventory };
+      });
+    }, 1000);
+  }, [combatState, player.recipes, player.skills, player.inventory, player.max_health, getAvailableIngredients]);
+
+  useEffect(() => {
+    const checkBuffExpiration = () => {
+      if (gatherBuff && Date.now() >= gatherBuff.expires) {
+        setGatherBuff(null);
+        setGameMessage("Your gathering potion effect has worn off!");
+      }
+    };
+    const interval = setInterval(checkBuffExpiration, 1000);
+    return () => clearInterval(interval);
+  }, [gatherBuff]);
+
+  // ---- Leaderboard ----
+  const fetchLeaderboardData = useCallback(async () => {
+    if (!connected || !publicKey || typeof window === "undefined") return;
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('wallet_address, name, level, gold')
+        .order('level', { ascending: false })
+        .order('gold', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setLeaderboardData(data || []);
+      if (data && data.length > 0 && data[0].wallet_address === player.wallet_address) {
+        setGameMessage("You’re #1 on the leaderboard! Claim 100 gold next login!");
+      }
+    } catch (error) {
+      console.error("Leaderboard fetch error:", error);
+      setLeaderboardData([]);
+      setGameMessage("Failed to load leaderboard.");
+    }
+  }, [connected, publicKey, player.wallet_address]);
+
+  useEffect(() => {
+    if (connected && publicKey && modals.leaderboard) {
+      fetchLeaderboardData();
+    }
+    const interval = setInterval(fetchLeaderboardData, 10000);
+    return () => clearInterval(interval);
+  }, [fetchLeaderboardData, modals.leaderboard, connected, publicKey]);
+
+  // ---- Equipment ----
+  const equipItem = useCallback((itemName) => {
+    setPlayer(prev => {
+      const item = prev.recipes.find(r => r.name === itemName && (r.type === "equip" || r.type === "armor"));
+      if (!item) return prev;
+      return {
+        ...prev,
+        equipment: {
+          ...prev.equipment,
+          [item.type === "equip" ? "weapon" : "armor"]: itemName
+        }
+      };
+    });
+  }, []);
+
+  // ---- Town Upgrades ----
+  const upgradeTown = useCallback((townName, salesCount) => {
+    if (salesCount >= 10) {
+      setTownLevels(prev => ({
+        ...prev,
+        [townName]: Math.min(prev[townName] + 1, 3),
+      }));
+    }
+  }, []);
+
+  // ---- Market ----
+  const buyIngredient = useCallback((ingredient, price) => {
+    const cost = Math.floor(price / townLevels[currentTown]);
+    setPlayer(prev => {
+      if (prev.gold < cost) {
+        setGameMessage("Not enough gold!");
+        return prev;
+      }
+      const newInventory = [...prev.inventory];
+      const existingItem = newInventory.find(item => item.name === ingredient);
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        newInventory.push({ name: ingredient, quantity: 1 });
+      }
+      return {
+        ...prev,
+        gold: prev.gold - cost,
+        inventory: newInventory,
+      };
+    });
+    setGameMessage(`Bought ${ingredient} for ${cost} gold!`);
+  }, [currentTown, townLevels]);
+
+  const sellDrink = useCallback((drinkName) => {
+    const recipe = player.recipes.find(r => (r.type === "sell" || r.type === "heal") && r.name === drinkName);
+    if (!recipe || !recipe.sellValue) {
+      setGameMessage("This item cannot be sold!");
+      return;
+    }
+
+    const drinkInInventory = player.inventory.find(item => item.name === drinkName);
+    if (!drinkInInventory || drinkInInventory.quantity === 0) {
+      setGameMessage("You don’t have any of this item to sell!");
+      return;
+    }
+
+    const currentTownData = towns.find(t => t.name === currentTown);
+    const demandMultiplier = (currentTownData.demand[drinkName] || 1.0) * (currentEvent?.type === "festival" ? 1.5 : 1) * (weather.demandBonus[drinkName] || 1);
+    const reward = Math.floor((recipe.sellValue || recipe.baseGold) * currentTownData.rewardMultiplier * demandMultiplier);
+
+    setPlayer(prev => {
+      const sellTask = prev.weekly_tasks.find(t => t.description === "Sell 10 Spicy Sakes" && drinkName === "Spicy Sake");
+      const updatedweekly_tasks = sellTask
+        ? prev.weekly_tasks.map(t => t.description === "Sell 10 Spicy Sakes" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
+        : prev.weekly_tasks;
+      if (sellTask && sellTask.progress + 1 >= sellTask.target) completeWeeklyTask("sellDrinks");
+      return {
+        ...prev,
+        inventory: prev.inventory.map(item => item.name === drinkName ? { ...item, quantity: item.quantity - 1 } : item).filter(item => item.quantity > 0),
+        gold: prev.gold + reward,
+        stats: { ...prev.stats, itemsSold: prev.stats.itemsSold + 1 },
+        weekly_tasks: updatedweekly_tasks,
+      };
+    });
+    updateXP(reward * 2);
+    upgradeTown(currentTown, player.stats.itemsSold + 1);
+    setGameMessage(`You sold ${drinkName} for ${reward} gold! (+${reward * 2} XP)`);
+  }, [player.inventory, player.recipes, currentTown, currentEvent, weather, updateXP, upgradeTown, player.stats.itemsSold, completeWeeklyTask]);
+
+  // ---- Inventory Upgrades ----
+  const upgradeInventory = useCallback(() => {
+    setPlayer(prev => {
+      if (prev.gold < 50) {
+        setGameMessage("Not enough gold to upgrade inventory!");
+        return prev;
+      }
+      return { ...prev, gold: prev.gold - 50, inventory_slots: prev.inventory_slots + 5 };
+    });
+    setGameMessage("Inventory upgraded! +5 slots.");
+  }, [player.gold]);
+
+  // ---- Guild ----
+  const joinGuild = useCallback((guildName) => {
+    setPlayer(prev => {
+      if (prev.guild) {
+        setGameMessage("You’re already in a guild!");
+        return prev;
+      }
+      return { ...prev, guild: { name: guildName, progress: 0, target: 100 } };
+    });
+    setGameMessage(`Joined ${guildName}! Contribute gold to guild goals.`);
+  }, []);
+
+  const contributeToGuild = useCallback(() => {
+    setPlayer(prev => {
+      if (!prev.guild || prev.gold < 10) {
+        setGameMessage("Not enough gold or no guild!");
+        return prev;
+      }
+      const newProgress = prev.guild.progress + 10;
+      if (newProgress >= prev.guild.target) {
+        setGameMessage(`${prev.guild.name} goal completed! Earned 50 gold!`);
+        return { ...prev, guild: { ...prev.guild, progress: 0 }, gold: prev.gold + 40 };
+      }
+      return { ...prev, guild: { ...prev.guild, progress: newProgress }, gold: prev.gold - 10 };
+    });
+  }, []);
+
+  // ---- Gathering ----
+  const gatherSingle = useCallback(() => {
+    const town = towns.find(t => t.name === currentTown);
+    const now = Date.now();
+    const cooldownReduction = (player.skills.some(s => s.name === "Quick Gather") ? player.skills.find(s => s.name === "Quick Gather").effect.cooldownReduction : 0) +
+      (gatherBuff && gatherBuff.type === "cooldownReduction" && now < gatherBuff.expires ? gatherBuff.value : 0);
+    if (lastGatherTimes[currentTown] && (now - lastGatherTimes[currentTown]) < town.gatherCooldown * 60 * 1000 * (1 - cooldownReduction)) {
+      setGameMessage("Gather cooldown active!");
+      return;
+    }
+    const ingredient = currentEvent?.type === "storm" ? null : town.ingredients[Math.floor(Math.random() * town.ingredients.length)];
+    if (!ingredient) {
+      setGameMessage("Gathering halted by the storm!");
+      return;
+    }
+    setPlayer(prev => {
+      let newInventory = prev.inventory.find(i => i.name === ingredient)
+        ? prev.inventory.map(i => i.name === ingredient ? { ...i, quantity: Math.min(i.quantity + 1, prev.inventory_slots) } : i)
+        : [...prev.inventory, { name: ingredient, quantity: 1 }];
+      let newrare_items = [...prev.rare_items];
+      const rareChanceBoost = gatherBuff && gatherBuff.type === "rareChanceBoost" && now < gatherBuff.expires ? gatherBuff.value : 0;
+      const rareDrop = town.rareIngredients.find(r => Math.random() < r.chance * (prev.skills.some(s => s.name === "Lucky Find") ? 1 + prev.skills.find(s => s.name === "Lucky Find").effect.rareChance : 1) + rareChanceBoost);
+      if (rareDrop) {
+        newInventory = newInventory.find(i => i.name === rareDrop.name)
+          ? newInventory.map(i => i.name === rareDrop.name ? { ...i, quantity: Math.min(i.quantity + 1, prev.inventory_slots) } : i)
+          : [...newInventory, { name: rareDrop.name, quantity: 1 }];
+        newrare_items.push(rareDrop.name);
+        setGameMessage(`Rare find! You gathered a ${rareDrop.name}!`);
+      }
+      if (weather.gatherBonus && Math.random() < weather.gatherBonus.chance) {
+        const bonusItem = newInventory.find(i => i.name === weather.gatherBonus.ingredient);
+        newInventory = bonusItem
+          ? newInventory.map(i => i.name === weather.gatherBonus.ingredient ? { ...i, quantity: Math.min(i.quantity + 1, prev.inventory_slots) } : i)
+          : [...newInventory, { name: weather.gatherBonus.ingredient, quantity: 1 }];
+        setGameMessage(`Weather bonus! You gathered an extra ${weather.gatherBonus.ingredient}!`);
+      }
+      const herbQuest = prev.quests.find(q => q.id === "herbQuest" && ingredient === "Herbs");
+      const updatedQuests = herbQuest
+        ? prev.quests.map(q => q.id === herbQuest.id ? { ...q, progress: Math.min(q.progress + 1, q.target) } : q)
+        : prev.quests;
+      if (herbQuest && herbQuest.progress + 1 >= herbQuest.target) completeQuest("herbQuest");
+      return {
+        ...prev,
+        inventory: newInventory,
+        rare_items: newrare_items,
+        quests: updatedQuests,
+        stats: { ...prev.stats, gathers: prev.stats.gathers + 1 },
+      };
+    });
+    setLastGatherTimes(prev => ({ ...prev, [currentTown]: now }));
+    if (!gameMessage.includes("Rare find") && !gameMessage.includes("Weather bonus")) setGameMessage(`You gathered ${ingredient}!`);
+  }, [currentTown, lastGatherTimes, weather, completeQuest, player.skills, player.inventory_slots, currentEvent, gatherBuff]);
+
+  const queueGathers = useCallback((count) => {
+    const town = towns.find(t => t.name === currentTown);
+    const now = Date.now();
+    if (player.gold < count) {
+      setGameMessage("Not enough gold!");
+      return;
+    }
+    if (lastQueuedGatherTime && (now - lastQueuedGatherTime) < 3 * 60 * 1000) {
+      setGameMessage("Queued gather cooldown active!");
+      return;
+    }
+    setPlayer(prev => {
+      let newInventory = [...prev.inventory];
+      let newrare_items = [...prev.rare_items];
+      const rareChanceBoost = gatherBuff && gatherBuff.type === "rareChanceBoost" && now < gatherBuff.expires ? gatherBuff.value : 0;
+      for (let i = 0; i < count; i++) {
+        const ingredient = currentEvent?.type === "storm" ? null : town.ingredients[Math.floor(Math.random() * town.ingredients.length)];
+        if (!ingredient) continue;
+        const existingItem = newInventory.find(item => item.name === ingredient);
+        newInventory = existingItem
+          ? newInventory.map(item => item.name === ingredient ? { ...item, quantity: Math.min(item.quantity + 1, prev.inventory_slots) } : item)
+          : [...newInventory, { name: ingredient, quantity: 1 }];
+        if (weather.gatherBonus && Math.random() < weather.gatherBonus.chance) {
+          const bonusItem = newInventory.find(i => i.name === weather.gatherBonus.ingredient);
+          newInventory = bonusItem
+            ? newInventory.map(i => i.name === weather.gatherBonus.ingredient ? { ...i, quantity: Math.min(i.quantity + 1, prev.inventory_slots) } : i)
+            : [...newInventory, { name: weather.gatherBonus.ingredient, quantity: 1 }];
+        }
+        const rareDrop = town.rareIngredients.find(r => Math.random() < r.chance * (prev.skills.some(s => s.name === "Lucky Find") ? 1 + prev.skills.find(s => s.name === "Lucky Find").effect.rareChance : 1) + rareChanceBoost);
+        if (rareDrop) {
+          newInventory = newInventory.find(i => i.name === rareDrop.name)
+            ? newInventory.map(i => i.name === rareDrop.name ? { ...i, quantity: Math.min(i.quantity + 1, prev.inventory_slots) } : i)
+            : [...newInventory, { name: rareDrop.name, quantity: 1 }];
+          newrare_items.push(rareDrop.name);
+        }
+      }
+      const herbQuest = prev.quests.find(q => q.id === "herbQuest");
+      const updatedQuests = herbQuest
+        ? prev.quests.map(q => q.id === herbQuest.id ? { ...q, progress: Math.min(q.progress + count, q.target) } : q)
+        : prev.quests;
+      if (herbQuest && herbQuest.progress + count >= herbQuest.target) completeQuest("herbQuest");
+      return {
+        ...prev,
+        inventory: newInventory,
+        rare_items: newrare_items,
+        gold: prev.gold - count,
+        quests: updatedQuests,
+        stats: { ...prev.stats, gathers: prev.stats.gathers + count },
+      };
+    });
+    setLastQueuedGatherTime(now);
+    setGameMessage(`You queued ${count} gathers!`);
+  }, [player.gold, player.inventory_slots, lastQueuedGatherTime, currentTown, weather, completeQuest, currentEvent, gatherBuff]);
+
+  // ---- Countdowns ----
+  const formatCountdown = useCallback(seconds => {
+    const days = Math.floor(seconds / (24 * 3600));
+    const hours = Math.floor((seconds % (24 * 3600)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${secs}s`;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateCountdowns = () => {
+      const now = Date.now();
+      const lastNormalTime = lastGatherTimes[currentTown];
+      if (lastNormalTime) {
+        const townData = towns.find(t => t.name === currentTown);
+        const cooldownReduction = player.skills.some(s => s.name === "Quick Gather") ? player.skills.find(s => s.name === "Quick Gather").effect.cooldownReduction : 0;
+        const cooldownSeconds = townData.gatherCooldown * 60 * (1 - cooldownReduction);
+        const remainingSeconds = Math.max(cooldownSeconds - Math.floor((now - lastNormalTime) / 1000), 0);
+        setCountdown(remainingSeconds);
+        if (remainingSeconds === 0 && lastNormalTime) setGameMessage(`You can gather in ${currentTown} again!`);
+      } else {
+        setCountdown(null);
+      }
+
+      if (lastQueuedGatherTime) {
+        const remainingSeconds = Math.max(3 * 60 - Math.floor((now - lastQueuedGatherTime) / 1000), 0);
+        setQueuedCountdown(remainingSeconds);
+        if (remainingSeconds === 0 && lastQueuedGatherTime) setGameMessage("You can queue gathers for gold again!");
+      } else {
+        setQueuedCountdown(null);
+      }
+    };
+
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(interval);
+  }, [lastGatherTimes, lastQueuedGatherTime, currentTown, player.skills]);
+
+  // ---- Inventory ----
+  const sortInventory = useCallback(() => {
     setPlayer(prev => ({
       ...prev,
       inventory: [...prev.inventory].sort((a, b) => a.name.localeCompare(b.name)),
     }));
-    setGameMessage("Inventory reorganized!");
-  };
+  }, []);
 
-  const upgradeInventory = () => {
-    if (player.gold < 50) {
-      setGameMessage("Insufficient credits for slot upgrade!");
-      return;
-    }
-    setPlayer(prev => ({
-      ...prev,
-      gold: prev.gold - 50,
-      inventorySlots: prev.inventorySlots + 5,
-    }));
-    setGameMessage("Storage capacity enhanced by 5 slots!");
-  };
-
-  const equipItem = (itemName) => {
-    const recipe = player.recipes.find(r => r.name === itemName);
-    if (!recipe || player.inventory.find(i => i.name === itemName)?.quantity < 1) {
-      setGameMessage("Item unavailable for equipping!");
-      return;
-    }
-    setPlayer(prev => {
-      const newInventory = prev.inventory.map(i => i.name === itemName ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
-      return {
-        ...prev,
-        inventory: newInventory,
-        equipment: { ...prev.equipment, [recipe.type === "equip" ? "weapon" : "armor"]: itemName },
-      };
-    });
-    setGameMessage(`${itemName} activated in your gear!`);
-  };
-
-  const useGatherPotion = (itemName) => {
-    const recipe = player.recipes.find(r => r.name === itemName);
-    if (!recipe || player.inventory.find(i => i.name === itemName)?.quantity < 1) {
-      setGameMessage("No amplifiers available!");
-      return;
-    }
-    setPlayer(prev => {
-      const newInventory = prev.inventory.map(i => i.name === itemName ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
-      return { ...prev, inventory: newInventory };
-    });
-    setCountdown(recipe.effect.duration / 1000);
-    setGameMessage(`${itemName} deployed! Rarity boosted for ${recipe.effect.duration / 60000} minutes.`);
-  };
-
-  const startCombat = () => {
-    const enemy = enemies[Math.floor(Math.random() * enemies.length)];
-    setCombatState({
-      playerHealth: player.health,
-      enemy: { ...enemy, health: enemy.health },
-      enemyHealth: enemy.health,
-      log: [`Engaging ${enemy.name} in cyber combat!`],
-      isAttacking: false,
-    });
-    toggleModal("combat");
-  };
-
-  const attackEnemy = (type) => {
-    if (!combatState || combatState.isAttacking || combatResult) return;
-    setCombatState(prev => ({ ...prev, isAttacking: true }));
-    const skill = type !== "Basic Attack" ? player.skills.find(s => s.name === type) : null;
-    const damage = skill ? skill.effect.damage || 5 : 5;
-    const playerDamage = damage + (player.equipment.weapon ? recipes.find(r => r.name === player.equipment.weapon)?.bonus.damage || 0 : 0);
-
-    setTimeout(() => {
-      setCombatState(prev => {
-        const enemyHealth = Math.max(0, prev.enemyHealth - playerDamage);
-        const log = [...prev.log, `You inflicted ${playerDamage} damage on ${prev.enemy.name}!`];
-        if (enemyHealth <= 0) {
-          const gold = prev.enemy.goldReward;
-          const xp = prev.enemy.xpReward;
-          const drop = Math.random() < prev.enemy.dropChance ? prev.enemy.rareDrop : null;
-          setPlayer(p => ({
-            ...p,
-            gold: p.gold + gold,
-            xp: p.xp + xp,
-            rareItems: drop ? [...p.rareItems, drop] : p.rareItems,
-            stats: { ...p.stats, enemiesDefeated: p.stats.enemiesDefeated + 1 },
-          }));
-          setCombatResult({ type: "win", message: `Victory! Acquired ${gold} credits, ${xp} XP${drop ? `, and ${drop}` : ""}.` });
-          return { ...prev, enemyHealth, log, isAttacking: false };
-        }
-
-        const enemyDamage = prev.enemy.damage - (player.equipment.armor ? recipes.find(r => r.name === player.equipment.armor)?.bonus.defense || 0 : 0);
-        const newPlayerHealth = Math.max(0, prev.playerHealth - enemyDamage);
-        const newLog = [...log, `${prev.enemy.name} countered with ${enemyDamage} damage!`];
-        if (newPlayerHealth <= 0) {
-          setCombatResult({ type: "loss", message: "System overload! Deploy a potion to recover." });
-        }
-        setPlayer(p => ({ ...p, health: newPlayerHealth }));
-        return { ...prev, enemyHealth, playerHealth: newPlayerHealth, log: newLog, isAttacking: false };
-      });
-    }, 1000);
-  };
-
-  const craftPotionInCombat = (recipeName) => {
-    if (!combatState || combatState.isAttacking || combatResult) return;
-    const recipe = player.recipes.find(r => r.name === recipeName);
-    if (!recipe || !recipe.ingredients.every(ing => player.inventory.find(i => i.name === ing)?.quantity > 0)) {
-      setCombatState(prev => ({ ...prev, log: [...prev.log, "Insufficient components for nano-repair!"] }));
-      return;
-    }
-    setCombatState(prev => ({ ...prev, isAttacking: true }));
-    setTimeout(() => {
+  // ---- Community Event ----
+  const mockCommunityEvent = useCallback(() => ({
+    description: "Community Goal: Contribute 500 gold total! Current: " + (Math.min(500, Math.floor(Math.random() * 600))) + "/500",
+    action: () => {
       setPlayer(prev => {
-        const newInventory = prev.inventory.map(item => 
-          recipe.ingredients.includes(item.name) ? { ...item, quantity: item.quantity - 1 } : item
-        ).filter(i => i.quantity > 0);
-        const newHealth = Math.min(prev.maxHealth, prev.health + (prev.maxHealth * recipe.healPercent));
-        return { ...prev, inventory: newInventory, health: newHealth, stats: { ...prev.stats, potionsCrafted: prev.stats.potionsCrafted + 1 } };
+        if (prev.gold < 50) {
+          setGameMessage("Need 50 gold to contribute!");
+          return prev;
+        }
+        const contribution = 50;
+        setGameMessage("You contributed 50 gold to the community goal!");
+        if (Math.random() < 0.2) {
+          setGameMessage("Community goal completed! Earned 100 gold!");
+          return { ...prev, gold: prev.gold - contribution + 100 };
+        }
+        return { ...prev, gold: prev.gold - contribution };
       });
-      setCombatState(prev => ({
-        ...prev,
-        playerHealth: Math.min(player.maxHealth, prev.playerHealth + (player.maxHealth * recipe.healPercent)),
-        log: [...prev.log, `Nano-repair ${recipeName} deployed! Restored ${recipe.healPercent * 100}% vitality.`],
-        isAttacking: false,
-      }));
-    }, 1000);
-  };
+      setModals(prev => ({ ...prev, community: false }));
+    },
+  }), []);
 
-  const craftItem = () => {
-    const selectedRecipe = player.recipes.find(r => 
-      r.ingredients.every(ing => selectedIngredients.filter(i => i === ing).length >= r.ingredients.filter(i => i === ing).length) && 
-      r.ingredients.length === selectedIngredients.length
-    );
-    if (!selectedRecipe) {
-      setGameMessage("Invalid blueprint detected!");
-      return;
-    }
-    if (!selectedRecipe.ingredients.every(ing => player.inventory.find(i => i.name === ing)?.quantity > 0)) {
-      setGameMessage("Component shortage!");
-      return;
-    }
-    const success = Math.random() < (player.trait === "craftsman" ? 0.9 : 0.8);
-    if (!success) {
-      setPlayer(prev => ({
-        ...prev,
-        inventory: prev.inventory.map(i => selectedRecipe.ingredients.includes(i.name) ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0),
-      }));
-      setGameMessage("Fabrication error! Components lost.");
-      setSelectedIngredients([]);
-      return;
-    }
-    setPlayer(prev => {
-      const newInventory = prev.inventory.map(i => 
-        selectedRecipe.ingredients.includes(i.name) ? { ...i, quantity: i.quantity - 1 } : i
-      ).filter(i => i.quantity > 0);
-      const existingItem = newInventory.find(i => i.name === selectedRecipe.name);
-      if (existingItem) {
-        existingItem.quantity += 1;
-      } else {
-        newInventory.push({ name: selectedRecipe.name, quantity: 1 });
-      }
-      return {
-        ...prev,
-        inventory: newInventory,
-        stats: { ...prev.stats, potionsCrafted: prev.stats.potionsCrafted + (selectedRecipe.type === "heal" || selectedRecipe.type === "gather" ? 1 : 0) },
-      };
-    });
-    setGameMessage(`${selectedRecipe.name} successfully fabricated!`);
-    setSelectedIngredients([]);
-    toggleModal("craft");
-  };
-
-  const toggleIngredient = (ingredient) => {
-    setSelectedIngredients(prev => 
-      prev.includes(ingredient) ? prev.filter(i => i !== ingredient) : [...prev, ingredient]
-    );
-  };
-
-  const gatherSingle = () => {
-    if (countdown > 0) {
-      setGameMessage("Harvesting on cooldown!");
-      return;
-    }
-    const townIngredients = towns.find(t => t.name === currentTown).ingredients;
-    const gatheredItem = townIngredients[Math.floor(Math.random() * townIngredients.length)];
-    const rareChance = weather.gatherBonus && weather.gatherBonus.ingredient === gatheredItem ? weather.gatherBonus.chance : 0;
-    const isRare = Math.random() < rareChance;
-    setPlayer(prev => {
-      const newInventory = [...prev.inventory];
-      const item = newInventory.find(i => i.name === (isRare ? weather.gatherBonus.ingredient : gatheredItem));
-      if (item) {
-        item.quantity += 1;
-      } else {
-        newInventory.push({ name: isRare ? weather.gatherBonus.ingredient : gatheredItem, quantity: 1 });
-      }
-      return { ...prev, inventory: newInventory, stats: { ...prev.stats, gathers: prev.stats.gathers + 1 } };
-    });
-    const cooldown = towns.find(t => t.name === currentTown).gatherCooldown / (player.skills.find(s => s.name === "Swift Harvest")?.effect.cooldownReduction || 1);
-    setCountdown(cooldown / 1000);
-    setGameMessage(`Harvested ${isRare ? weather.gatherBonus.ingredient : gatheredItem}${isRare ? " (Rare)!" : "!"}`);
-    updateQuests(gatheredItem);
-  };
-
-  const queueGathers = (count) => {
-    if (player.gold < count || queuedCountdown > 0) {
-      setGameMessage(player.gold < count ? "Insufficient credits!" : "Queue processing!");
-      return;
-    }
-    setPlayer(prev => ({ ...prev, gold: prev.gold - count }));
-    const townIngredients = towns.find(t => t.name === currentTown).ingredients;
-    let gathered = [];
-    for (let i = 0; i < count; i++) {
-      const item = townIngredients[Math.floor(Math.random() * townIngredients.length)];
-      const rareChance = weather.gatherBonus && weather.gatherBonus.ingredient === item ? weather.gatherBonus.chance : 0;
-      const isRare = Math.random() < rareChance;
-      gathered.push(isRare ? weather.gatherBonus.ingredient : item);
-    }
-    setPlayer(prev => {
-      const newInventory = [...prev.inventory];
-      gathered.forEach(item => {
-        const existing = newInventory.find(i => i.name === item);
-        if (existing) existing.quantity += 1;
-        else newInventory.push({ name: item, quantity: 1 });
-      });
-      return { ...prev, inventory: newInventory, stats: { ...prev.stats, gathers: prev.stats.gathers + count } };
-    });
-    setQueuedCountdown(180);
-    setGameMessage(`Queued ${count} harvests: ${gathered.join(", ")}!`);
-    gathered.forEach(updateQuests);
-  };
-
-  const sellDrink = (itemName) => {
-    const recipe = player.recipes.find(r => r.name === itemName);
-    if (!recipe || player.inventory.find(i => i.name === itemName)?.quantity < 1) return;
-    const townData = towns.find(t => t.name === currentTown);
-    const demandMultiplier = (townData.demand[itemName] || 1.0) * (currentEvent?.type === "Neon Fest" ? 1.5 : 1) * (weather.demandBonus[itemName] || 1);
-    const price = Math.floor((recipe.baseGold || recipe.sellValue) * townData.rewardMultiplier * demandMultiplier);
-    setPlayer(prev => {
-      const newInventory = prev.inventory.map(i => i.name === itemName ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
-      return {
-        ...prev,
-        inventory: newInventory,
-        gold: prev.gold + price,
-        stats: { ...prev.stats, itemsSold: prev.stats.itemsSold + 1 },
-      };
-    });
-    setGameMessage(`Transferred ${itemName} for ${price} credits!`);
-  };
-
-  const buyIngredient = (ingredient, price) => {
-    const cost = Math.floor(price / townLevels[currentTown]);
-    if (player.gold < cost) {
-      setGameMessage("Insufficient credits for acquisition!");
-      return;
-    }
-    setPlayer(prev => {
-      const newInventory = [...prev.inventory];
-      const item = newInventory.find(i => i.name === ingredient);
-      if (item) item.quantity += 1;
-      else newInventory.push({ name: ingredient, quantity: 1 });
-      return { ...prev, inventory: newInventory, gold: prev.gold - cost };
-    });
-    setGameMessage(`Acquired ${ingredient} for ${cost} credits!`);
-  };
-
-  const addQuest = (quest) => {
-    if (player.quests.length >= 3) {
-      setGameMessage("Mission log at capacity!");
-      return;
-    }
-    setPlayer(prev => ({ ...prev, quests: [...prev.quests, { ...quest, progress: 0 }] }));
-    setGameMessage(`Mission accepted: ${quest.description}`);
-    toggleModal("npc");
-  };
-
-  const travel = (town) => {
-    if (currentTown === town || modals.travel) return;
+  // ---- Travel ----
+  const travel = useCallback((town) => {
     setTravelDestination(town);
-    toggleModal("travel");
+    setModals(prev => ({ ...prev, travel: true }));
     setTimeout(() => {
       setCurrentTown(town);
-      setPlayer(prev => ({ ...prev, xp: prev.xp + 2 }));
-      setGameMessage(`Teleported to ${town}! +2 XP`);
-      toggleModal("travel");
-      checkLevelUp();
-    }, 2000);
-  };
+      updateXP(2);
+      setGameMessage(`You arrived at ${town}! (+2 XP)`);
+      setModals(prev => ({ ...prev, travel: false }));
+      setTravelDestination(null);
+    }, 5000);
+  }, [updateXP]);
 
-  const contributeToGuild = () => {
-    if (player.gold < 10) {
-      setGameMessage("Insufficient credits to contribute!");
-      return;
-    }
+  // ---- Character Customization ----
+  const customizeCharacter = useCallback((newName, newAvatar, newTrait) => {
     setPlayer(prev => ({
       ...prev,
-      gold: prev.gold - 10,
-      guild: { ...prev.guild, progress: prev.guild.progress + 10 },
+      name: newName || prev.name,
+      avatar: newAvatar || prev.avatar,
+      trait: newTrait || prev.trait,
     }));
-    setGameMessage("Contributed 10 credits to the guild!");
-    if (player.guild.progress + 10 >= player.guild.target) {
-      setPlayer(prev => ({
-        ...prev,
-        gold: prev.gold + 50,
-        guild: { ...prev.guild, progress: 0 },
-      }));
-      setGameMessage("Guild objective achieved! +50 credits reward!");
-    }
-  };
+    setModals(prev => ({ ...prev, customize: false }));
+    setGameMessage(`Character customized! Welcome, ${newName || player.name}!`);
+  }, [player.name]);
 
-  const joinGuild = (name) => {
-    setPlayer(prev => ({ ...prev, guild: { name, progress: 0, target: 100 } }));
-    setGameMessage(`Linked with ${name} network!`);
-    toggleModal("guild");
-  };
+  // ---- Modal Toggle ----
+  const toggleModal = useCallback((modal) => {
+    setModals(prev => ({ ...prev, [modal]: !prev[modal] }));
+  }, []);
 
-  const customizeCharacter = (name, avatar, trait) => {
-    setPlayer(prev => ({ ...prev, name, avatar, trait: trait === "null" ? null : trait }));
-    setGameMessage("Avatar recalibrated!");
-    toggleModal("customize");
-  };
-
-  const unlockSkill = (skillName, tree) => {
-    const skill = skillTrees[tree].find(s => s.name === skillName);
-    if (player.gold < skill.cost.gold) {
-      setGameMessage("Insufficient credits to unlock module!");
-      return;
-    }
-    setPlayer(prev => ({
-      ...prev,
-      gold: prev.gold - skill.cost.gold,
-      skills: [...prev.skills, { ...skill, level: 1, uses: 0, effect: { ...skill.effect } }],
-    }));
-    setGameMessage(`${skillName} module integrated!`);
-  };
-
-  const mockCommunityEvent = () => ({
-    description: "Neon Fest in Sakura Nexus! Amplify rewards with contribution.",
-    action: () => {
-      if (player.gold < 5) {
-        setGameMessage("Insufficient credits to contribute!");
-        return;
-      }
-      setPlayer(prev => ({ ...prev, gold: prev.gold - 5 }));
-      setGameMessage("Amplified Neon Fest! Rewards enhanced.");
-    },
-  });
-
-  const checkLevelUp = () => {
-    if (player.xp >= 150 * player.level) {
-      setPlayer(prev => ({
-        ...prev,
-        level: prev.level + 1,
-        xp: prev.xp - (150 * prev.level),
-        maxHealth: prev.maxHealth + 10,
-        health: prev.health + 10,
-      }));
-      setGameMessage(`System upgrade! Now Level ${player.level + 1}. +10 Max Vitality!`);
-    }
-  };
-
-  const updateQuests = (item) => {
-    setPlayer(prev => {
-      const updatedQuests = prev.quests.map(q => {
-        if (q.description.includes(item) && q.progress < q.target) {
-          const newProgress = q.progress + 1;
-          if (newProgress >= q.target) {
-            setGameMessage(`Mission completed: ${q.description}! Reward: ${q.reward.gold || 0} credits, ${q.reward.xp || 0} XP`);
-            setPlayer(p => ({
-              ...p,
-              gold: p.gold + (q.reward.gold || 0),
-              xp: p.xp + (q.reward.xp || 0),
-            }));
-            return null;
-          }
-          return { ...q, progress: newProgress };
-        }
-        return q;
-      }).filter(q => q !== null);
-      return { ...prev, quests: updatedQuests };
-    });
-    checkLevelUp();
-  };
-
-  // Game Loop
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (countdown > 0) setCountdown(prev => prev - 1);
-      if (queuedCountdown > 0) setQueuedCountdown(prev => prev - 1);
-      if (eventTimer && Date.now() > eventTimer) {
-        setCurrentEvent(null);
-        setEventTimer(null);
-        setGameMessage("Event terminated!");
-      }
-    }, 1000);
-
-    if (Math.random() < 0.05) {
-      const newWeather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
-      setWeather(newWeather);
-      setGameMessage(`Atmospheric shift to ${newWeather.type}!`);
-    }
-    if (!currentEvent && Math.random() < 0.02) {
-      const newEvent = events[Math.floor(Math.random() * events.length)];
-      setCurrentEvent(newEvent);
-      setEventTimer(Date.now() + (newEvent.duration || 300000));
-      setGameMessage(newEvent.description);
-    }
-
-    return () => clearInterval(interval);
-  }, [countdown, queuedCountdown, eventTimer, currentEvent]);
-
-  // Render
+  // ---- Render ----
   return (
-    <div className={styles.page}>
-      <Head><title>Kaito's Cyber Adventure</title></Head>
-      <div className={styles.hud}>
-        <button className={styles.leaderboardBtn} onClick={() => toggleModal("leaderboard")}>
-          <FaTrophy /> Nexus Leaderboard
-        </button>
-        <div className={styles.mainCard}>
-          <h1 className={styles.playerTitle}>
-            <Image src={`/avatars/${player.avatar}.jpg`} alt="Avatar" width={32} height={32} className={styles.avatar} />
-            <FaUser className={styles.icon} /> {player.name} (Level {player.level})
-          </h1>
-          <div className={styles.stats}>
-            <span><FaHeart className={styles.icon} /> Vitality: {player.health}/{player.maxHealth}</span>
-            <span><FaCoins className={styles.icon} /> Credits: {player.gold}</span>
-            <span>XP: {player.xp}</span>
-          </div>
-          <div className={styles.xpBar}>
-            <div className={styles.xpFill} style={{ width: `${xpProgress}%` }} />
-            <span className={styles.xpLabel}>{Math.round(xpProgress)}%</span>
-          </div>
-          <p className={styles.townInfo}><FaMap className={styles.icon} /> Sector: {currentTown} (Level {townLevels[currentTown]}) | Grid Status: {weather.type}</p>
-          {currentEvent && (
-            <p className={styles.eventText}>
-              <FaGem className={styles.icon} /> {currentEvent.description} {eventTimer ? `(${formatCountdown(Math.max(0, Math.floor((eventTimer - Date.now()) / 1000)))})` : ""}
-            </p>
-          )}
-          <p className={styles.gameMessage}>{gameMessage}</p>
-
-          <h2 className={styles.sectionTitle}><FaBook className={styles.icon} /> Quantum Inventory (Max: {player.inventorySlots})</h2>
-          <div className={styles.inventoryControls}>
-            <button className={styles.controlBtn} onClick={sortInventory}><FaCog /> Reorganize</button>
-            <button className={styles.controlBtn} onClick={upgradeInventory}><FaPlus /> Expand (50c)</button>
-          </div>
-          <ul className={styles.inventoryList}>
-            {player.inventory.map(item => (
-              <li key={item.name} className={styles.inventoryItem}>
-                {item.name}: {item.quantity}
-                {(player.recipes.find(r => r.name === item.name && (r.type === "equip" || r.type === "armor"))) && (
-                  <button className={styles.actionBtn} onClick={() => equipItem(item.name)}><GiCrossedSwords /> Equip</button>
+    <div style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto", background: "url('/background.jpg') center/cover" }}>
+      <Head><title>Kaito's Adventure</title></Head>
+      <Container fluid className="py-3 py-md-5" style={{ paddingTop: "50px" }}>
+        <Button variant="info" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 1000 }} onClick={() => toggleModal("leaderboard")}>Leaderboard</Button>
+        <Row className="justify-content-center">
+          <Col md={10}>
+            <Card className={`text-center ${styles.gildedCard}`} style={{ background: "rgba(255, 255, 255, 0.9)", maxHeight: "80vh", overflowY: "auto" }}>
+              <Card.Body className="p-3" style={{ paddingBottom: "clamp(2rem, 5vh, 4rem)" }}>
+                <Card.Title as="h1" className="mb-3 text-danger" style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}>
+                  <Image src={`/avatars/${player.avatar}.jpg`} alt="Avatar" width={32} height={32} style={{ marginRight: "10px" }} />
+                  {player.name} (Level {player.level})
+                </Card.Title>
+                <Card.Text>Health: {player.health}/{player.max_health} | Gold: {player.gold} | XP: {player.xp}</Card.Text>
+                <ProgressBar now={xpProgress} label={`${Math.round(xpProgress)}%`} variant="success" className="my-2" style={{ width: "50%", margin: "0 auto" }} />
+                <Card.Text>Current Town: {currentTown} (Level {townLevels[currentTown]}) | Weather: {weather.type}</Card.Text>
+                {currentEvent && (
+                  <Card.Text className="text-warning">
+                    {currentEvent.description} {eventTimer ? `(${formatCountdown(Math.max(0, Math.floor((eventTimer - Date.now()) / 1000)))})` : ""}
+                  </Card.Text>
                 )}
-                {(player.recipes.find(r => r.name === item.name && r.type === "gather")) && (
-                  <button className={styles.actionBtn} onClick={() => useGatherPotion(item.name)}><FaPlay /> Deploy</button>
-                )}
-              </li>
-            ))}
-          </ul>
-          <p><FaGem className={styles.icon} /> Rare Modules: {player.rareItems.join(", ") || "None"}</p>
-          <p>
-            <GiCrossedSwords className={styles.icon} /> Weapon: {player.equipment.weapon || "None"} | 
-            <FaShieldAlt className={styles.icon} /> Armor: {player.equipment.armor || "None"}
-          </p>
-
-          <h2 className={styles.sectionTitle}><FaStore className={styles.icon} /> Sector Resources in {currentTown}</h2>
-          <ul className={styles.ingredientsList}>
-            {getAvailableIngredients.map(item => (
-              <li key={item.name} className={styles.ingredientItem}>
-                {item.name}: {item.owned ? item.quantity : towns.find(t => t.name === currentTown).ingredients.includes(item.name) ? "∞ (Sector)" : "0"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <footer className={styles.actionsFooter}>
-        <div className={styles.actions}>
-          <div className={styles.actionDropdown}>
-            <button className={styles.dropdownBtn}><FaBook /> Fabricate</button>
-            <div className={styles.dropdownContent}>
-              <button onClick={() => toggleModal("craft")}>Nano Items</button>
-              <button onClick={() => toggleModal("healing")}>Repair Potion</button>
-            </div>
-          </div>
-          <button className={styles.actionBtn} onClick={startCombat}><GiCrossedSwords /> Engage</button>
-          <div className={styles.actionDropdown}>
-            <button className={styles.dropdownBtn}><FaMap /> Sector</button>
-            <div className={styles.dropdownContent}>
-              <button onClick={() => toggleModal("market")}>Trade Hub</button>
-              <button onClick={() => toggleModal("gather")}>Harvest</button>
-              <div className={styles.dropdownHeader}>Teleport</div>
-              {towns.map(town => (
-                <button key={town.name} onClick={() => travel(town.name)} disabled={currentTown === town.name || modals.travel}>
-                  {town.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className={styles.actionDropdown}>
-            <button className={styles.dropdownBtn}><FaTasks /> Missions ({player.quests.length})</button>
-            <div className={styles.dropdownContent}>
-              <button onClick={() => toggleModal("quests")}>Missions</button>
-              <button onClick={() => toggleModal("daily")}>Tasks</button>
-            </div>
-          </div>
-          <div className={styles.actionDropdown}>
-            <button className={styles.dropdownBtn}><FaChartBar /> Diagnostics</button>
-            <div className={styles.dropdownContent}>
-              <button onClick={() => toggleModal("stats")}>Stats</button>
-              <button onClick={() => toggleModal("skills")}>Modules</button>
-              <button onClick={() => toggleModal("leaderboard")}>Leaderboard</button>
-            </div>
-          </div>
-          <div className={styles.actionDropdown}>
-            <button className={styles.dropdownBtn}><FaCog /> System</button>
-            <div className={styles.dropdownContent}>
-              <button onClick={() => toggleModal("community")}>Network Events</button>
-              <button onClick={() => toggleModal("customize")}>Recalibrate</button>
-              <button onClick={() => toggleModal("events")}>Grid Status</button>
-              <button onClick={() => toggleModal("guild")}>Guild {player.guild ? `(${player.guild.name})` : ""}</button>
-            </div>
-          </div>
-        </div>
-        {countdown !== null && countdown > 0 && (
-          <p className={styles.countdown}><FaHourglassHalf /> Harvest: {formatCountdown(countdown)}</p>
-        )}
-        {queuedCountdown !== null && queuedCountdown > 0 && (
-          <p className={styles.countdown}><FaHourglassHalf /> Queue: {formatCountdown(queuedCountdown)}</p>
-        )}
-      </footer>
+                <Card.Text className="mb-4 text-muted">{gameMessage}</Card.Text>
+                <h2>Inventory (Max: {player.inventory_slots})</h2>
+                <Button variant="outline-secondary" size="sm" onClick={sortInventory} className="mb-2">Sort Inventory</Button>
+                <Button variant="outline-primary" size="sm" onClick={upgradeInventory} className="mb-2 ml-2">Upgrade Slots (50g)</Button>
+                <ListGroup variant="flush" className="mb-4 mx-auto" style={{ maxWidth: "min(400px, 90vw)", maxHeight: "30vh", overflowY: "auto" }}>
+                  {player.inventory.map(item => (
+                    <ListGroup.Item key={item.name}>
+                      {item.name}: {item.quantity}
+                      {(player.recipes.find(r => r.name === item.name && (r.type === "equip" || r.type === "armor"))) && (
+                        <Button variant="outline-primary" size="sm" className="ml-2" onClick={() => equipItem(item.name)}>Equip</Button>
+                      )}
+                      {(player.recipes.find(r => r.name === item.name && r.type === "gather")) && (
+                        <Button variant="outline-success" size="sm" className="ml-2" onClick={() => useGatherPotion(item.name)}>Use</Button>
+                      )}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+                <Card.Text>Rare Items: {player.rare_items.join(", ") || "None"}</Card.Text>
+                <Card.Text>Equipped: Weapon: {player.equipment.weapon || "None"} | Armor: {player.equipment.armor || "None"}</Card.Text>
+                <h2 className="mt-4">Available Ingredients in {currentTown}</h2>
+                <ListGroup variant="flush" className="mb-4 mx-auto" style={{ maxWidth: "min(400px, 90vw)", maxHeight: "20vh", overflowY: "auto" }}>
+                  {getAvailableIngredients.map(item => (
+                    <ListGroup.Item key={item.name}>
+                      {item.name}: {item.owned ? item.quantity : towns.find(t => t.name === currentTown).ingredients.includes(item.name) ? "∞ (Town)" : "0"}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </Card.Body>
+              <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255, 255, 255, 0.9)", padding: "0.5rem 0", borderTop: "1px solid #ccc" }}>
+                <Container>
+                  <Row className="flex-wrap justify-content-center">
+                    <Col xs="auto" className="mb-2">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="primary" size="sm">Craft</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => toggleModal("craft")}>Craft Items</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("healing")}>Craft Healing Potion</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Col>
+                    <Col xs="auto" className="mb-2">
+                      <Button variant="danger" size="sm" onClick={startCombat}>Combat</Button>
+                    </Col>
+                    <Col xs="auto" className="mb-2">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="success" size="sm">Town</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => toggleModal("market")}>Visit Market</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("gather")}>Gather Ingredient</Dropdown.Item>
+                          <Dropdown.Header>Travel</Dropdown.Header>
+                          {towns.map(town => (
+                            <Dropdown.Item
+                              key={town.name}
+                              onClick={() => travel(town.name)}
+                              disabled={currentTown === town.name || modals.travel}
+                            >
+                              {town.name}
+                            </Dropdown.Item>
+                          ))}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Col>
+                    <Col xs="auto" className="mb-2">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="outline-info" size="sm">Quests ({player.quests.length})</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => toggleModal("quests")}>Quests</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("daily")}>Tasks</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Col>
+                    <Col xs="auto" className="mb-2">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="outline-secondary" size="sm">Stats</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => toggleModal("stats")}>Stats</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("skills")}>Skills</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("leaderboard")}>Leaderboard</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Col>
+                    <Col xs="auto" className="mb-2">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="outline-dark" size="sm">More</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => toggleModal("community")}>Community</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("customize")}>Customize</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("events")}>Events</Dropdown.Item>
+                          <Dropdown.Item onClick={() => toggleModal("guild")}>Guild {player.guild ? `(${player.guild.name})` : ""}</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Col>
+                  </Row>
+                  {countdown !== null && countdown > 0 && <p className="mt-1 text-center" style={{ fontSize: "0.875rem" }}>Gather: {formatCountdown(countdown)}</p>}
+                  {queuedCountdown !== null && queuedCountdown > 0 && <p className="mt-1 text-center" style={{ fontSize: "0.875rem" }}>Queued: {formatCountdown(queuedCountdown)}</p>}
+                </Container>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
 
       {/* Modals */}
-      {Object.entries(modals).map(([key, isOpen]) => isOpen && (
-        <div key={key} className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            {key === "quests" && (
-              <>
-                <div className={styles.modalHeader}><FaTasks /> Mission Log<button className={styles.closeBtn} onClick={() => toggleModal("quests")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <ul className={styles.list}>
-                    {player.quests.map(quest => (
-                      <li key={quest.id}>
-                        {quest.description} - {quest.progress}/{quest.target}<br />
-                        Reward: {quest.reward.gold ? `${quest.reward.gold} Credits` : ""} {quest.reward.xp ? `${quest.reward.xp} XP` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                  <button className={styles.actionBtn} onClick={() => addQuest(towns.find(t => t.name === currentTown).npcs[0].quest)} disabled={player.quests.length >= 3}>Accept Mission</button>
-                </div>
-              </>
-            )}
-            {key === "leaderboard" && (
-              <>
-                <div className={styles.modalHeader}><FaTrophy /> Nexus Leaderboard<button className={styles.closeBtn} onClick={() => toggleModal("leaderboard")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <ul className={styles.list}>
-                    {leaderboardData.map((entry, index) => (
-                      <li key={entry.wallet_address}>
-                        {index + 1}. {entry.name} - Level {entry.level} - {entry.gold} Credits
-                        <br />
-                        <small>{entry.wallet_address?.slice(0, 6)}...{entry.wallet_address?.slice(-4)}</small>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-            {key === "craft" && (
-              <>
-                <div className={styles.modalHeader}><FaFlask /> Fabrication Matrix<button className={styles.closeBtn} onClick={() => toggleModal("craft")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <h5>Select Components:</h5>
-                  {getAvailableIngredients.map(item => (
-                    <label key={item.name} className={styles.checkbox}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIngredients.includes(item.name)}
-                        onChange={() => toggleIngredient(item.name)}
-                        disabled={!item.owned || item.quantity === 0}
-                      />
-                      {item.name} ({item.owned ? item.quantity : "∞"}) (Selected: {selectedIngredients.filter(i => i === item.name).length})
-                    </label>
-                  ))}
-                  <div className={styles.tabs}>
-                    <button className={activeTab === "drinks" ? styles.activeTab : ""} onClick={() => setActiveTab("drinks")}>Drinks</button>
-                    <button className={activeTab === "weapons" ? styles.activeTab : ""} onClick={() => setActiveTab("weapons")}>Weapons</button>
-                    <button className={activeTab === "armor" ? styles.activeTab : ""} onClick={() => setActiveTab("armor")}>Armor</button>
-                    <button className={activeTab === "potions" ? styles.activeTab : ""} onClick={() => setActiveTab("potions")}>Potions</button>
-                  </div>
-                  <div className={styles.tabContent}>
-                    {activeTab === "drinks" && (
-                      <ul>{player.recipes.filter(r => r.type === "sell").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")}</li>)}</ul>
-                    )}
-                    {activeTab === "weapons" && (
-                      <ul>{player.recipes.filter(r => r.type === "equip").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")} (Bonus: +{r.bonus.damage} Damage)</li>)}</ul>
-                    )}
-                    {activeTab === "armor" && (
-                      <ul>{player.recipes.filter(r => r.type === "armor").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")} (Defense: {r.bonus.defense}) {r.unlockLevel > player.level ? "(Locked)" : ""}</li>)}</ul>
-                    )}
-                    {activeTab === "potions" && (
-                      <ul>
-                        {player.recipes.filter(r => r.type === "heal" || r.type === "gather").map(r => (
-                          <li key={r.name}>
-                            {r.name}: {r.ingredients.join(", ")}
-                            {r.type === "heal" && ` (Heal: ${r.healPercent * 100}% HP, Sell: ${r.sellValue} credits)`}
-                            {r.type === "gather" && ` (Effect: ${r.effect.rareChanceBoost ? `+${r.effect.rareChanceBoost * 100}% Rare Chance` : `-${r.effect.cooldownReduction * 100}% Cooldown`}, ${r.effect.duration / 60000} min)`}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <button className={styles.actionBtn} onClick={craftItem}>Fabricate</button>
-                </div>
-              </>
-            )}
-            {key === "healing" && (
-              <>
-                <div className={styles.modalHeader}><FaFlask /> Repair Protocols<button className={styles.closeBtn} onClick={() => toggleModal("healing")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <p>Activate repair potions via Fabrication Matrix for trade, or deploy in combat for emergency restoration.</p>
-                </div>
-              </>
-            )}
-            {key === "gather" && (
-              <>
-                <div className={styles.modalHeader}><FaMap /> Harvest Interface<button className={styles.closeBtn} onClick={() => toggleModal("gather")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <div className={styles.gatherCard}>
-                    <h5>Single Harvest</h5>
-                    <p>Extract one resource (cooldown varies). {weather.gatherBonus ? `Bonus: ${weather.gatherBonus.chance * 100}% chance for ${weather.gatherBonus.ingredient}` : ""}</p>
-                    <button className={styles.actionBtn} onClick={gatherSingle} disabled={countdown > 0}>Harvest Now</button>
-                  </div>
-                  <div className={styles.gatherCard}>
-                    <h5>Queue Harvests</h5>
-                    <p>1 credit per harvest, max 5 (3-min cooldown).</p>
-                    <div className={styles.gatherOptions}>
-                      {[1, 2, 3, 4, 5].map(count => (
-                        <button
-                          key={count}
-                          className={styles.actionBtn}
-                          onClick={() => queueGathers(count)}
-                          disabled={player.gold < count || queuedCountdown > 0}
-                        >
-                          {count} ({count}c)
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-            {key === "combat" && (
-              <>
-                <div className={styles.combatModal}>
-                  <div className={styles.combatHeader}>Combat Grid<button className={styles.closeBtn} onClick={() => toggleModal("combat")}>X</button></div>
-                  <div className={styles.combatBody}>
-                    {combatState && (
-                      <div className={styles.combatGrid}>
-                        <div className={styles.combatSide}>
-                          <h4>Kaito</h4>
-                          <div className={styles.healthBar}>
-                            <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.maxHealth) * 100}%` }} />
-                          </div>
-                          <p>Vitality: {combatState.playerHealth}/{player.maxHealth}</p>
-                          <div className={combatState.isAttacking ? styles.attacking : ""}>[Kaito Node]</div>
-                        </div>
-                        <div className={styles.vs}>VS</div>
-                        <div className={styles.combatSide}>
-                          <h4>{combatState.enemy.name}</h4>
-                          <div className={styles.healthBar}>
-                            <div className={styles.healthFill} style={{ width: `${(combatState.enemyHealth / combatState.enemy.health) * 100}%` }} />
-                          </div>
-                          <p>Vitality: {combatState.enemyHealth}/{combatState.enemy.health}</p>
-                          <div className={combatState.isAttacking ? styles.enemyHit : ""}>[Enemy Node]</div>
-                        </div>
-                      </div>
-                    )}
-                    <div className={styles.combatControls}>
-                      <button className={styles.actionBtn} onClick={() => attackEnemy("Basic Attack")} disabled={!combatState || combatState?.isAttacking || combatResult}>Pulse Strike</button>
-                      <div className={styles.inlineForm}>
-                        <select
-                          onChange={(e) => attackEnemy(e.target.value)}
-                          disabled={!combatState || combatState?.isAttacking || combatResult}
-                          className={styles.select}
-                        >
-                          <option value="">Select Module</option>
-                          {player.skills
-                            .filter(s => s.level > 0 && (s.tree === "CyberWarrior" || s.effect.damage))
-                            .map(skill => (
-                              <option key={skill.name} value={skill.name}>
-                                {skill.name} (Lv {skill.level})
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                      <div className={styles.inlineForm}>
-                        <select
-                          onChange={(e) => craftPotionInCombat(e.target.value)}
-                          disabled={!combatState || combatState?.isAttacking || combatResult}
-                          className={styles.select}
-                        >
-                          <option value="">Deploy Potion</option>
-                          {player.recipes
-                            .filter(r => r.type === "heal")
-                            .map(recipe => (
-                              <option key={recipe.name} value={recipe.name}>
-                                {recipe.name} ({recipe.ingredients.join(", ")})
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                    {combatState && (
-                      <ul className={styles.combatLog}>
-                        {combatState.log.map((entry, idx) => <li key={idx}>{entry}</li>)}
-                      </ul>
-                    )}
-                    {combatResult && (
-                      <div className={combatResult.type === "win" ? styles.combatWin : styles.combatLoss}>
-                        {combatResult.message}
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.combatFooter}>
-                    <button className={styles.actionBtn} onClick={() => toggleModal("combat")} disabled={combatResult}>Disengage</button>
-                  </div>
-                </div>
-              </>
-            )}
-            {key === "market" && (
-              <>
-                <div className={styles.modalHeader}><FaShoppingCart /> {currentTown} Trade Hub<button className={styles.closeBtn} onClick={() => toggleModal("market")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <h5>Offload Assets:</h5>
-                  <ul className={styles.list}>
-                    {player.inventory.filter(item => player.recipes.some(r => r.name === item.name && (r.type === "sell" || r.type === "heal"))).map(item => {
-                      const recipe = player.recipes.find(r => r.name === item.name);
-                      const townData = towns.find(t => t.name === currentTown);
-                      const demandMultiplier = (townData.demand[item.name] || 1.0) * (currentEvent?.type === "Neon Fest" ? 1.5 : 1) * (weather.demandBonus[item.name] || 1);
-                      const price = Math.floor((recipe.baseGold || recipe.sellValue) * townData.rewardMultiplier * demandMultiplier);
-                      return (
-                        <li key={item.name} className={styles.tradeItem}>
-                          <span>{item.name}: {item.quantity} (Trades for {price} credits each)</span>
-                          <button className={styles.actionBtn} onClick={() => sellDrink(item.name)} disabled={item.quantity === 0}>Offload</button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <h5>Acquisition Nodes:</h5>
-                  <ul className={styles.list}>
-                    {towns.find(t => t.name === currentTown).npcs.map(npc => ({
-                      ingredient: towns.find(t => t.name === currentTown).ingredients[0],
-                      price: 10,
-                    })).map((offer, idx) => (
-                      <li key={idx} className={styles.tradeItem}>
-                        <span>{offer.ingredient} (Acquire for {Math.floor(offer.price / townLevels[currentTown])} credits)</span>
-                        <button className={styles.actionBtn} onClick={() => buyIngredient(offer.ingredient, offer.price)} disabled={player.gold < Math.floor(offer.price / townLevels[currentTown])}>Acquire</button>
-                      </li>
-                    ))}
-                  </ul>
-                  <button className={styles.actionBtn} onClick={() => { setSelectedNPC(towns.find(t => t.name === currentTown).npcs[0]); toggleModal("npc"); }}>Interface NPC</button>
-                </div>
-              </>
-            )}
-            {key === "npc" && (
-              <>
-                <div className={styles.modalHeader}>Comm with {selectedNPC?.name}<button className={styles.closeBtn} onClick={() => toggleModal("npc")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <p>{selectedNPC?.dialogue}</p>
-                  {selectedNPC?.quest && !player.quests.some(q => q.id === selectedNPC.quest.id) && (
-                    <button className={styles.actionBtn} onClick={() => addQuest(selectedNPC.quest)}>Accept Mission</button>
-                  )}
-                </div>
-              </>
-            )}
-            {key === "daily" && (
-              <>
-                <div className={styles.modalHeader}><FaTasks /> Task Matrix<button className={styles.closeBtn} onClick={() => toggleModal("daily")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <p>Daily Boot Bonus: 20 Credits (Claimed)</p>
-                  <h5>Daily Directives:</h5>
-                  <ul className={styles.list}>
-                    {player.dailyTasks.map(task => (
-                      <li key={task.id}>
-                        {task.description} - {task.progress}/{task.target}<br />
-                        Reward: {task.reward.gold ? `${task.reward.gold} Credits` : ""} {task.reward.xp ? `${task.reward.xp} XP` : ""}<br />
-                        Time Left: {formatCountdown(Math.max(0, Math.floor((task.expires - Date.now()) / 1000)))}
-                        {task.completed && " (Completed)"}
-                      </li>
-                    ))}
-                  </ul>
-                  <h5>Weekly Protocols:</h5>
-                  <ul className={styles.list}>
-                    {player.weeklyTasks.map(task => (
-                      <li key={task.id}>
-                        {task.description} - {task.progress}/{task.target}<br />
-                        Reward: {task.reward.gold ? `${task.reward.gold} Credits` : ""} {task.reward.xp ? `${task.reward.xp} XP` : ""}<br />
-                        Time Left: {formatCountdown(Math.max(0, Math.floor((task.expires - Date.now()) / 1000)))}
-                        {task.completed && " (Completed)"}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-            {key === "stats" && (
-              <>
-                <div className={styles.modalHeader}><FaChartBar /> System Diagnostics<button className={styles.closeBtn} onClick={() => toggleModal("stats")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <ul className={styles.list}>
-                    <li>Enemies Neutralized: {player.stats.enemiesDefeated}</li>
-                    <li>Potions Fabricated: {player.stats.potionsCrafted}</li>
-                    <li>Assets Offloaded: {player.stats.itemsSold}</li>
-                    <li>Harvests Executed: {player.stats.gathers}</li>
-                  </ul>
-                </div>
-              </>
-            )}
-            {key === "community" && (
-              <>
-                <div className={styles.modalHeader}><FaUsers /> Network Events<button className={styles.closeBtn} onClick={() => toggleModal("community")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <p>{mockCommunityEvent().description}</p>
-                  <button className={styles.actionBtn} onClick={mockCommunityEvent().action}>Contribute</button>
-                </div>
-              </>
-            )}
-            {key === "customize" && (
-              <>
-                <div className={styles.modalHeader}><FaUser /> Avatar Calibration<button className={styles.closeBtn} onClick={() => toggleModal("customize")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <div className={styles.form}>
-                    <label>Name</label>
-                    <input type="text" defaultValue={player.name} id="customName" className={styles.input} />
-                    <label>Avatar</label>
-                    <select defaultValue={player.avatar} id="customAvatar" className={styles.select}>
-                      <option value="default">Default</option>
-                      <option value="warrior">CyberWarrior</option>
-                      <option value="craftsman">TechCraftsman</option>
-                    </select>
-                    <label>Trait</label>
-                    <select defaultValue={player.trait} id="customTrait" className={styles.select}>
-                      <option value={null}>None</option>
-                      <option value="warrior">CyberWarrior (+5 Damage)</option>
-                      <option value="craftsman">TechCraftsman (+10% Craft Success)</option>
-                    </select>
-                    <button className={styles.actionBtn} onClick={() => customizeCharacter(
-                      document.getElementById("customName").value,
-                      document.getElementById("customAvatar").value,
-                      document.getElementById("customTrait").value
-                    )}>Save</button>
-                  </div>
-                </div>
-              </>
-            )}
-            {key === "guild" && (
-              <>
-                <div className={styles.modalHeader}><FaDragon /> Guild Network<button className={styles.closeBtn} onClick={() => toggleModal("guild")}>X</button></div>
-                <div className={styles.modalBody}>
-                  {player.guild ? (
-                    <>
-                      <p>Node: {player.guild.name}</p>
-                      <p>Progress: {player.guild.progress}/{player.guild.target} Credits</p>
-                      <button className={styles.actionBtn} onClick={contributeToGuild}>Contribute 10 Credits</button>
-                    </>
-                  ) : (
-                    <>
-                      <p>Link to a guild to amplify collective goals!</p>
-                      <button className={styles.actionBtn} onClick={() => joinGuild("Dragon Clan")}>Join Dragon Clan</button>
-                      <button className={styles.actionBtn} onClick={() => joinGuild("Mist Guardians")}>Join Mist Guardians</button>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-            {key === "skills" && (
-              <>
-                <div className={styles.modalHeader}><FaStar /> Module Matrix<button className={styles.closeBtn} onClick={() => toggleModal("skills")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <div className={styles.tabs}>
-                    {Object.keys(skillTrees).map(tree => (
-                      <button key={tree} className={activeTab === tree ? styles.activeTab : ""} onClick={() => setActiveTab(tree)}>{tree}</button>
-                    ))}
-                  </div>
-                  <ul className={styles.list}>
-                    {skillTrees[activeTab].map(skill => {
-                      const playerSkill = player.skills.find(s => s.name === skill.name);
-                      return (
-                        <li key={skill.name}>
-                          {skill.name} - Level {playerSkill ? playerSkill.level : 0} (Uses: {playerSkill ? playerSkill.uses : 0})
-                          <br />
-                          {skill.effect.damage && `Damage: ${playerSkill ? playerSkill.effect.damage : skill.effect.damage}`}
-                          {skill.effect.costReduction && ` Cost Reduction: ${(playerSkill ? playerSkill.effect.costReduction : skill.effect.costReduction) * 100}%`}
-                          {skill.effect.cooldownReduction && ` Cooldown Reduction: ${(playerSkill ? playerSkill.effect.cooldownReduction : skill.effect.cooldownReduction) * 100}%`}
-                          {!playerSkill && (
-                            <button className={styles.actionBtn} onClick={() => unlockSkill(skill.name, activeTab)}>
-                              Integrate ({skill.cost.gold} Credits)
-                            </button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </>
-            )}
-            {key === "events" && (
-              <>
-                <div className={styles.modalHeader}><FaExclamationTriangle /> Grid Events<button className={styles.closeBtn} onClick={() => toggleModal("events")}>X</button></div>
-                <div className={styles.modalBody}>
-                  {currentEvent ? (
-                    <p>{currentEvent.description} (Time Left: {formatCountdown(Math.max(0, Math.floor((eventTimer - Date.now()) / 1000)))})</p>
-                  ) : (
-                    <p>No active grid disturbances.</p>
-                  )}
-                </div>
-              </>
-            )}
-            {key === "travel" && (
-              <div className={styles.travelBody}>
-                <Image src="/travel-chibi.jpg" alt="Traveling Chibi" width={100} height={100} className={styles.travelChibi} />
-                <p>Quantum jump to {travelDestination}...</p>
+      <Modal show={modals.quests} onHide={() => toggleModal("quests")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Quests</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <ListGroup variant="flush">
+            {player.quests.map(quest => (
+              <ListGroup.Item key={quest.id}>
+                {quest.description} - {quest.progress}/{quest.target}<br />
+                Reward: {quest.reward.gold ? `${quest.reward.gold} Gold` : ""} {quest.reward.xp ? `${quest.reward.xp} XP` : ""}
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+          <Button variant="primary" onClick={() => addQuest(towns.find(t => t.name === currentTown).npcs[0].quest)} className="mt-3" disabled={player.quests.length >= 3}>Accept New Quest</Button>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("quests")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.leaderboard} onHide={() => toggleModal("leaderboard")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Leaderboard</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          {!connected ? (
+            <p>Please connect your wallet to view the leaderboard.</p>
+          ) : leaderboardData.length === 0 ? (
+            <p>Loading leaderboard...</p>
+          ) : (
+            <ListGroup variant="flush">
+              {leaderboardData.map((entry, index) => (
+                <ListGroup.Item key={entry.wallet_address}>
+                  {index + 1}. {entry.name} - Level {entry.level} - {entry.gold} Gold
+                  <br />
+                  <small>{entry.wallet_address.slice(0, 6)}...{entry.wallet_address.slice(-4)}</small>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          )}
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("leaderboard")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.craft} onHide={() => toggleModal("craft")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Craft Items</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <Form>
+            <h5>Select Ingredients:</h5>
+            {getAvailableIngredients.map(item => (
+              <Form.Check
+                key={item.name}
+                type="checkbox"
+                label={`${item.name} (${item.owned ? item.quantity : "∞"}) (Selected: ${selectedIngredients.filter(i => i === item.name).length})`}
+                checked={selectedIngredients.includes(item.name)}
+                onChange={() => toggleIngredient(item.name)}
+                disabled={!item.owned || item.quantity === 0}
+              />
+            ))}
+          </Form>
+          <Tabs activeKey={activeTab} onSelect={k => setActiveTab(k)} id="craft-tabs" className="mt-3">
+            <Tab eventKey="drinks" title="Drinks">
+              <p className="mt-3">Known Sellable Recipes:</p>
+              <ul>{player.recipes.filter(r => r.type === "sell").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")}</li>)}</ul>
+            </Tab>
+            <Tab eventKey="weapons" title="Weapons">
+              <p className="mt-3">Known Weapon Recipes:</p>
+              <ul>{player.recipes.filter(r => r.type === "equip").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")} (Bonus: +{r.bonus.damage} Damage)</li>)}</ul>
+            </Tab>
+            <Tab eventKey="armor" title="Armor">
+              <p className="mt-3">Known Armor Recipes (Unlocks at Level 10):</p>
+              <ul>{player.recipes.filter(r => r.type === "armor").map(r => <li key={r.name}>{r.name}: {r.ingredients.join(", ")} (Defense: {r.bonus.defense}) {r.unlockLevel > player.level ? "(Locked)" : ""}</li>)}</ul>
+            </Tab>
+            <Tab eventKey="potions" title="Potions">
+              <p className="mt-3">Known Potion Recipes:</p>
+              <ul>
+                {player.recipes.filter(r => r.type === "heal" || r.type === "gather").map(r => (
+                  <li key={r.name}>
+                    {r.name}: {r.ingredients.join(", ")}
+                    {r.type === "heal" && ` (Heal: ${r.healPercent * 100}% HP, Sell: ${r.sellValue} gold)`}
+                    {r.type === "gather" && ` (Effect: ${r.effect.rareChanceBoost ? `+${r.effect.rareChanceBoost * 100}% Rare Chance` : `-${r.effect.cooldownReduction * 100}% Cooldown`}, ${r.effect.duration / 60000} min)`}
+                  </li>
+                ))}
+              </ul>
+            </Tab>
+          </Tabs>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => toggleModal("craft")}>Cancel</Button>
+          <Button variant="primary" onClick={() => {
+            const selectedRecipe = player.recipes.find(r => 
+              r.ingredients.every(ing => selectedIngredients.filter(i => i === ing).length >= r.ingredients.filter(i => i === ing).length) && 
+              r.ingredients.length === selectedIngredients.length
+            );
+            craftItem(selectedRecipe ? selectedRecipe.type : activeTab);
+          }}>Craft</Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={modals.healing} onHide={() => toggleModal("healing")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Healing Potions</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <p>You can craft healing potions for sale in the market in Craft Items, but battle healing potions can only be crafted in combat.</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => toggleModal("healing")}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.gather} onHide={() => toggleModal("gather")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Gather Options in {currentTown}</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <Card className="mb-3">
+            <Card.Body>
+              <Card.Title>Normal Gather</Card.Title>
+              <Card.Text>Gather one ingredient for free (cooldown varies by town). {weather.gatherBonus ? `Bonus: ${weather.gatherBonus.chance * 100}% chance for ${weather.gatherBonus.ingredient}` : ""}</Card.Text>
+              <Button variant="warning" onClick={gatherSingle} disabled={countdown > 0}>Gather Now</Button>
+            </Card.Body>
+          </Card>
+          <Card>
+            <Card.Body>
+              <Card.Title>Queue Gathers for Gold</Card.Title>
+              <Card.Text>Pay 1 gold per gather, up to 5 (3-minute global cooldown).</Card.Text>
+              <div>
+                {[1, 2, 3, 4, 5].map(count => (
+                  <Button
+                    key={count}
+                    variant="outline-warning"
+                    className="m-1"
+                    onClick={() => queueGathers(count)}
+                    disabled={player.gold < count || queuedCountdown > 0}
+                  >
+                    {count} ({count} gold)
+                  </Button>
+                ))}
               </div>
-            )}
-            {key === "guide" && (
-              <>
-                <div className={styles.modalHeader}>Kaito's Cyber Codex<button className={styles.closeBtn} onClick={() => toggleModal("guide")}>X</button></div>
-                <div className={styles.modalBody}>
-                  <h5>System Overview</h5>
-                  <p>Engage in <em>Kaito's Cyber Adventure</em>, a grid-based RPG. Initialize with 5 credits, 100 vitality, and a nano-inventory (Water x2, Herbs x1) in Sakura Nexus. Explore, fabricate, combat, and ascend the Nexus Leaderboard!</p>
-                  <h5>Core Protocols</h5>
-                  <ol>
-                    <li><strong>Sectors & Travel</strong>: Navigate Sakura Nexus, Iron Grid, Mist Circuit. Teleport via Sector menu (+2 XP).</li>
-                    <li><strong>Harvesting</strong>: Single (free, cooldown) or Queue (1 credit each, 3-min cooldown). Grid boosts: Digital Rain (Water), Quantum Fog (Mist Essence).</li>
-                    <li><strong>Fabrication</strong>: Create tradeables (e.g., Herbal Tea), weapons, armor (level 10+), potions. 80% success (+10% TechCraftsman).</li>
-                    <li><strong>Combat</strong>: Engage Cyber Bandits, Stealth Drones, Titan Mechs. Deploy potions in combat to restore vitality (even at 0!). Earn credits, XP, modules.</li>
-                    <li><strong>Trade Hub</strong>: Offload assets, acquire components. Prices shift with sector demand.</li>
-                    <li><strong>Missions & Tasks</strong>: NPC missions (max 3), daily (e.g., 2 enemies), weekly (e.g., 10 Teas).</li>
-                    <li><strong>Progression</strong>: 150 XP/level (+10 HP), unlock modules, expand inventory (+5 slots, 50 credits).</li>
-                    <li><strong>Guild Networks</strong>: Link, contribute 10 credits to 100-credit goals (+50 credits).</li>
-                    <li><strong>Grid Events</strong>: Neon Fests (boost demand), Cyber Raids (combat), Data Storms (reduce harvesting).</li>
-                  </ol>
-                  <h5>Objectives</h5>
-                  <p><strong>Short-Term</strong>: Harvest, fabricate, trade, complete missions. <strong>Long-Term</strong>: Upgrade, unlock modules/armor, dominate the leaderboard.</p>
-                  <h5>Strategic Inputs</h5>
-                  <ul>
-                    <li>Start in Sakura: Fabricate Herbal Tea, trade for credits.</li>
-                    <li>0 Vitality? Engage combat, deploy a potion (stock Water/Herbs).</li>
-                    <li>Unlock "Nano Brew" (cheaper crafts), "Swift Harvest" (faster harvests).</li>
-                    <li>Expand inventory early (50 credits).</li>
-                    <li>Trade Strong Healing Potions in Mist Circuit (1.2x demand).</li>
-                  </ul>
-                  <button className={styles.actionBtn} onClick={() => toggleModal("guide")}>Engage</button>
-                </div>
-              </>
-            )}
+            </Card.Body>
+          </Card>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("gather")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.combat} onHide={() => toggleModal("combat")} centered className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Body className="p-0" style={{ maxHeight: "80vh", overflowY: "auto" }}>
+          <Card className="border-0">
+            <Card.Header className="bg-danger text-center text-white"><h3>Combat Arena</h3></Card.Header>
+            <Card.Body className={styles.combatBody}>
+              {combatState && (
+                <Row>
+                  <Col md={5} className="text-center">
+                    <h4>Kaito</h4>
+                    <div className={`${styles.healthBar} mb-3`}>
+                      <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
+                    </div>
+                    <p>Health: {combatState.playerHealth}/{player.max_health}</p>
+                    <div className={combatState.isAttacking ? styles.attacking : ""}>[Kaito Placeholder]</div>
+                  </Col>
+                  <Col md={2} className="align-items-center d-flex justify-content-center"><h2>VS</h2></Col>
+                  <Col md={5} className="text-center">
+                    <h4>{combatState.enemy.name}</h4>
+                    <div className={`${styles.healthBar} mb-3`}>
+                      <div className={styles.healthFill} style={{ width: `${(combatState.enemyHealth / combatState.enemy.health) * 100}%` }} />
+                    </div>
+                    <p>Health: {combatState.enemyHealth}/{combatState.enemy.health}</p>
+                    <div className={combatState.isAttacking ? styles.enemyHit : ""}>[Enemy Placeholder]</div>
+                  </Col>
+                </Row>
+              )}
+              <div className="mt-3 text-center">
+                <Button variant="danger" onClick={() => attackEnemy("Basic Attack")} disabled={!combatState || combatState?.isAttacking || combatResult} className="m-1">Basic Attack</Button>
+                <Form inline className="d-inline-block m-1">
+                  <Form.Select
+                    onChange={(e) => attackEnemy(e.target.value)}
+                    disabled={!combatState || combatState?.isAttacking || combatResult}
+                    style={{ width: "auto", display: "inline-block" }}
+                  >
+                    <option value="">Select Skill</option>
+                    {player.skills
+                      .filter(s => s.level > 0 && (s.tree === "Warrior" || s.effect.damage || s.effect.stunChance))
+                      .map(skill => (
+                        <option key={skill.name} value={skill.name}>
+                          {skill.name} (Lv {skill.level})
+                        </option>
+                      ))}
+                  </Form.Select>
+                </Form>
+                <Form inline className="d-inline-block m-1">
+                  <Form.Select
+                    onChange={(e) => craftPotionInCombat(e.target.value)}
+                    disabled={!combatState || combatState?.isAttacking || combatResult}
+                    style={{ width: "auto", display: "inline-block" }}
+                  >
+                    <option value="">Craft Potion</option>
+                    {player.recipes
+                      .filter(r => r.type === "heal")
+                      .map(recipe => (
+                        <option key={recipe.name} value={recipe.name}>
+                          {recipe.name} ({recipe.ingredients.join(", ")})
+                        </option>
+                      ))}
+                  </Form.Select>
+                </Form>
+              </div>
+              {combatState && (
+                <ListGroup className="mt-3" style={{ maxHeight: "20vh", overflowY: "auto" }}>
+                  {combatState.log.map((entry, idx) => <ListGroup.Item key={idx}>{entry}</ListGroup.Item>)}
+                </ListGroup>
+              )}
+              {combatResult && (
+                <Alert variant={combatResult.type === "win" ? "success" : "danger"} className={styles.combatResult}>
+                  {combatResult.message}
+                </Alert>
+              )}
+            </Card.Body>
+            <Card.Footer className="text-center">
+              <Button variant="secondary" onClick={() => toggleModal("combat")} disabled={combatResult}>Flee</Button>
+            </Card.Footer>
+          </Card>
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={modals.market} onHide={() => toggleModal("market")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>{currentTown} Market</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <h5>Sell Your Items:</h5>
+          <ListGroup className="mb-3">
+            {player.inventory.filter(item => player.recipes.some(r => r.name === item.name && (r.type === "sell" || r.type === "heal"))).map(item => {
+              const recipe = player.recipes.find(r => r.name === item.name);
+              const townData = towns.find(t => t.name === currentTown);
+              const demandMultiplier = (townData.demand[item.name] || 1.0) * (currentEvent?.type === "festival" ? 1.5 : 1) * (weather.demandBonus[item.name] || 1);
+              const price = Math.floor((recipe.baseGold || recipe.sellValue) * townData.rewardMultiplier * demandMultiplier);
+              return (
+                <ListGroup.Item key={item.name} className="align-items-center d-flex justify-content-between">
+                  <span>{item.name}: {item.quantity} (Sells for {price} gold each)</span>
+                  <Button variant="outline-success" size="sm" onClick={() => sellDrink(item.name)} disabled={item.quantity === 0}>Sell One</Button>
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+          <h5>NPC Buyers:</h5>
+          <ListGroup>
+            {towns.find(t => t.name === currentTown).npcOffers.map((offer, idx) => (
+              <ListGroup.Item key={idx} className="align-items-center d-flex justify-content-between">
+                <span>{offer.ingredient} (Buy for {Math.floor(offer.price / townLevels[currentTown])} gold)</span>
+                <Button variant="outline-primary" size="sm" onClick={() => buyIngredient(offer.ingredient, offer.price)} disabled={player.gold < Math.floor(offer.price / townLevels[currentTown])}>Buy One</Button>
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+          <Button variant="outline-info" className="mt-3" onClick={() => { setSelectedNPC(towns.find(t => t.name === currentTown).npcs[0]); toggleModal("npc"); }}>Talk to NPC</Button>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("market")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.npc} onHide={() => toggleModal("npc")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Talk to {selectedNPC?.name}</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <p>{selectedNPC?.dialogue}</p>
+          {selectedNPC?.quest && !player.quests.some(q => q.id === selectedNPC.quest.id) && (
+            <Button variant="primary" onClick={() => addQuest(selectedNPC.quest)}>Accept Quest</Button>
+          )}
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("npc")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.daily} onHide={() => toggleModal("daily")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Daily & Weekly Tasks</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <p>Daily Login Bonus: 20 Gold (Claimed today)</p>
+          <h5>Daily Challenges:</h5>
+          <ListGroup variant="flush">
+            {player.daily_tasks.map(task => (
+              <ListGroup.Item key={task.id}>
+                {task.description} - {task.progress}/{task.target}<br />
+                Reward: {task.reward.gold ? `${task.reward.gold} Gold` : ""} {task.reward.xp ? `${task.reward.xp} XP` : ""}<br />
+                Time Left: {formatCountdown(Math.max(0, Math.floor((task.expires - Date.now()) / 1000)))}
+                {task.completed && " (Completed)"}
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+          <h5 className="mt-3">Weekly Challenges:</h5>
+          <ListGroup variant="flush">
+            {player.weekly_tasks.map(task => (
+              <ListGroup.Item key={task.id}>
+                {task.description} - {task.progress}/{task.target}<br />
+                Reward: {task.reward.gold ? `${task.reward.gold} Gold` : ""} {task.reward.xp ? `${task.reward.xp} XP` : ""}<br />
+                Time Left: {formatCountdown(Math.max(0, Math.floor((task.expires - Date.now()) / 1000)))}
+                {task.completed && " (Completed)"}
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("daily")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.stats} onHide={() => toggleModal("stats")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Lifetime Stats</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <ListGroup variant="flush">
+            <ListGroup.Item>Enemies Defeated: {player.stats.enemiesDefeated}</ListGroup.Item>
+            <ListGroup.Item>Potions Crafted: {player.stats.potionsCrafted}</ListGroup.Item>
+            <ListGroup.Item>Items Sold: {player.stats.itemsSold}</ListGroup.Item>
+            <ListGroup.Item>Gathers Performed: {player.stats.gathers}</ListGroup.Item>
+          </ListGroup>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("stats")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.community} onHide={() => toggleModal("community")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Community Events</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <p>{mockCommunityEvent().description}</p>
+          <Button variant="primary" onClick={mockCommunityEvent().action}>Perform Action</Button>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("community")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.customize} onHide={() => toggleModal("customize")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Customize Character</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <Form>
+            <Form.Group>
+              <Form.Label>Name</Form.Label>
+              <Form.Control type="text" defaultValue={player.name} id="customName" />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Avatar</Form.Label>
+              <Form.Control as="select" defaultValue={player.avatar} id="customAvatar">
+                <option value="default">Default</option>
+                <option value="warrior">Warrior</option>
+                <option value="craftsman">Craftsman</option>
+              </Form.Control>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Trait</Form.Label>
+              <Form.Control as="select" defaultValue={player.trait} id="customTrait">
+                <option value={null}>None</option>
+                <option value="warrior">Warrior (+5 Combat Damage)</option>
+                <option value="craftsman">Craftsman (+10% Craft Success)</option>
+              </Form.Control>
+            </Form.Group>
+            <Button variant="primary" onClick={() => customizeCharacter(
+              document.getElementById("customName").value,
+              document.getElementById("customAvatar").value,
+              document.getElementById("customTrait").value
+            )}>Save</Button>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("customize")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.guild} onHide={() => toggleModal("guild")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Guild</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          {player.guild ? (
+            <>
+              <p>Member of: {player.guild.name}</p>
+              <p>Goal Progress: {player.guild.progress}/{player.guild.target} Gold</p>
+              <Button variant="primary" onClick={contributeToGuild}>Contribute 10 Gold</Button>
+            </>
+          ) : (
+            <>
+              <p>Join a guild to contribute to collective goals!</p>
+              <Button variant="outline-primary" onClick={() => joinGuild("Dragon Clan")}>Join Dragon Clan</Button>
+              <Button variant="outline-primary" onClick={() => joinGuild("Mist Guardians")}>Join Mist Guardians</Button>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("guild")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.skills} onHide={() => toggleModal("skills")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Skills</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <Tabs defaultActiveKey="Warrior" id="skill-tabs" className="mb-3">
+            {Object.keys(skillTrees).map(tree => (
+              <Tab eventKey={tree} title={tree} key={tree}>
+                <ListGroup variant="flush">
+                  {skillTrees[tree].map(skill => {
+                    const playerSkill = player.skills.find(s => s.name === skill.name);
+                    return (
+                      <ListGroup.Item key={skill.name}>
+                        {skill.name} - Level {playerSkill ? playerSkill.level : 0} (Uses: {playerSkill ? playerSkill.uses : 0})
+                        <br />
+                        {skill.effect.damage && `Damage: ${playerSkill ? playerSkill.effect.damage : skill.effect.damage}`}
+                        {skill.effect.healBonus && ` Heal Bonus: ${playerSkill ? playerSkill.effect.healBonus : skill.effect.healBonus}`}
+                        {skill.effect.costReduction && ` Cost Reduction: ${(playerSkill ? playerSkill.effect.costReduction : skill.effect.costReduction) * 100}%`}
+                        {skill.effect.cooldownReduction && ` Cooldown Reduction: ${(playerSkill ? playerSkill.effect.cooldownReduction : skill.effect.cooldownReduction) * 100}%`}
+                        {skill.effect.rareChance && ` Rare Chance: ${(playerSkill ? playerSkill.effect.rareChance : skill.effect.rareChance) * 100}%`}
+                        {skill.effect.stunChance && ` Stun Chance: ${(playerSkill ? playerSkill.effect.stunChance : skill.effect.stunChance) * 100}%`}
+                        {!playerSkill && (
+                          <Button variant="outline-primary" size="sm" className="ml-2" onClick={() => unlockSkill(skill.name, tree)}>
+                            Unlock ({skill.cost.gold} Gold)
+                          </Button>
+                        )}
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Tab>
+            ))}
+          </Tabs>
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("skills")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.events} onHide={() => toggleModal("events")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Current Events</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          {currentEvent ? (
+            <p>{currentEvent.description} (Time Left: {formatCountdown(Math.max(0, Math.floor((eventTimer - Date.now()) / 1000)))})</p>
+          ) : (
+            <p>No active events right now.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("events")}>Close</Button></Modal.Footer>
+      </Modal>
+
+      <Modal show={modals.travel} backdrop="static" keyboard={false} className={styles.travelModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Body className={styles.travelBody} style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <div className={styles.travelContent}>
+            <Image src="/travel-chibi.jpg" alt="Traveling Chibi" width={100} height={100} className={styles.travelChibi} />
+            <p>Traveling to {travelDestination}...</p>
           </div>
-        </div>
-      ))}
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={modals.guide} onHide={() => toggleModal("guide")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
+        <Modal.Header closeButton><Modal.Title>Welcome to Kaito's Adventure!</Modal.Title></Modal.Header>
+        <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <h5>Overview</h5>
+          <p>Welcome to <em>Kaito's Adventure</em>, a browser-based RPG where you play as Kaito Brewmaster. Start with 5 gold, 100 health, and a small inventory (Water x2, Herbs x1) in Sakura Village. Explore, craft, fight, and rise to the top!</p>
+          
+          <h5>Core Mechanics</h5>
+          <ol>
+            <li><strong>Towns & Travel</strong>: Explore Sakura Village, Iron Port, Mist Hollow. Travel via "Town" dropdown (+2 XP).</li>
+            <li><strong>Gathering</strong>: Single (free, cooldown) or Queue (1 gold each, 3-min cooldown). Weather boosts: Rainy (Water), Foggy (Mist Essence).</li>
+            <li><strong>Crafting</strong>: Make sellable items (e.g., Herbal Tea), weapons, armor (level 10+), healing potions. 80% success (+10% Craftsman trait).</li>
+            <li><strong>Combat</strong>: Fight Bandits, Ninjas, Golems. Craft potions in-combat to heal (even at 0 health!). Earn gold, XP, drops.</li>
+            <li><strong>Market</strong>: Sell items/potions, buy ingredients. Prices vary by town demand.</li>
+            <li><strong>Quests & Tasks</strong>: NPC quests (max 3), daily (e.g., 2 enemies), weekly (e.g., 10 Sakes).</li>
+            <li><strong>Progression</strong>: 150 XP/level (+10 HP), unlock skills, upgrade inventory (+5 slots, 50 gold).</li>
+            <li><strong>Guilds</strong>: Join, contribute 10 gold to 100-gold goals (+50 gold).</li>
+            <li><strong>Events</strong>: Festivals (boost demand), raids (combat), storms (reduce gathering).</li>
+          </ol>
+          
+          <h5>Objectives</h5>
+          <p><strong>Short-Term</strong>: Gather, craft, sell, complete quests. <strong>Long-Term</strong>: Level up, unlock skills/armor, top the leaderboard.</p>
+          
+          <h5>Tips</h5>
+          <ul>
+            <li>Start in Sakura: Craft Herbal Tea, sell for gold.</li>
+            <li>0 Health? Enter combat, craft a potion fast (keep Water/Herbs).</li>
+            <li>Get "Efficient Brewing" (cheaper crafts), "Quick Gather" (faster gathers).</li>
+            <li>Upgrade inventory early (50 gold).</li>
+            <li>Sell Strong Healing Potions in Mist Hollow (1.2x demand).</li>
+          </ul>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={() => toggleModal("guide")}>Got it!</Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
-}
+};
+
+export default Home;
