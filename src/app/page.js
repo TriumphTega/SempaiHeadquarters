@@ -5,7 +5,21 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
-import { FaHome, FaExchangeAlt, FaUser, FaComments, FaBell, FaBookOpen, FaSun, FaMoon, FaChevronLeft, FaChevronRight, FaBars, FaTimes } from "react-icons/fa";
+import {
+  FaHome,
+  FaExchangeAlt,
+  FaUser,
+  FaComments,
+  FaBell,
+  FaBookOpen,
+  FaSun,
+  FaMoon,
+  FaChevronLeft,
+  FaChevronRight,
+  FaBars,
+  FaTimes,
+  FaGamepad, // Added for game icon
+} from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
@@ -253,6 +267,9 @@ export default function Home() {
             <Link href="/chat" onClick={() => handleNavigation("/chat")} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
             </Link>
+            <Link href="/kaito-adventure" onClick={() => handleNavigation("/kaito-adventure")} className={styles.navLink}>
+              <FaGamepad className={styles.navIcon} /> Kaito's Adventure
+            </Link>
             <button onClick={handleCreatorAccess} className={styles.actionButton}>
               {isWriter ? "Creator Dashboard" : "Become a Creator"}
             </button>
@@ -330,6 +347,16 @@ export default function Home() {
               </div>
             </div>
           ))}
+          {/* <div className={styles.carouselItem}>
+            <div className={styles.novelCard}>
+              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); handleNavigation("/kaito-adventure"); }}>
+                <img src="/images/kaito-adventure.jpg" alt="Kaito's Adventure" className={styles.novelImage} />
+                <div className={styles.novelOverlay}>
+                  <h3 className={styles.novelTitle}>Kaito's Adventure</h3>
+                </div>
+              </Link>
+            </div>
+          </div> */}
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
               <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>

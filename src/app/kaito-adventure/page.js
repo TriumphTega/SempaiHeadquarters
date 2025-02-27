@@ -140,7 +140,7 @@ const skillTrees = {
 };
 
 // ---- Home Component ----
-const Home = () => {
+const KaitoAdventure = () => {
   const { publicKey, connected } = useWallet();
   const defaultPlayerMemo = useMemo(() => ({
     ...defaultPlayer,
@@ -1726,4 +1726,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default KaitoAdventure;

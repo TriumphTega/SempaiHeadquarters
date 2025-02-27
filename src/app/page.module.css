@@ -954,3 +954,60 @@
     font-size: 0.6rem;
   }
 }
+/* Game Section */
+.gameSection {
+  padding: 40px 10px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.dark .gameSection {
+  background: #000;
+}
+
+.light .gameSection {
+  background: #f5f5f5;
+}
+
+/* Game Teaser when not connected */
+.gameTeaser {
+  text-align: center;
+  padding: 20px;
+  background: rgba(243, 99, 22, 0.1);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  animation: fadeInSection 1s ease-out;
+}
+
+.gameTeaserImage {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+}
+
+.gameTeaser:hover .gameTeaserImage {
+  transform: scale(1.05);
+}
+
+.gameTeaserText {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
+.dark .gameTeaserText {
+  color: #fff;
+}
+
+.light .gameTeaserText {
+  color: #555;
+}
+
+/* Ensure KaitoAdventure inherits theme */
+.gameContainer {
+  background: inherit;
+  color: inherit;
+}
