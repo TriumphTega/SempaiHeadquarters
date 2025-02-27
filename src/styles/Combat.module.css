@@ -58,6 +58,7 @@
   .gildedModal .modal-dialog {
     max-height: 90vh;
     overflow-y: auto;
+    text-color: black
   }
   
   .gildedCard {
