@@ -845,40 +845,46 @@ const Home = () => {
     setGameMessage(`Bought ${ingredient} for ${cost} gold!`);
   }, [currentTown, townLevels]);
 
-  const sellDrink = useCallback((drinkName) => {
-    const recipe = player.recipes.find(r => (r.type === "sell" || r.type === "heal") && r.name === drinkName);
-    if (!recipe || !recipe.sellValue) {
-      setGameMessage("This item cannot be sold!");
-      return;
-    }
-
-    const drinkInInventory = player.inventory.find(item => item.name === drinkName);
-    if (!drinkInInventory || drinkInInventory.quantity === 0) {
+  const sellDrink = useCallback((itemName) => {
+    const recipe = player.recipes.find(r => r.name === itemName);
+    const itemInInventory = player.inventory.find(item => item.name === itemName);
+  
+    if (!itemInInventory || itemInInventory.quantity === 0) {
       setGameMessage("You don’t have any of this item to sell!");
       return;
     }
-
+    if (!recipe || (!recipe.sellValue && !recipe.baseGold)) {
+      setGameMessage("This item cannot be sold!");
+      return;
+    }
+  
     const currentTownData = towns.find(t => t.name === currentTown);
-    const demandMultiplier = (currentTownData.demand[drinkName] || 1.0) * (currentEvent?.type === "festival" ? 1.5 : 1) * (weather.demandBonus[drinkName] || 1);
-    const reward = Math.floor((recipe.sellValue || recipe.baseGold) * currentTownData.rewardMultiplier * demandMultiplier);
-
+    const demandMultiplier = (currentTownData.demand[itemName] || 1.0) * 
+      (currentEvent?.type === "festival" ? 1.5 : 1) * 
+      (weather.demandBonus[itemName] || 1);
+    const reward = Math.floor((recipe.sellValue || recipe.baseGold) * 
+      currentTownData.rewardMultiplier * demandMultiplier);
+  
     setPlayer(prev => {
-      const sellTask = prev.weekly_tasks.find(t => t.description === "Sell 10 Spicy Sakes" && drinkName === "Spicy Sake");
-      const updatedweekly_tasks = sellTask
+      const sellTask = prev.weekly_tasks.find(t => t.description === "Sell 10 Spicy Sakes" && itemName === "Spicy Sake");
+      const updatedWeeklyTasks = sellTask
         ? prev.weekly_tasks.map(t => t.description === "Sell 10 Spicy Sakes" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
         : prev.weekly_tasks;
       if (sellTask && sellTask.progress + 1 >= sellTask.target) completeWeeklyTask("sellDrinks");
+  
       return {
         ...prev,
-        inventory: prev.inventory.map(item => item.name === drinkName ? { ...item, quantity: item.quantity - 1 } : item).filter(item => item.quantity > 0),
+        inventory: prev.inventory
+          .map(item => item.name === itemName ? { ...item, quantity: item.quantity - 1 } : item)
+          .filter(item => item.quantity > 0),
         gold: prev.gold + reward,
         stats: { ...prev.stats, itemsSold: prev.stats.itemsSold + 1 },
-        weekly_tasks: updatedweekly_tasks,
+        weekly_tasks: updatedWeeklyTasks,
       };
     });
     updateXP(reward * 2);
     upgradeTown(currentTown, player.stats.itemsSold + 1);
-    setGameMessage(`You sold ${drinkName} for ${reward} gold! (+${reward * 2} XP)`);
+    setGameMessage(`You sold ${itemName} for ${reward} gold! (+${reward * 2} XP)`);
   }, [player.inventory, player.recipes, currentTown, currentEvent, weather, updateXP, upgradeTown, player.stats.itemsSold, completeWeeklyTask]);
 
   // ---- Inventory Upgrades ----
@@ -1392,14 +1398,14 @@ const Home = () => {
             <Card.Body className={styles.combatBody}>
               {combatState && (
                 <Row>
-                  <Col md={5} className="text-center">
-                    <h4>Kaito</h4>
-                    <div className={`${styles.healthBar} mb-3`}>
-                      <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
-                    </div>
-                    <p>Health: {combatState.playerHealth}/{player.max_health}</p>
-                    <div className={combatState.isAttacking ? styles.attacking : ""}>[Kaito Placeholder]</div>
-                  </Col>
+                 <Col md={5} className="text-center">
+                  <h4>Kaito</h4>
+                  <div className={`${styles.healthBar} mb-3 fadeIn`}>
+                    <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
+                  </div>
+                  <p>Health: {combatState.playerHealth}/{player.max_health}</p>
+                  <div className={`${combatState.isAttacking ? styles.attacking : ''} fadeIn`}>[Kaito Placeholder]</div>
+                </Col>
                   <Col md={2} className="align-items-center d-flex justify-content-center"><h2>VS</h2></Col>
                   <Col md={5} className="text-center">
                     <h4>{combatState.enemy.name}</h4>
@@ -1467,21 +1473,33 @@ const Home = () => {
       <Modal show={modals.market} onHide={() => toggleModal("market")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
         <Modal.Header closeButton><Modal.Title>{currentTown} Market</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
-          <h5>Sell Your Items:</h5>
-          <ListGroup className="mb-3">
-            {player.inventory.filter(item => player.recipes.some(r => r.name === item.name && (r.type === "sell" || r.type === "heal"))).map(item => {
-              const recipe = player.recipes.find(r => r.name === item.name);
-              const townData = towns.find(t => t.name === currentTown);
-              const demandMultiplier = (townData.demand[item.name] || 1.0) * (currentEvent?.type === "festival" ? 1.5 : 1) * (weather.demandBonus[item.name] || 1);
-              const price = Math.floor((recipe.baseGold || recipe.sellValue) * townData.rewardMultiplier * demandMultiplier);
-              return (
-                <ListGroup.Item key={item.name} className="align-items-center d-flex justify-content-between">
-                  <span>{item.name}: {item.quantity} (Sells for {price} gold each)</span>
-                  <Button variant="outline-success" size="sm" onClick={() => sellDrink(item.name)} disabled={item.quantity === 0}>Sell One</Button>
-                </ListGroup.Item>
-              );
-            })}
-          </ListGroup>
+        <h5>Sell Your Items:</h5>
+<ListGroup className="mb-3">
+  {player.inventory
+    .filter(item => player.recipes.some(r => r.name === item.name && (r.sellValue || r.baseGold)))
+    .map(item => {
+      const recipe = player.recipes.find(r => r.name === item.name);
+      const townData = towns.find(t => t.name === currentTown);
+      const demandMultiplier = (townData.demand[item.name] || 1.0) * 
+        (currentEvent?.type === "festival" ? 1.5 : 1) * 
+        (weather.demandBonus[item.name] || 1);
+      const price = Math.floor((recipe.sellValue || recipe.baseGold) * 
+        townData.rewardMultiplier * demandMultiplier);
+      return (
+        <ListGroup.Item key={item.name} className="align-items-center d-flex justify-content-between">
+          <span>{item.name}: {item.quantity} (Sells for {price} gold each)</span>
+          <Button 
+            variant="outline-success" 
+            size="sm" 
+            onClick={() => sellDrink(item.name)} 
+            disabled={item.quantity === 0}
+          >
+            Sell One
+          </Button>
+        </ListGroup.Item>
+      );
+    })}
+</ListGroup>
           <h5>NPC Buyers:</h5>
           <ListGroup>
             {towns.find(t => t.name === currentTown).npcOffers.map((offer, idx) => (
