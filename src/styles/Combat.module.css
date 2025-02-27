@@ -67,6 +67,7 @@
     border: 2px solid #FFD700;
     box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     background: linear-gradient(to bottom, #FFF8E1, #FDF5E6);
+    text-color: #000000;
   }
   
   .lightBackdrop {
