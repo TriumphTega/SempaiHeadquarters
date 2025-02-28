@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaUser, FaEnvelope, FaCamera, FaGem, FaBolt, FaSave, FaHome, FaExchangeAlt  } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaCamera, FaGem, FaBolt, FaSave, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import styles from "./EditProfile.module.css";
 import Link from 'next/link';
-
 
 export default function EditProfile() {
   const { connected, publicKey } = useWallet();
@@ -18,7 +17,10 @@ export default function EditProfile() {
   const [imageText, setImageText] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const { balance } = UseAmethystBalance();
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // Fetch user data
   useEffect(() => {
@@ -98,20 +100,27 @@ export default function EditProfile() {
     address.length > 15 ? `${address.slice(0, 2)}**${address.slice(-2)}` : address;
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.logoLink}>
-          <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
-        </Link>
-        <nav className={styles.nav}>
-          <Link href="/" className={styles.navLink}>
-            <FaHome /> Home
+    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
+      {/* Navbar with Home style */}
+      <nav className={styles.navbar}>
+        <div className={styles.navContainer}>
+          <Link href="/" className={styles.logoLink}>
+            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <span className={styles.logoText}>Sempai HQ</span>
           </Link>
-          <Link href="/swap" className={styles.navLink}>
-            <FaExchangeAlt /> Swap
-          </Link>
-        </nav>
-      </header>
+          <button className={styles.menuToggle} onClick={toggleMenu}>
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Link href="/" className={styles.navLink}>
+              <FaHome className={styles.navIcon} /> Home
+            </Link>
+            <Link href="/swap" className={styles.navLink}>
+              <FaExchangeAlt className={styles.navIcon} /> Swap
+            </Link>
+          </div>
+        </div>
+      </nav>
 
       <main className={styles.main}>
         <section className={styles.profileSection}>

@@ -2,20 +2,41 @@
     min-height: 100vh;
     background: #000;
     color: #fff;
-    font-family: 'Orbitron', sans-serif; /* Futuristic font */
+    font-family: 'Orbitron', sans-serif;
     overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* Darken and blur when menu is open */
+  .menuActive::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 998;
+    display: none;
   }
   
   /* Navbar */
   .navbar {
+    padding: 10px 0;
     position: fixed;
     top: 0;
     width: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    border-bottom: 1px solid rgba(243, 99, 22, 0.8);
-    padding: 20px 0;
     z-index: 1000;
-    box-shadow: 0 0 20px rgba(243, 99, 22, 0.3);
+    box-shadow: 0 2px 10px rgba(243, 99, 22, 0.2);
+    animation: slideIn 0.6s ease-out;
+    background: rgba(0, 0, 0, 0.95); /* Matches NovelsPage dark theme */
+    border-bottom: 1px solid rgba(243, 99, 22, 0.8);
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
   
   .navContainer {
@@ -24,7 +45,7 @@
     align-items: center;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 30px;
+    padding: 0 15px;
   }
   
   .logoLink {
@@ -34,83 +55,111 @@
   }
   
   .logo {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: 2px solid rgba(243, 99, 22, 0.8);
-    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
   }
   
   .logo:hover {
-    transform: rotate(360deg);
-    box-shadow: 0 0 25px rgba(243, 99, 22, 0.8);
+    transform: rotate(360deg) scale(1.1);
+    box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
   }
   
   .logoText {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-left: 15px;
-    color: rgba(243, 99, 22, 0.8);
-    text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-left: 10px;
+    color: #ff6200;
+    text-shadow: 0 2px 4px rgba(243, 99, 22, 0.5);
+  }
+  
+  .menuToggle {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #ff6200;
+    display: none;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  
+  .menuToggle:hover {
+    transform: scale(1.2);
   }
   
   .navLinks {
     display: flex;
-    gap: 30px;
-  }
-  
-  .navLink {
-    color: #fff;
-    text-decoration: none;
-    font-size: 1.2rem;
-    font-weight: 500;
-    padding: 10px 20px;
-    border: 1px solid transparent;
+    align-items: center;
+    gap: 10px;
     transition: all 0.3s ease;
   }
   
+  .navLink {
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+  }
+  
   .navLink:hover {
-    color: rgba(243, 99, 22, 0.8);
-    border: 1px solid rgba(243, 99, 22, 0.8);
-    box-shadow: 0 0 15px rgba(243, 99, 22, 0.5);
+    transform: translateY(-2px);
+    background: rgba(243, 99, 22, 0.4);
+    color: #ff6200;
+  }
+  
+  .navIcon {
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+  }
+  
+  .navLink:hover .navIcon {
+    transform: scale(1.2) rotate(10deg);
   }
   
   .connectButton {
     background: rgba(243, 99, 22, 0.8);
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    color: #fff;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #fff !important;
+    transition: background 0.3s ease, transform 0.3s ease;
   }
   
   .connectButton:hover {
-    box-shadow: 0 0 20px rgba(243, 99, 22, 1);
     transform: scale(1.05);
+    background: #ff6200;
   }
   
   /* Header */
   .header {
-    padding: 100px 30px 60px;
+    padding: 80px 15px 40px;
     text-align: center;
     background: linear-gradient(135deg, rgba(0, 0, 0, 1), rgba(243, 99, 22, 0.1));
   }
   
   .headerTitle {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 900;
     color: rgba(243, 99, 22, 0.8);
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-shadow: 0 0 15px rgba(243, 99, 22, 0.6);
     animation: glow 2s infinite alternate;
   }
   
   .headerSubtitle {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: #ccc;
-    margin: 20px 0 40px;
+    margin: 15px 0 30px;
     text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
   }
   
@@ -118,40 +167,36 @@
     background: rgba(0, 0, 0, 0.9);
     border: 2px solid rgba(243, 99, 22, 0.8);
     border-radius: 10px;
-    padding: 30px;
-    max-width: 500px;
-    margin: 0 auto;
+    padding: 20px;
+    max-width: 100%;
+    margin: 0 15px;
     box-shadow: 0 0 30px rgba(243, 99, 22, 0.4);
   }
   
   .walletInfo {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
   }
   
   .balance, .points {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 600;
     color: #fff;
     text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
   }
   
-  .balance span, .points span {
-    color: rgba(243, 99, 22, 0.8);
-  }
-  
   .withdrawPanel {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
   }
   
   .withdrawInput {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(243, 99, 22, 0.8);
-    padding: 15px;
+    padding: 10px;
     border-radius: 8px;
     color: #fff;
-    font-size: 1.2rem;
+    font-size: 1rem;
     transition: all 0.3s ease;
   }
   
@@ -162,19 +207,22 @@
   
   .buttonGroup {
     display: flex;
-    gap: 15px;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   
   .withdrawButton, .refreshButton {
     background: rgba(243, 99, 22, 0.8);
     border: none;
-    padding: 15px;
+    padding: 10px;
     border-radius: 8px;
     color: #fff;
     font-weight: 600;
-    font-size: 1.2rem;
+    font-size: 1rem;
     transition: all 0.3s ease;
     cursor: pointer;
+    flex: 1;
+    min-width: 100px;
   }
   
   .withdrawButton:hover, .refreshButton:hover {
@@ -188,9 +236,9 @@
   }
   
   .pending, .error {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 500;
-    margin-top: 15px;
+    margin-top: 10px;
   }
   
   .pending {
@@ -203,28 +251,28 @@
   
   .connectPrompt {
     background: rgba(243, 99, 22, 0.8);
-    padding: 20px;
+    padding: 15px;
     border-radius: 10px;
     display: inline-block;
     box-shadow: 0 0 20px rgba(243, 99, 22, 0.5);
   }
   
   .connectPrompt p {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 600;
-    margin: 0 0 15px;
+    margin: 0 0 10px;
     text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
   }
   
   /* Novels Grid */
   .gridSection {
-    padding: 60px 30px;
+    padding: 40px 15px;
   }
   
   .novelsGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
   }
@@ -250,7 +298,7 @@
   
   .novelImage {
     width: 100%;
-    height: 400px;
+    height: 300px;
     object-fit: cover;
     filter: brightness(0.8);
     transition: filter 0.3s ease;
@@ -266,14 +314,14 @@
     left: 0;
     right: 0;
     background: rgba(0, 0, 0, 0.8);
-    padding: 20px;
+    padding: 15px;
     text-align: center;
     border-top: 1px solid rgba(243, 99, 22, 0.8);
   }
   
   .novelTitle {
     color: rgba(243, 99, 22, 0.8);
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 700;
     text-transform: uppercase;
     margin: 0;
@@ -297,9 +345,24 @@
     border: 2px solid rgba(243, 99, 22, 0.8);
   }
   
+  .connectWalletButton {
+    background: rgba(243, 99, 22, 0.8);
+    color: #fff !important;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .connectWalletButton:hover {
+    background: #ff6200;
+    transform: scale(1.05);
+  }
+  
   .noData {
     text-align: center;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: #ccc;
     text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
   }
@@ -308,4 +371,177 @@
   @keyframes glow {
     0% { text-shadow: 0 0 10px rgba(243, 99, 22, 0.5); }
     100% { text-shadow: 0 0 20px rgba(243, 99, 22, 0.8); }
+  }
+  
+  /* Mobile Styles */
+  @media (max-width: 768px) {
+    .menuActive::before {
+      display: block;
+    }
+  
+    .navContainer {
+      padding: 10px 15px;
+      position: relative;
+      flex-wrap: nowrap;
+    }
+  
+    .menuToggle {
+      display: block;
+    }
+  
+    .navLinks {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.95);
+      box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+      z-index: 999;
+    }
+  
+    .navLinksOpen {
+      display: flex;
+      animation: slideDownMenu 0.3s ease-out;
+    }
+  
+    @keyframes slideDownMenu {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  
+    .navLink, .connectButton {
+      width: 100%;
+      justify-content: center;
+      padding: 10px 0;
+    }
+  
+    .header {
+      padding: 60px 10px 30px;
+    }
+  
+    .headerTitle {
+      font-size: 1.8rem;
+    }
+  
+    .headerSubtitle {
+      font-size: 1rem;
+    }
+  
+    .walletPanel {
+      padding: 15px;
+      margin: 0 10px;
+    }
+  
+    .balance, .points {
+      font-size: 1.2rem;
+    }
+  
+    .withdrawInput {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+  
+    .buttonGroup {
+      flex-direction: column;
+      gap: 8px;
+    }
+  
+    .withdrawButton, .refreshButton {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+  
+    .pending, .error {
+      font-size: 0.9rem;
+    }
+  
+    .connectPrompt {
+      padding: 10px;
+    }
+  
+    .connectPrompt p {
+      font-size: 1rem;
+    }
+  
+    .gridSection {
+      padding: 30px 10px;
+    }
+  
+    .novelsGrid {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+  
+    .novelImage {
+      height: 250px;
+    }
+  
+    .novelOverlay {
+      padding: 10px;
+    }
+  
+    .novelTitle {
+      font-size: 1rem;
+    }
+  
+    .noData {
+      font-size: 1rem;
+    }
+  
+    .connectWalletButton {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .logo {
+      width: 35px;
+      height: 35px;
+    }
+  
+    .logoText {
+      font-size: 1.2rem;
+    }
+  
+    .navLink, .connectButton {
+      font-size: 0.8rem;
+      padding: 8px 0;
+    }
+  
+    .navIcon {
+      font-size: 1rem;
+    }
+  
+    .headerTitle {
+      font-size: 1.5rem;
+    }
+  
+    .headerSubtitle {
+      font-size: 0.9rem;
+    }
+  
+    .balance, .points {
+      font-size: 1rem;
+    }
+  
+    .withdrawInput {
+      font-size: 0.8rem;
+    }
+  
+    .withdrawButton, .refreshButton {
+      font-size: 0.8rem;
+      padding: 6px;
+    }
+  
+    .novelImage {
+      height: 200px;
+    }
+  
+    .novelTitle {
+      font-size: 0.9rem;
+    }
   }

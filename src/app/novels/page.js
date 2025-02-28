@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
+import {
+  FaHome,
+  FaExchangeAlt,
+  FaBars,
+  FaTimes,
+} from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
 import LoadingPage from "../../components/LoadingPage";
@@ -14,6 +22,7 @@ import styles from "../../styles/NovelsPage.module.css";
 
 export default function NovelsPage() {
   const { connected, publicKey, sendTransaction } = useWallet();
+  const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [novels, setNovels] = useState([]);
@@ -21,7 +30,18 @@ export default function NovelsPage() {
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const connection = new Connection(RPC_URL);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
+
+  const handleNavigation = (path) => {
+    if (connected) {
+      router.push(path);
+    } else {
+      setErrorMessage("Please connect your wallet to navigate.");
+    }
+  };
 
   const checkBalance = async () => {
     if (!publicKey) return;
@@ -195,17 +215,24 @@ export default function NovelsPage() {
   if (loading) return <LoadingPage />;
 
   return (
-    <div className={styles.page}>
-      {/* Navbar */}
+    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
+      {/* Navbar with Home style */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
+          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
             <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
-          <div className={styles.navLinks}>
-            <Link href="/" className={styles.navLink}>Home</Link>
-            <Link href="/swap" className={styles.navLink}>Swap</Link>
+          <button className={styles.menuToggle} onClick={toggleMenu}>
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+              <FaHome className={styles.navIcon} /> Home
+            </Link>
+            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
+              <FaExchangeAlt className={styles.navIcon} /> Swap
+            </Link>
             <ConnectButton className={styles.connectButton} />
           </div>
         </div>
@@ -259,7 +286,7 @@ export default function NovelsPage() {
         ) : (
           <div className={styles.connectPrompt}>
             <p>Connect to access the nexus</p>
-            <ConnectButton />
+            <WalletMultiButton className={styles.connectWalletButton} />
           </div>
         )}
       </header>
@@ -284,7 +311,7 @@ export default function NovelsPage() {
                       <h5 className={styles.novelTitle}>{novel.title}</h5>
                     </div>
                     <div className={styles.lockedOverlay}>
-                      <ConnectButton />
+                      <WalletMultiButton className={styles.connectWalletButton} />
                     </div>
                   </div>
                 )}
