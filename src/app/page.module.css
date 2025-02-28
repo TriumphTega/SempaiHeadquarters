@@ -655,7 +655,7 @@
 
 .carouselArrow {
   font-size: 1.5rem;
-  color: rgba(243, 99, 22, 0.8);
+  color: transparent;
   transition: transform 0.3s ease, color 0.3s ease;
   position: absolute;
   top: 50%;
@@ -664,7 +664,7 @@
 }
 
 .carouselArrow:hover {
-  color: #ff6200;
+  color: transparent;
   transform: scale(1.2) translateY(-50%);
 }
 
