@@ -1,23 +1,8 @@
-// ChatPage.jsx
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/services/supabase/supabaseClient";
 import styles from "./Chat.module.css";
-import Link from "next/link";
-
-import {
-  FaHome,
-  FaBars,
-  FaTimes,
-  FaPaperPlane,
-  FaImage,
-  FaGift,
-  FaSun,
-  FaMoon,
-  FaReply,
-  FaUserCircle,
-} from "react-icons/fa";
 
 function Message({ msg, walletAddress, onReply }) {
   const isOwnMessage = msg.wallet_address === walletAddress;
@@ -30,20 +15,24 @@ function Message({ msg, walletAddress, onReply }) {
         {msg.profile_image ? (
           <img src={msg.profile_image} alt="Profile" className={styles.profileImage} />
         ) : (
-          <FaUserCircle className={styles.profilePlaceholder} />
+          <div className={styles.profilePlaceholder} />
         )}
         <span className={styles.userName}>{msg.name}</span>
       </div>
       <div className={styles.messageBody}>
         {msg.content && <p className={styles.messageContent}>{msg.content}</p>}
-        {msg.media_url && <img src={msg.media_url} alt="Media" className={styles.mediaImage} />}
+        {msg.media_url && (
+          <img src={msg.media_url} alt="Media" className={styles.mediaImage} />
+        )}
         {msg.parent_id && (
           <p className={styles.replyInfo}>
             Replied to {msg.parent_name || msg.parent_wallet_address || "unknown"}
           </p>
         )}
         <button onClick={() => onReply(msg.id)} className={styles.replyButton}>
-          <FaReply className={styles.replyIcon} />
+          <svg className={styles.replyIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+          </svg>
         </button>
       </div>
     </div>
@@ -62,11 +51,12 @@ function GifPicker({ onSelect, onClose }) {
     }
     setLoading(true);
     try {
+      // Note: using backticks around the search pattern
       const { data, error } = await supabase
         .from("gifs")
         .select("id, title, url")
         .ilike("title", `%${query}%`)
-        .limit(20);
+        .limit(20); // Limit for performance
       if (error) throw error;
       setGifs(data || []);
     } catch (error) {
@@ -78,7 +68,7 @@ function GifPicker({ onSelect, onClose }) {
   }, []);
 
   useEffect(() => {
-    const debounce = setTimeout(() => fetchGifs(searchTerm), 300);
+    const debounce = setTimeout(() => fetchGifs(searchTerm), 300); // Debounce search
     return () => clearTimeout(debounce);
   }, [searchTerm, fetchGifs]);
 
@@ -94,7 +84,9 @@ function GifPicker({ onSelect, onClose }) {
           autoFocus
         />
         <button onClick={onClose} className={styles.closeButton}>
-          <FaTimes className={styles.closeIcon} />
+          <svg className={styles.closeIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
         </button>
       </div>
       <div className={styles.gifGrid}>
@@ -126,8 +118,6 @@ export default function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -217,29 +207,30 @@ export default function ChatPage() {
       }
 
       const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("wallet_address", walletAddress)
-        .single();
-
-      if (userError || !userData) {
-        console.error("User not found", userError);
-        setUploading(false);
-        return;
-      }
-
-      const user_id = userData.id;
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          user_id,
-          content: input.trim() || null,
-          media_url: mediaUrl,
-          parent_id: replyingTo,
-        }),
+      .from("users")
+      .select("id")
+      .eq("wallet_address", walletAddress)
+      .single();
+    
+    if (userError || !userData) {
+      console.error("User not found", userError);
+      setUploading(false);
+      return;
+    }
+    
+    const user_id = userData.id;
+    
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        user_id, // now sending the user_id
+        content: input.trim() || null,
+        media_url: mediaUrl,
+        parent_id: replyingTo,
+      }),
+    
       });
 
       if (res.ok) {
@@ -258,36 +249,10 @@ export default function ChatPage() {
   const handleFileChange = (e) => setFile(e.target.files?.[0] || null);
   const handleReply = (id) => setReplyingTo(id);
   const handleGifSelect = (url) => handleSend(url);
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
   return (
-    <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
-      {/* Navbar */}
-      <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <button onClick={toggleTheme} className={styles.themeToggle}>
-              {isDarkMode ? <FaSun /> : <FaMoon />}
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Overlay for mobile menu blur */}
-      {menuOpen && <div className={styles.blurOverlay}></div>}
-
-      {/* Messages */}
+    <div className={styles.chatContainer}>
+      <header className={styles.header}>Live Chat</header>
       <main className={styles.messages}>
         {messages.map((msg) => (
           <Message key={msg.id} msg={msg} walletAddress={walletAddress} onReply={handleReply} />
@@ -295,7 +260,6 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </main>
 
-      {/* Reply Indicator */}
       {replyingTo && (
         <div className={styles.replyIndicator}>
           {(() => {
@@ -310,12 +274,13 @@ export default function ChatPage() {
             );
           })()}
           <button onClick={() => setReplyingTo(null)} className={styles.cancelButton}>
-            <FaTimes className={styles.cancelIcon} />
+            <svg className={styles.cancelIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
           </button>
         </div>
       )}
 
-      {/* Input Area */}
       <footer className={styles.inputArea}>
         <input
           type="text"
@@ -326,7 +291,9 @@ export default function ChatPage() {
           disabled={uploading}
         />
         <label htmlFor="file-upload" className={styles.iconButton}>
-          <FaImage />
+          <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16a6 6 0 1 1 6-6 6 6 0 0 1-6 6z" />
+          </svg>
         </label>
         <input
           id="file-upload"
@@ -341,10 +308,14 @@ export default function ChatPage() {
           className={styles.iconButton}
           disabled={uploading}
         >
-          <FaGift />
+          <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-2 10h-3v3h-2v-3H9v-2h3V9h2v3h3v2z" />
+          </svg>
         </button>
         <button onClick={() => handleSend()} className={styles.sendButton} disabled={uploading}>
-          <FaPaperPlane />
+          <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M2 21L23 12 2 3v7l15 2-15 2z" />
+          </svg>
         </button>
       </footer>
 

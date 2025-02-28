@@ -18,7 +18,7 @@ import {
   FaChevronRight,
   FaBars,
   FaTimes,
-  FaGamepad, // Added for game icon
+  FaGamepad,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -28,18 +28,24 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import styles from "./page.module.css";
 
-// Custom arrow components
-const PrevArrow = ({ onClick }) => (
-  <button className={styles.carouselArrow} onClick={onClick}>
-    <FaChevronLeft />
-  </button>
-);
+// Custom arrow components with props forwarding
+const PrevArrow = (props) => {
+  const { className, style, onClick } = props;
+  return (
+    <button className={`${styles.carouselArrow} ${className}`} style={{ ...style, left: "10px" }} onClick={onClick}>
+      <FaChevronLeft />
+    </button>
+  );
+};
 
-const NextArrow = ({ onClick }) => (
-  <button className={styles.carouselArrow} onClick={onClick}>
-    <FaChevronRight />
-  </button>
-);
+const NextArrow = (props) => {
+  const { className, style, onClick } = props;
+  return (
+    <button className={`${styles.carouselArrow} ${className}`} style={{ ...style, right: "10px" }} onClick={onClick}>
+      <FaChevronRight />
+    </button>
+  );
+};
 
 export default function Home() {
   const { connected, publicKey } = useWallet();
@@ -347,16 +353,16 @@ export default function Home() {
               </div>
             </div>
           ))}
-          {/* <div className={styles.carouselItem}>
+          <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
               <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); handleNavigation("/kaito-adventure"); }}>
-                <img src="/images/kaito-adventure.jpg" alt="Kaito's Adventure" className={styles.novelImage} />
+                <img src="/background.jpg" alt="Kaito Brewmaster" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
-                  <h3 className={styles.novelTitle}>Kaito's Adventure</h3>
+                  <h3 className={styles.novelTitle}>Kaito Brewmaster</h3>
                 </div>
               </Link>
             </div>
-          </div> */}
+          </div>
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
               <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>
@@ -389,7 +395,6 @@ export default function Home() {
           </div>
         </Slider>
       </section>
-
       {showConnectPopup && (
         <div className={styles.connectPopupOverlay}>
           <div className={styles.connectPopup}>
