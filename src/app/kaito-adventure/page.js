@@ -17,14 +17,16 @@ import {
   Tabs,
   Tab,
   Dropdown,
-  Navbar as BootstrapNavbar, // Renamed to avoid conflict
+  Navbar as BootstrapNavbar,
   Nav,
 } from "react-bootstrap";
 import { useWallet } from "@solana/wallet-adapter-react";
 import styles from '../../styles/Combat.module.css';
 import debounce from 'lodash/debounce';
 import { supabase } from "../../services/supabase/supabaseClient";
-import { FaHome, FaUser, FaGamepad, FaBars, FaTimes } from "react-icons/fa";
+import { FaHome, FaUser, FaGamepad, FaBars, FaTimes, FaShieldAlt, FaFlask, FaCoins, FaMap, FaSkull, FaBook, FaUsers, FaStar, FaRunning } from "react-icons/fa";
+import { GiCrossedSwords } from "react-icons/gi"; // Another option
+
 import Link from 'next/link';
 
 // ---- Constants Section ----
@@ -207,7 +209,7 @@ const KaitoAdventure = () => {
           .eq('wallet_address', walletAddress)
           .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        if (error && error.code !== 'PGRST116') {
           console.error("Error loading from Supabase:", error);
           return;
         }
@@ -216,7 +218,6 @@ const KaitoAdventure = () => {
         if (data) {
           playerData = { ...defaultPlayerMemo, ...data, recipes: defaultPlayerMemo.recipes };
         } else {
-          // New player
           playerData = { ...defaultPlayerMemo, wallet_address: walletAddress };
           const { error: insertError } = await supabase
             .from('players')
@@ -288,7 +289,7 @@ const KaitoAdventure = () => {
             skills: player.skills,
             stats: player.stats,
             last_login: new Date().toISOString(),
-            daily_tasks: player.dailyTasks,
+            daily_tasks: player.daily_tasks,
             weekly_tasks: player.weekly_tasks,
             guild: player.guild,
             avatar: player.avatar,
@@ -1137,11 +1138,11 @@ const KaitoAdventure = () => {
 
   // ---- Render ----
   return (
-    <div style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto", background: "url('/background.jpg') center/cover" }}>
+    <div style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto", background: "url('/background.jpg') center/cover fixed", animation: "backgroundFade 5s infinite" }}>
       <Head><title>Kaito's Adventure</title></Head>
       
       {/* Navbar */}
-      <BootstrapNavbar className={styles.navbar} sticky="top">
+      <BootstrapNavbar className={`${styles.navbar} ${styles.glow}`} sticky="top">
         <Container>
           <BootstrapNavbar.Brand as={Link} href="/" className={styles.logoLink}>
             <Image src="/images/logo.jpg" alt="Sempai HQ" width={40} height={40} className={styles.logo} />
@@ -1165,17 +1166,21 @@ const KaitoAdventure = () => {
       </BootstrapNavbar>
 
       <Container fluid className="py-3 py-md-5" style={{ paddingTop: "50px" }}>
-        <Button variant="info" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 1000 }} onClick={() => toggleModal("leaderboard")}>Leaderboard</Button>
+        <Button variant="info" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 1000 }} onClick={() => toggleModal("leaderboard")} className={styles.glowButton}>
+          <FaStar className={styles.iconPulse} /> Leaderboard
+        </Button>
         <Row className="justify-content-center">
           <Col md={10}>
-            <Card className={`text-center ${styles.gildedCard}`} style={{ background: "rgba(255, 255, 255, 0.9)", maxHeight: "80vh", overflowY: "auto" }}>
+            <Card className={`${styles.gildedCard} ${styles.cardPulse}`} style={{ background: "rgba(255, 255, 255, 0.9)", maxHeight: "80vh", overflowY: "auto" }}>
               <Card.Body className="p-3" style={{ paddingBottom: "clamp(2rem, 5vh, 4rem)" }}>
-                <Card.Title as="h1" className="mb-3 text-danger" style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}>
-                  <Image src={`/avatars/${player.avatar}.jpg`} alt="Avatar" width={32} height={32} style={{ marginRight: "10px" }} />
+                <Card.Title as="h1" className="mb-3 text-danger" style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", textShadow: "0 0 5px #ff6200" }}>
+                  <Image src={`/avatars/${player.avatar}.jpg`} alt="Avatar" width={32} height={32} className={styles.avatarBounce} />
                   {player.name} (Level {player.level})
                 </Card.Title>
-                <Card.Text>Health: {player.health}/{player.max_health} | Gold: {player.gold} | XP: {player.xp}</Card.Text>
-                <ProgressBar now={xpProgress} label={`${Math.round(xpProgress)}%`} variant="success" className="my-2" style={{ width: "50%", margin: "0 auto" }} />
+                <Card.Text className={styles.statGlow}>
+                  <FaShieldAlt /> Health: {player.health}/{player.max_health} | <FaCoins /> Gold: {player.gold} | <FaStar /> XP: {player.xp}
+                </Card.Text>
+                <ProgressBar now={xpProgress} label={`${Math.round(xpProgress)}%`} variant="success" className={`${styles.xpBar} my-2`} style={{ width: "50%", margin: "0 auto" }} />
                 <Card.Text>Current Town: {currentTown} (Level {townLevels[currentTown]}) | Weather: {weather.type}</Card.Text>
                 {currentEvent && (
                   <Card.Text className="text-warning">
@@ -1183,28 +1188,32 @@ const KaitoAdventure = () => {
                   </Card.Text>
                 )}
                 <Card.Text className="mb-4 text-muted">{gameMessage}</Card.Text>
-                <h2>Inventory (Max: {player.inventory_slots})</h2>
-                <Button variant="outline-secondary" size="sm" onClick={sortInventory} className="mb-2">Sort Inventory</Button>
-                <Button variant="outline-primary" size="sm" onClick={upgradeInventory} className="mb-2 ml-2">Upgrade Slots (50g)</Button>
+                <h2 className={styles.sectionTitle}><FaFlask /> Inventory (Max: {player.inventory_slots})</h2>
+                <Button variant="outline-secondary" size="sm" onClick={sortInventory} className={`${styles.glowButton} mb-2`}>Sort</Button>
+                <Button variant="outline-primary" size="sm" onClick={upgradeInventory} className={`${styles.glowButton} mb-2 ml-2`}>Upgrade (+5) <FaCoins /> 50</Button>
                 <ListGroup variant="flush" className="mb-4 mx-auto" style={{ maxWidth: "min(400px, 90vw)", maxHeight: "30vh", overflowY: "auto" }}>
                   {player.inventory.map(item => (
-                    <ListGroup.Item key={item.name}>
-                      {item.name}: {item.quantity}
+                    <ListGroup.Item key={item.name} className={styles.inventoryItem}>
+                      <span className={rare_items.includes(item.name) ? styles.rareItem : ""}>
+                        <Image src={`/items/${item.name.toLowerCase().replace(" ", "-")}.png`} alt={item.name} width={20} height={20} onError={(e) => e.target.style.display = "none"} />
+                        {item.name}: {item.quantity}
+                      </span>
                       {(player.recipes.find(r => r.name === item.name && (r.type === "equip" || r.type === "armor"))) && (
-                        <Button variant="outline-primary" size="sm" className="ml-2" onClick={() => equipItem(item.name)}>Equip</Button>
+                        <Button variant="outline-primary" size="sm" className={`${styles.glowButton} ml-2`} onClick={() => equipItem(item.name)}><GiCrossedSwords /> Equip</Button>
                       )}
                       {(player.recipes.find(r => r.name === item.name && r.type === "gather")) && (
-                        <Button variant="outline-success" size="sm" className="ml-2" onClick={() => useGatherPotion(item.name)}>Use</Button>
+                        <Button variant="outline-success" size="sm" className={`${styles.glowButton} ml-2`} onClick={() => useGatherPotion(item.name)}><FaFlask /> Use</Button>
                       )}
                     </ListGroup.Item>
                   ))}
                 </ListGroup>
-                <Card.Text>Rare Items: {player.rare_items.join(", ") || "None"}</Card.Text>
-                <Card.Text>Equipped: Weapon: {player.equipment.weapon || "None"} | Armor: {player.equipment.armor || "None"}</Card.Text>
-                <h2 className="mt-4">Available Ingredients in {currentTown}</h2>
+                <Card.Text><FaStar /> Rare Items: {player.rare_items.join(", ") || "None"}</Card.Text>
+                <Card.Text><FaShieldAlt /> Equipped: Weapon: {player.equipment.weapon || "None"} | Armor: {player.equipment.armor || "None"}</Card.Text>
+                <h2 className={styles.sectionTitle}><FaMap /> Available Ingredients in {currentTown}</h2>
                 <ListGroup variant="flush" className="mb-4 mx-auto" style={{ maxWidth: "min(400px, 90vw)", maxHeight: "20vh", overflowY: "auto" }}>
                   {getAvailableIngredients.map(item => (
                     <ListGroup.Item key={item.name}>
+                      <Image src={`/items/${item.name.toLowerCase().replace(" ", "-")}.png`} alt={item.name} width={20} height={20} onError={(e) => e.target.style.display = "none"} />
                       {item.name}: {item.owned ? item.quantity : towns.find(t => t.name === currentTown).ingredients.includes(item.name) ? "∞ (Town)" : "0"}
                     </ListGroup.Item>
                   ))}
@@ -1215,7 +1224,7 @@ const KaitoAdventure = () => {
                   <Row className="flex-wrap justify-content-center">
                     <Col xs="auto" className="mb-2">
                       <Dropdown>
-                        <Dropdown.Toggle variant="primary" size="sm">Craft</Dropdown.Toggle>
+                        <Dropdown.Toggle variant="primary" size="sm" className={styles.glowButton}><FaFlask /> Craft</Dropdown.Toggle>
                         <Dropdown.Menu>
                           <Dropdown.Item onClick={() => toggleModal("craft")}>Craft Items</Dropdown.Item>
                           <Dropdown.Item onClick={() => toggleModal("healing")}>Craft Healing Potion</Dropdown.Item>
@@ -1223,11 +1232,11 @@ const KaitoAdventure = () => {
                       </Dropdown>
                     </Col>
                     <Col xs="auto" className="mb-2">
-                      <Button variant="danger" size="sm" onClick={startCombat}>Combat</Button>
+                      <Button variant="danger" size="sm" onClick={startCombat} className={styles.glowButton}><FaSkull /> Combat</Button>
                     </Col>
                     <Col xs="auto" className="mb-2">
                       <Dropdown>
-                        <Dropdown.Toggle variant="success" size="sm">Town</Dropdown.Toggle>
+                        <Dropdown.Toggle variant="success" size="sm" className={styles.glowButton}><FaMap /> Town</Dropdown.Toggle>
                         <Dropdown.Menu>
                           <Dropdown.Item onClick={() => toggleModal("market")}>Visit Market</Dropdown.Item>
                           <Dropdown.Item onClick={() => toggleModal("gather")}>Gather Ingredient</Dropdown.Item>
@@ -1246,7 +1255,7 @@ const KaitoAdventure = () => {
                     </Col>
                     <Col xs="auto" className="mb-2">
                       <Dropdown>
-                        <Dropdown.Toggle variant="outline-info" size="sm">Quests ({player.quests.length})</Dropdown.Toggle>
+                        <Dropdown.Toggle variant="outline-info" size="sm" className={styles.glowButton}><FaBook /> Quests ({player.quests.length})</Dropdown.Toggle>
                         <Dropdown.Menu>
                           <Dropdown.Item onClick={() => toggleModal("quests")}>Quests</Dropdown.Item>
                           <Dropdown.Item onClick={() => toggleModal("daily")}>Tasks</Dropdown.Item>
@@ -1255,7 +1264,7 @@ const KaitoAdventure = () => {
                     </Col>
                     <Col xs="auto" className="mb-2">
                       <Dropdown>
-                        <Dropdown.Toggle variant="outline-secondary" size="sm">Stats</Dropdown.Toggle>
+                        <Dropdown.Toggle variant="outline-secondary" size="sm" className={styles.glowButton}><FaStar /> Stats</Dropdown.Toggle>
                         <Dropdown.Menu>
                           <Dropdown.Item onClick={() => toggleModal("stats")}>Stats</Dropdown.Item>
                           <Dropdown.Item onClick={() => toggleModal("skills")}>Skills</Dropdown.Item>
@@ -1265,7 +1274,7 @@ const KaitoAdventure = () => {
                     </Col>
                     <Col xs="auto" className="mb-2">
                       <Dropdown>
-                        <Dropdown.Toggle variant="outline-dark" size="sm">More</Dropdown.Toggle>
+                        <Dropdown.Toggle variant="outline-dark" size="sm" className={styles.glowButton}><FaUsers /> More</Dropdown.Toggle>
                         <Dropdown.Menu>
                           <Dropdown.Item onClick={() => toggleModal("community")}>Community</Dropdown.Item>
                           <Dropdown.Item onClick={() => toggleModal("customize")}>Customize</Dropdown.Item>
@@ -1286,7 +1295,7 @@ const KaitoAdventure = () => {
 
       {/* Modals */}
       <Modal show={modals.quests} onHide={() => toggleModal("quests")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Quests</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaBook /> Quests</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <ListGroup variant="flush">
             {player.quests.map(quest => (
@@ -1296,13 +1305,13 @@ const KaitoAdventure = () => {
               </ListGroup.Item>
             ))}
           </ListGroup>
-          <Button variant="primary" onClick={() => addQuest(towns.find(t => t.name === currentTown).npcs[0].quest)} className="mt-3" disabled={player.quests.length >= 3}>Accept New Quest</Button>
+          <Button variant="primary" onClick={() => addQuest(towns.find(t => t.name === currentTown).npcs[0].quest)} className={`${styles.glowButton} mt-3`} disabled={player.quests.length >= 3}>Accept New Quest</Button>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("quests")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("quests")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.leaderboard} onHide={() => toggleModal("leaderboard")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Leaderboard</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaStar /> Leaderboard</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           {!connected ? (
             <p>Please connect your wallet to view the leaderboard.</p>
@@ -1320,11 +1329,11 @@ const KaitoAdventure = () => {
             </ListGroup>
           )}
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("leaderboard")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("leaderboard")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.craft} onHide={() => toggleModal("craft")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Craft Items</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaFlask /> Craft Items</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <Form>
             <h5>Select Ingredients:</h5>
@@ -1362,40 +1371,40 @@ const KaitoAdventure = () => {
                     {r.type === "gather" && ` (Effect: ${r.effect.rareChanceBoost ? `+${r.effect.rareChanceBoost * 100}% Rare Chance` : `-${r.effect.cooldownReduction * 100}% Cooldown`}, ${r.effect.duration / 60000} min)`}
                   </li>
                 ))}
-                              </ul>
+              </ul>
             </Tab>
           </Tabs>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => toggleModal("craft")}>Cancel</Button>
+          <Button variant="secondary" onClick={() => toggleModal("craft")} className={styles.glowButton}>Cancel</Button>
           <Button variant="primary" onClick={() => {
             const selectedRecipe = player.recipes.find(r => 
               r.ingredients.every(ing => selectedIngredients.filter(i => i === ing).length >= r.ingredients.filter(i => i === ing).length) && 
               r.ingredients.length === selectedIngredients.length
             );
             craftItem(selectedRecipe ? selectedRecipe.type : activeTab);
-          }}>Craft</Button>
+          }} className={styles.glowButton}>Craft</Button>
         </Modal.Footer>
       </Modal>
 
       <Modal show={modals.healing} onHide={() => toggleModal("healing")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Healing Potions</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaFlask /> Healing Potions</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <p>You can craft healing potions for sale in the market in Craft Items, but battle healing potions can only be crafted in combat.</p>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => toggleModal("healing")}>Close</Button>
+          <Button variant="secondary" onClick={() => toggleModal("healing")} className={styles.glowButton}>Close</Button>
         </Modal.Footer>
       </Modal>
 
       <Modal show={modals.gather} onHide={() => toggleModal("gather")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Gather Options in {currentTown}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaMap /> Gather Options in {currentTown}</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <Card className="mb-3">
             <Card.Body>
               <Card.Title>Normal Gather</Card.Title>
               <Card.Text>Gather one ingredient for free (cooldown varies by town). {weather.gatherBonus ? `Bonus: ${weather.gatherBonus.chance * 100}% chance for ${weather.gatherBonus.ingredient}` : ""}</Card.Text>
-              <Button variant="warning" onClick={gatherSingle} disabled={countdown > 0}>Gather Now</Button>
+              <Button variant="warning" onClick={gatherSingle} disabled={countdown > 0} className={styles.glowButton}>Gather Now</Button>
             </Card.Body>
           </Card>
           <Card>
@@ -1407,7 +1416,7 @@ const KaitoAdventure = () => {
                   <Button
                     key={count}
                     variant="outline-warning"
-                    className="m-1"
+                    className={`${styles.glowButton} m-1`}
                     onClick={() => queueGathers(count)}
                     disabled={player.gold < count || queuedCountdown > 0}
                   >
@@ -1418,7 +1427,7 @@ const KaitoAdventure = () => {
             </Card.Body>
           </Card>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("gather")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("gather")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.combat} onHide={() => toggleModal("combat")} centered className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
@@ -1430,25 +1439,31 @@ const KaitoAdventure = () => {
                 <Row>
                   <Col md={5} className="text-center">
                     <h4>Kaito</h4>
-                    <div className={`${styles.healthBar} mb-3 fadeIn`}>
+                    <div className={`${styles.healthBar} mb-3 ${combatState.playerHealth < player.max_health / 3 ? styles.healthDanger : ""}`}>
                       <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
                     </div>
                     <p>Health: {combatState.playerHealth}/{player.max_health}</p>
-                    <div className={`${combatState.isAttacking ? styles.attacking : ''} fadeIn`}>[Kaito Placeholder]</div>
+                    <div className={`${combatState.isAttacking ? styles.attacking : ''} ${styles.character}`}>
+                      <Image src="/kaito.png" alt="Kaito" width={100} height={100} className={styles.characterImage} onError={(e) => e.target.src = "/avatars/default.jpg"} />
+                    </div>
                   </Col>
-                  <Col md={2} className="align-items-center d-flex justify-content-center"><h2>VS</h2></Col>
+                  <Col md={2} className="align-items-center d-flex justify-content-center"><h2 className={styles.vsGlow}>VS</h2></Col>
                   <Col md={5} className="text-center">
                     <h4>{combatState.enemy.name}</h4>
-                    <div className={`${styles.healthBar} mb-3`}>
+                    <div className={`${styles.healthBar} mb-3 ${combatState.enemyHealth < combatState.enemy.health / 3 ? styles.healthDanger : ""}`}>
                       <div className={styles.healthFill} style={{ width: `${(combatState.enemyHealth / combatState.enemy.health) * 100}%` }} />
                     </div>
                     <p>Health: {combatState.enemyHealth}/{combatState.enemy.health}</p>
-                    <div className={combatState.isAttacking ? styles.enemyHit : ""}>[Enemy Placeholder]</div>
+                    <div className={`${combatState.isAttacking ? styles.enemyHit : ""} ${styles.character}`}>
+                      <Image src={`/enemies/${combatState.enemy.name.toLowerCase().replace(" ", "-")}.png`} alt={combatState.enemy.name} width={100} height={100} className={styles.characterImage} onError={(e) => e.target.src = "/enemies/default.png"} />
+                    </div>
                   </Col>
                 </Row>
               )}
               <div className="mt-3 text-center">
-                <Button variant="danger" onClick={() => attackEnemy("Basic Attack")} disabled={!combatState || combatState?.isAttacking || combatResult} className="m-1">Basic Attack</Button>
+                <Button variant="danger" onClick={() => attackEnemy("Basic Attack")} disabled={!combatState || combatState?.isAttacking || combatResult} className={`${styles.glowButton} m-1`}>
+                  <GiCrossedSwords className={styles.iconPulse} /> Attack
+                </Button>
                 <Form inline className="d-inline-block m-1">
                   <Form.Select
                     onChange={(e) => attackEnemy(e.target.value)}
@@ -1483,25 +1498,26 @@ const KaitoAdventure = () => {
                 </Form>
               </div>
               {combatState && (
-                <ListGroup className="mt-3" style={{ maxHeight: "20vh", overflowY: "auto" }}>
-                  {combatState.log.map((entry, idx) => <ListGroup.Item key={idx}>{entry}</ListGroup.Item>)}
+                <ListGroup className="mt-3" style={{ maxHeight: "20vh", overflowY: "auto", background: "rgba(0, 0, 0, 0.1)" }}>
+                  {combatState.log.map((entry, idx) => <ListGroup.Item key={idx} className={styles.logEntry}>{entry}</ListGroup.Item>)}
                 </ListGroup>
               )}
               {combatResult && (
-                <Alert variant={combatResult.type === "win" ? "success" : "danger"} className={styles.combatResult}>
+                <Alert variant={combatResult.type === "win" ? "success" : "danger"} className={`${styles.combatResult} ${styles.resultPop}`}>
                   {combatResult.message}
                 </Alert>
               )}
+              <div className={styles.particleContainer}></div>
             </Card.Body>
             <Card.Footer className="text-center">
-              <Button variant="secondary" onClick={() => toggleModal("combat")} disabled={combatResult}>Flee</Button>
+              <Button variant="secondary" onClick={() => toggleModal("combat")} disabled={combatResult} className={styles.glowButton}><FaRunning /> Flee</Button>
             </Card.Footer>
           </Card>
         </Modal.Body>
       </Modal>
 
       <Modal show={modals.market} onHide={() => toggleModal("market")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>{currentTown} Market</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaCoins /> {currentTown} Market</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <h5>Sell Your Items:</h5>
           <ListGroup className="mb-3">
@@ -1523,6 +1539,7 @@ const KaitoAdventure = () => {
                       size="sm" 
                       onClick={() => sellDrink(item.name)} 
                       disabled={item.quantity === 0}
+                      className={styles.glowButton}
                     >
                       Sell One
                     </Button>
@@ -1535,13 +1552,13 @@ const KaitoAdventure = () => {
             {towns.find(t => t.name === currentTown).npcOffers.map((offer, idx) => (
               <ListGroup.Item key={idx} className="align-items-center d-flex justify-content-between">
                 <span>{offer.ingredient} (Buy for {Math.floor(offer.price / townLevels[currentTown])} gold)</span>
-                <Button variant="outline-primary" size="sm" onClick={() => buyIngredient(offer.ingredient, offer.price)} disabled={player.gold < Math.floor(offer.price / townLevels[currentTown])}>Buy One</Button>
+                <Button variant="outline-primary" size="sm" onClick={() => buyIngredient(offer.ingredient, offer.price)} disabled={player.gold < Math.floor(offer.price / townLevels[currentTown])} className={styles.glowButton}>Buy One</Button>
               </ListGroup.Item>
             ))}
           </ListGroup>
-          <Button variant="outline-info" className="mt-3" onClick={() => { setSelectedNPC(towns.find(t => t.name === currentTown).npcs[0]); toggleModal("npc"); }}>Talk to NPC</Button>
+          <Button variant="outline-info" className={`${styles.glowButton} mt-3`} onClick={() => { setSelectedNPC(towns.find(t => t.name === currentTown).npcs[0]); toggleModal("npc"); }}>Talk to NPC</Button>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("market")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("market")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.npc} onHide={() => toggleModal("npc")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
@@ -1549,14 +1566,14 @@ const KaitoAdventure = () => {
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <p>{selectedNPC?.dialogue}</p>
           {selectedNPC?.quest && !player.quests.some(q => q.id === selectedNPC.quest.id) && (
-            <Button variant="primary" onClick={() => addQuest(selectedNPC.quest)}>Accept Quest</Button>
+            <Button variant="primary" onClick={() => addQuest(selectedNPC.quest)} className={styles.glowButton}>Accept Quest</Button>
           )}
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("npc")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("npc")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.daily} onHide={() => toggleModal("daily")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Daily & Weekly Tasks</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaBook /> Daily & Weekly Tasks</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <p>Daily Login Bonus: 20 Gold (Claimed today)</p>
           <h5>Daily Challenges:</h5>
@@ -1582,11 +1599,11 @@ const KaitoAdventure = () => {
             ))}
           </ListGroup>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("daily")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("daily")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.stats} onHide={() => toggleModal("stats")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Lifetime Stats</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaStar /> Lifetime Stats</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <ListGroup variant="flush">
             <ListGroup.Item>Enemies Defeated: {player.stats.enemiesDefeated}</ListGroup.Item>
@@ -1595,16 +1612,16 @@ const KaitoAdventure = () => {
             <ListGroup.Item>Gathers Performed: {player.stats.gathers}</ListGroup.Item>
           </ListGroup>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("stats")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("stats")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.community} onHide={() => toggleModal("community")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Community Events</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaUsers /> Community Events</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <p>{mockCommunityEvent().description}</p>
-          <Button variant="primary" onClick={mockCommunityEvent().action}>Perform Action</Button>
+          <Button variant="primary" onClick={mockCommunityEvent().action} className={styles.glowButton}>Perform Action</Button>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("community")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("community")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.customize} onHide={() => toggleModal("customize")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
@@ -1635,34 +1652,34 @@ const KaitoAdventure = () => {
               document.getElementById("customName").value,
               document.getElementById("customAvatar").value,
               document.getElementById("customTrait").value
-            )}>Save</Button>
+            )} className={styles.glowButton}>Save</Button>
           </Form>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("customize")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("customize")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.guild} onHide={() => toggleModal("guild")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Guild</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaUsers /> Guild</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           {player.guild ? (
             <>
               <p>Member of: {player.guild.name}</p>
               <p>Goal Progress: {player.guild.progress}/{player.guild.target} Gold</p>
-              <Button variant="primary" onClick={contributeToGuild}>Contribute 10 Gold</Button>
+              <Button variant="primary" onClick={contributeToGuild} className={styles.glowButton}>Contribute 10 Gold</Button>
             </>
           ) : (
             <>
               <p>Join a guild to contribute to collective goals!</p>
-              <Button variant="outline-primary" onClick={() => joinGuild("Dragon Clan")}>Join Dragon Clan</Button>
-              <Button variant="outline-primary" onClick={() => joinGuild("Mist Guardians")}>Join Mist Guardians</Button>
+              <Button variant="outline-primary" onClick={() => joinGuild("Dragon Clan")} className={styles.glowButton}>Join Dragon Clan</Button>
+              <Button variant="outline-primary" onClick={() => joinGuild("Mist Guardians")} className={`${styles.glowButton} ml-2`}>Join Mist Guardians</Button>
             </>
           )}
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("guild")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("guild")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.skills} onHide={() => toggleModal("skills")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
-        <Modal.Header closeButton><Modal.Title>Skills</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title><FaStar /> Skills</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
           <Tabs defaultActiveKey="Warrior" id="skill-tabs" className="mb-3">
             {Object.keys(skillTrees).map(tree => (
@@ -1681,7 +1698,7 @@ const KaitoAdventure = () => {
                         {skill.effect.rareChance && ` Rare Chance: ${(playerSkill ? playerSkill.effect.rareChance : skill.effect.rareChance) * 100}%`}
                         {skill.effect.stunChance && ` Stun Chance: ${(playerSkill ? playerSkill.effect.stunChance : skill.effect.stunChance) * 100}%`}
                         {!playerSkill && (
-                          <Button variant="outline-primary" size="sm" className="ml-2" onClick={() => unlockSkill(skill.name, tree)}>
+                          <Button variant="outline-primary" size="sm" className={`${styles.glowButton} ml-2`} onClick={() => unlockSkill(skill.name, tree)}>
                             Unlock ({skill.cost.gold} Gold)
                           </Button>
                         )}
@@ -1693,7 +1710,7 @@ const KaitoAdventure = () => {
             ))}
           </Tabs>
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("skills")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("skills")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.events} onHide={() => toggleModal("events")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
@@ -1705,7 +1722,7 @@ const KaitoAdventure = () => {
             <p>No active events right now.</p>
           )}
         </Modal.Body>
-        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("events")}>Close</Button></Modal.Footer>
+        <Modal.Footer><Button variant="secondary" onClick={() => toggleModal("events")} className={styles.glowButton}>Close</Button></Modal.Footer>
       </Modal>
 
       <Modal show={modals.travel} backdrop="static" keyboard={false} className={styles.travelModal} backdropClassName={styles.lightBackdrop}>
@@ -1749,7 +1766,7 @@ const KaitoAdventure = () => {
           </ul>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => toggleModal("guide")}>Got it!</Button>
+          <Button variant="primary" onClick={() => toggleModal("guide")} className={styles.glowButton}>Got it!</Button>
         </Modal.Footer>
       </Modal>
     </div>
