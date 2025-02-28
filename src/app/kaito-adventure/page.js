@@ -17,13 +17,15 @@ import {
   Tabs,
   Tab,
   Dropdown,
+  Navbar as BootstrapNavbar, // Renamed to avoid conflict
+  Nav,
 } from "react-bootstrap";
 import { useWallet } from "@solana/wallet-adapter-react";
 import styles from '../../styles/Combat.module.css';
 import debounce from 'lodash/debounce';
 import { supabase } from "../../services/supabase/supabaseClient";
-
-
+import { FaHome, FaUser, FaGamepad, FaBars, FaTimes } from "react-icons/fa";
+import Link from 'next/link';
 
 // ---- Constants Section ----
 const defaultPlayer = {
@@ -35,7 +37,7 @@ const defaultPlayer = {
   level: 1,
   inventory: [
     { name: "Water", quantity: 2 },
-    { name: "Herbs", quantity: 1 }, 
+    { name: "Herbs", quantity: 1 },
   ],
   inventory_slots: 10,
   rare_items: [],
@@ -139,7 +141,7 @@ const skillTrees = {
   ],
 };
 
-// ---- Home Component ----
+// ---- KaitoAdventure Component ----
 const KaitoAdventure = () => {
   const { publicKey, connected } = useWallet();
   const defaultPlayerMemo = useMemo(() => ({
@@ -184,6 +186,9 @@ const KaitoAdventure = () => {
   const [selectedNPC, setSelectedNPC] = useState(null);
   const [travelDestination, setTravelDestination] = useState(null);
   const [gatherBuff, setGatherBuff] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // ---- Persistence and Supabase Sync ----
   useEffect(() => {
@@ -686,7 +691,6 @@ const KaitoAdventure = () => {
             };
           });
           updateXP(xpGain);
-          updateSkillLevel(skillName);
           setGameMessage(`You defeated ${prev.enemy.name} and earned ${prev.enemy.gold} gold!${drop ? " Dropped: " + drop : ""} (+${xpGain} XP)`);
           setCombatResult({ type: "win", message: `Victory! You defeated ${prev.enemy.name}!` });
           setTimeout(() => setModals(m => ({ ...m, combat: false })), 1500);
@@ -848,7 +852,7 @@ const KaitoAdventure = () => {
   const sellDrink = useCallback((itemName) => {
     const recipe = player.recipes.find(r => r.name === itemName);
     const itemInInventory = player.inventory.find(item => item.name === itemName);
-  
+
     if (!itemInInventory || itemInInventory.quantity === 0) {
       setGameMessage("You don’t have any of this item to sell!");
       return;
@@ -857,21 +861,21 @@ const KaitoAdventure = () => {
       setGameMessage("This item cannot be sold!");
       return;
     }
-  
+
     const currentTownData = towns.find(t => t.name === currentTown);
     const demandMultiplier = (currentTownData.demand[itemName] || 1.0) * 
       (currentEvent?.type === "festival" ? 1.5 : 1) * 
       (weather.demandBonus[itemName] || 1);
     const reward = Math.floor((recipe.sellValue || recipe.baseGold) * 
       currentTownData.rewardMultiplier * demandMultiplier);
-  
+
     setPlayer(prev => {
       const sellTask = prev.weekly_tasks.find(t => t.description === "Sell 10 Spicy Sakes" && itemName === "Spicy Sake");
       const updatedWeeklyTasks = sellTask
         ? prev.weekly_tasks.map(t => t.description === "Sell 10 Spicy Sakes" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
         : prev.weekly_tasks;
       if (sellTask && sellTask.progress + 1 >= sellTask.target) completeWeeklyTask("sellDrinks");
-  
+
       return {
         ...prev,
         inventory: prev.inventory
@@ -1135,6 +1139,31 @@ const KaitoAdventure = () => {
   return (
     <div style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto", background: "url('/background.jpg') center/cover" }}>
       <Head><title>Kaito's Adventure</title></Head>
+      
+      {/* Navbar */}
+      <BootstrapNavbar className={styles.navbar} sticky="top">
+        <Container>
+          <BootstrapNavbar.Brand as={Link} href="/" className={styles.logoLink}>
+            <Image src="/images/logo.jpg" alt="Sempai HQ" width={40} height={40} className={styles.logo} />
+            <span className={styles.logoText}>Sempai HQ</span>
+          </BootstrapNavbar.Brand>
+          <Button variant="link" className={styles.menuToggle} onClick={toggleMenu}>
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </Button>
+          <Nav className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Nav.Link as={Link} href="/" className={styles.navLink}>
+              <FaHome className={styles.navIcon} /> Home
+            </Nav.Link>
+            <Nav.Link as={Link} href="/profile" className={styles.navLink}>
+              <FaUser className={styles.navIcon} /> Profile
+            </Nav.Link>
+            <Nav.Link as={Link} href="/kaito-adventure" className={styles.navLink} active>
+              <FaGamepad className={styles.navIcon} /> Game
+            </Nav.Link>
+          </Nav>
+        </Container>
+      </BootstrapNavbar>
+
       <Container fluid className="py-3 py-md-5" style={{ paddingTop: "50px" }}>
         <Button variant="info" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 1000 }} onClick={() => toggleModal("leaderboard")}>Leaderboard</Button>
         <Row className="justify-content-center">
@@ -1333,7 +1362,7 @@ const KaitoAdventure = () => {
                     {r.type === "gather" && ` (Effect: ${r.effect.rareChanceBoost ? `+${r.effect.rareChanceBoost * 100}% Rare Chance` : `-${r.effect.cooldownReduction * 100}% Cooldown`}, ${r.effect.duration / 60000} min)`}
                   </li>
                 ))}
-              </ul>
+                              </ul>
             </Tab>
           </Tabs>
         </Modal.Body>
@@ -1348,6 +1377,7 @@ const KaitoAdventure = () => {
           }}>Craft</Button>
         </Modal.Footer>
       </Modal>
+
       <Modal show={modals.healing} onHide={() => toggleModal("healing")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
         <Modal.Header closeButton><Modal.Title>Healing Potions</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
@@ -1398,14 +1428,14 @@ const KaitoAdventure = () => {
             <Card.Body className={styles.combatBody}>
               {combatState && (
                 <Row>
-                 <Col md={5} className="text-center">
-                  <h4>Kaito</h4>
-                  <div className={`${styles.healthBar} mb-3 fadeIn`}>
-                    <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
-                  </div>
-                  <p>Health: {combatState.playerHealth}/{player.max_health}</p>
-                  <div className={`${combatState.isAttacking ? styles.attacking : ''} fadeIn`}>[Kaito Placeholder]</div>
-                </Col>
+                  <Col md={5} className="text-center">
+                    <h4>Kaito</h4>
+                    <div className={`${styles.healthBar} mb-3 fadeIn`}>
+                      <div className={styles.healthFill} style={{ width: `${(combatState.playerHealth / player.max_health) * 100}%` }} />
+                    </div>
+                    <p>Health: {combatState.playerHealth}/{player.max_health}</p>
+                    <div className={`${combatState.isAttacking ? styles.attacking : ''} fadeIn`}>[Kaito Placeholder]</div>
+                  </Col>
                   <Col md={2} className="align-items-center d-flex justify-content-center"><h2>VS</h2></Col>
                   <Col md={5} className="text-center">
                     <h4>{combatState.enemy.name}</h4>
@@ -1473,33 +1503,33 @@ const KaitoAdventure = () => {
       <Modal show={modals.market} onHide={() => toggleModal("market")} className={styles.gildedModal} backdropClassName={styles.lightBackdrop}>
         <Modal.Header closeButton><Modal.Title>{currentTown} Market</Modal.Title></Modal.Header>
         <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
-        <h5>Sell Your Items:</h5>
-<ListGroup className="mb-3">
-  {player.inventory
-    .filter(item => player.recipes.some(r => r.name === item.name && (r.sellValue || r.baseGold)))
-    .map(item => {
-      const recipe = player.recipes.find(r => r.name === item.name);
-      const townData = towns.find(t => t.name === currentTown);
-      const demandMultiplier = (townData.demand[item.name] || 1.0) * 
-        (currentEvent?.type === "festival" ? 1.5 : 1) * 
-        (weather.demandBonus[item.name] || 1);
-      const price = Math.floor((recipe.sellValue || recipe.baseGold) * 
-        townData.rewardMultiplier * demandMultiplier);
-      return (
-        <ListGroup.Item key={item.name} className="align-items-center d-flex justify-content-between">
-          <span>{item.name}: {item.quantity} (Sells for {price} gold each)</span>
-          <Button 
-            variant="outline-success" 
-            size="sm" 
-            onClick={() => sellDrink(item.name)} 
-            disabled={item.quantity === 0}
-          >
-            Sell One
-          </Button>
-        </ListGroup.Item>
-      );
-    })}
-</ListGroup>
+          <h5>Sell Your Items:</h5>
+          <ListGroup className="mb-3">
+            {player.inventory
+              .filter(item => player.recipes.some(r => r.name === item.name && (r.sellValue || r.baseGold)))
+              .map(item => {
+                const recipe = player.recipes.find(r => r.name === item.name);
+                const townData = towns.find(t => t.name === currentTown);
+                const demandMultiplier = (townData.demand[item.name] || 1.0) * 
+                  (currentEvent?.type === "festival" ? 1.5 : 1) * 
+                  (weather.demandBonus[item.name] || 1);
+                const price = Math.floor((recipe.sellValue || recipe.baseGold) * 
+                  townData.rewardMultiplier * demandMultiplier);
+                return (
+                  <ListGroup.Item key={item.name} className="align-items-center d-flex justify-content-between">
+                    <span>{item.name}: {item.quantity} (Sells for {price} gold each)</span>
+                    <Button 
+                      variant="outline-success" 
+                      size="sm" 
+                      onClick={() => sellDrink(item.name)} 
+                      disabled={item.quantity === 0}
+                    >
+                      Sell One
+                    </Button>
+                  </ListGroup.Item>
+                );
+              })}
+          </ListGroup>
           <h5>NPC Buyers:</h5>
           <ListGroup>
             {towns.find(t => t.name === currentTown).npcOffers.map((offer, idx) => (
