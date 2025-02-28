@@ -242,7 +242,7 @@ export default function ChapterPage({ params }) {
   
       if (eventInsertError) throw new Error(`Error inserting wallet events: ${eventInsertError.message}`);
   
-      setSuccessMessage("Tokens credited successfully!");
+      setSuccessMessage("Points credited successfully!");
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
       setError(error.message);
