@@ -2,6 +2,7 @@
 import { Container, Row, Col, Dropdown, Button } from "react-bootstrap";
 import { FaFlask, FaSkull, FaMap, FaBook, FaStar, FaUsers } from "react-icons/fa";
 import styles from "../../styles/Combat.module.css";
+import { GiCrossedSwords } from "react-icons/gi"; // Another option
 
 const ActionBar = ({ toggleModal, startCombat, travel, currentTown, towns, player, countdown, queuedCountdown, formatCountdown }) => (
   <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255, 255, 255, 0.9)", padding: "0.5rem 0", borderTop: "1px solid #ccc" }}>
@@ -17,7 +18,7 @@ const ActionBar = ({ toggleModal, startCombat, travel, currentTown, towns, playe
           </Dropdown>
         </Col>
         <Col xs="auto" className="mb-2">
-          <Button variant="danger" size="sm" onClick={startCombat} className={styles.glowButton}><FaSkull /> Combat</Button>
+          <Button variant="danger" size="sm" onClick={startCombat} className={styles.glowButton}><GiCrossedSwords /> Combat</Button>
         </Col>
         <Col xs="auto" className="mb-2">
           <Dropdown>
