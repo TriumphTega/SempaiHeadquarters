@@ -44,44 +44,22 @@ export default function NovelPage() {
     }
   }, [id]);
 
-  // Check wallet connection and fetch data
+  // Fetch novel data on mount, regardless of wallet connection
   useEffect(() => {
-    if (!connected) {
-      setShowConnectPopup(true);
-      setLoading(false);
-      return;
-    }
     fetchNovel();
-  }, [connected, fetchNovel]);
+  }, [fetchNovel]);
 
-  // Handle navigation with wallet check
-  const handleNavigation = (path) => {
-    if (connected) {
-      router.push(path);
-    } else {
+  // Handle navigation with wallet check for chapters beyond 1
+  const handleNavigation = (path, chapterId) => {
+    const chapterNum = parseInt(chapterId, 10);
+    if (!connected && chapterNum > 1) { // Require connection for chapters 2+ (index 2+)
       setShowConnectPopup(true);
+    } else {
+      router.push(path);
     }
   };
 
   if (loading) return <LoadingPage />;
-
-  if (!connected) {
-    return (
-      <div className={styles.connectPopupOverlay}>
-        <div className={`${styles.connectPopup} ${styles.dark}`}>
-          <button onClick={() => setShowConnectPopup(false)} className={styles.closePopupButton}>
-            <FaTimes />
-          </button>
-          <h3 className={styles.popupTitle}>Access Denied</h3>
-          <p className={styles.popupMessage}>Connect your wallet to explore this novel.</p>
-          <WalletMultiButton className={styles.connectWalletButton} />
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.backHomeLink}>
-            <FaHome /> Back to Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (!novel) {
     return (
@@ -91,12 +69,31 @@ export default function NovelPage() {
     );
   }
 
+  // Show connect popup only if triggered by navigation
+  if (showConnectPopup) {
+    return (
+      <div className={styles.connectPopupOverlay}>
+        <div className={`${styles.connectPopup} ${styles.dark}`}>
+          <button onClick={() => setShowConnectPopup(false)} className={styles.closePopupButton}>
+            <FaTimes />
+          </button>
+          <h3 className={styles.popupTitle}>Access Denied</h3>
+          <p className={styles.popupMessage}>Connect your wallet to explore this chapter.</p>
+          <WalletMultiButton className={styles.connectWalletButton} />
+          <Link href="/" onClick={() => router.push("/")} className={styles.backHomeLink}>
+            <FaHome /> Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${styles.page} ${styles.dark}`}>
       {/* Futuristic Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
+          <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
             <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
@@ -104,10 +101,10 @@ export default function NovelPage() {
             <FaBars />
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+            <Link href="/" onClick={() => router.push("/")} className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link href={`/novel/${id}/summary`} onClick={() => handleNavigation(`/novel/${id}/summary`)} className={styles.navLink}>
+            <Link href={`/novel/${id}/summary`} onClick={() => router.push(`/novel/${id}/summary`)} className={styles.navLink}>
               <FaBookOpen className={styles.navIcon} /> Summary
             </Link>
           </div>
@@ -132,7 +129,7 @@ export default function NovelPage() {
           {Object.entries(novel.chaptertitles || {}).map(([chapterId, title]) => (
             <Link
               href={`/novel/${id}/chapter/${chapterId}`}
-              onClick={() => handleNavigation(`/novel/${id}/chapter/${chapterId}`)}
+              onClick={() => handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId)}
               key={chapterId}
               className={styles.chapterCard}
             >

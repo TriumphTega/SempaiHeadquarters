@@ -31,10 +31,13 @@ export default function CreatorsDashboard() {
   const [novelSummary, setNovelSummary] = useState("");
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [newChapterContent, setNewChapterContent] = useState("");
+  const [newChapterIsAdvance, setNewChapterIsAdvance] = useState(false);
+  const [newChapterReleaseDate, setNewChapterReleaseDate] = useState("");
   const [novelsList, setNovelsList] = useState([]);
   const [selectedNovel, setSelectedNovel] = useState(null);
   const [chapterTitles, setChapterTitles] = useState([]);
   const [chapterContents, setChapterContents] = useState([]);
+  const [advanceChapters, setAdvanceChapters] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isWriter, setIsWriter] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
@@ -42,11 +45,10 @@ export default function CreatorsDashboard() {
   const [editChapterIndex, setEditChapterIndex] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
-  // Check creator access and fetch user details
   const handleCreatorAccess = async () => {
     if (!connected || !publicKey) {
       setLoading(false);
@@ -80,7 +82,6 @@ export default function CreatorsDashboard() {
     }
   };
 
-  // Fetch novels based on user role
   const fetchNovels = async () => {
     if (!currentUserId) return;
 
@@ -100,7 +101,6 @@ export default function CreatorsDashboard() {
     }
   };
 
-  // Fetch writers (for superusers)
   const fetchWriters = async () => {
     if (!isSuperuser) return;
 
@@ -131,7 +131,6 @@ export default function CreatorsDashboard() {
     }
   }, [currentUserId, isWriter, isSuperuser]);
 
-  // Handle image upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
@@ -143,38 +142,60 @@ export default function CreatorsDashboard() {
     }
   };
 
-  // Add or update chapter
   const handleAddChapter = () => {
     if (!newChapterTitle.trim() || !newChapterContent.trim()) {
       alert("Please provide both a chapter title and content.");
       return;
     }
 
+    const index = editChapterIndex !== null ? editChapterIndex : chapterTitles.length;
+
     if (editChapterIndex !== null) {
       setChapterTitles((prev) => {
         const updated = [...prev];
-        updated[editChapterIndex] = newChapterTitle;
+        updated[index] = newChapterTitle;
         return updated;
       });
       setChapterContents((prev) => {
         const updated = [...prev];
-        updated[editChapterIndex] = newChapterContent;
+        updated[index] = newChapterContent;
+        return updated;
+      });
+      setAdvanceChapters((prev) => {
+        const updated = [...prev.filter((c) => c.index !== index)];
+        updated.push({
+          index,
+          is_advance: newChapterIsAdvance,
+          free_release_date: newChapterIsAdvance ? newChapterReleaseDate || null : null,
+        });
         return updated;
       });
       setEditChapterIndex(null);
     } else {
       setChapterTitles((prev) => [...prev, newChapterTitle]);
       setChapterContents((prev) => [...prev, newChapterContent]);
+      setAdvanceChapters((prev) => [
+        ...prev,
+        {
+          index,
+          is_advance: newChapterIsAdvance,
+          free_release_date: newChapterIsAdvance ? newChapterReleaseDate || null : null,
+        },
+      ]);
     }
 
     setNewChapterTitle("");
     setNewChapterContent("");
+    setNewChapterIsAdvance(false);
+    setNewChapterReleaseDate("");
   };
 
-  // Edit chapter
   const handleEditChapter = (index) => {
     setNewChapterTitle(chapterTitles[index]);
     setNewChapterContent(chapterContents[index]);
+    const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false, free_release_date: null };
+    setNewChapterIsAdvance(advanceInfo.is_advance);
+    setNewChapterReleaseDate(advanceInfo.free_release_date || "");
     setEditChapterIndex(index);
     if (chapterTitleRef.current) {
       chapterTitleRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -182,14 +203,13 @@ export default function CreatorsDashboard() {
     }
   };
 
-  // Remove chapter
   const handleRemoveChapter = (index) => {
     setChapterTitles((prev) => prev.filter((_, i) => i !== index));
     setChapterContents((prev) => prev.filter((_, i) => i !== index));
+    setAdvanceChapters((prev) => prev.filter((c) => c.index !== index));
     if (editChapterIndex === index) setEditChapterIndex(null);
   };
 
-  // Edit existing novel
   const handleEditNovel = (novel) => {
     setSelectedNovel(novel);
     setNovelTitle(novel.title);
@@ -197,9 +217,9 @@ export default function CreatorsDashboard() {
     setNovelSummary(novel.summary);
     setChapterTitles(novel.chaptertitles || []);
     setChapterContents(novel.chaptercontents || []);
+    setAdvanceChapters(novel.advance_chapters || []);
   };
 
-  // Submit novel
   const handleNovelSubmit = async (e) => {
     e.preventDefault();
 
@@ -215,6 +235,7 @@ export default function CreatorsDashboard() {
       summary: novelSummary,
       chaptertitles: chapterTitles,
       chaptercontents: chapterContents,
+      advance_chapters: advanceChapters,
     };
 
     setLoading(true);
@@ -263,30 +284,28 @@ export default function CreatorsDashboard() {
     }
   };
 
-  // Reset form
   const resetForm = () => {
     setNovelTitle("");
     setNovelImage("");
     setNovelSummary("");
     setNewChapterTitle("");
     setNewChapterContent("");
+    setNewChapterIsAdvance(false);
+    setNewChapterReleaseDate("");
     setChapterTitles([]);
     setChapterContents([]);
+    setAdvanceChapters([]);
     setSelectedNovel(null);
     setEditChapterIndex(null);
   };
 
-  // Toggle mobile menu
   const toggleMenu = () => setMenuOpen((prev) => !prev);
-
-  // Toggle light/dark mode
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
   if (loading) return <LoadingPage />;
 
   return (
     <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
-      {/* Navbar */}
       <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
@@ -308,10 +327,8 @@ export default function CreatorsDashboard() {
         </div>
       </nav>
 
-      {/* Overlay for mobile menu blur */}
       {menuOpen && <div className={styles.blurOverlay}></div>}
 
-      {/* Header */}
       <header className={styles.header}>
         <h1 className={styles.headerTitle}>
           <FaUserShield /> Creator’s Vault
@@ -319,7 +336,6 @@ export default function CreatorsDashboard() {
         <p className={styles.headerSubtitle}>Craft and curate your literary masterpieces.</p>
       </header>
 
-      {/* Main Content */}
       <main className={styles.main}>
         {!connected ? (
           <div className={styles.connectPrompt}>
@@ -337,7 +353,6 @@ export default function CreatorsDashboard() {
           </div>
         ) : (
           <div className={styles.dashboard}>
-            {/* Novel Form */}
             <section className={styles.formSection}>
               <h2 className={styles.sectionTitle}>
                 <FaBookOpen /> {selectedNovel ? "Edit Manuscript" : "New Manuscript"}
@@ -407,39 +422,54 @@ export default function CreatorsDashboard() {
                       rows="4"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddChapter}
-                    className={styles.addChapterButton}
-                  >
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>
+                      <input
+                        type="checkbox"
+                        checked={newChapterIsAdvance}
+                        onChange={(e) => setNewChapterIsAdvance(e.target.checked)}
+                      />
+                      Mark as Advance Chapter
+                    </label>
+                    {newChapterIsAdvance && (
+                      <input
+                        type="datetime-local"
+                        value={newChapterReleaseDate}
+                        onChange={(e) => setNewChapterReleaseDate(new Date(e.target.value).toISOString())}
+                        className={styles.input}
+                        min={new Date().toISOString().slice(0, 16)}
+                      />
+                    )}
+                  </div>
+                  <button type="button" onClick={handleAddChapter} className={styles.addChapterButton}>
                     <FaPlus /> {editChapterIndex !== null ? "Update" : "Add"}
                   </button>
                 </div>
 
                 {chapterTitles.length > 0 && (
                   <ul className={styles.chapterList}>
-                    {chapterTitles.map((title, index) => (
-                      <li key={index} className={styles.chapterItem}>
-                        <span className={styles.chapterText}>
-                          <strong>{title}</strong>
-                          <p>{chapterContents[index].slice(0, 50)}...</p>
-                        </span>
-                        <div className={styles.chapterActions}>
-                          <button
-                            onClick={() => handleEditChapter(index)}
-                            className={styles.editButton}
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            onClick={() => handleRemoveChapter(index)}
-                            className={styles.deleteButton}
-                          >
-                            <FaTrash />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                    {chapterTitles.map((title, index) => {
+                      const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false };
+                      return (
+                        <li key={index} className={styles.chapterItem}>
+                          <span className={styles.chapterText}>
+                            <strong>{title}</strong>
+                            <p>{chapterContents[index].slice(0, 50)}...</p>
+                            {advanceInfo.is_advance && (
+                              <small>Advance (Free on: {advanceInfo.free_release_date || "TBD"})</small>
+                            )}
+                          </span>
+                          <div className={styles.chapterActions}>
+                            <button onClick={() => handleEditChapter(index)} className={styles.editButton}>
+                              <FaEdit />
+                            </button>
+                            <button onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}>
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
 
@@ -449,7 +479,6 @@ export default function CreatorsDashboard() {
               </form>
             </section>
 
-            {/* Novels List */}
             <section className={styles.novelsSection}>
               <h2 className={styles.sectionTitle}>
                 <FaBookOpen /> Your Manuscripts
@@ -479,7 +508,6 @@ export default function CreatorsDashboard() {
               )}
             </section>
 
-            {/* Writers List (Superuser Only) */}
             {isSuperuser && (
               <section className={styles.writersSection}>
                 <h2 className={styles.sectionTitle}>
@@ -503,7 +531,6 @@ export default function CreatorsDashboard() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className={styles.footer}>
         <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
       </footer>

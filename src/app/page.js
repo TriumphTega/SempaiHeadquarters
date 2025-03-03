@@ -209,15 +209,20 @@ export default function Home() {
   }, [connected, publicKey, router]);
 
   const handleNavigation = (path) => {
-    if (connected) {
-      setPageLoading(true);
-      setMenuOpen(false);
-      setNotificationsOpen(false);
-      setShowConnectPopup(false);
-      router.push(path);
-    } else {
-      setShowConnectPopup(true);
-    }
+    setPageLoading(true);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    router.push(path);
+  };
+
+  const handleNovelNavigation = (novelId) => {
+    // Allow navigation to novel page without wallet connection
+    setPageLoading(true);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    router.push(`/novel/${novelId}`);
   };
 
   useEffect(() => {
@@ -264,61 +269,63 @@ export default function Home() {
             <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
+            <Link href="/swap" onClick={() => (connected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
               <FaExchangeAlt className={styles.navIcon} /> Swap
             </Link>
-            <Link href="/profile" onClick={() => handleNavigation("/profile")} className={styles.navLink}>
+            <Link href="/profile" onClick={() => (connected ? handleNavigation("/profile") : toggleConnectPopup())} className={styles.navLink}>
               <FaUser className={styles.navIcon} /> Profile
             </Link>
-            <Link href="/chat" onClick={() => handleNavigation("/chat")} className={styles.navLink}>
+            <Link href="/chat" onClick={() => (connected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
             </Link>
-            <Link href="/kaito-adventure" onClick={() => handleNavigation("/kaito-adventure")} className={styles.navLink}>
+            <Link href="/kaito-adventure" onClick={() => (connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
               <FaGamepad className={styles.navIcon} /> Kaito's Adventure
             </Link>
             <button onClick={handleCreatorAccess} className={styles.actionButton}>
               {isWriter ? "Creator Dashboard" : "Become a Creator"}
             </button>
-            <div className={styles.notificationWrapper}>
-              <button onClick={toggleNotifications} className={styles.notificationButton}>
-                <FaBell className={styles.bellIcon} />
-                {notifications.length > 0 && (
-                  <span className={styles.notificationBadge}>{notifications.length}</span>
-                )}
-              </button>
-              {notificationsOpen && (
-                <div className={styles.notificationDropdown}>
-                  {notifications.length > 0 ? (
-                    <>
-                      {notifications.map((notif) => (
-                        <div key={notif.id} className={styles.notificationItem}>
-                          {notif.type === "reply" && notif.comment_id ? (
-                            <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                              📩 Someone replied: "{notif.message}"
-                            </Link>
-                          ) : notif.type === "new_chapter" ? (
-                            <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                              📖 New chapter: "{notif.novel_title}"
-                            </Link>
-                          ) : notif.type === "reward" ? (
-                            <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                              🎉 Weekly reward received!
-                            </Link>
-                          ) : (
-                            <span>{notif.message || "New notification"}</span>
-                          )}
-                        </div>
-                      ))}
-                      <button onClick={markAsRead} className={styles.markReadButton}>
-                        Mark All as Read
-                      </button>
-                    </>
-                  ) : (
-                    <div className={styles.noNotifications}>No new notifications</div>
+            {connected && (
+              <div className={styles.notificationWrapper}>
+                <button onClick={toggleNotifications} className={styles.notificationButton}>
+                  <FaBell className={styles.bellIcon} />
+                  {notifications.length > 0 && (
+                    <span className={styles.notificationBadge}>{notifications.length}</span>
                   )}
-                </div>
-              )}
-            </div>
+                </button>
+                {notificationsOpen && (
+                  <div className={styles.notificationDropdown}>
+                    {notifications.length > 0 ? (
+                      <>
+                        {notifications.map((notif) => (
+                          <div key={notif.id} className={styles.notificationItem}>
+                            {notif.type === "reply" && notif.comment_id ? (
+                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                                📩 Someone replied: "{notif.message}"
+                              </Link>
+                            ) : notif.type === "new_chapter" ? (
+                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                                📖 New chapter: "{notif.novel_title}"
+                              </Link>
+                            ) : notif.type === "reward" ? (
+                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                                🎉 Weekly reward received!
+                              </Link>
+                            ) : (
+                              <span>{notif.message || "New notification"}</span>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={markAsRead} className={styles.markReadButton}>
+                          Mark All as Read
+                        </button>
+                      </>
+                    ) : (
+                      <div className={styles.noNotifications}>No new notifications</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <button onClick={toggleTheme} className={styles.themeToggle}>
               {theme === "dark" ? <FaSun /> : <FaMoon />}
             </button>
@@ -344,7 +351,7 @@ export default function Home() {
           {novels.map((novel) => (
             <div key={novel.id} className={styles.carouselItem}>
               <div className={styles.novelCard}>
-                <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNavigation(`/novel/${novel.id}`); }}>
+                <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNovelNavigation(novel.id); }}>
                   <img src={novel.image} alt={novel.title} className={styles.novelImage} />
                   <div className={styles.novelOverlay}>
                     <h3 className={styles.novelTitle}>{novel.title}</h3>
@@ -355,7 +362,7 @@ export default function Home() {
           ))}
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); handleNavigation("/kaito-adventure"); }}>
+              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
                 <img src="/background.jpg" alt="Kaito Brewmaster" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>Kaito Brewmaster</h3>
@@ -375,7 +382,7 @@ export default function Home() {
           </div>
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); handleNavigation("/keep-it-simple"); }}>
+              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
                 <img src="/images/novel-4.jpg" alt="KISS" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>KISS</h3>
@@ -385,7 +392,7 @@ export default function Home() {
           </div>
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
-              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); handleNavigation("/dao-governance"); }}>
+              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
                 <img src="/images/dao.jpg" alt="DAO Governance" className={styles.novelImage} />
                 <div className={styles.novelOverlay}>
                   <h3 className={styles.novelTitle}>DAO Governance</h3>
@@ -395,6 +402,7 @@ export default function Home() {
           </div>
         </Slider>
       </section>
+
       {showConnectPopup && (
         <div className={styles.connectPopupOverlay}>
           <div className={styles.connectPopup}>

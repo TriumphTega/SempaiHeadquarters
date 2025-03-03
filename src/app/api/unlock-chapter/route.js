@@ -33,8 +33,6 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid transaction: not found" }), { status: 400 });
     }
 
-    console.log("Transaction:", JSON.stringify(tx, null, 2));
-
     if (!tx.meta || tx.meta.err) {
       console.log("Transaction meta error:", tx.meta?.err);
       return new Response(JSON.stringify({ error: "Invalid transaction: failed on chain" }), { status: 400 });
@@ -68,14 +66,47 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid recipient" }), { status: 400 });
     }
 
+    const { data: novel, error: novelError } = await supabase
+      .from("novels")
+      .select("chaptercontents, advance_chapters")
+      .eq("id", story_id)
+      .single();
+    if (novelError || !novel) {
+      return new Response(JSON.stringify({ error: "Novel not found" }), { status: 404 });
+    }
+
+    const totalChapters = Object.keys(novel.chaptercontents || {}).length;
+    const currentChapterNum = parseInt(current_chapter, 10); // 0-based
+
+    const advanceChapters = novel.advance_chapters || [];
+    for (let i = 0; i < currentChapterNum; i++) {
+      const advanceInfo = advanceChapters.find((c) => c.index === i) || { is_advance: false, free_release_date: null };
+      if (advanceInfo.is_advance && (!advanceInfo.free_release_date || new Date(advanceInfo.free_release_date) > new Date())) {
+        const { data: unlock } = await supabase
+          .from("unlocked_story_chapters")
+          .select("chapter_unlocked_till, expires_at")
+          .eq("user_id", user_id)
+          .eq("story_id", story_id)
+          .single();
+        const hasUnlock = unlock && (!unlock.expires_at || new Date(unlock.expires_at) > new Date()) && unlock.chapter_unlocked_till >= i;
+        if (!hasUnlock) {
+          return new Response(JSON.stringify({ error: `Chapter ${i} must be unlocked first` }), { status: 403 });
+        }
+      }
+    }
+
+    let chapter_unlocked_till;
+    const chaptersPurchased = subscription_type === "3CHAPTERS" ? 3 : Infinity; // Infinity for FULL
+    if (subscription_type === "FULL") {
+      chapter_unlocked_till = -1; // Unlock all
+    } else {
+      // Set to current + 2 (3 chapters total), regardless of totalChapters now
+      chapter_unlocked_till = currentChapterNum + chaptersPurchased - 1; // e.g., 0 + 3 - 1 = 2
+    }
+
     const expires_at = subscription_type === "3CHAPTERS"
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       : null;
-
-    // Calculate chapter_unlocked_till based on subscription type
-    const chapter_unlocked_till = subscription_type === "FULL"
-      ? -1 // Full unlock
-      : current_chapter + 2; // Unlock current chapter + next 2 (total 3 chapters)
 
     const unlockData = {
       user_id,
@@ -85,48 +116,35 @@ export async function POST(req) {
       payment_amount,
       subscription_type,
       expires_at,
+      chapters_purchased: subscription_type === "3CHAPTERS" ? 3 : null, // Store for future reference
     };
 
-    // Check for existing unlock record
-    const { data: existing, error: existingError } = await supabase
+    const { data: existing } = await supabase
       .from("unlocked_story_chapters")
-      .select("chapter_unlocked_till, expires_at")
+      .select("*")
       .eq("user_id", user_id)
       .eq("story_id", story_id)
       .single();
 
-    if (existingError && existingError.code !== "PGRST116") {
-      console.log("Error checking existing unlock:", existingError);
-      throw existingError;
-    }
-
     if (existing) {
-      const expired = existing.expires_at && new Date(existing.expires_at) < new Date();
-      if (!expired && existing.chapter_unlocked_till >= chapter_unlocked_till) {
-        console.log("Already unlocked up to or beyond this range:", existing.chapter_unlocked_till);
-        return new Response(
-          JSON.stringify({ message: "Chapters already unlocked up to this point!", subscription_type }),
-          { status: 200 }
-        );
-      } else {
-        // Update to extend the unlock range
-        await supabase
-          .from("unlocked_story_chapters")
-          .update({ chapter_unlocked_till: Math.max(existing.chapter_unlocked_till, chapter_unlocked_till), expires_at })
-          .eq("user_id", user_id)
-          .eq("story_id", story_id);
-        console.log("Updated unlock range:", unlockData);
-      }
+      const new_unlocked_till = existing.chapter_unlocked_till === -1 ? -1 : Math.max(existing.chapter_unlocked_till, chapter_unlocked_till);
+      await supabase
+        .from("unlocked_story_chapters")
+        .update({ ...unlockData, chapter_unlocked_till: new_unlocked_till })
+        .eq("user_id", user_id)
+        .eq("story_id", story_id);
     } else {
-      // Insert new unlock record
-      await supabase.from("unlocked_story_chapters").insert(unlockData);
-      console.log("Inserted new unlock:", unlockData);
+      await supabase
+        .from("unlocked_story_chapters")
+        .insert(unlockData);
     }
 
+    console.log("Unlock successful:", unlockData);
     return new Response(
       JSON.stringify({
         message: "Chapters unlocked successfully!",
         subscription_type,
+        chapter_unlocked_till,
       }),
       { status: 200 }
     );

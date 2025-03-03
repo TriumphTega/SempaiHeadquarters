@@ -36,11 +36,7 @@ export default function NovelsPage() {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   const handleNavigation = (path) => {
-    if (connected) {
-      router.push(path);
-    } else {
-      setErrorMessage("Please connect your wallet to navigate.");
-    }
+    router.push(path); // No wallet check here for novel navigation
   };
 
   const checkBalance = async () => {
@@ -208,7 +204,7 @@ export default function NovelsPage() {
       setLoading(true);
       Promise.all([checkBalance(), fetchNovels()]).finally(() => setLoading(false));
     } else {
-      setLoading(false);
+      fetchNovels().finally(() => setLoading(false)); // Fetch novels even if not connected
     }
   }, [connected, publicKey]);
 
@@ -216,7 +212,6 @@ export default function NovelsPage() {
 
   return (
     <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
-      {/* Navbar with Home style */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
@@ -238,7 +233,6 @@ export default function NovelsPage() {
         </div>
       </nav>
 
-      {/* Header */}
       <header className={styles.header}>
         <h1 className={styles.headerTitle}>Digital Library Nexus</h1>
         <p className={styles.headerSubtitle}>Access the multiverse of stories</p>
@@ -285,36 +279,23 @@ export default function NovelsPage() {
           </div>
         ) : (
           <div className={styles.connectPrompt}>
-            <p>Connect to access the nexus</p>
+            <p>Connect to manage your wallet (first two chapters free)</p>
             <WalletMultiButton className={styles.connectWalletButton} />
           </div>
         )}
       </header>
 
-      {/* Novels Grid */}
       <section className={styles.gridSection}>
         <div className={styles.novelsGrid}>
           {novels.length > 0 ? (
             novels.map((novel) => (
               <div key={novel.id} className={styles.novelNode}>
-                {connected ? (
-                  <Link href={`/novel/${novel.id}`} className={styles.novelLink}>
-                    <img src={novel.image} alt={novel.title} className={styles.novelImage} />
-                    <div className={styles.novelOverlay}>
-                      <h5 className={styles.novelTitle}>{novel.title}</h5>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className={styles.lockedNode}>
-                    <img src={novel.image} alt={novel.title} className={styles.novelImage} />
-                    <div className={styles.novelOverlay}>
-                      <h5 className={styles.novelTitle}>{novel.title}</h5>
-                    </div>
-                    <div className={styles.lockedOverlay}>
-                      <WalletMultiButton className={styles.connectWalletButton} />
-                    </div>
+                <Link href={`/novel/${novel.id}`} onClick={() => handleNavigation(`/novel/${novel.id}`)} className={styles.novelLink}>
+                  <img src={novel.image} alt={novel.title} className={styles.novelImage} />
+                  <div className={styles.novelOverlay}>
+                    <h5 className={styles.novelTitle}>{novel.title}</h5>
                   </div>
-                )}
+                </Link>
               </div>
             ))
           ) : (
