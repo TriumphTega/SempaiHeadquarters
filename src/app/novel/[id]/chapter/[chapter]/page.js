@@ -19,6 +19,20 @@ import { TREASURY_PUBLIC_KEY, DEVNET_RPC_URL } from "../../../../../constants";
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 const connection = new Connection(DEVNET_RPC_URL, "confirmed");
 
+// Function to fetch SOL price in USD from CoinGecko
+const fetchSolPrice = async () => {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
+    );
+    const data = await response.json();
+    return data.solana.usd; // Returns current SOL price in USD
+  } catch (error) {
+    console.error("Error fetching SOL price:", error);
+    throw new Error("Failed to fetch SOL price");
+  }
+};
+
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const router = useRouter();
@@ -35,6 +49,21 @@ export default function ChapterPage() {
   const [userId, setUserId] = useState(null);
   const [advanceInfo, setAdvanceInfo] = useState(null);
   const [canUnlockNextThree, setCanUnlockNextThree] = useState(false);
+  const [solPrice, setSolPrice] = useState(null); // Store SOL price in USD
+
+  // Fetch SOL price on mount
+  useEffect(() => {
+    const getSolPrice = async () => {
+      try {
+        const price = await fetchSolPrice();
+        setSolPrice(price);
+      } catch (err) {
+        setError("Unable to fetch SOL price. Using default values.");
+        setSolPrice(100); // Fallback price ($100/SOL) if API fails
+      }
+    };
+    getSolPrice();
+  }, []);
 
   const updateTokenBalance = useCallback(async () => {
     if (!publicKey || !novel || !chapter || !id) {
@@ -216,7 +245,7 @@ export default function ChapterPage() {
           event_type: "deposit",
           event_details: eventDetails,
           source_chain: "SOL",
-          source_currency: "Token",
+          currency: "Token",
           amount_change: authorReward,
           wallet_address: novelOwner.wallet_address,
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
@@ -252,7 +281,7 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      if (!connected && chapterNum > 1) { // Allow chapters 0 and 1 without wallet
+      if (!connected && chapterNum > 1) {
         setShowConnectPopup(true);
         setLoading(false);
         return;
@@ -304,7 +333,7 @@ export default function ChapterPage() {
       if (novelError || !novelData) throw new Error(novelError?.message || "Novel not found");
       setNovel(novelData);
 
-      const chapterNum = parseInt(chapter, 10); // 0-based
+      const chapterNum = parseInt(chapter, 10);
       const totalChapters = Object.keys(novelData.chaptercontents || {}).length;
       const chapterAdvanceInfo = novelData.advance_chapters
         ? novelData.advance_chapters.find((c) => c.index === chapterNum) || { is_advance: false, free_release_date: null }
@@ -313,15 +342,13 @@ export default function ChapterPage() {
 
       console.log("Checking access - Chapter:", chapterNum, "Total Chapters:", totalChapters, "Advance Info:", chapterAdvanceInfo);
 
-      // Allow chapters 0 and 1 as free previews, overriding is_advance if not connected
       if (chapterNum <= 1) {
         console.log("Chapter is a free preview (0 or 1), unlocking");
         setIsLocked(false);
-        setCanUnlockNextThree(false); // No unlocks needed for free chapters
+        setCanUnlockNextThree(false);
         return;
       }
 
-      // Check previous chapters for unlock eligibility (for chapters 2+)
       let allPreviousUnlocked = true;
       const advanceChapters = novelData.advance_chapters || [];
       for (let i = 0; i < chapterNum; i++) {
@@ -396,10 +423,19 @@ export default function ChapterPage() {
       return;
     }
 
+    if (!solPrice) {
+      setError("SOL price not available. Please try again later.");
+      return;
+    }
+
     try {
+      const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15; // $3 or $15
+      const solAmount = usdAmount / solPrice; // Convert USD to SOL
+      const lamports = Math.round(solAmount * LAMPORTS_PER_SOL); // Convert SOL to lamports
+
+      console.log(`Subscription: ${subscriptionType}, USD: $${usdAmount}, SOL: ${solAmount}, Lamports: ${lamports}`);
+
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      const amount = subscriptionType === "3CHAPTERS" ? 0.03 : 0.15;
-      const lamports = Math.round(amount * LAMPORTS_PER_SOL);
 
       const transaction = new Transaction({
         recentBlockhash: blockhash,
@@ -433,6 +469,7 @@ export default function ChapterPage() {
           signature,
           userPublicKey: publicKey.toString(),
           current_chapter: parseInt(chapter, 10),
+          sol_amount: solAmount, // Send SOL amount for backend verification
         }),
       });
 
@@ -474,12 +511,12 @@ export default function ChapterPage() {
   }, [id]);
 
   useEffect(() => {
-    fetchNovel(); // Fetch novel regardless of connection
+    fetchNovel();
   }, [fetchNovel]);
 
   useEffect(() => {
     if (!loading && novel && (connected || parseInt(chapter, 10) <= 1) && !isLocked) {
-      updateTokenBalance(); // Only runs if connected (due to publicKey check)
+      updateTokenBalance();
     }
   }, [loading, novel, connected, isLocked, chapter, updateTokenBalance]);
 
@@ -548,6 +585,10 @@ export default function ChapterPage() {
     .filter((line) => line.trim() !== "")
     .map((line) => `<p>${line.trim()}</p>`)
     .join("");
+
+  // Calculate SOL amounts for display
+  const threeChaptersSol = solPrice ? (3 / solPrice).toFixed(4) : "Loading...";
+  const fullChaptersSol = solPrice ? (15 / solPrice).toFixed(4) : "Loading...";
 
   return (
     <div className={`${styles.page} ${styles.dark}`}>
@@ -620,13 +661,17 @@ export default function ChapterPage() {
             <button
               onClick={() => handlePayment("3CHAPTERS")}
               className={styles.unlockButton}
-              disabled={!canUnlockNextThree}
+              disabled={!canUnlockNextThree || !solPrice}
               title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
             >
-              Unlock 3 Chapters (0.03 SOL)
+              Unlock 3 Chapters (${threeChaptersSol} SOL)
             </button>
-            <button onClick={() => handlePayment("FULL")} className={styles.unlockButton}>
-              Unlock All Chapters (0.15 SOL)
+            <button
+              onClick={() => handlePayment("FULL")}
+              className={styles.unlockButton}
+              disabled={!solPrice}
+            >
+              Unlock All Chapters (${fullChaptersSol} SOL)
             </button>
           </div>
         ) : (

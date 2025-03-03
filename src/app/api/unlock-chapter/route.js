@@ -4,18 +4,42 @@ import { TREASURY_PUBLIC_KEY, DEVNET_RPC_URL } from "@/constants";
 
 const connection = new Connection(DEVNET_RPC_URL, "confirmed");
 
+// Fetch SOL price in USD from CoinGecko
+const fetchSolPrice = async () => {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
+    );
+    const data = await response.json();
+    return data.solana.usd;
+  } catch (error) {
+    console.error("Error fetching SOL price:", error);
+    throw new Error("Failed to fetch SOL price");
+  }
+};
+
 export async function POST(req) {
   try {
-    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter } = await req.json();
-    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter });
+    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, sol_amount } = await req.json();
+    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, sol_amount });
 
     if (!["3CHAPTERS", "FULL"].includes(subscription_type)) {
       console.log("Invalid subscription type:", subscription_type);
       return new Response(JSON.stringify({ error: "Invalid subscription type" }), { status: 400 });
     }
 
-    const payment_amount = subscription_type === "3CHAPTERS" ? 0.03 : 0.15;
-    console.log("Expected payment amount (SOL):", payment_amount);
+    // Fetch real-time SOL price
+    const solPrice = await fetchSolPrice();
+    const usdAmount = subscription_type === "3CHAPTERS" ? 3 : 15; // $3 or $15
+    const expectedSolAmount = usdAmount / solPrice; // Expected SOL amount
+    const expectedLamports = Math.round(expectedSolAmount * LAMPORTS_PER_SOL);
+
+    // Allow a small tolerance (e.g., 2% of lamports) due to rounding and price fluctuations
+    const tolerance = 0.02;
+    const minLamports = Math.round(expectedLamports * (1 - tolerance));
+    const maxLamports = Math.round(expectedLamports * (1 + tolerance));
+
+    console.log(`Expected USD: $${usdAmount}, SOL Price: $${solPrice}, Expected SOL: ${expectedSolAmount}, Expected Lamports: ${expectedLamports}, Range: ${minLamports}-${maxLamports}`);
 
     let tx = null;
     for (let i = 0; i < 3; i++) {
@@ -53,11 +77,12 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid transaction: sender or receiver missing" }), { status: 400 });
     }
 
-    const amountTransferred = (tx.meta.postBalances[receiverIndex] - tx.meta.preBalances[receiverIndex]) / LAMPORTS_PER_SOL;
-    console.log("Amount transferred (SOL):", amountTransferred);
+    const amountTransferredLamports = tx.meta.postBalances[receiverIndex] - tx.meta.preBalances[receiverIndex];
+    const amountTransferredSol = amountTransferredLamports / LAMPORTS_PER_SOL;
+    console.log("Amount transferred (SOL):", amountTransferredSol, "Lamports:", amountTransferredLamports);
 
-    if (amountTransferred !== payment_amount) {
-      console.log("Incorrect payment amount:", { expected: payment_amount, actual: amountTransferred });
+    if (amountTransferredLamports < minLamports || amountTransferredLamports > maxLamports) {
+      console.log("Incorrect payment amount:", { expectedSol: expectedSolAmount, actualSol: amountTransferredSol });
       return new Response(JSON.stringify({ error: "Incorrect payment amount" }), { status: 400 });
     }
 
@@ -76,7 +101,7 @@ export async function POST(req) {
     }
 
     const totalChapters = Object.keys(novel.chaptercontents || {}).length;
-    const currentChapterNum = parseInt(current_chapter, 10); // 0-based
+    const currentChapterNum = parseInt(current_chapter, 10);
 
     const advanceChapters = novel.advance_chapters || [];
     for (let i = 0; i < currentChapterNum; i++) {
@@ -96,12 +121,11 @@ export async function POST(req) {
     }
 
     let chapter_unlocked_till;
-    const chaptersPurchased = subscription_type === "3CHAPTERS" ? 3 : Infinity; // Infinity for FULL
+    const chaptersPurchased = subscription_type === "3CHAPTERS" ? 3 : Infinity;
     if (subscription_type === "FULL") {
-      chapter_unlocked_till = -1; // Unlock all
+      chapter_unlocked_till = -1;
     } else {
-      // Set to current + 2 (3 chapters total), regardless of totalChapters now
-      chapter_unlocked_till = currentChapterNum + chaptersPurchased - 1; // e.g., 0 + 3 - 1 = 2
+      chapter_unlocked_till = currentChapterNum + chaptersPurchased - 1;
     }
 
     const expires_at = subscription_type === "3CHAPTERS"
@@ -113,10 +137,10 @@ export async function POST(req) {
       story_id,
       chapter_unlocked_till,
       transaction_id: signature,
-      payment_amount,
+      payment_amount: amountTransferredSol, // Store actual SOL amount paid
       subscription_type,
       expires_at,
-      chapters_purchased: subscription_type === "3CHAPTERS" ? 3 : null, // Store for future reference
+      chapters_purchased: subscription_type === "3CHAPTERS" ? 3 : null,
     };
 
     const { data: existing } = await supabase
