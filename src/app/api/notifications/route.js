@@ -2,10 +2,10 @@ import { supabase } from "@/services/supabase/supabaseClient";
 
 export async function POST(req) {
   try {
-    // Fetch all novels and their chapter count
+    // Fetch all novels with titles and chapter counts
     const { data: novels, error: novelsError } = await supabase
       .from("novels")
-      .select("id, chaptertitles");
+      .select("id, title, chaptertitles");
 
     if (novelsError) {
       throw new Error("Error fetching novels: " + novelsError.message);
@@ -28,7 +28,7 @@ export async function POST(req) {
     const notifications = [];
 
     for (const novel of novels) {
-      const { id: novelId, chaptertitles } = novel;
+      const { id: novelId, title: novelTitle, chaptertitles } = novel;
       const totalChapters = Object.keys(chaptertitles).length;
 
       // Find users who haven't read the latest chapter
@@ -40,15 +40,21 @@ export async function POST(req) {
         notifications.push({
           user_id,
           novel_id: novelId,
-          message: `A new chapter has been released for a novel you are reading!`,
-          read: false,
+          message: `A new chapter has been released for "${novelTitle}"!`, // More specific message
+          type: "new_chapter", // Explicitly set type
+          novel_title: novelTitle, // Store novel title
+          is_read: false,
+          created_at: new Date().toISOString(), // Ensure timestamp is set
         });
       });
     }
 
     // Bulk insert notifications
     if (notifications.length > 0) {
-      const { error: notificationsError } = await supabase.from("notifications").insert(notifications);
+      const { error: notificationsError } = await supabase
+        .from("notifications")
+        .insert(notifications);
+
       if (notificationsError) {
         throw new Error("Error inserting notifications: " + notificationsError.message);
       }

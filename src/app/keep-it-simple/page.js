@@ -117,10 +117,10 @@ export default function Haven() {
             By leveraging blockchain technology, we aim to create a <span className={styles.highlight}>user-prioritized Read-to-Earn (R2E) model</span> that combines NFTs, beautiful artwork, and immersive storylines with the power of the Solana blockchain.
           </p>
 
-          <h2>Structural Model</h2>
+          {/* <h2>Structural Model</h2>
           <p>
             To build this grand ecosystem, we will offer a total of <span className={styles.highlight}>4 initial Goddess Waifu NFTs</span>, never to be minted again. These early holders will enjoy governance rights and exclusive benefits in the ecosystem.
-          </p>
+          </p> */}
 
           <h2>Waifu Lore</h2>
           <p>

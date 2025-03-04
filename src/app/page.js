@@ -117,7 +117,7 @@ export default function Home() {
     const walletAddress = publicKey.toString();
     let retryCount = 0;
     const maxRetries = 3;
-
+  
     const fetchWithRetry = async () => {
       try {
         const { data: user, error: userError } = await supabase
@@ -125,16 +125,16 @@ export default function Home() {
           .select("id")
           .eq("wallet_address", walletAddress)
           .single();
-
+  
         if (userError || !user) throw new Error("User not found");
-
+  
         const { data, error } = await supabase
           .from("notifications")
-          .select("*")
+          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id") // Ensure all fields are fetched
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
-
+  
         if (error) throw new Error(`Failed to fetch notifications: ${error.message}`);
         setNotifications(data || []);
       } catch (err) {
@@ -148,9 +148,10 @@ export default function Home() {
         setError("Failed to load notifications.");
       }
     };
-
+  
     await fetchWithRetry();
   }, [connected, publicKey]);
+  
 
   const markAsRead = useCallback(async () => {
     if (!connected || !publicKey) return;
@@ -389,38 +390,38 @@ export default function Home() {
                     <span className={styles.notificationBadge}>{notifications.length}</span>
                   )}
                 </button>
-                {notificationsOpen && (
-                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
-                    {notifications.length > 0 ? (
-                      <>
-                        {notifications.map((notif) => (
-                          <div key={notif.id} className={styles.notificationItem}>
-                            {notif.type === "reply" && notif.comment_id ? (
-                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                                📩 Someone replied: "{notif.message}"
-                              </Link>
-                            ) : notif.type === "new_chapter" ? (
-                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                                📖 New chapter: "{notif.novel_title}"
-                              </Link>
-                            ) : notif.type === "reward" ? (
-                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                                🎉 Weekly reward received!
-                              </Link>
-                            ) : (
-                              <span>{notif.message || "New notification"}</span>
-                            )}
-                          </div>
-                        ))}
-                        <button onClick={markAsRead} className={styles.markReadButton}>
-                          Mark All as Read
-                        </button>
-                      </>
-                    ) : (
-                      <div className={styles.noNotifications}>No new notifications</div>
-                    )}
-                  </div>
-                )}
+                  {notificationsOpen && (
+                    <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
+                      {notifications.length > 0 ? (
+                        <>
+                          {notifications.map((notif) => (
+                            <div key={notif.id} className={styles.notificationItem}>
+                              {notif.type === "reply" && notif.comment_id ? (
+                                <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                                  📩 Someone replied: "{notif.message}"
+                                </Link>
+                              ) : notif.type === "new_chapter" ? (
+                                <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                                  📖 {notif.message} {/* Use the full message with title */}
+                                </Link>
+                              ) : notif.type === "reward" ? (
+                                <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                                  🎉 Weekly reward received!
+                                </Link>
+                              ) : (
+                                <span>{notif.message || "New notification"}</span>
+                              )}
+                            </div>
+                          ))}
+                          <button onClick={markAsRead} className={styles.markReadButton}>
+                            Mark All as Read
+                          </button>
+                        </>
+                      ) : (
+                        <div className={styles.noNotifications}>No new notifications</div>
+                      )}
+                    </div>
+                  )}
               </div>
             )}
             <button onClick={toggleTheme} className={styles.themeToggle}>

@@ -9,7 +9,7 @@ import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } f
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
@@ -681,28 +681,39 @@ export default function ChapterPage() {
 
         {isLocked ? (
           <div className={styles.lockedContent}>
-            {advanceInfo?.is_advance ? (
-              <p>{releaseDateMessage }</p>
-            ) : (
-              <p>This chapter is locked.</p>
-            )}
-            <p>Choose a subscription to unlock ( SOL):</p>
-            <button
-              onClick={() => handlePayment("3CHAPTERS")}
-              className={styles.unlockButton}
-              disabled={!canUnlockNextThree || !solPrice}
-              title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
-            >
-              Unlock 3 Chapters ($3 /{threeChaptersSol} SOL)
-            </button>
-            <button
-              onClick={() => handlePayment("FULL")}
-              className={styles.unlockButton}
-              disabled={!solPrice}
-            >
-              Unlock All Chapters ($15/ {fullChaptersSol} SOL)
-            </button>
+          <div className={styles.lockIconWrapper}>
+            <FaLock className={styles.lockIcon} />
           </div>
+          {advanceInfo?.is_advance ? (
+            <p className={styles.message}>{releaseDateMessage }</p>
+          ) : (
+            <p className={styles.message}>
+              <FaLock className={styles.messageIcon} /> This chapter is locked
+            </p>
+          )}
+          <p className={styles.subMessage}>
+            <FaGem className={styles.gemIcon} /> Unlock with a subscription (SOL)
+          </p>
+          <button
+            onClick={() => handlePayment("3CHAPTERS")}
+            className={`${styles.unlockButton} ${styles.threeChapters}`}
+            disabled={!canUnlockNextThree || !solPrice}
+            title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
+          >
+            <FaRocket className={styles.buttonIcon} />
+            <span className={styles.buttonText}>Unlock 3 Chapters</span>
+            <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
+          </button>
+          <button
+            onClick={() => handlePayment("FULL")}
+            className={`${styles.unlockButton} ${styles.fullChapters}`}
+            disabled={!solPrice}
+          >
+            <FaCrown className={styles.buttonIcon} />
+            <span className={styles.buttonText}>Unlock All Chapters</span>
+            <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
+          </button>
+        </div>
         ) : (
           <>
             <div className={styles.chapterContent}>
