@@ -1,0 +1,536 @@
+/* Page */
+.page {
+    min-height: 100vh;
+    background: linear-gradient(145deg, #0d1b2a 0%, #1b263b 100%);
+    color: #ffffff;
+    font-family: 'Roboto', sans-serif;
+    overflow-x: hidden;
+  }
+  
+  /* Loading Animation */
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #0d1b2a;
+  }
+  
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #ff6200;
+    border-top: 5px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Header */
+  .header {
+    background: rgba(13, 27, 42, 0.95);
+    padding: 15px 25px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 15px rgba(255, 98, 0, 0.2);
+    animation: fadeInDown 0.8s ease-out;
+  }
+  
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .logoLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logo {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid #ff6200;
+    transition: transform 0.5s ease, box-shadow 0.3s ease;
+  }
+  
+  .logoLink:hover .logo {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 0 15px rgba(255, 98, 0, 0.5);
+  }
+  
+  .logoText {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ff6200;
+    margin-left: 12px;
+    transition: color 0.3s ease;
+  }
+  
+  .logoLink:hover .logoText {
+    color: #ffffff;
+  }
+  
+  .navLinks {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .navLink {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .navLink:hover {
+    background: rgba(255, 98, 0, 0.2);
+    color: #ff6200;
+    transform: translateY(-2px);
+  }
+  
+  .menuToggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    position: relative;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .menuIcon {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background: #ff6200;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: background 0.3s ease;
+  }
+  
+  .menuIcon::before,
+  .menuIcon::after {
+    content: '';
+    position: absolute;
+    width: 25px;
+    height: 3px;
+    background: #ff6200;
+    transition: transform 0.3s ease;
+  }
+  
+  .menuIcon::before {
+    top: -8px;
+  }
+  
+  .menuIcon::after {
+    bottom: -8px;
+  }
+  
+  .menuIcon.open {
+    background: transparent;
+  }
+  
+  .menuIcon.open::before {
+    transform: translateY(8px) rotate(45deg);
+  }
+  
+  .menuIcon.open::after {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+  
+  /* Main */
+  .main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  
+  /* How to Use Section */
+  .howTo {
+    background: rgba(27, 38, 59, 0.9);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 20px rgba(255, 98, 0, 0.1);
+    animation: fadeInUp 0.8s ease-out;
+  }
+  
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .howToTitle {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ff6200;
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 8px rgba(255, 98, 0, 0.3);
+  }
+  
+  .howToList {
+    list-style: none;
+    padding: 0;
+    counter-reset: step;
+  }
+  
+  .howToList li {
+    position: relative;
+    padding: 15px 0 15px 45px;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #dcdcdc;
+    border-bottom: 1px solid rgba(255, 98, 0, 0.1);
+    animation: slideInLeft 0.5s ease-out forwards;
+  }
+  
+  .howToList li:last-child {
+    border-bottom: none;
+  }
+  
+  .howToList li:nth-child(1) { animation-delay: 0.1s; }
+  .howToList li:nth-child(2) { animation-delay: 0.2s; }
+  .howToList li:nth-child(3) { animation-delay: 0.3s; }
+  .howToList li:nth-child(4) { animation-delay: 0.4s; }
+  .howToList li:nth-child(5) { animation-delay: 0.5s; }
+  
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  .howToList li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    background: #ff6200;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 0.9rem;
+    box-shadow: 0 0 8px rgba(255, 98, 0, 0.3);
+  }
+  
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 50px 0;
+    background: linear-gradient(to bottom, rgba(255, 98, 0, 0.05), transparent);
+  }
+  
+  .heroTitle {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #ff6200;
+    margin-bottom: 15px;
+    text-shadow: 0 3px 10px rgba(255, 98, 0, 0.4);
+    animation: fadeInScale 1s ease-out;
+  }
+  
+  @keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  .heroSubtitle {
+    font-size: 1.2rem;
+    color: #dcdcdc;
+    max-width: 600px;
+    margin: 0 auto;
+    animation: fadeIn 1.2s ease-out 0.2s forwards;
+  }
+  
+  /* Content */
+  .content {
+    padding: 20px 0;
+  }
+  
+  .content h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #ff6200;
+    margin: 35px 0 15px;
+    text-align: center;
+    position: relative;
+    text-shadow: 0 2px 6px rgba(255, 98, 0, 0.3);
+    animation: fadeInUp 0.8s ease-out;
+  }
+  
+  .content h2::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 2px;
+    background: #ff6200;
+    border-radius: 1px;
+    animation: expandLine 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes expandLine {
+    0%, 100% { width: 50px; }
+    50% { width: 80px; }
+  }
+  
+  .content p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #dcdcdc;
+    margin-bottom: 20px;
+    text-align: justify;
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+  
+  .content p:nth-child(odd) {
+    animation-delay: 0.1s;
+  }
+  
+  .content p:nth-child(even) {
+    animation-delay: 0.3s;
+  }
+  
+  .highlight {
+    color: #ff6200;
+    font-weight: 500;
+    padding: 2px 6px;
+    background: rgba(255, 98, 0, 0.1);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+  }
+  
+  .highlight:hover {
+    background: rgba(255, 98, 0, 0.2);
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 25px 0;
+    text-align: center;
+    background: rgba(13, 27, 42, 0.95);
+    border-top: 1px solid rgba(255, 98, 0, 0.2);
+  }
+  
+  .footer p {
+    font-size: 0.9rem;
+    color: #dcdcdc;
+    margin: 0;
+    animation: fadeInUp 1s ease-out;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .header {
+      padding: 10px 15px;
+    }
+  
+    .nav {
+      flex-wrap: wrap;
+      position: relative;
+    }
+  
+    .logo {
+      width: 40px;
+      height: 40px;
+    }
+  
+    .logoText {
+      font-size: 1.4rem;
+    }
+  
+    .navLinks {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      background: rgba(13, 27, 42, 0.98);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      box-shadow: 0 4px 15px rgba(255, 98, 0, 0.2);
+      z-index: 999;
+    }
+  
+    .navLinks.active {
+      display: flex;
+      animation: slideDown 0.3s ease-out;
+    }
+  
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  
+    .navLink {
+      font-size: 1.1rem;
+      padding: 12px 20px;
+      width: 100%;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 98, 0, 0.1);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+  
+    .navLink:hover {
+      background: rgba(255, 98, 0, 0.3);
+      color: #ffffff;
+      transform: none; /* Disable transform on mobile for smoother interaction */
+    }
+  
+    .navLink:last-child {
+      border-bottom: none;
+    }
+  
+    .menuToggle {
+      display: block;
+    }
+  
+    .main {
+      padding: 20px 10px;
+    }
+  
+    .howTo {
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+  
+    .howToTitle {
+      font-size: 1.8rem;
+    }
+  
+    .howToList li {
+      font-size: 0.95rem;
+      padding: 12px 0 12px 40px;
+    }
+  
+    .howToList li::before {
+      width: 25px;
+      height: 25px;
+      font-size: 0.85rem;
+    }
+  
+    .hero {
+      padding: 30px 0;
+    }
+  
+    .heroTitle {
+      font-size: 2.2rem;
+    }
+  
+    .heroSubtitle {
+      font-size: 1.1rem;
+      max-width: 90%;
+    }
+  
+    .content h2 {
+      font-size: 1.6rem;
+      margin: 30px 0 12px;
+    }
+  
+    .content p {
+      font-size: 0.95rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .logo {
+      width: 35px;
+      height: 35px;
+    }
+  
+    .logoText {
+      font-size: 1.2rem;
+    }
+  
+    .menuToggle {
+      width: 35px;
+      height: 35px;
+    }
+  
+    .menuIcon, .menuIcon::before, .menuIcon::after {
+      width: 20px;
+    }
+  
+    .menuIcon::before {
+      top: -6px;
+    }
+  
+    .menuIcon::after {
+      bottom: -6px;
+    }
+  
+    .menuIcon.open::before {
+      transform: translateY(6px) rotate(45deg);
+    }
+  
+    .menuIcon.open::after {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+  
+    .howToTitle {
+      font-size: 1.6rem;
+    }
+  
+    .howToList li {
+      font-size: 0.9rem;
+      padding: 10px 0 10px 35px;
+    }
+  
+    .howToList li::before {
+      width: 22px;
+      height: 22px;
+      font-size: 0.8rem;
+    }
+  
+    .heroTitle {
+      font-size: 1.8rem;
+    }
+  
+    .heroSubtitle {
+      font-size: 1rem;
+    }
+  
+    .content h2 {
+      font-size: 1.4rem;
+    }
+  
+    .content p {
+      font-size: 0.9rem;
+    }
+  
+    .footer p {
+      font-size: 0.85rem;
+    }
+  }
