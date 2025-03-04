@@ -19,6 +19,7 @@ import {
   FaBars,
   FaTimes,
   FaGamepad,
+  FaBullhorn,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -54,6 +55,7 @@ export default function Home() {
   const [isWriter, setIsWriter] = useState(false);
   const [novels, setNovels] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,22 +63,53 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+
   const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
+    setMenuOpen((prev) => {
+      console.log("Toggling menu, new state:", !prev);
+      return !prev;
+    });
     setNotificationsOpen(false);
     setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
   };
-  const toggleNotifications = () => {
-    setNotificationsOpen((prev) => !prev);
-    setMenuOpen(false);
+
+  const toggleNotifications = (e) => {
+    e.stopPropagation();
+    // Debounce to prevent rapid toggles
+    if (toggleNotifications.lastToggle && Date.now() - toggleNotifications.lastToggle < 100) return;
+    toggleNotifications.lastToggle = Date.now();
+
+    setNotificationsOpen((prev) => {
+      console.log("Toggling notifications, new state:", !prev);
+      return !prev;
+    });
     setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
   };
+  toggleNotifications.lastToggle = 0; // Initialize outside function
+
   const toggleConnectPopup = () => {
-    setShowConnectPopup((prev) => !prev);
+    setShowConnectPopup((prev) => {
+      console.log("Toggling connect popup, new state:", !prev);
+      return !prev;
+    });
     setMenuOpen(false);
     setNotificationsOpen(false);
+    setAnnouncementsOpen(false);
+  };
+
+  const toggleAnnouncements = () => {
+    setAnnouncementsOpen((prev) => {
+      console.log("Toggling announcements, new state:", !prev);
+      return !prev;
+    });
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
   };
 
   const fetchNotifications = useCallback(async () => {
@@ -176,10 +209,30 @@ export default function Home() {
     } catch (err) {
       console.error(err.message);
       setError("Failed to load novels.");
+    }
+  }, []);
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/announcements${publicKey ? `?publicKey=${publicKey.toString()}` : ''}`);
+      if (!response.ok) throw new Error("Failed to fetch announcements");
+      const { data } = await response.json();
+
+      const recentAnnouncements = data.filter(announcement => {
+        const createdAt = new Date(announcement.created_at);
+        const now = new Date();
+        const diffInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+        return diffInDays <= 7;
+      });
+
+      setAnnouncements(recentAnnouncements.slice(0, 5));
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+      setError("Failed to load announcements.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [publicKey]);
 
   const handleCreatorAccess = useCallback(async () => {
     if (!connected || !publicKey) {
@@ -213,15 +266,16 @@ export default function Home() {
     setMenuOpen(false);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
     router.push(path);
   };
 
   const handleNovelNavigation = (novelId) => {
-    // Allow navigation to novel page without wallet connection
     setPageLoading(true);
     setMenuOpen(false);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
     router.push(`/novel/${novelId}`);
   };
 
@@ -230,9 +284,27 @@ export default function Home() {
     fetchUserDetails();
     fetchNovels();
     fetchNotifications();
-  }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications]);
+    fetchAnnouncements();
+  }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications, fetchAnnouncements]);
 
-  const carouselSettings = {
+  // Add outside click handler
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      const notificationButton = document.querySelector(`.${styles.notificationButton}`);
+      const notificationDropdown = document.querySelector(`.${styles.notificationDropdown}`);
+      if (
+        notificationsOpen &&
+        !notificationButton?.contains(e.target) &&
+        !notificationDropdown?.contains(e.target)
+      ) {
+        setNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, [notificationsOpen]);
+
+  const novelCarouselSettings = {
     dots: true,
     infinite: true,
     speed: 700,
@@ -250,6 +322,25 @@ export default function Home() {
       { breakpoint: 768, settings: { slidesToShow: 2, centerPadding: "20px" } },
       { breakpoint: 480, settings: { slidesToShow: 1, centerPadding: "10px" } },
     ],
+  };
+
+  const announcementCarouselSettings = {
+    dots: true,
+    infinite: true,
+    speed: 600,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 3500,
+    arrows: true,
+    prevArrow: <PrevArrow />,
+    nextArrow: <NextArrow />,
+    fade: true,
+    pauseOnHover: true,
+    adaptiveHeight: true,
+    customPaging: (i) => (
+      <button className={styles.customDot}>{i + 1}</button>
+    ),
   };
 
   if (loading || pageLoading) return <LoadingPage />;
@@ -286,14 +377,20 @@ export default function Home() {
             </button>
             {connected && (
               <div className={styles.notificationWrapper}>
-                <button onClick={toggleNotifications} className={styles.notificationButton}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleNotifications(e);
+                  }}
+                  className={styles.notificationButton}
+                >
                   <FaBell className={styles.bellIcon} />
                   {notifications.length > 0 && (
                     <span className={styles.notificationBadge}>{notifications.length}</span>
                   )}
                 </button>
                 {notificationsOpen && (
-                  <div className={styles.notificationDropdown}>
+                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
                     {notifications.length > 0 ? (
                       <>
                         {notifications.map((notif) => (
@@ -336,6 +433,54 @@ export default function Home() {
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>
+          <div className={styles.announcementToggleWrapper}>
+            <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
+              <FaBullhorn className={styles.announcementIcon} />
+              {announcements.length > 0 && (
+                <span className={styles.announcementBadge}>{announcements.length}</span>
+              )}
+            </button>
+            {announcementsOpen && (
+              <div className={styles.announcementDropdown}>
+                {error && <div className={styles.errorAlert}>{error}</div>}
+                {announcements.length > 0 ? (
+                  <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
+                    {announcements.map((announcement) => (
+                      <div key={announcement.id} className={styles.announcementSlide}>
+                        <div className={styles.announcementCard}>
+                          <div className={styles.announcementGlow}></div>
+                          <h3 className={styles.announcementTitle}>{announcement.title}</h3>
+                          <p className={styles.announcementMessage}>{announcement.message}</p>
+                          <div className={styles.announcementDetails}>
+                            <span className={styles.announcementAuthor}>
+                              {announcement.users.wallet_address.slice(0, 6)}...
+                            </span>
+                            <Link
+                              href={`/novel/${announcement.novels.id}`}
+                              onClick={() => handleNovelNavigation(announcement.novels.id)}
+                              className={styles.announcementLink}
+                            >
+                              {announcement.novels.title}
+                            </Link>
+                            <span className={styles.announcementDate}>
+                              {new Date(announcement.created_at).toLocaleDateString()}
+                            </span>
+                            {announcement.release_date && (
+                              <span className={styles.announcementRelease}>
+                                {new Date(announcement.release_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </Slider>
+                ) : (
+                  <p className={styles.noAnnouncements}>No recent announcements.</p>
+                )}
+              </div>
+            )}
+          </div>
           <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
           <p className={styles.heroSubtitle}>Discover Novels, Earn Tokens, Unleash Your Imagination</p>
           <button onClick={() => handleNavigation("/novels")} className={styles.heroButton}>
@@ -347,7 +492,7 @@ export default function Home() {
       <section className={styles.novelsSection}>
         <h2 className={styles.sectionTitle}>Featured</h2>
         {error && <div className={styles.errorAlert}>{error}</div>}
-        <Slider {...carouselSettings} className={styles.carousel}>
+        <Slider {...novelCarouselSettings} className={styles.carousel}>
           {novels.map((novel) => (
             <div key={novel.id} className={styles.carouselItem}>
               <div className={styles.novelCard}>

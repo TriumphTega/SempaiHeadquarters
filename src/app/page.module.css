@@ -236,48 +236,62 @@
   background: #e55a00;
 }
 
+/* Notification Wrapper */
 .notificationWrapper {
   position: relative;
   display: flex;
   align-items: center;
+  z-index: 1001; /* Above menu overlay */
 }
 
+/* Notification Button (Bell Icon) */
 .notificationButton {
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background 0.3s ease;
+  z-index: 1002; /* Above dropdown */
+  border-radius: 50%;
 }
 
-.bellIcon {
-  font-size: 1.2rem;
-  transition: transform 0.3s ease;
-}
-
-.dark .bellIcon {
+.dark .notificationButton {
   color: #ff6200;
 }
 
-.light .bellIcon {
+.light .notificationButton {
   color: #e55a00;
 }
 
+.notificationButton:hover {
+  transform: scale(1.15);
+}
+
+.bellIcon {
+  font-size: 1.3rem;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
 .notificationButton:hover .bellIcon {
-  transform: scale(1.2) rotate(15deg);
+  transform: rotate(15deg);
+  color: #ff6200;
 }
 
 .notificationBadge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: 2px;
+  right: 2px;
   background: #dc3545;
   color: #fff;
   border-radius: 50%;
-  padding: 2px 5px;
-  font-size: 0.7rem;
-  animation: bouncePulse 1.5s infinite;
+  padding: 3px 6px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: bouncePulse 1.5s infinite ease-in-out;
 }
 
 @keyframes bouncePulse {
@@ -286,75 +300,238 @@
   60% { transform: scale(1.1); }
 }
 
+/* Notification Dropdown */
 .notificationDropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 12px);
   right: 0;
-  width: 300px;
-  max-height: 400px;
+  width: 320px;
+  max-height: 420px;
   overflow-y: auto;
-  background: rgba(20, 20, 20, 0.95);
-  border: 1px solid rgba(243, 99, 22, 0.8);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.3);
+  background: rgba(20, 20, 20, 0.97);
+  border: 2px solid rgba(243, 99, 22, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(243, 99, 22, 0.4), inset 0 0 10px rgba(243, 99, 22, 0.1);
   padding: 15px;
   z-index: 1000;
-  animation: slideDownMenu 0.3s ease-out;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease-out, transform 0.2s ease-out;
+  transform: translateY(-10px);
 }
 
-.light .notificationDropdown {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+.notificationDropdown.open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  animation: dropdownFadeIn 0.3s ease-out;
 }
 
-@keyframes slideDownMenu {
+@keyframes dropdownFadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+.light .notificationDropdown {
+  background: rgba(245, 245, 245, 0.97);
+  border: 2px solid rgba(243, 99, 22, 0.7);
+  box-shadow: 0 6px 20px rgba(243, 99, 22, 0.3), inset 0 0 10px rgba(243, 99, 22, 0.05);
+}
+
+/* Notification Item */
 .notificationItem {
-  padding: 10px;
-  border-bottom: 1px solid rgba(243, 99, 22, 0.2);
+  padding: 10px 12px;
+  margin: 5px 0;
+  background: rgba(243, 99, 22, 0.05);
+  border-radius: 8px;
   font-size: 0.9rem;
-  transition: background 0.3s ease;
+  line-height: 1.4;
+  transition: background 0.3s ease, transform 0.2s ease;
+  border-left: 4px solid rgba(243, 99, 22, 0.8);
 }
 
 .dark .notificationItem {
-  color: #fff;
+  color: #e0e0e0;
 }
 
 .light .notificationItem {
-  color: #333;
+  color: #444;
 }
 
 .notificationItem:hover {
-  background: rgba(243, 99, 22, 0.2);
+  background: rgba(243, 99, 22, 0.15);
+  transform: translateX(5px);
 }
 
 .notificationItem a {
   color: #ff6200;
   text-decoration: none;
-  display: block;
+  font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .notificationItem a:hover {
+  color: #fff;
   text-decoration: underline;
 }
 
+/* No Notifications Message */
 .noNotifications {
-  padding: 10px;
-  font-size: 0.9rem;
+  padding: 15px;
   text-align: center;
-  opacity: 0.8;
-}
-
-.dark .noNotifications {
-  color: #fff;
+  font-size: 0.95rem;
+  color: #aaa;
+  font-style: italic;
+  border-radius: 8px;
+  background: rgba(243, 99, 22, 0.03);
+  animation: fadeIn 0.5s ease-out;
 }
 
 .light .noNotifications {
-  color: #555;
+  color: #666;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mark All as Read Button */
+.markReadButton {
+  background: rgba(243, 99, 22, 0.9);
+  color: #fff;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  width: 100%;
+  margin-top: 12px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.markReadButton:hover {
+  background: #ff6200;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.5);
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .notificationWrapper {
+    margin: 10px 0;
+    width: 100%;
+  }
+
+  .notificationButton {
+    padding: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bellIcon {
+    font-size: 1.2rem;
+  }
+
+  .notificationBadge {
+    top: 1px;
+    right: calc(50% - 15px);
+    padding: 2px 5px;
+    font-size: 0.7rem;
+  }
+
+  .notificationDropdown {
+    width: calc(100vw - 30px);
+    max-width: 300px;
+    max-height: 360px;
+    top: calc(100% + 8px);
+    right: 10px;
+    left: auto;
+    z-index: 1005; /* Above menu overlay */
+    background: rgba(20, 20, 20, 0.98);
+    border: 2px solid rgba(243, 99, 22, 1);
+    border-radius: 10px;
+    padding: 12px;
+    display: none;
+    transform: translateY(-10px);
+  }
+
+  .notificationDropdown.open {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .notificationItem {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .markReadButton {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .notificationButton {
+    padding: 6px;
+  }
+
+  .bellIcon {
+    font-size: 1.1rem;
+  }
+
+  .notificationBadge {
+    top: 0;
+    right: calc(50% - 14px);
+    padding: 2px 4px;
+    font-size: 0.65rem;
+  }
+
+  .notificationDropdown {
+    width: calc(100vw - 20px);
+    max-width: 280px;
+    max-height: 340px;
+    right: 8px;
+    padding: 10px;
+  }
+
+  .notificationItem {
+    padding: 7px 8px;
+    font-size: 0.8rem;
+  }
+
+  .noNotifications {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .markReadButton {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Scrollbar Styling for Dropdown */
+.notificationDropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.notificationDropdown::-webkit-scrollbar-track {
+  background: rgba(243, 99, 22, 0.1);
+  border-radius: 4px;
+}
+
+.notificationDropdown::-webkit-scrollbar-thumb {
+  background: rgba(243, 99, 22, 0.7);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.notificationDropdown::-webkit-scrollbar-thumb:hover {
+  background: #ff6200;
 }
 
 .markReadButton {
@@ -1010,4 +1187,377 @@
 .gameContainer {
   background: inherit;
   color: inherit;
+}
+/* Hero Section Adjustments */
+.heroContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 15px;
+}
+
+/* Announcement Toggle */
+.announcementToggleWrapper {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1001;
+}
+
+.announcementToggle {
+  background: rgba(243, 99, 22, 0.8);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.light .announcementToggle {
+  background: rgba(243, 99, 22, 0.6);
+}
+
+.announcementToggle:hover {
+  background: #ff6200;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.5);
+}
+
+.announcementIcon {
+  font-size: 1.2rem;
+  color: #fff;
+  transition: transform 0.3s ease;
+}
+
+.announcementToggle:hover .announcementIcon {
+  transform: rotate(20deg);
+}
+
+.announcementBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: #fff;
+  border-radius: 50%;
+  padding: 2px 5px;
+  font-size: 0.7rem;
+  animation: bouncePulse 1.5s infinite;
+}
+
+@keyframes bouncePulse {
+  0%, 20%, 50%, 80%, 100% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  60% { transform: scale(1.1); }
+}
+
+/* Announcement Dropdown */
+.announcementDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 320px;
+  max-height: 360px;
+  background: rgba(20, 20, 20, 0.97);
+  border: 2px solid rgba(243, 99, 22, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(243, 99, 22, 0.4);
+  padding: 10px;
+  z-index: 1000;
+  animation: slideDownMenu 0.3s ease-out;
+  overflow-y: auto;
+}
+
+.light .announcementDropdown {
+  background: rgba(245, 245, 245, 0.97);
+  border: 2px solid rgba(243, 99, 22, 0.6);
+  box-shadow: 0 6px 20px rgba(243, 99, 22, 0.3);
+}
+
+.announcementCarousel {
+  padding: 0;
+}
+
+.announcementSlide {
+  padding: 0;
+  outline: none;
+  transition: opacity 0.3s ease;
+}
+
+.announcementCard {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(243, 99, 22, 0.05));
+  border: 1px solid rgba(243, 99, 22, 0.6);
+  border-radius: 10px;
+  padding: 15px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.announcementCard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 15px rgba(243, 99, 22, 0.6);
+}
+
+.announcementGlow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(243, 99, 22, 0.25) 10%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  animation: glowRotate 10s infinite linear;
+}
+
+.announcementCard:hover .announcementGlow {
+  opacity: 0.35;
+}
+
+@keyframes glowRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.announcementTitle {
+  font-size: 1.2rem;
+  color: #ff6200;
+  font-weight: bold;
+  text-shadow: 0 1px 4px rgba(243, 99, 22, 0.5);
+  margin-bottom: 10px;
+}
+
+.announcementMessage {
+  font-size: 0.9rem;
+  flex-grow: 1;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+
+.dark .announcementMessage {
+  color: #e0e0e0;
+}
+
+.light .announcementMessage {
+  color: #444;
+}
+
+.announcementDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #888;
+  position: relative;
+  z-index: 1;
+}
+
+.announcementAuthor {
+  background: rgba(243, 99, 22, 0.2);
+  padding: 3px 8px;
+  border-radius: 12px;
+  transition: background 0.3s ease;
+}
+
+.announcementCard:hover .announcementAuthor {
+  background: rgba(243, 99, 22, 0.35);
+}
+
+.announcementLink {
+  color: #ff6200;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(243, 99, 22, 0.2);
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.announcementLink:hover {
+  background: #ff6200;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.announcementDate, .announcementRelease {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px 8px;
+  border-radius: 12px;
+  transition: background 0.3s ease;
+}
+
+.light .announcementDate, .light .announcementRelease {
+  background: rgba(200, 200, 200, 0.35);
+}
+
+.announcementCard:hover .announcementDate,
+.announcementCard:hover .announcementRelease {
+  background: rgba(243, 99, 22, 0.4);
+}
+
+.noAnnouncements {
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 15px;
+  opacity: 0.8;
+  color: #ccc;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.light .noAnnouncements {
+  color: #666;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Custom Carousel Dots */
+.customDot {
+  width: 8px;
+  height: 8px;
+  background: rgba(243, 99, 22, 0.5);
+  border-radius: 50%;
+  border: none;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.slick-dots li.slick-active .customDot {
+  background: #ff6200;
+  transform: scale(1.3);
+}
+
+.dark .slick-dots li button:before,
+.light .slick-dots li button:before {
+  display: none; /* Hide default dots */
+}
+
+.slick-dots {
+  bottom: -25px;
+}
+
+.slick-dots li {
+  margin: 0 4px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .announcementToggleWrapper {
+    top: 10px;
+    left: 10px;
+  }
+
+  .announcementToggle {
+    padding: 6px 10px;
+  }
+
+  .announcementIcon {
+    font-size: 1rem;
+  }
+
+  .announcementBadge {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+  .announcementDropdown {
+    width: calc(100vw - 20px);
+    max-width: 300px;
+    max-height: 340px;
+    left: 10px;
+    top: calc(100% + 5px);
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .announcementCard {
+    min-height: 160px;
+    padding: 12px;
+  }
+
+  .announcementTitle {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .announcementMessage {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .announcementDetails {
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+
+  .announcementAuthor, .announcementLink, .announcementDate, .announcementRelease {
+    padding: 2px 6px;
+  }
+
+  .slick-dots {
+    bottom: -20px;
+  }
+
+  .customDot {
+    width: 7px;
+    height: 7px;
+  }
+}
+
+@media (max-width: 480px) {
+  .announcementToggle {
+    padding: 5px 8px;
+  }
+
+  .announcementIcon {
+    font-size: 0.9rem;
+  }
+
+  .announcementBadge {
+    padding: 1px 3px;
+    font-size: 0.55rem;
+  }
+
+  .announcementDropdown {
+    width: calc(100vw - 16px);
+    max-width: 280px;
+    max-height: 320px;
+    left: 8px;
+  }
+
+  .announcementCard {
+    min-height: 150px;
+    padding: 10px;
+  }
+
+  .announcementTitle {
+    font-size: 1rem;
+  }
+
+  .announcementMessage {
+    font-size: 0.8rem;
+  }
+
+  .announcementDetails {
+    font-size: 0.7rem;
+    gap: 5px;
+  }
+
+  .customDot {
+    width: 6px;
+    height: 6px;
+  }
 }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import {
   FaHome,
   FaBars,
@@ -19,6 +21,7 @@ import {
   FaSun,
   FaMoon,
   FaImage,
+  FaBullhorn,
 } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
@@ -32,7 +35,7 @@ export default function CreatorsDashboard() {
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [newChapterContent, setNewChapterContent] = useState("");
   const [newChapterIsAdvance, setNewChapterIsAdvance] = useState(false);
-  const [newChapterReleaseDate, setNewChapterReleaseDate] = useState("");
+  const [newChapterReleaseDate, setNewChapterReleaseDate] = useState(null); // Changed to null for DatePicker
   const [novelsList, setNovelsList] = useState([]);
   const [selectedNovel, setSelectedNovel] = useState(null);
   const [chapterTitles, setChapterTitles] = useState([]);
@@ -46,6 +49,9 @@ export default function CreatorsDashboard() {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null); // Changed to null for DatePicker
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -166,7 +172,7 @@ export default function CreatorsDashboard() {
         updated.push({
           index,
           is_advance: newChapterIsAdvance,
-          free_release_date: newChapterIsAdvance ? newChapterReleaseDate || null : null,
+          free_release_date: newChapterIsAdvance ? (newChapterReleaseDate ? newChapterReleaseDate.toISOString() : null) : null,
         });
         return updated;
       });
@@ -179,7 +185,7 @@ export default function CreatorsDashboard() {
         {
           index,
           is_advance: newChapterIsAdvance,
-          free_release_date: newChapterIsAdvance ? newChapterReleaseDate || null : null,
+          free_release_date: newChapterIsAdvance ? (newChapterReleaseDate ? newChapterReleaseDate.toISOString() : null) : null,
         },
       ]);
     }
@@ -187,15 +193,16 @@ export default function CreatorsDashboard() {
     setNewChapterTitle("");
     setNewChapterContent("");
     setNewChapterIsAdvance(false);
-    setNewChapterReleaseDate("");
+    setNewChapterReleaseDate(null);
   };
 
-  const handleEditChapter = (index) => {
+  const handleEditChapter = (e, index) => {
+    e.preventDefault(); // Prevent form submission
     setNewChapterTitle(chapterTitles[index]);
     setNewChapterContent(chapterContents[index]);
     const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false, free_release_date: null };
     setNewChapterIsAdvance(advanceInfo.is_advance);
-    setNewChapterReleaseDate(advanceInfo.free_release_date || "");
+    setNewChapterReleaseDate(advanceInfo.free_release_date ? new Date(advanceInfo.free_release_date) : null);
     setEditChapterIndex(index);
     if (chapterTitleRef.current) {
       chapterTitleRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -284,6 +291,69 @@ export default function CreatorsDashboard() {
     }
   };
 
+  const handleAnnouncementSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedNovel) {
+      alert("Please select a novel to announce.");
+      return;
+    }
+    if (!announcementTitle.trim() || !announcementMessage.trim()) {
+      alert("Please provide both an announcement title and message.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: readers, error: readersError } = await supabase
+        .from("novel_interactions")
+        .select("user_id")
+        .eq("novel_id", selectedNovel.id);
+
+      if (readersError) throw new Error(readersError.message);
+
+      const announcementData = {
+        writer_id: currentUserId,
+        novel_id: selectedNovel.id,
+        title: announcementTitle,
+        message: announcementMessage,
+        release_date: announcementReleaseDate ? announcementReleaseDate.toISOString() : null,
+      };
+
+      const { error: announcementError } = await supabase
+        .from("writer_announcements")
+        .insert([announcementData]);
+
+      if (announcementError) throw new Error(announcementError.message);
+
+      if (readers.length > 0) {
+        const notifications = readers.map((reader) => ({
+          user_id: reader.user_id,
+          novel_id: selectedNovel.id,
+          type: "announcement",
+          message: `${announcementTitle}: ${announcementMessage}`,
+          novel_title: selectedNovel.title,
+        }));
+
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert(notifications);
+
+        if (notifError) throw new Error(notifError.message);
+      }
+
+      alert("Announcement sent successfully to readers!");
+      setAnnouncementTitle("");
+      setAnnouncementMessage("");
+      setAnnouncementReleaseDate(null);
+    } catch (err) {
+      console.error("Error sending announcement:", err.message);
+      alert("Failed to send announcement. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setNovelTitle("");
     setNovelImage("");
@@ -291,7 +361,7 @@ export default function CreatorsDashboard() {
     setNewChapterTitle("");
     setNewChapterContent("");
     setNewChapterIsAdvance(false);
-    setNewChapterReleaseDate("");
+    setNewChapterReleaseDate(null);
     setChapterTitles([]);
     setChapterContents([]);
     setAdvanceChapters([]);
@@ -432,12 +502,14 @@ export default function CreatorsDashboard() {
                       Mark as Advance Chapter
                     </label>
                     {newChapterIsAdvance && (
-                      <input
-                        type="datetime-local"
-                        value={newChapterReleaseDate}
-                        onChange={(e) => setNewChapterReleaseDate(new Date(e.target.value).toISOString())}
+                      <DatePicker
+                        selected={newChapterReleaseDate}
+                        onChange={(date) => setNewChapterReleaseDate(date)}
+                        showTimeSelect
+                        dateFormat="Pp"
+                        minDate={new Date()}
+                        placeholderText="Select release date"
                         className={styles.input}
-                        min={new Date().toISOString().slice(0, 16)}
                       />
                     )}
                   </div>
@@ -460,7 +532,11 @@ export default function CreatorsDashboard() {
                             )}
                           </span>
                           <div className={styles.chapterActions}>
-                            <button onClick={() => handleEditChapter(index)} className={styles.editButton}>
+                            <button
+                              type="button" // Explicitly set to prevent form submission
+                              onClick={(e) => handleEditChapter(e, index)}
+                              className={styles.editButton}
+                            >
                               <FaEdit />
                             </button>
                             <button onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}>
@@ -477,6 +553,54 @@ export default function CreatorsDashboard() {
                   <FaUpload /> {selectedNovel ? "Update" : "Publish"}
                 </button>
               </form>
+
+              {/* Announcement Section */}
+              {selectedNovel && (
+                <div className={styles.announcementSection}>
+                  <h3 className={styles.sectionTitle}>
+                    <FaBullhorn /> Announce to Readers
+                  </h3>
+                  <form onSubmit={handleAnnouncementSubmit} className={styles.announcementForm}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Announcement Title</label>
+                      <input
+                        type="text"
+                        value={announcementTitle}
+                        onChange={(e) => setAnnouncementTitle(e.target.value)}
+                        placeholder="e.g., New Chapter Coming Soon!"
+                        className={styles.input}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Message</label>
+                      <textarea
+                        value={announcementMessage}
+                        onChange={(e) => setAnnouncementMessage(e.target.value)}
+                        placeholder="Write your announcement here"
+                        className={styles.textarea}
+                        rows="3"
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.label}>Release Date (Optional)</label>
+                      <DatePicker
+                        selected={announcementReleaseDate}
+                        onChange={(date) => setAnnouncementReleaseDate(date)}
+                        showTimeSelect
+                        dateFormat="Pp"
+                        minDate={new Date()}
+                        placeholderText="Select release date"
+                        className={styles.input}
+                      />
+                    </div>
+                    <button type="submit" className={styles.announcementButton}>
+                      <FaBullhorn /> Send Announcement
+                    </button>
+                  </form>
+                </div>
+              )}
             </section>
 
             <section className={styles.novelsSection}>

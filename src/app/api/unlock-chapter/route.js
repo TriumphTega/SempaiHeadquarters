@@ -1,8 +1,9 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { TREASURY_PUBLIC_KEY, DEVNET_RPC_URL } from "@/constants";
+import { RPC_URL } from "@/constants";
 
-const connection = new Connection(DEVNET_RPC_URL, "confirmed");
+const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
+const connection = new Connection(RPC_URL, "confirmed");
 
 // Fetch SOL price in USD from CoinGecko
 const fetchSolPrice = async () => {
@@ -66,7 +67,7 @@ export async function POST(req) {
       (key) => key.toBase58() === userPublicKey
     );
     const receiverIndex = tx.transaction.message.accountKeys.findIndex(
-      (key) => key.toBase58() === TREASURY_PUBLIC_KEY
+      (key) => key.toBase58() === TARGET_WALLET
     );
 
     if (senderIndex === -1 || receiverIndex === -1) {
@@ -86,7 +87,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Incorrect payment amount" }), { status: 400 });
     }
 
-    if (tx.transaction.message.accountKeys[receiverIndex].toBase58() !== TREASURY_PUBLIC_KEY) {
+    if (tx.transaction.message.accountKeys[receiverIndex].toBase58() !== TARGET_WALLET) {
       console.log("Invalid recipient:", tx.transaction.message.accountKeys[receiverIndex].toBase58());
       return new Response(JSON.stringify({ error: "Invalid recipient" }), { status: 400 });
     }

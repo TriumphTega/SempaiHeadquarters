@@ -892,3 +892,53 @@
     height: 200px;
   }
 }
+.announcementSection {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.announcementForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.announcementButton {
+  background: #00d4ff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.3s;
+}
+
+.announcementButton:hover {
+  background: #00b0d8;
+}
+/* Adjust DatePicker to match your input style */
+.react-datepicker-wrapper {
+  display: block;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  color: #333;
+  font-size: 1rem;
+}
+
+.darkMode .react-datepicker__input-container input {
+  background: #333;
+  color: #fff;
+  border-color: #555;
+}
