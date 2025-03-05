@@ -390,9 +390,19 @@ enum GeneratedPurpose {
   IMPLICIT_KEY_FIELD
   IMPLICIT_REF_FIELD
 
+  # Generated static fields extended to table types.
+  METADATA_FIELD
+
   # Relational non-column fields extended to table types.
   QUERY_MULTIPLE_ONE_TO_MANY
   QUERY_MULTIPLE_MANY_TO_MANY
+
+  # Generated fields for aggregates
+  QUERY_COUNT
+  QUERY_SUM
+  QUERY_AVG
+  QUERY_MIN
+  QUERY_MAX
 
   # Top-level Query fields.
   QUERY_SINGLE
@@ -1053,7 +1063,7 @@ type OneTable @table {
 ```
 Data Connect generates the necessary foreign key constraint.
 
-```graphql
+```sql
 CREATE TABLE "public"."many_table" (
   "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
   "ref_field_id" uuid NOT NULL,
