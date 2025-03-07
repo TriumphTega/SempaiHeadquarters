@@ -20,6 +20,7 @@ import {
   FaTimes,
   FaGamepad,
   FaBullhorn,
+  FaFeatherAlt,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -29,7 +30,6 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import styles from "./page.module.css";
 
-// Custom arrow components with props forwarding
 const PrevArrow = (props) => {
   const { className, style, onClick } = props;
   return (
@@ -53,6 +53,7 @@ export default function Home() {
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
+  const [userId, setUserId] = useState(null);
   const [novels, setNovels] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -79,7 +80,6 @@ export default function Home() {
 
   const toggleNotifications = (e) => {
     e.stopPropagation();
-    // Debounce to prevent rapid toggles
     if (toggleNotifications.lastToggle && Date.now() - toggleNotifications.lastToggle < 100) return;
     toggleNotifications.lastToggle = Date.now();
 
@@ -90,7 +90,7 @@ export default function Home() {
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
   };
-  toggleNotifications.lastToggle = 0; // Initialize outside function
+  toggleNotifications.lastToggle = 0;
 
   const toggleConnectPopup = () => {
     setShowConnectPopup((prev) => {
@@ -117,7 +117,7 @@ export default function Home() {
     const walletAddress = publicKey.toString();
     let retryCount = 0;
     const maxRetries = 3;
-  
+
     const fetchWithRetry = async () => {
       try {
         const { data: user, error: userError } = await supabase
@@ -125,16 +125,16 @@ export default function Home() {
           .select("id")
           .eq("wallet_address", walletAddress)
           .single();
-  
+
         if (userError || !user) throw new Error("User not found");
-  
+
         const { data, error } = await supabase
           .from("notifications")
-          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id") // Ensure all fields are fetched
+          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id")
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
-  
+
         if (error) throw new Error(`Failed to fetch notifications: ${error.message}`);
         setNotifications(data || []);
       } catch (err) {
@@ -148,10 +148,9 @@ export default function Home() {
         setError("Failed to load notifications.");
       }
     };
-  
+
     await fetchWithRetry();
   }, [connected, publicKey]);
-  
 
   const markAsRead = useCallback(async () => {
     if (!connected || !publicKey) return;
@@ -185,12 +184,13 @@ export default function Home() {
       const walletAddress = publicKey.toString();
       const { data: user, error } = await supabase
         .from("users")
-        .select("isWriter")
+        .select("id, isWriter")
         .eq("wallet_address", walletAddress)
         .single();
 
       if (error) throw new Error("Failed to fetch user details");
       setIsWriter(user?.isWriter || false);
+      setUserId(user?.id);
     } catch (err) {
       console.error(err.message);
       setError("Failed to verify writer status.");
@@ -204,11 +204,45 @@ export default function Home() {
 
   const fetchNovels = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from("novels").select("*");
-      if (error) throw new Error("Failed to fetch novels");
-      setNovels(data || []);
+      const { data: novelsData, error: novelsError } = await supabase
+        .from("novels")
+        .select("id, title, image, summary, user_id");
+
+      if (novelsError) throw new Error(`Failed to fetch novels: ${novelsError.message}`);
+      console.log("Fetched novels:", novelsData);
+
+      if (!novelsData || novelsData.length === 0) {
+        setNovels([]);
+        return;
+      }
+
+      const userIds = novelsData.map(novel => novel.user_id).filter(id => id);
+      if (userIds.length === 0) {
+        setNovels(novelsData.map(novel => ({ ...novel, writer: { name: "Unknown", isWriter: false } })));
+        return;
+      }
+
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, name, isWriter")
+        .in("id", userIds);
+
+      if (usersError) throw new Error(`Failed to fetch writer details: ${usersError.message}`);
+      console.log("Fetched users for novels:", usersData);
+
+      const usersMap = usersData.reduce((acc, user) => {
+        acc[user.id] = { name: user.name || "Unknown", isWriter: user.isWriter || false };
+        return acc;
+      }, {});
+
+      const enrichedNovels = novelsData.map(novel => ({
+        ...novel,
+        writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
+      }));
+
+      setNovels(enrichedNovels);
     } catch (err) {
-      console.error(err.message);
+      console.error("Error in fetchNovels:", err.message);
       setError("Failed to load novels.");
     }
   }, []);
@@ -216,19 +250,55 @@ export default function Home() {
   const fetchAnnouncements = useCallback(async () => {
     try {
       const response = await fetch(`/api/announcements${publicKey ? `?publicKey=${publicKey.toString()}` : ''}`);
-      if (!response.ok) throw new Error("Failed to fetch announcements");
+      if (!response.ok) throw new Error(`API fetch failed with status ${response.status}`);
       const { data } = await response.json();
+      console.log("API announcements response:", data);
 
-      const recentAnnouncements = data.filter(announcement => {
-        const createdAt = new Date(announcement.created_at);
-        const now = new Date();
-        const diffInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
-        return diffInDays <= 7;
-      });
+      const recentAnnouncements = data
+        .filter(announcement => {
+          const createdAt = new Date(announcement.created_at);
+          const now = new Date();
+          const diffInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+          return diffInDays <= 7;
+        })
+        .slice(0, 5);
 
-      setAnnouncements(recentAnnouncements.slice(0, 5));
+      if (!recentAnnouncements.length) {
+        setAnnouncements([]);
+        setLoading(false);
+        return;
+      }
+
+      // Extract user IDs from the nested users object
+      const userIds = recentAnnouncements.map(a => a.users?.id).filter(id => id);
+      if (!userIds.length) {
+        setAnnouncements(recentAnnouncements.map(a => ({ ...a, name: "Unknown" })));
+        setLoading(false);
+        return;
+      }
+
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", userIds);
+
+      if (usersError) throw new Error(`Failed to fetch user data for announcements: ${usersError.message}`);
+      console.log("Fetched users for announcements:", usersData);
+
+      const userMap = usersData.reduce((acc, user) => {
+        acc[user.id] = user.name || "Unknown";
+        return acc;
+      }, {});
+
+      const enrichedAnnouncements = recentAnnouncements.map(announcement => ({
+        ...announcement,
+        name: userMap[announcement.users?.id] || "Unknown",
+        user_id: announcement.users?.id, // Use this for the profile link
+      }));
+
+      setAnnouncements(enrichedAnnouncements);
     } catch (err) {
-      console.error("Error fetching announcements:", err);
+      console.error("Error fetching announcements:", err.message);
       setError("Failed to load announcements.");
     } finally {
       setLoading(false);
@@ -288,7 +358,6 @@ export default function Home() {
     fetchAnnouncements();
   }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications, fetchAnnouncements]);
 
-  // Add outside click handler
   useEffect(() => {
     const handleOutsideClick = (e) => {
       const notificationButton = document.querySelector(`.${styles.notificationButton}`);
@@ -364,7 +433,11 @@ export default function Home() {
             <Link href="/swap" onClick={() => (connected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
               <FaExchangeAlt className={styles.navIcon} /> Swap
             </Link>
-            <Link href="/profile" onClick={() => (connected ? handleNavigation("/profile") : toggleConnectPopup())} className={styles.navLink}>
+            <Link
+              href={connected && isWriter ? `/writers-profile/${userId}` : "/editprofile"}
+              onClick={() => (connected ? handleNavigation(isWriter ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
+              className={styles.navLink}
+            >
               <FaUser className={styles.navIcon} /> Profile
             </Link>
             <Link href="/chat" onClick={() => (connected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
@@ -390,38 +463,38 @@ export default function Home() {
                     <span className={styles.notificationBadge}>{notifications.length}</span>
                   )}
                 </button>
-                  {notificationsOpen && (
-                    <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
-                      {notifications.length > 0 ? (
-                        <>
-                          {notifications.map((notif) => (
-                            <div key={notif.id} className={styles.notificationItem}>
-                              {notif.type === "reply" && notif.comment_id ? (
-                                <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                                  📩 Someone replied: "{notif.message}"
-                                </Link>
-                              ) : notif.type === "new_chapter" ? (
-                                <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                                  📖 {notif.message} {/* Use the full message with title */}
-                                </Link>
-                              ) : notif.type === "reward" ? (
-                                <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                                  🎉 Weekly reward received!
-                                </Link>
-                              ) : (
-                                <span>{notif.message || "New notification"}</span>
-                              )}
-                            </div>
-                          ))}
-                          <button onClick={markAsRead} className={styles.markReadButton}>
-                            Mark All as Read
-                          </button>
-                        </>
-                      ) : (
-                        <div className={styles.noNotifications}>No new notifications</div>
-                      )}
-                    </div>
-                  )}
+                {notificationsOpen && (
+                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
+                    {notifications.length > 0 ? (
+                      <>
+                        {notifications.map((notif) => (
+                          <div key={notif.id} className={styles.notificationItem}>
+                            {notif.type === "reply" && notif.comment_id ? (
+                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                                📩 Someone replied: "{notif.message}"
+                              </Link>
+                            ) : notif.type === "new_chapter" ? (
+                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                                📖 {notif.message}
+                              </Link>
+                            ) : notif.type === "reward" ? (
+                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                                🎉 Weekly reward received!
+                              </Link>
+                            ) : (
+                              <span>{notif.message || "New notification"}</span>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={markAsRead} className={styles.markReadButton}>
+                          Mark All as Read
+                        </button>
+                      </>
+                    ) : (
+                      <div className={styles.noNotifications}>No new notifications</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <button onClick={toggleTheme} className={styles.themeToggle}>
@@ -453,9 +526,13 @@ export default function Home() {
                           <h3 className={styles.announcementTitle}>{announcement.title}</h3>
                           <p className={styles.announcementMessage}>{announcement.message}</p>
                           <div className={styles.announcementDetails}>
-                            <span className={styles.announcementAuthor}>
-                              {announcement.users.wallet_address.slice(0, 6)}...
-                            </span>
+                            <Link
+                              href={`/writers-profile/${announcement.user_id}`}
+                              onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
+                              className={styles.announcementAuthor}
+                            >
+                              <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
+                            </Link>
                             <Link
                               href={`/novel/${announcement.novels.id}`}
                               onClick={() => handleNovelNavigation(announcement.novels.id)}
@@ -489,7 +566,6 @@ export default function Home() {
           </button>
         </div>
       </header>
-
       <section className={styles.novelsSection}>
         <h2 className={styles.sectionTitle}>Featured</h2>
         {error && <div className={styles.errorAlert}>{error}</div>}
@@ -503,9 +579,19 @@ export default function Home() {
                     <h3 className={styles.novelTitle}>{novel.title}</h3>
                   </div>
                 </Link>
+                {novel.writer.isWriter && (
+                  <Link
+                    href={`/writers-profile/${novel.user_id}`}
+                    onClick={() => handleNavigation(`/writers-profile/${novel.user_id}`)}
+                    className={styles.writerName}
+                  >
+                    <FaFeatherAlt className={styles.writerBadge} /> {novel.writer.name}
+                  </Link>
+                )}
               </div>
             </div>
           ))}
+          {/* Static carousel items remain unchanged */}
           <div className={styles.carouselItem}>
             <div className={styles.novelCard}>
               <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
@@ -548,6 +634,7 @@ export default function Home() {
           </div>
         </Slider>
       </section>
+
 
       {showConnectPopup && (
         <div className={styles.connectPopupOverlay}>

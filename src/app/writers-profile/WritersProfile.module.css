@@ -1,0 +1,357 @@
+/* Container and existing styles */
+.container {
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  font-family: "Orbitron", sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(243, 99, 22, 0.2) 0%, rgba(0, 0, 0, 0.9) 70%);
+  z-index: -1;
+  animation: pulse 10s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+  100% { opacity: 0.5; transform: scale(1); }
+}
+
+.menuActive::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  z-index: 998;
+  display: none;
+}
+
+/* Navbar styles copied from EditProfile.module.css */
+.navbar {
+  padding: 15px 0;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(20, 20, 20, 0.9);
+  border-bottom: 2px solid rgba(243, 99, 22, 0.6);
+  animation: slideIn 0.6s ease-out;
+}
+
+.navContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid rgba(243, 99, 22, 0.8);
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.logo:hover {
+  transform: rotate(360deg);
+  box-shadow: 0 0 20px rgba(243, 99, 22, 1);
+}
+
+.logoText {
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin-left: 15px;
+  color: rgba(243, 99, 22, 0.9);
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+}
+
+.menuToggle {
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  color: rgba(243, 99, 22, 0.9);
+  display: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.menuToggle:hover {
+  transform: scale(1.2);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.navLink {
+  font-size: 1.2rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 25px;
+  color: #fff;
+  background: rgba(243, 99, 22, 0.2);
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.navLink:hover {
+  background: rgba(243, 99, 22, 0.8);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.6);
+}
+
+/* Main content layout */
+.main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.content {
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* Existing styles for profile and novels */
+.title {
+  font-size: 3rem;
+  color: rgba(243, 99, 22, 0.9);
+  text-align: center;
+  text-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+  margin-bottom: 40px;
+  animation: neonGlow 2s infinite alternate;
+}
+
+@keyframes neonGlow {
+  from { text-shadow: 0 0 10px rgba(243, 99, 22, 0.6); }
+  to { text-shadow: 0 0 20px rgba(243, 99, 22, 1); }
+}
+
+.profileCard {
+  background: rgba(20, 20, 20, 0.9);
+  border: 2px solid rgba(243, 99, 22, 0.6);
+  border-radius: 15px;
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  box-shadow: 0 0 25px rgba(243, 99, 22, 0.4);
+  animation: fadeIn 1s ease-out;
+}
+
+.sectionTitle {
+  font-size: 1.8rem;
+  color: #fff;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+}
+
+.bio {
+  font-size: 1.1rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.socials {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.socialLink {
+  color: rgba(243, 99, 22, 0.9);
+  text-decoration: none;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.socialLink:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.walletInfo {
+  font-size: 1.1rem;
+  color: #ccc;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-shadow: 0 0 5px rgba(243, 99, 22, 0.4);
+}
+
+.novelsSection {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.novelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.novelCard {
+  background: rgba(20, 20, 20, 0.9);
+  border: 1px solid rgba(243, 99, 22, 0.6);
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.novelCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.6);
+}
+
+.novelImage {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.novelTitle {
+  font-size: 1.3rem;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.novelSummary {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 15px;
+}
+
+.novelButton,
+.navButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.novelButton:hover,
+.navButton:hover {
+  background: rgba(243, 99, 22, 1);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+.placeholder {
+  font-size: 1.2rem;
+  color: #888;
+  text-align: center;
+}
+
+.error {
+  font-size: 1.5rem;
+  color: rgba(243, 99, 22, 0.9);
+  text-align: center;
+  margin: 20px 0;
+  animation: shake 0.5s ease;
+}
+
+.connectWrapper {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.connectButton {
+  background: rgba(243, 99, 22, 0.8);
+  color: #fff !important;
+  padding: 12px 30px;
+  border-radius: 30px;
+  border: none;
+  font-weight: bold;
+  font-size: 1.2rem;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.connectButton:hover {
+  background: rgba(243, 99, 22, 1);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+/* Mobile Styles from EditProfile */
+@media (max-width: 768px) {
+  .menuActive::before { display: block; }
+  .menuToggle { display: block; }
+  .navLinks {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    padding: 20px;
+    background: rgba(20, 20, 20, 0.9);
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.4);
+    z-index: 999;
+  }
+  .navLinksOpen {
+    display: flex;
+    animation: slideDownMenu 0.3s ease-out;
+  }
+  .main { padding: 40px 15px; }
+}
+/* Same as before, only changing this section */
+.sectionTitle {
+  font-size: 1.8rem;
+  color: #fff;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+}
+
+/* Rest of the CSS remains unchanged */
+/* Animations */
+@keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes slideDownMenu { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }

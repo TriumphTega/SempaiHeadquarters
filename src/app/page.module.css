@@ -1,3 +1,4 @@
+/* Base Page Styles */
 .page {
   min-height: 100vh;
   transition: background 0.5s ease, color 0.5s ease;
@@ -14,7 +15,7 @@
   color: #333;
 }
 
-/* Darken and blur when menu is open */
+/* Menu Overlay */
 .menuActive::before {
   content: "";
   position: fixed;
@@ -34,6 +35,7 @@
   }
 }
 
+/* Navbar */
 .navbar {
   padding: 10px 0;
   position: sticky;
@@ -66,6 +68,7 @@
   padding: 0 15px;
 }
 
+/* Logo */
 .logoLink {
   display: flex;
   align-items: center;
@@ -109,6 +112,7 @@
   text-shadow: 0 2px 4px rgba(243, 99, 22, 0.3);
 }
 
+/* Menu Toggle */
 .menuToggle {
   background: transparent;
   border: none;
@@ -123,6 +127,7 @@
   transform: scale(1.2);
 }
 
+/* Navigation Links */
 .navLinks {
   display: flex;
   align-items: center;
@@ -172,6 +177,7 @@
   transform: scale(1.2) rotate(10deg);
 }
 
+/* Buttons */
 .actionButton {
   padding: 6px 15px;
   border: none;
@@ -236,15 +242,14 @@
   background: #e55a00;
 }
 
-/* Notification Wrapper */
+/* Notification Styles */
 .notificationWrapper {
   position: relative;
   display: flex;
   align-items: center;
-  z-index: 1001; /* Above menu overlay */
+  z-index: 1001;
 }
 
-/* Notification Button (Bell Icon) */
 .notificationButton {
   background: transparent;
   border: none;
@@ -254,7 +259,7 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.3s ease, background 0.3s ease;
-  z-index: 1002; /* Above dropdown */
+  z-index: 1002;
   border-radius: 50%;
 }
 
@@ -300,7 +305,6 @@
   60% { transform: scale(1.1); }
 }
 
-/* Notification Dropdown */
 .notificationDropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -338,7 +342,6 @@
   box-shadow: 0 6px 20px rgba(243, 99, 22, 0.3), inset 0 0 10px rgba(243, 99, 22, 0.05);
 }
 
-/* Notification Item */
 .notificationItem {
   padding: 10px 12px;
   margin: 5px 0;
@@ -375,7 +378,6 @@
   text-decoration: underline;
 }
 
-/* No Notifications Message */
 .noNotifications {
   padding: 15px;
   text-align: center;
@@ -396,9 +398,8 @@
   to { opacity: 1; }
 }
 
-/* Mark All as Read Button */
 .markReadButton {
-  background: rgba(243, 99, 22, 0.9);
+  background: rgba(243, 99, 22, 0.8);
   color: #fff;
   border: none;
   padding: 8px 15px;
@@ -417,104 +418,6 @@
   box-shadow: 0 4px 12px rgba(243, 99, 22, 0.5);
 }
 
-/* Mobile Styles */
-@media (max-width: 768px) {
-  .notificationWrapper {
-    margin: 10px 0;
-    width: 100%;
-  }
-
-  .notificationButton {
-    padding: 8px;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .bellIcon {
-    font-size: 1.2rem;
-  }
-
-  .notificationBadge {
-    top: 1px;
-    right: calc(50% - 15px);
-    padding: 2px 5px;
-    font-size: 0.7rem;
-  }
-
-  .notificationDropdown {
-    width: calc(100vw - 30px);
-    max-width: 300px;
-    max-height: 360px;
-    top: calc(100% + 8px);
-    right: 10px;
-    left: auto;
-    z-index: 1005; /* Above menu overlay */
-    background: rgba(20, 20, 20, 0.98);
-    border: 2px solid rgba(243, 99, 22, 1);
-    border-radius: 10px;
-    padding: 12px;
-    display: none;
-    transform: translateY(-10px);
-  }
-
-  .notificationDropdown.open {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .notificationItem {
-    padding: 8px 10px;
-    font-size: 0.85rem;
-  }
-
-  .markReadButton {
-    padding: 7px 12px;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .notificationButton {
-    padding: 6px;
-  }
-
-  .bellIcon {
-    font-size: 1.1rem;
-  }
-
-  .notificationBadge {
-    top: 0;
-    right: calc(50% - 14px);
-    padding: 2px 4px;
-    font-size: 0.65rem;
-  }
-
-  .notificationDropdown {
-    width: calc(100vw - 20px);
-    max-width: 280px;
-    max-height: 340px;
-    right: 8px;
-    padding: 10px;
-  }
-
-  .notificationItem {
-    padding: 7px 8px;
-    font-size: 0.8rem;
-  }
-
-  .noNotifications {
-    padding: 12px;
-    font-size: 0.9rem;
-  }
-
-  .markReadButton {
-    padding: 6px 10px;
-    font-size: 0.8rem;
-  }
-}
-
-/* Scrollbar Styling for Dropdown */
 .notificationDropdown::-webkit-scrollbar {
   width: 8px;
 }
@@ -534,23 +437,7 @@
   background: #ff6200;
 }
 
-.markReadButton {
-  background: rgba(243, 99, 22, 0.8);
-  color: #fff;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 20px;
-  width: 100%;
-  margin-top: 10px;
-  font-weight: bold;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-
-.markReadButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
-}
-
+/* Theme Toggle */
 .themeToggle {
   background: transparent;
   border: none;
@@ -571,6 +458,7 @@
   transform: scale(1.2) rotate(20deg);
 }
 
+/* Hero Section */
 .hero {
   padding: 60px 0;
   text-align: center;
@@ -591,6 +479,10 @@
 }
 
 .heroContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: 900px;
   margin: 0 auto;
   padding: 0 15px;
@@ -663,6 +555,7 @@
   to { transform: rotate(360deg); }
 }
 
+/* Novels Section */
 .novelsSection {
   padding: 40px 10px;
   max-width: 1300px;
@@ -715,56 +608,68 @@
   75% { transform: translateX(4px); }
 }
 
+/* Carousel */
 .carousel {
   position: relative;
-  padding: 0 20px;
-}
-
-.carouselItem {
-  padding: 5px;
-  outline: none;
-}
-/* page.module.css (example additions if not present) */
-.carousel {
   padding: 20px 0;
 }
 
 .carouselItem {
-  padding: 0 10px;
+  padding: 5px 10px;
+  outline: none;
 }
 
 .carouselArrow {
   background: transparent;
   border: none;
-  font-size: 24px;
-  color: #ff6200;
+  font-size: 1.5rem;
+  color: transparent;
   cursor: pointer;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 1;
+  z-index: 10;
+  transition: transform 0.3s ease;
 }
 
-.carouselArrow:first-child {
+.carouselArrow:hover {
+  transform: scale(1.2) translateY(-50%);
+}
+
+.slick-prev {
   left: 0;
 }
 
-.carouselArrow:last-child {
+.slick-next {
   right: 0;
 }
 
-/* Add other necessary styles from your design */
+.dark .slick-dots li button:before {
+  color: rgba(243, 99, 22, 0.8);
+}
 
+.light .slick-dots li button:before {
+  color: rgba(243, 99, 22, 0.6);
+}
+
+.slick-dots li.slick-active button:before {
+  color: #ff6200;
+}
+
+/* Novel Card */
 .novelCard {
   position: relative;
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
   transition: transform 0.5s ease, box-shadow 0.5s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .novelCard:hover {
   transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(243, 99, 22, 0.5);
 }
 
 .dark .novelCard {
@@ -775,13 +680,10 @@
   background: rgba(255, 255, 255, 0.9);
 }
 
-.novelCard:hover {
-  box-shadow: 0 8px 25px rgba(243, 99, 22, 0.5);
-}
-
-.novelCard a {
+.novelCard a:first-child {
   text-decoration: none;
   display: block;
+  position: relative;
 }
 
 .novelImage {
@@ -827,44 +729,49 @@
 }
 
 .novelCard:hover .novelTitle {
-  color: #ff6200;
+  color: #000000;
 }
 
-.carouselArrow {
-  font-size: 1.5rem;
-  color: transparent;
-  transition: transform 0.3s ease, color 0.3s ease;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
+.writerName {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #fff;
+  text-decoration: none;
+  padding: 5px 10px;
+  background: rgba(20, 20, 20, 0.8);
+  border-radius: 0 0 15px 15px;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  z-index: 2;
 }
 
-.carouselArrow:hover {
-  color: transparent;
-  transform: scale(1.2) translateY(-50%);
+.writerName:hover {
+  background: rgba(243, 99, 22, 0.6);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.8);
 }
 
-.slick-prev {
-  left: 0;
+.light .writerName {
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
 }
 
-.slick-next {
-  right: 0;
+.writerBadge {
+  color: rgba(243, 99, 22, 0.9);
+  font-size: 1rem;
+  margin-right: 5px;
+  text-shadow: 0 0 5px rgba(243, 99, 22, 0.6);
+  animation: glowPulse 2s infinite alternate;
 }
 
-.dark .slick-dots li button:before {
-  color: rgba(243, 99, 22, 0.8);
+@keyframes glowPulse {
+  from { text-shadow: 0 0 5px rgba(243, 99, 22, 0.6); }
+  to { text-shadow: 0 0 10px rgba(243, 99, 22, 1); }
 }
 
-.light .slick-dots li button:before {
-  color: rgba(243, 99, 22, 0.6);
-}
-
-.slick-dots li.slick-active button:before {
-  color: #ff6200;
-}
-
+/* Footer */
 .footer {
   padding: 30px 0;
   text-align: center;
@@ -893,7 +800,7 @@
   color: #555;
 }
 
-/* Connect Wallet Pop-up */
+/* Connect Popup */
 .connectPopupOverlay {
   position: fixed;
   top: 0;
@@ -990,147 +897,6 @@
   transform: scale(1.05);
 }
 
-/* Mobile Styles */
-@media (max-width: 768px) {
-  .navContainer {
-    padding: 10px 15px;
-    position: relative;
-    flex-wrap: nowrap;
-  }
-
-  .menuToggle {
-    display: block;
-  }
-
-  .navLinks {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    padding: 15px;
-    background: inherit;
-    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-    z-index: 999;
-  }
-
-  .navLinksOpen {
-    display: flex;
-    animation: slideDownMenu 0.3s ease-out;
-  }
-
-  @keyframes slideDownMenu {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .navLink, .actionButton, .connectButton {
-    width: 100%;
-    justify-content: center;
-    padding: 10px 0;
-  }
-
-  .notificationWrapper {
-    margin: 10px 0;
-  }
-
-  .notificationDropdown {
-    width: 100%;
-    max-width: 300px;
-    right: 0;
-    left: auto;
-    transform: translateX(0);
-  }
-
-  .hero {
-    padding: 40px 0;
-  }
-
-  .heroTitle {
-    font-size: 2rem;
-  }
-
-  .heroSubtitle {
-    font-size: 1rem;
-  }
-
-  .heroButton {
-    padding: 10px 20px;
-    font-size: 1rem;
-  }
-
-  .heroIcon {
-    font-size: 1.2rem;
-  }
-
-  .novelsSection {
-    padding: 30px 10px;
-  }
-
-  .sectionTitle {
-    font-size: 1.8rem;
-  }
-
-  .carousel {
-    padding: 0 10px;
-  }
-
-  .novelImage {
-    height: 200px;
-  }
-
-  .novelTitle {
-    font-size: 1rem;
-  }
-
-  .carouselArrow {
-    font-size: 1.2rem;
-  }
-
-  .connectPopup {
-    width: 85%;
-    padding: 15px;
-  }
-
-  .popupTitle {
-    font-size: 1.5rem;
-  }
-
-  .popupMessage {
-    font-size: 1rem;
-  }
-
-  .connectWalletButton {
-    padding: 8px 15px;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo {
-    width: 35px;
-    height: 35px;
-  }
-
-  .logoText {
-    font-size: 1.2rem;
-  }
-
-  .navLink, .actionButton, .connectButton {
-    font-size: 0.8rem;
-    padding: 8px 0;
-  }
-
-  .navIcon, .bellIcon, .themeToggle {
-    font-size: 1rem;
-  }
-
-  .notificationBadge {
-    padding: 1px 4px;
-    font-size: 0.6rem;
-  }
-}
 /* Game Section */
 .gameSection {
   padding: 40px 10px;
@@ -1146,7 +912,6 @@
   background: #f5f5f5;
 }
 
-/* Game Teaser when not connected */
 .gameTeaser {
   text-align: center;
   padding: 20px;
@@ -1183,18 +948,9 @@
   color: #555;
 }
 
-/* Ensure KaitoAdventure inherits theme */
 .gameContainer {
   background: inherit;
   color: inherit;
-}
-/* Hero Section Adjustments */
-.heroContent {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 15px;
 }
 
 /* Announcement Toggle */
@@ -1249,12 +1005,6 @@
   animation: bouncePulse 1.5s infinite;
 }
 
-@keyframes bouncePulse {
-  0%, 20%, 50%, 80%, 100% { transform: scale(1); }
-  40% { transform: scale(1.2); }
-  60% { transform: scale(1.1); }
-}
-
 /* Announcement Dropdown */
 .announcementDropdown {
   position: absolute;
@@ -1276,6 +1026,11 @@
   background: rgba(245, 245, 245, 0.97);
   border: 2px solid rgba(243, 99, 22, 0.6);
   box-shadow: 0 6px 20px rgba(243, 99, 22, 0.3);
+}
+
+@keyframes slideDownMenu {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .announcementCarousel {
@@ -1368,11 +1123,20 @@
   background: rgba(243, 99, 22, 0.2);
   padding: 3px 8px;
   border-radius: 12px;
-  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
 .announcementCard:hover .announcementAuthor {
   background: rgba(243, 99, 22, 0.35);
+}
+
+.announcementAuthor:hover {
+  color: #ff6200;
+  transform: scale(1.05);
 }
 
 .announcementLink {
@@ -1391,14 +1155,16 @@
   transform: scale(1.05);
 }
 
-.announcementDate, .announcementRelease {
+.announcementDate,
+.announcementRelease {
   background: rgba(0, 0, 0, 0.35);
   padding: 3px 8px;
   border-radius: 12px;
   transition: background 0.3s ease;
 }
 
-.light .announcementDate, .light .announcementRelease {
+.light .announcementDate,
+.light .announcementRelease {
   background: rgba(200, 200, 200, 0.35);
 }
 
@@ -1420,11 +1186,6 @@
   color: #666;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* Custom Carousel Dots */
 .customDot {
   width: 8px;
@@ -1442,7 +1203,7 @@
 
 .dark .slick-dots li button:before,
 .light .slick-dots li button:before {
-  display: none; /* Hide default dots */
+  display: none;
 }
 
 .slick-dots {
@@ -1455,6 +1216,168 @@
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+  .navContainer {
+    padding: 10px 15px;
+    position: relative;
+    flex-wrap: nowrap;
+  }
+
+  .menuToggle {
+    display: block;
+  }
+
+  .navLinks {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    padding: 15px;
+    background: inherit;
+    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+    z-index: 999;
+  }
+
+  .navLinksOpen {
+    display: flex;
+    animation: slideDownMenu 0.3s ease-out;
+  }
+
+  .navLink,
+  .actionButton,
+  .connectButton {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  .notificationWrapper {
+    margin: 10px 0;
+    width: 100%;
+  }
+
+  .notificationButton {
+    padding: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bellIcon {
+    font-size: 1.2rem;
+  }
+
+  .notificationBadge {
+    top: 1px;
+    right: calc(50% - 15px);
+    padding: 2px 5px;
+    font-size: 0.7rem;
+  }
+
+  .notificationDropdown {
+    width: calc(100vw - 30px);
+    max-width: 300px;
+    max-height: 360px;
+    top: calc(100% + 8px);
+    right: 10px;
+    left: auto;
+    z-index: 1005;
+    background: rgba(20, 20, 20, 0.98);
+    border: 2px solid rgba(243, 99, 22, 1);
+    border-radius: 10px;
+    padding: 12px;
+    display: none;
+    transform: translateY(-10px);
+  }
+
+  .notificationDropdown.open {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .notificationItem {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .markReadButton {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+  }
+
+  .hero {
+    padding: 40px 0;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+
+  .heroButton {
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+
+  .heroIcon {
+    font-size: 1.2rem;
+  }
+
+  .novelsSection {
+    padding: 30px 10px;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+  }
+
+  .carousel {
+    padding: 0 10px;
+  }
+
+  .carouselArrow {
+    font-size: 1.2rem;
+  }
+
+  .novelImage {
+    height: 200px;
+  }
+
+  .novelTitle {
+    font-size: 1rem;
+  }
+
+  .writerName {
+    font-size: 0.9rem;
+    padding: 4px 8px;
+  }
+
+  .writerBadge {
+    font-size: 0.9rem;
+  }
+
+  .connectPopup {
+    width: 85%;
+    padding: 15px;
+  }
+
+  .popupTitle {
+    font-size: 1.5rem;
+  }
+
+  .popupMessage {
+    font-size: 1rem;
+  }
+
+  .connectWalletButton {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+  }
+
   .announcementToggleWrapper {
     top: 10px;
     left: 10px;
@@ -1503,8 +1426,15 @@
     gap: 6px;
   }
 
-  .announcementAuthor, .announcementLink, .announcementDate, .announcementRelease {
+  .announcementAuthor,
+  .announcementLink,
+  .announcementDate,
+  .announcementRelease {
     padding: 2px 6px;
+  }
+
+  .announcementAuthor {
+    font-size: 0.9rem;
   }
 
   .slick-dots {
@@ -1518,6 +1448,79 @@
 }
 
 @media (max-width: 480px) {
+  .logo {
+    width: 35px;
+    height: 35px;
+  }
+
+  .logoText {
+    font-size: 1.2rem;
+  }
+
+  .navLink,
+  .actionButton,
+  .connectButton {
+    font-size: 0.8rem;
+    padding: 8px 0;
+  }
+
+  .navIcon,
+  .bellIcon,
+  .themeToggle {
+    font-size: 1rem;
+  }
+
+  .notificationBadge {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+    top: 0;
+    right: calc(50% - 14px);
+  }
+
+  .notificationButton {
+    padding: 6px;
+  }
+
+  .notificationDropdown {
+    width: calc(100vw - 20px);
+    max-width: 280px;
+    max-height: 340px;
+    right: 8px;
+    padding: 10px;
+  }
+
+  .notificationItem {
+    padding: 7px 8px;
+    font-size: 0.8rem;
+  }
+
+  .noNotifications {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .markReadButton {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .novelImage {
+    height: 180px;
+  }
+
+  .novelTitle {
+    font-size: 0.9rem;
+  }
+
+  .writerName {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+
+  .writerBadge {
+    font-size: 0.8rem;
+  }
+
   .announcementToggle {
     padding: 5px 8px;
   }
@@ -1554,6 +1557,10 @@
   .announcementDetails {
     font-size: 0.7rem;
     gap: 5px;
+  }
+
+  .announcementAuthor {
+    font-size: 0.8rem;
   }
 
   .customDot {
