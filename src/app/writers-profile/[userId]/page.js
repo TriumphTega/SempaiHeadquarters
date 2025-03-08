@@ -5,7 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
-import { FaBook, FaRocket, FaUserAstronaut, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
+import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "../WritersProfile.module.css";
 import Link from "next/link";
@@ -13,7 +13,7 @@ import Link from "next/link";
 export default function WritersProfilePage() {
   const { connected, publicKey } = useWallet();
   const router = useRouter();
-  const { userId } = useParams(); // Get dynamic userId from URL
+  const { userId } = useParams();
   const [isWriter, setIsWriter] = useState(false);
   const [writerData, setWriterData] = useState(null);
   const [novels, setNovels] = useState([]);
@@ -46,10 +46,9 @@ export default function WritersProfilePage() {
       }
 
       try {
-        // Fetch user data based on userId from URL
         const { data: user, error: userError } = await supabase
           .from("users")
-          .select("id, isWriter, name, wallet_address")
+          .select("id, isWriter, name, wallet_address, image") // Added image field
           .eq("id", userId)
           .single();
 
@@ -65,7 +64,6 @@ export default function WritersProfilePage() {
           return;
         }
 
-        // Check if this is the connected user's own profile
         if (walletReady && publicKey && user.wallet_address === publicKey.toString()) {
           setIsOwnProfile(true);
         }
@@ -111,7 +109,7 @@ export default function WritersProfilePage() {
   if (loading) return <LoadingPage />;
 
   return (
-    <div className={`${styles.container} ${menuOpen ? styles.menuActive : ""}`}>
+    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
@@ -123,78 +121,93 @@ export default function WritersProfilePage() {
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
             <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
-            <Link href="/editprofile" className={styles.navLink}><FaExchangeAlt /> Edit Profile</Link>
+            {isOwnProfile && (
+              <Link href="/editprofile" className={styles.navLink}><FaExchangeAlt /> Edit Profile</Link>
+            )}
           </div>
         </div>
       </nav>
 
       <main className={styles.main}>
-        {error ? (
-          <div className={styles.content}>
-            <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
-            <p className={styles.error}>{error}</p>
-            {isOwnProfile && (
-              <button onClick={() => handleNavigation("/profile")} className={styles.navButton}>
-                <FaUserAstronaut /> Back to Profile
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className={styles.content}>
-            <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
-            <section className={styles.profileCard}>
-              <h2 className={styles.sectionTitle}>
-                <FaUserAstronaut /> {writerData?.name || writerData?.wallet_address.slice(0, 8)}
-              </h2>
-              <p className={styles.bio}>{writerData?.bio || "No bio provided."}</p>
-              <div className={styles.socials}>
-                {writerData?.twitter && (
-                  <a href={`https://twitter.com/${writerData.twitter}`} target="_blank" className={styles.socialLink}>
-                    <FaTwitter /> @{writerData.twitter}
-                  </a>
-                )}
-                {writerData?.discord && (
-                  <span className={styles.socialLink}><FaDiscord /> {writerData.discord}</span>
-                )}
-                {writerData?.website && (
-                  <a href={writerData.website} target="_blank" className={styles.socialLink}>
-                    <FaGlobe /> Website
-                  </a>
-                )}
-              </div>
-              <p className={styles.walletInfo}><FaWallet /> {writerData?.wallet_address.slice(0, 8)}...</p>
-            </section>
-            <section className={styles.novelsSection}>
-              <h2 className={styles.sectionTitle}><FaBook /> Creations</h2>
-              {novels.length > 0 ? (
-                <div className={styles.novelGrid}>
-                  {novels.map((novel) => (
-                    <div key={novel.id} className={styles.novelCard}>
-                      <img src={novel.image} alt={novel.title} className={styles.novelImage} />
-                      <h3 className={styles.novelTitle}>{novel.title}</h3>
-                      <p className={styles.novelSummary}>{novel.summary.slice(0, 100)}...</p>
-                      <button onClick={() => handleNavigation(`/novel/${novel.id}`)} className={styles.novelButton}>
-                        <FaBook /> Read More
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.placeholder}>No novels yet.</p>
+        <div className={styles.content}>
+          <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
+          {error ? (
+            <div className={styles.errorContainer}>
+              <p className={styles.error}>{error}</p>
+              {isOwnProfile && (
+                <button onClick={() => handleNavigation("/profile")} className={styles.navButton}>
+                  <img
+                    src={writerData?.image || "/images/default-profile.jpg"}
+                    alt="Profile"
+                    className={styles.profileIcon}
+                  /> Back to Profile
+                </button>
               )}
-            </section>
-            {isOwnProfile && (
-              <>
-                <button onClick={() => handleNavigation("/editprofile")} className={styles.navButton}>
-                  <FaUserAstronaut /> Edit Profile
-                </button>
-                <button onClick={() => handleNavigation("/creators-dashboard")} className={styles.navButton}>
-                  <FaRocket /> Creator Dashboard
-                </button>
-              </>
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <>
+              <section className={styles.profileCard}>
+                <h2 className={styles.sectionTitle}>
+                  <img
+                    src={writerData?.image || "/images/default-profile.jpg"}
+                    alt="Profile"
+                    className={styles.profileIcon}
+                  /> {writerData?.name || writerData?.wallet_address.slice(0, 8)}
+                </h2>
+                <p className={styles.bio}>{writerData?.bio || "No bio provided."}</p>
+                <div className={styles.socials}>
+                  {writerData?.twitter && (
+                    <a href={`https://twitter.com/${writerData.twitter}`} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                      <FaTwitter /> @{writerData.twitter}
+                    </a>
+                  )}
+                  {writerData?.discord && (
+                    <span className={styles.socialLink}><FaDiscord /> {writerData.discord}</span>
+                  )}
+                  {writerData?.website && (
+                    <a href={writerData.website} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                      <FaGlobe /> Website
+                    </a>
+                  )}
+                </div>
+                <p className={styles.walletInfo}><FaWallet /> {writerData?.wallet_address.slice(0, 8)}...</p>
+              </section>
+              <section className={styles.novelsSection}>
+                <h2 className={styles.sectionTitle}><FaBook /> Creations</h2>
+                {novels.length > 0 ? (
+                  <div className={styles.novelGrid}>
+                    {novels.map((novel) => (
+                      <div key={novel.id} className={styles.novelCard}>
+                        <img src={novel.image} alt={novel.title} className={styles.novelImage} />
+                        <h3 className={styles.novelTitle}>{novel.title}</h3>
+                        <p className={styles.novelSummary}>{novel.summary.slice(0, 100)}...</p>
+                        <button onClick={() => handleNavigation(`/novel/${novel.id}`)} className={styles.novelButton}>
+                          <FaBook /> Read More
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.placeholder}>No novels yet.</p>
+                )}
+              </section>
+              {isOwnProfile && (
+                <div className={styles.profileActions}>
+                  <button onClick={() => handleNavigation("/editprofile")} className={styles.navButton}>
+                    <img
+                      src={writerData?.image || "/images/default-profile.jpg"}
+                      alt="Profile"
+                      className={styles.profileIcon}
+                    /> Edit Profile
+                  </button>
+                  <button onClick={() => handleNavigation("/creators-dashboard")} className={styles.navButton}>
+                    <FaRocket /> Creator Dashboard
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

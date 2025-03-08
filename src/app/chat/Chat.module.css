@@ -93,19 +93,15 @@
   color: #F28C38;
 }
 
-.writerNameButton {
-  background: none;
-  border: none;
-  padding: 0;
+.writerNameLink {
   font-size: 14px;
   font-weight: 600;
   color: #F28C38;
-  cursor: pointer;
   text-decoration: underline;
   transition: color 0.2s ease;
 }
 
-.writerNameButton:hover {
+.writerNameLink:hover {
   color: #E07B30; /* Slightly darker orange for hover */
 }
 
@@ -254,4 +250,51 @@
   padding: 8px 12px;
   border: 1px solid #E0E0E0;
   border-radius: 20px;
-  font-size: 14
+  font-size: 14px;
+  outline: none;
+  margin-right: 10px;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+}
+
+.closeButton:active {
+  animation: pulse 0.2s ease;
+}
+
+.closeIcon {
+  width: 20px;
+  height: 20px;
+  fill: #F28C38;
+}
+
+.gifGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.gifImage {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.gifImage:hover {
+  transform: scale(1.05);
+}
+
+.loadingText,
+.noResults {
+  text-align: center;
+  color: #757575;
+  font-size: 14px;
+  margin: 20px 0;
+}

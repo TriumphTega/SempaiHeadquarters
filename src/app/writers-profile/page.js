@@ -5,7 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
-import { FaBook, FaRocket, FaUserAstronaut, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
+import { FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "./WritersProfile.module.css";
 import Link from "next/link";
@@ -48,7 +48,7 @@ export default function WritersProfilePage() {
 
         const { data: user, error: userError } = await supabase
           .from("users")
-          .select("id, isWriter, name")
+          .select("id, isWriter, name, image") // Added image field
           .eq("wallet_address", walletAddress)
           .single();
 
@@ -103,8 +103,7 @@ export default function WritersProfilePage() {
   };
 
   return (
-    <div className={`${styles.container} ${menuOpen ? styles.menuActive : ""}`}>
-      {/* Navbar from EditProfile */}
+    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
@@ -121,37 +120,44 @@ export default function WritersProfilePage() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className={styles.main}>
         {loading || !walletReady ? (
           <LoadingPage />
         ) : !connected || !publicKey ? (
           <div className={styles.content}>
-            <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
-            <p className={styles.error}>Connect your Solana wallet to access the Writer’s Nexus.</p>
+            <h1 className={styles.title}>Profile</h1>
+            <p className={styles.error}>Connect your Solana wallet to view your profile.</p>
             <div className={styles.connectWrapper}>
               <WalletMultiButton className={styles.connectButton} />
             </div>
           </div>
         ) : error || !isWriter ? (
           <div className={styles.content}>
-            <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
-            <p className={styles.error}>{error || "Access denied. Writers only."}</p>
+            <h1 className={styles.title}>Profile</h1>
+            <p className={styles.error}>{error || "You are not registered as a writer."}</p>
             <button onClick={() => handleNavigation("/profile")} className={styles.navButton}>
-              <FaUserAstronaut /> Back to Profile
+              <img
+                src={writerData?.image || "/images/default-profile.jpg"}
+                alt="Profile"
+                className={styles.profileIcon}
+              /> Back to Profile
             </button>
           </div>
         ) : (
           <div className={styles.content}>
-            <h1 className={styles.title}><FaRocket /> Writer’s Nexus</h1>
+            <h1 className={styles.title}>My Profile</h1>
             <section className={styles.profileCard}>
               <h2 className={styles.sectionTitle}>
-                <FaUserAstronaut /> {writerData?.name || publicKey.toString().slice(0, 8)}
+                <img
+                  src={writerData?.image || "/images/default-profile.jpg"}
+                  alt="Profile"
+                  className={styles.profileIcon}
+                /> {writerData?.name || publicKey.toString().slice(0, 8)}
               </h2>
               <p className={styles.bio}>{writerData?.bio || "No bio provided."}</p>
               <div className={styles.socials}>
                 {writerData?.twitter && (
-                  <a href={`https://twitter.com/${writerData.twitter}`} target="_blank" className={styles.socialLink}>
+                  <a href={`https://twitter.com/${writerData.twitter}`} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                     <FaTwitter /> @{writerData.twitter}
                   </a>
                 )}
@@ -159,7 +165,7 @@ export default function WritersProfilePage() {
                   <span className={styles.socialLink}><FaDiscord /> {writerData.discord}</span>
                 )}
                 {writerData?.website && (
-                  <a href={writerData.website} target="_blank" className={styles.socialLink}>
+                  <a href={writerData.website} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                     <FaGlobe /> Website
                   </a>
                 )}
@@ -167,7 +173,7 @@ export default function WritersProfilePage() {
               <p className={styles.walletInfo}><FaWallet /> {publicKey.toString().slice(0, 8)}...</p>
             </section>
             <section className={styles.novelsSection}>
-              <h2 className={styles.sectionTitle}><FaBook /> My Creations</h2>
+              <h2 className={styles.sectionTitle}><FaRocket /> My Creations</h2>
               {novels.length > 0 ? (
                 <div className={styles.novelGrid}>
                   {novels.map((novel) => (
@@ -176,18 +182,23 @@ export default function WritersProfilePage() {
                       <h3 className={styles.novelTitle}>{novel.title}</h3>
                       <p className={styles.novelSummary}>{novel.summary.slice(0, 100)}...</p>
                       <button onClick={() => handleNavigation(`/novel/${novel.id}`)} className={styles.novelButton}>
-                        <FaBook /> Read More
+                        <FaRocket /> Read More
                       </button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className={styles.placeholder}>No novels yet. Start creating!</p>
+                <p className={styles.placeholder}>No creations yet. Start writing!</p>
               )}
             </section>
-            <button onClick={() => handleNavigation("/creators-dashboard")} className={styles.navButton}>
-              <FaRocket /> Creator Dashboard
-            </button>
+            <div className={styles.profileActions}>
+              <button onClick={() => handleNavigation("/editprofile")} className={styles.navButton}>
+                <FaExchangeAlt /> Edit Profile
+              </button>
+              <button onClick={() => handleNavigation("/creators-dashboard")} className={styles.navButton}>
+                <FaRocket /> Creator Dashboard
+              </button>
+            </div>
           </div>
         )}
       </main>
