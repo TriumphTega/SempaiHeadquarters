@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaUser, FaEnvelope, FaCamera, FaGem, FaBolt, FaSave, FaHome, FaExchangeAlt, FaBars, FaTimes, FaBook, FaTwitter, FaDiscord, FaGlobe } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaCamera, FaGem, FaBolt, FaSave, FaHome, FaExchangeAlt, FaBars, FaTimes, FaBook, FaTwitter, FaDiscord, FaGlobe, FaPen } from "react-icons/fa"; // Add FaPen
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import styles from "./EditProfile.module.css";
 import Link from "next/link";
@@ -186,8 +186,10 @@ export default function EditProfile() {
     />
   </div>
   <div className={styles.imageGroup}>
-    <div className={styles.inputWrapper}>
+  <div className={styles.inputWrapper}>
+    <label className={styles.imageLabel}>
       <FaCamera className={styles.inputIcon} />
+      <FaPen className={styles.editIcon} /> {/* Edit indicator */}
       <input
         type="file"
         onChange={handleImageChange}
@@ -195,13 +197,14 @@ export default function EditProfile() {
         accept="image/*"
         disabled={!connected}
       />
-    </div>
-    {imageText && (
-      <div className={styles.previewWrapper}>
-        <img src={imageText} alt="Preview" className={styles.previewImage} />
-      </div>
-    )}
+    </label>
   </div>
+  {imageText && (
+    <div className={styles.previewWrapper}>
+      <img src={imageText} alt="Preview" className={styles.previewImage} />
+    </div>
+  )}
+</div>
   {isWriter && (
     <>
       <div className={styles.inputGroup}>
