@@ -11,13 +11,6 @@
   height: 100%; /* Ensure it fills the viewport */
 }
 
-/* Ensure body doesn’t scroll independently */
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Prevent body from scrolling */
-  height: 100%;
-}
 
 .page::before {
   content: "";
