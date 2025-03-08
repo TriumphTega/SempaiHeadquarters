@@ -1,547 +1,528 @@
-.page {
-    min-height: 100vh;
-    background: #000;
-    color: #fff;
-    font-family: 'Orbitron', sans-serif;
-    overflow-x: hidden;
-    position: relative;
+/* Nexus Container */
+.nexusContainer {
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  font-family: "Orbitron", sans-serif;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Floating Particles Background */
+.nexusContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(243, 99, 22, 0.1) 0%, transparent 70%);
+  animation: pulseGlow 10s infinite ease-in-out;
+  z-index: 0;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 0.3;
   }
-  
-  /* Darken and blur when menu is open */
-  .menuActive::before {
-    content: "";
-    position: fixed;
-    top: 0;
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Navbar */
+.nexusNavbar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1200px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(243, 99, 22, 0.5);
+  border-radius: 50px;
+  padding: 10px 20px;
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.3);
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.navbarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nexusLogo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoImage {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #ff6200;
+  transition: transform 0.5s ease;
+}
+
+.nexusLogo:hover .logoImage {
+  transform: rotate(360deg);
+}
+
+.logoText {
+  margin-left: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ff6200;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.7);
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  color: #ff6200;
+  font-size: 1.8rem;
+  cursor: pointer;
+  display: none;
+}
+
+.navItems {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navItem {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.navItem:hover {
+  background: rgba(243, 99, 22, 0.3);
+  transform: scale(1.05);
+  color: #ff6200;
+}
+
+.connectBtn {
+  background: #ff6200;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 25px;
+  color: #fff !important;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.connectBtn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+/* Header */
+.nexusHeader {
+  text-align: center;
+  padding: 120px 20px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.headerTitle {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #ff6200;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
+  animation: neonFlicker 3s infinite alternate;
+}
+
+.headerTagline {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 20px 0;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.4);
+}
+
+@keyframes neonFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* Novels Grid */
+.nexusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 0 20px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.novelCard {
+  position: relative;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(243, 99, 22, 0.3);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.2);
+}
+
+.novelCard:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 0 30px rgba(243, 99, 22, 0.5);
+}
+
+.novelLink {
+  display: block;
+  text-decoration: none;
+}
+
+.novelCover {
+  width: 100%;
+  height: 350px;
+  object-fit: cover;
+  transition: filter 0.3s ease;
+}
+
+.novelCard:hover .novelCover {
+  filter: brightness(1.1);
+}
+
+.novelName {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ff6200;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 15px 0;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+}
+
+.writerContainer {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  padding: 20px;
+  text-align: center;
+}
+
+.writerLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1rem;
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.writerLink:hover {
+  color: #ff6200;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.8);
+}
+
+.featherIcon {
+  color: #ff6200;
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.writerLink:hover .featherIcon {
+  transform: scale(1.2) rotate(10deg);
+}
+
+.noNovels {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.4);
+}
+
+/* Floating Wallet Panel */
+.walletPanel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(243, 99, 22, 0.5);
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.3);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  width: 300px;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+.walletPanelOpen {
+  max-height: 400px;
+}
+
+.walletToggle {
+  background: none;
+  border: none;
+  color: #ff6200;
+  font-size: 1.2rem;
+  padding: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.walletSummary {
+  font-size: 1rem;
+  color: #fff;
+  text-shadow: 0 0 5px rgba(243, 99, 22, 0.5);
+}
+
+.walletContent {
+  padding: 15px;
+}
+
+.walletInfo p {
+  margin: 10px 0;
+  font-size: 1rem;
+}
+
+.balanceLabel,
+.pointsLabel {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.pendingText {
+  color: #feb47b;
+  font-size: 0.9rem;
+}
+
+.withdrawSection {
+  margin-top: 15px;
+}
+
+.withdrawInput {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #ff6200;
+  padding: 8px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.withdrawInput:focus {
+  outline: none;
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.8);
+}
+
+.withdrawActions {
+  display: flex;
+  gap: 10px;
+}
+
+.withdrawBtn,
+.refreshBtn {
+  flex: 1;
+  background: #ff6200;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.withdrawBtn:hover,
+.refreshBtn:hover {
+  background: rgba(243, 99, 22, 0.8);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+.withdrawBtn:disabled,
+.refreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.errorText {
+  color: #ff3b3b;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* Connect Callout */
+.connectCallout {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid #ff6200;
+  border-radius: 15px;
+  max-width: 500px;
+  margin: 20px auto;
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.connectCallout p {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.walletConnectBtn {
+  background: #ff6200 !important;
+  padding: 10px 20px !important;
+  border-radius: 25px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  transition: all 0.3s ease !important;
+}
+
+.walletConnectBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nexusNavbar {
+    width: 95%;
+    padding: 10px 15px;
+  }
+
+  .menuButton {
+    display: block;
+  }
+
+  .navItems {
+    display: none;
+    position: absolute;
+    top: 100%;
     left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.95);
+    flex-direction: column;
+    padding: 20px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 5px 20px rgba(243, 99, 22, 0.3);
+  }
+
+  .navItemsOpen {
+    display: flex;
+  }
+
+  .navItem,
+  .connectBtn {
     width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    z-index: 998;
-    display: none;
+    justify-content: center;
+    padding: 12px;
   }
-  
-  /* Navbar */
-  .navbar {
-    padding: 10px 0;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
-    box-shadow: 0 2px 10px rgba(243, 99, 22, 0.2);
-    animation: slideIn 0.6s ease-out;
-    background: transparent; /* Matches NovelsPage dark theme */
-    border-bottom: 1px solid rgba(243, 99, 22, 0.8);
+
+  .nexusHeader {
+    padding: 100px 15px 30px;
   }
-  
-  @keyframes slideIn {
-    from { transform: translateY(-100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+
+  .headerTitle {
+    font-size: 2.5rem;
   }
-  
-  .navContainer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 15px;
+
+  .headerTagline {
+    font-size: 1.1rem;
   }
-  
-  .logoLink {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
+
+  .nexusGrid {
+    grid-template-columns: 1fr;
+    padding: 0 15px 80px; /* Extra padding for wallet panel */
   }
-  
-  .logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid rgba(243, 99, 22, 0.8);
-    transition: transform 0.5s ease, box-shadow 0.5s ease;
+
+  .novelCover {
+    height: 300px;
   }
-  
-  .logo:hover {
-    transform: rotate(360deg) scale(1.1);
-    box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+
+  .walletPanel {
+    width: 90%;
+    max-width: 300px;
+    bottom: 10px;
+    right: 50%;
+    transform: translateX(50%);
   }
-  
-  .logoText {
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin-left: 10px;
-    color: #ff6200;
-    text-shadow: 0 2px 4px rgba(243, 99, 22, 0.5);
+
+  .walletPanelOpen {
+    max-height: 350px;
   }
-  
-  .menuToggle {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: #ff6200;
-    display: none;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-  }
-  
-  .menuToggle:hover {
-    transform: scale(1.2);
-  }
-  
-  .navLinks {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-  }
-  
-  .navLink {
-    font-size: 0.9rem;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    color: #fff;
-    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
-  }
-  
-  .navLink:hover {
-    transform: translateY(-2px);
-    background: rgba(243, 99, 22, 0.4);
-    color: #ff6200;
-  }
-  
-  .navIcon {
-    font-size: 0.9rem;
-    transition: transform 0.3s ease;
-  }
-  
-  .navLink:hover .navIcon {
-    transform: scale(1.2) rotate(10deg);
-  }
-  
-  .connectButton {
-    background: rgba(243, 99, 22, 0.8);
-    border: none;
-    padding: 6px 15px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: #fff !important;
-    transition: background 0.3s ease, transform 0.3s ease;
-  }
-  
-  .connectButton:hover {
-    transform: scale(1.05);
-    background: #ff6200;
-  }
-  
-  /* Header */
-  .header {
-    padding: 80px 15px 40px;
-    text-align: center;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 1), rgba(243, 99, 22, 0.1));
-  }
-  
+}
+
+@media (max-width: 480px) {
   .headerTitle {
     font-size: 2rem;
-    font-weight: 900;
-    color: rgba(243, 99, 22, 0.8);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 0 15px rgba(243, 99, 22, 0.6);
-    animation: glow 2s infinite alternate;
   }
-  
-  .headerSubtitle {
+
+  .headerTagline {
+    font-size: 1rem;
+  }
+
+  .novelName {
     font-size: 1.2rem;
-    color: #ccc;
-    margin: 15px 0 30px;
-    text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
   }
-  
-  .walletPanel {
-    background: rgba(0, 0, 0, 0.9);
-    border: 2px solid rgba(243, 99, 22, 0.8);
-    border-radius: 10px;
-    padding: 20px;
-    max-width: 100%;
-    margin: 0 15px;
-    box-shadow: 0 0 30px rgba(243, 99, 22, 0.4);
+
+  .writerLink {
+    font-size: 0.9rem;
   }
-  
-  .walletInfo {
-    margin-bottom: 15px;
+
+  .featherIcon {
+    font-size: 1rem;
   }
-  
-  .balance, .points {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #fff;
-    text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+
+  .walletToggle {
+    font-size: 1rem;
+    padding: 10px;
   }
-  
-  .withdrawPanel {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+
+  .walletSummary {
+    font-size: 0.9rem;
   }
-  
+
+  .walletContent {
+    padding: 10px;
+  }
+
+  .walletInfo p {
+    font-size: 0.9rem;
+  }
+
   .withdrawInput {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(243, 99, 22, 0.8);
-    padding: 10px;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 1rem;
-    transition: all 0.3s ease;
+    font-size: 0.8rem;
+    padding: 6px;
   }
-  
-  .withdrawInput:focus {
-    box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
-    outline: none;
+
+  .withdrawBtn,
+  .refreshBtn {
+    font-size: 0.8rem;
+    padding: 6px;
   }
-  
-  .buttonGroup {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  
-  .withdrawButton, .refreshButton {
-    background: rgba(243, 99, 22, 0.8);
-    border: none;
-    padding: 10px;
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 600;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    flex: 1;
-    min-width: 100px;
-  }
-  
-  .withdrawButton:hover, .refreshButton:hover {
-    background: #ff6200;
-    box-shadow: 0 0 20px rgba(243, 99, 22, 1);
-  }
-  
-  .withdrawButton:disabled, .refreshButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .pending, .error {
-    font-size: 1rem;
-    font-weight: 500;
-    margin-top: 10px;
-  }
-  
-  .pending {
-    color: #feb47b;
-  }
-  
-  .error {
-    color: #ff3b3b;
-  }
-  
-  .connectPrompt {
-    background: rgba(243, 99, 22, 0.8);
-    padding: 15px;
-    border-radius: 10px;
-    display: inline-block;
-    box-shadow: 0 0 20px rgba(243, 99, 22, 0.5);
-  }
-  
-  .connectPrompt p {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin: 0 0 10px;
-    text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
-  }
-  
-  /* Novels Grid */
-  .gridSection {
-    padding: 40px 15px;
-  }
-  
-  .novelsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  
-  .novelNode {
-    position: relative;
-    background: rgba(0, 0, 0, 0.9);
-    border: 2px solid rgba(243, 99, 22, 0.8);
-    border-radius: 15px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 0 15px rgba(243, 99, 22, 0.3);
-  }
-  
-  .novelNode:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 0 30px rgba(243, 99, 22, 0.6);
-  }
-  
-  .novelLink {
-    text-decoration: none;
-  }
-  
-  .novelImage {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    filter: brightness(0.8);
-    transition: filter 0.3s ease;
-  }
-  
-  .novelNode:hover .novelImage {
-    filter: brightness(1);
-  }
-  
-  .novelOverlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 15px;
-    text-align: center;
-    border-top: 1px solid rgba(243, 99, 22, 0.8);
-  }
-  
-  .novelTitle {
-    color: rgba(243, 99, 22, 0.8);
-    font-size: 1.2rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 0;
-    text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
-  }
-  
-  .lockedNode {
-    position: relative;
-  }
-  
-  .lockedOverlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid rgba(243, 99, 22, 0.8);
-  }
-  
-  .connectWalletButton {
-    background: rgba(243, 99, 22, 0.8);
-    color: #fff !important;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-weight: bold;
-    font-size: 1rem;
-    transition: background 0.3s ease, transform 0.3s ease;
-  }
-  
-  .connectWalletButton:hover {
-    background: #ff6200;
-    transform: scale(1.05);
-  }
-  
-  .noData {
-    text-align: center;
-    font-size: 1.2rem;
-    color: #ccc;
-    text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
-  }
-  
-  /* Animation */
-  @keyframes glow {
-    0% { text-shadow: 0 0 10px rgba(243, 99, 22, 0.5); }
-    100% { text-shadow: 0 0 20px rgba(243, 99, 22, 0.8); }
-  }
-  
-  /* Mobile Styles */
-  @media (max-width: 768px) {
-    .menuActive::before {
-      display: block;
-    }
-  
-    .navContainer {
-      padding: 10px 15px;
-      position: relative;
-      flex-wrap: nowrap;
-    }
-  
-    .menuToggle {
-      display: block;
-    }
-  
-    .navLinks {
-      display: none;
-      flex-direction: column;
-      width: 100%;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      padding: 15px;
-      background: rgba(0, 0, 0, 0.95);
-      box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-      z-index: 999;
-    }
-  
-    .navLinksOpen {
-      display: flex;
-      animation: slideDownMenu 0.3s ease-out;
-    }
-  
-    @keyframes slideDownMenu {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  
-    .navLink, .connectButton {
-      width: 100%;
-      justify-content: center;
-      padding: 10px 0;
-    }
-  
-    .header {
-      padding: 60px 10px 30px;
-    }
-  
-    .headerTitle {
-      font-size: 1.8rem;
-    }
-  
-    .headerSubtitle {
-      font-size: 1rem;
-    }
-  
-    .walletPanel {
-      padding: 15px;
-      margin: 0 10px;
-    }
-  
-    .balance, .points {
-      font-size: 1.2rem;
-    }
-  
-    .withdrawInput {
-      padding: 8px;
-      font-size: 0.9rem;
-    }
-  
-    .buttonGroup {
-      flex-direction: column;
-      gap: 8px;
-    }
-  
-    .withdrawButton, .refreshButton {
-      padding: 8px;
-      font-size: 0.9rem;
-    }
-  
-    .pending, .error {
-      font-size: 0.9rem;
-    }
-  
-    .connectPrompt {
-      padding: 10px;
-    }
-  
-    .connectPrompt p {
-      font-size: 1rem;
-    }
-  
-    .gridSection {
-      padding: 30px 10px;
-    }
-  
-    .novelsGrid {
-      grid-template-columns: 1fr;
-      gap: 15px;
-    }
-  
-    .novelImage {
-      height: 250px;
-    }
-  
-    .novelOverlay {
-      padding: 10px;
-    }
-  
-    .novelTitle {
-      font-size: 1rem;
-    }
-  
-    .noData {
-      font-size: 1rem;
-    }
-  
-    .connectWalletButton {
-      padding: 8px 15px;
-      font-size: 0.9rem;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .logo {
-      width: 35px;
-      height: 35px;
-    }
-  
-    .logoText {
-      font-size: 1.2rem;
-    }
-  
-    .navLink, .connectButton {
-      font-size: 0.8rem;
-      padding: 8px 0;
-    }
-  
-    .navIcon {
-      font-size: 1rem;
-    }
-  
-    .headerTitle {
-      font-size: 1.5rem;
-    }
-  
-    .headerSubtitle {
-      font-size: 0.9rem;
-    }
-  
-    .balance, .points {
-      font-size: 1rem;
-    }
-  
-    .withdrawInput {
-      font-size: 0.8rem;
-    }
-  
-    .withdrawButton, .refreshButton {
-      font-size: 0.8rem;
-      padding: 6px;
-    }
-  
-    .novelImage {
-      height: 200px;
-    }
-  
-    .novelTitle {
-      font-size: 0.9rem;
-    }
-  }
+}

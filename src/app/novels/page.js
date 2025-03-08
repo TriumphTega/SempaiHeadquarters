@@ -11,6 +11,8 @@ import {
   FaExchangeAlt,
   FaBars,
   FaTimes,
+  FaFeather,
+  FaWallet,
 } from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
@@ -31,12 +33,14 @@ export default function NovelsPage() {
   const [weeklyPoints, setWeeklyPoints] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [walletPanelOpen, setWalletPanelOpen] = useState(false);
   const connection = new Connection(RPC_URL);
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const toggleWalletPanel = () => setWalletPanelOpen((prev) => !prev);
 
   const handleNavigation = (path) => {
-    router.push(path); // No wallet check here for novel navigation
+    router.push(path);
   };
 
   const checkBalance = async () => {
@@ -70,7 +74,10 @@ export default function NovelsPage() {
         .eq("status", "pending");
 
       if (pendingError) throw new Error("Error fetching pending withdrawals");
-      const totalPending = pendingData.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+      const totalPending = pendingData.reduce(
+        (sum, withdrawal) => sum + withdrawal.amount,
+        0
+      );
       setPendingWithdrawal(totalPending);
 
       setLoading(false);
@@ -136,7 +143,8 @@ export default function NovelsPage() {
         body: JSON.stringify({ withdrawalId }),
       });
 
-      const { transaction, blockhashInfo, error, message } = await response.json();
+      const { transaction, blockhashInfo, error, message } =
+        await response.json();
       if (error) throw new Error(message || "Failed to generate transaction");
 
       const tx = Transaction.from(Buffer.from(transaction, "base64"));
@@ -162,7 +170,8 @@ export default function NovelsPage() {
         .update({ status: "completed" })
         .eq("id", withdrawalId);
 
-      if (updateWithdrawalError) throw new Error("Failed to update withdrawal status");
+      if (updateWithdrawalError)
+        throw new Error("Failed to update withdrawal status");
 
       setErrorMessage("Withdrawal completed!");
       setWithdrawAmount("");
@@ -190,8 +199,18 @@ export default function NovelsPage() {
 
   const fetchNovels = async () => {
     try {
-      const { data, error } = await supabase.from("novels").select("*");
-      if (error) throw new Error("Error fetching novels");
+      const { data, error } = await supabase
+        .from("novels")
+        .select(`
+          id,
+          title,
+          image,
+          user_id,
+          users:user_id (name)
+        `);
+
+      if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
+      console.log("Fetched novels:", data);
       setNovels(data);
     } catch (error) {
       console.error("Error fetching novels:", error);
@@ -202,48 +221,136 @@ export default function NovelsPage() {
   useEffect(() => {
     if (connected && publicKey) {
       setLoading(true);
-      Promise.all([checkBalance(), fetchNovels()]).finally(() => setLoading(false));
+      Promise.all([checkBalance(), fetchNovels()]).finally(() =>
+        setLoading(false)
+      );
     } else {
-      fetchNovels().finally(() => setLoading(false)); // Fetch novels even if not connected
+      fetchNovels().finally(() => setLoading(false));
     }
   }, [connected, publicKey]);
 
   if (loading) return <LoadingPage />;
 
   return (
-    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+    <div className={styles.nexusContainer}>
+      {/* Floating Navbar */}
+      <nav className={styles.nexusNavbar}>
+        <div className={styles.navbarContent}>
+          <Link
+            href="/"
+            onClick={() => handleNavigation("/")}
+            className={styles.nexusLogo}
+          >
+            <img
+              src="/images/logo.jpg"
+              alt="Sempai HQ"
+              className={styles.logoImage}
+            />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
+          <button className={styles.menuButton} onClick={toggleMenu}>
             {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
+          <div
+            className={`${styles.navItems} ${menuOpen ? styles.navItemsOpen : ""}`}
+          >
+            <Link
+              href="/"
+              onClick={() => handleNavigation("/")}
+              className={styles.navItem}
+            >
+              <FaHome /> Home
             </Link>
-            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
-              <FaExchangeAlt className={styles.navIcon} /> Swap
+            <Link
+              href="/swap"
+              onClick={() => handleNavigation("/swap")}
+              className={styles.navItem}
+            >
+              <FaExchangeAlt /> Swap
             </Link>
-            <ConnectButton className={styles.connectButton} />
+            <ConnectButton className={styles.connectBtn} />
           </div>
         </div>
       </nav>
 
-      <header className={styles.header}>
+      {/* Header */}
+      <header className={styles.nexusHeader}>
         <h1 className={styles.headerTitle}>Digital Library Nexus</h1>
-        <p className={styles.headerSubtitle}>Access the multiverse of stories</p>
+        <p className={styles.headerTagline}>Unlock the Multiverse of Imagination</p>
         <CountdownTimer />
-        {connected ? (
-          <div className={styles.walletPanel}>
-            <div className={styles.walletInfo}>
-              <p className={styles.balance}>Balance: {balance} SMP</p>
-              <p className={styles.points}>Points: {weeklyPoints}</p>
+      </header>
+
+      {/* Novels Grid */}
+      <main className={styles.nexusGrid}>
+        {novels.length > 0 ? (
+          novels.map((novel) => (
+            <div key={novel.id} className={styles.novelCard}>
+              <Link
+                href={`/novel/${novel.id}`}
+                onClick={() => handleNavigation(`/novel/${novel.id}`)}
+                className={styles.novelLink}
+              >
+                <img
+                  src={novel.image}
+                  alt={novel.title}
+                  className={styles.novelCover}
+                />
+                <h3 className={styles.novelName}>{novel.title}</h3>
+              </Link>
+              <div className={styles.writerContainer}>
+                <Link
+                  href={`/writers-profile/${novel.user_id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigation(`/writers-profile/${novel.user_id}`);
+                  }}
+                  className={styles.writerLink}
+                >
+                  <FaFeather className={styles.featherIcon} />
+                  {novel.users?.name || "Unknown Writer"}
+                </Link>
+              </div>
             </div>
-            <div className={styles.withdrawPanel}>
+          ))
+        ) : (
+          <p className={styles.noNovels}>No stories detected in the nexus...</p>
+        )}
+      </main>
+
+      {/* Floating Wallet Panel */}
+      {connected ? (
+        <div
+          className={`${styles.walletPanel} ${
+            walletPanelOpen ? styles.walletPanelOpen : ""
+          }`}
+        >
+          <button
+            className={styles.walletToggle}
+            onClick={toggleWalletPanel}
+            aria-label="Toggle wallet panel"
+          >
+            <FaWallet />
+            <span className={styles.walletSummary}>
+              {balance} SMP | {weeklyPoints} Pts
+            </span>
+          </button>
+          <div className={styles.walletContent}>
+            <div className={styles.walletInfo}>
+              <p>
+                <span className={styles.balanceLabel}>Balance:</span> {balance}{" "}
+                SMP
+              </p>
+              <p>
+                <span className={styles.pointsLabel}>Points:</span>{" "}
+                {weeklyPoints}
+              </p>
+              {pendingWithdrawal > 0 && (
+                <p className={styles.pendingText}>
+                  Pending: {pendingWithdrawal} SMP
+                </p>
+              )}
+            </div>
+            <div className={styles.withdrawSection}>
               <input
                 type="number"
                 min="2500"
@@ -253,56 +360,34 @@ export default function NovelsPage() {
                 placeholder="Amount (Min: 2500)"
                 className={styles.withdrawInput}
               />
-              <div className={styles.buttonGroup}>
+              <div className={styles.withdrawActions}>
                 <button
                   onClick={handleWithdraw}
                   disabled={loading}
-                  className={styles.withdrawButton}
+                  className={styles.withdrawBtn}
                 >
                   Withdraw
                 </button>
                 <button
                   onClick={checkBalance}
                   disabled={loading}
-                  className={styles.refreshButton}
+                  className={styles.refreshBtn}
                 >
                   Refresh
                 </button>
               </div>
-              {pendingWithdrawal > 0 && (
-                <p className={styles.pending}>Pending: {pendingWithdrawal} SMP</p>
-              )}
               {errorMessage && (
-                <p className={styles.error}>{errorMessage}</p>
+                <p className={styles.errorText}>{errorMessage}</p>
               )}
             </div>
           </div>
-        ) : (
-          <div className={styles.connectPrompt}>
-            <p>Connect to manage your wallet (first two chapters free)</p>
-            <WalletMultiButton className={styles.connectWalletButton} />
-          </div>
-        )}
-      </header>
-
-      <section className={styles.gridSection}>
-        <div className={styles.novelsGrid}>
-          {novels.length > 0 ? (
-            novels.map((novel) => (
-              <div key={novel.id} className={styles.novelNode}>
-                <Link href={`/novel/${novel.id}`} onClick={() => handleNavigation(`/novel/${novel.id}`)} className={styles.novelLink}>
-                  <img src={novel.image} alt={novel.title} className={styles.novelImage} />
-                  <div className={styles.novelOverlay}>
-                    <h5 className={styles.novelTitle}>{novel.title}</h5>
-                  </div>
-                </Link>
-              </div>
-            ))
-          ) : (
-            <p className={styles.noData}>No data streams available</p>
-          )}
         </div>
-      </section>
+      ) : (
+        <div className={styles.connectCallout}>
+          <p>Connect your wallet to access premium features (first two chapters free)</p>
+          <WalletMultiButton className={styles.walletConnectBtn} />
+        </div>
+      )}
     </div>
   );
 }
