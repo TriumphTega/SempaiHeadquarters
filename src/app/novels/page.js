@@ -58,14 +58,25 @@ export default function NovelsPage() {
       const userId = user.id;
       setWeeklyPoints(user.weekly_points || 0);
 
+      // Fetch SMP balance specifically
       const { data: walletBalance, error: balanceError } = await supabase
         .from("wallet_balances")
         .select("amount")
         .eq("user_id", userId)
+        .eq("currency", "SMP") // Filter for SMP only
+        .eq("chain", "SOL")    // Ensure SOL chain (optional, adjust if needed)
         .single();
 
-      if (balanceError) throw new Error("Error fetching balance");
-      setBalance(walletBalance?.amount || 0);
+      if (balanceError) {
+        if (balanceError.code === "PGRST116") {
+          // No SMP balance exists yet
+          setBalance(0);
+        } else {
+          throw new Error(`Error fetching SMP balance: ${balanceError.message}`);
+        }
+      } else {
+        setBalance(walletBalance?.amount || 0);
+      }
 
       const { data: pendingData, error: pendingError } = await supabase
         .from("pending_withdrawals")

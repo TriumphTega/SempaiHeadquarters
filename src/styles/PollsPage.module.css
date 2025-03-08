@@ -1,0 +1,619 @@
+/* Global Container */
+.pollsContainer {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+    color: #fff;
+    font-family: "Orbitron", sans-serif;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  
+  .pollsContainer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(243, 99, 22, 0.15) 0%, transparent 70%);
+    z-index: 0;
+    animation: ambientGlow 15s infinite ease-in-out;
+  }
+  
+  @keyframes ambientGlow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+  }
+  
+  /* Navbar */
+  .pollsNavbar {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1200px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid rgba(243, 99, 22, 0.6);
+    border-radius: 50px;
+    padding: 10px 20px;
+    box-shadow: 0 0 25px rgba(243, 99, 22, 0.4);
+    z-index: 2000;
+    backdrop-filter: blur(8px);
+    animation: fadeInDown 0.5s ease-out;
+  }
+  
+  .navbarContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .nexusLogo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logoImage {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 3px solid #ff6200;
+    transition: transform 0.6s ease;
+  }
+  
+  .nexusLogo:hover .logoImage {
+    transform: rotate(360deg);
+  }
+  
+  .logoText {
+    margin-left: 12px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #ff6200;
+    text-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+  }
+  
+  .menuButton {
+    background: none;
+    border: none;
+    color: #ff6200;
+    font-size: 2rem;
+    cursor: pointer;
+    display: none;
+  }
+  
+  .navItems {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+  }
+  
+  .navItem {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  
+  .navItem:hover {
+    background: rgba(243, 99, 22, 0.4);
+    transform: scale(1.1);
+    color: #ff6200;
+    box-shadow: 0 0 15px rgba(243, 99, 22, 0.6);
+  }
+  
+  /* Header */
+  .pollsHeader {
+    text-align: center;
+    padding: 130px 20px 50px;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .headerTitle {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #ff6200;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 0 25px rgba(243, 99, 22, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    animation: neonPulse 2s infinite alternate;
+  }
+  
+  .headerIcon {
+    font-size: 3rem;
+    animation: spinGlow 3s infinite linear;
+  }
+  
+  .headerTagline {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 20px 0;
+    text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
+    animation: fadeIn 1s ease-out;
+  }
+  
+  .balanceInfo {
+    font-size: 1.2rem;
+    color: #ff6200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-shadow: 0 0 8px rgba(243, 99, 22, 0.6);
+  }
+  
+  /* Main Content */
+  .pollsMain {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .errorMessage {
+    position: fixed;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 75, 75, 0.9);
+    padding: 15px 30px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 1500;
+    animation: slideDown 0.5s ease-out;
+  }
+  
+  .closeError {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
+  .pollsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 50px;
+  }
+  
+  /* Create Section */
+  .createSection {
+    animation: slideInLeft 0.8s ease-out;
+  }
+  
+  .holoCard {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 20, 0.85));
+    border: 2px solid rgba(243, 99, 22, 0.7);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 0 30px rgba(243, 99, 22, 0.4);
+    transition: all 0.3s ease;
+  }
+  
+  .holoCard:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 0 40px rgba(243, 99, 22, 0.6);
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+    color: #ff6200;
+    text-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .sectionIcon {
+    font-size: 1.8rem;
+    animation: bounce 2s infinite ease-in-out;
+  }
+  
+  .holoInput {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(243, 99, 22, 0.5);
+    padding: 14px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+  }
+  
+  .holoInput:focus {
+    outline: none;
+    border-color: #ff6200;
+    box-shadow: 0 0 15px rgba(243, 99, 22, 0.7);
+    transform: scale(1.02);
+  }
+  
+  .actionBtn {
+    background: rgba(243, 99, 22, 0.2);
+    border: 2px solid #ff6200;
+    padding: 12px;
+    border-radius: 10px;
+    color: #ff6200;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+  }
+  
+  .actionBtn:hover {
+    background: #ff6200;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
+  }
+  
+  .expiryLabel {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.4);
+  }
+  
+  .launchBtn {
+    background: #ff6200;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.2rem;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .launchBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(243, 99, 22, 0.9);
+  }
+  
+  /* Overview Section */
+  .overviewSection {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    animation: slideInRight 0.8s ease-out;
+  }
+  
+  .overviewTitle {
+    font-size: 1.6rem;
+    color: #ff6200;
+    text-shadow: 0 0 12px rgba(243, 99, 22, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .trendingPoll {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    color: #fff;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(243, 99, 22, 0.3);
+  }
+  
+  .voteCount {
+    font-weight: 700;
+    color: #ff6200;
+    text-shadow: 0 0 8px rgba(243, 99, 22, 0.5);
+  }
+  
+  .noContent {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
+  }
+  
+  /* All Polls Section */
+  .allPollsSection {
+    animation: fadeInUp 0.8s ease-out;
+  }
+  
+  .pollsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 30px;
+  }
+  
+  .pollCard {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 30, 0.85));
+    border: 2px solid rgba(243, 99, 22, 0.6);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 25px rgba(243, 99, 22, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .pollCard:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 0 35px rgba(243, 99, 22, 0.6);
+  }
+  
+  .pollTitle {
+    font-size: 1.8rem;
+    color: #ff6200;
+    text-transform: uppercase;
+    text-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+    margin-bottom: 20px;
+  }
+  
+  .optionsList {
+    display: grid;
+    gap: 15px;
+  }
+  
+  .voteBtn {
+    background: rgba(243, 99, 22, 0.15);
+    border: 2px solid #ff6200;
+    padding: 12px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .voteBtn:hover:not(:disabled) {
+    background: #ff6200;
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
+  }
+  
+  .voteBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  .voteIcon {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+  }
+  
+  .voteBtn:hover:not(:disabled) .voteIcon {
+    transform: rotate(15deg);
+  }
+  
+  .expiryText {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    margin-top: 15px;
+    text-shadow: 0 0 5px rgba(243, 99, 22, 0.3);
+  }
+  
+  /* Loader */
+  .loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    font-size: 1.5rem;
+    color: #ff6200;
+    text-shadow: 0 0 10px rgba(243, 99, 22, 0.7);
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .loaderIcon {
+    font-size: 2.5rem;
+    animation: spin 1.5s infinite linear;
+  }
+  
+  /* Animations */
+  @keyframes neonPulse {
+    0%, 100% { text-shadow: 0 0 25px rgba(243, 99, 22, 0.9); }
+    50% { text-shadow: 0 0 35px rgba(243, 99, 22, 1); }
+  }
+  
+  @keyframes spinGlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 1024px) {
+    .pollsGrid {
+      grid-template-columns: 1fr;
+    }
+  
+    .createSection, .overviewSection {
+      width: 100%;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .pollsNavbar {
+      width: 95%;
+      padding: 8px 15px;
+    }
+  
+    .menuButton {
+      display: block;
+    }
+  
+    .navItems {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.95);
+      flex-direction: column;
+      padding: 20px;
+      border-radius: 0 0 20px 20px;
+      box-shadow: 0 5px 25px rgba(243, 99, 22, 0.4);
+    }
+  
+    .navItemsOpen {
+      display: flex;
+    }
+  
+    .navItem {
+      width: 100%;
+      padding: 12px;
+      justify-content: center;
+    }
+  
+    .pollsHeader {
+      padding: 100px 15px 40px;
+    }
+  
+    .headerTitle {
+      font-size: 2.8rem;
+    }
+  
+    .headerTagline {
+      font-size: 1.3rem;
+    }
+  
+    .balanceInfo {
+      font-size: 1rem;
+    }
+  
+    .pollsList {
+      grid-template-columns: 1fr;
+    }
+  
+    .pollCard {
+      padding: 15px;
+    }
+  
+    .pollTitle {
+      font-size: 1.6rem;
+    }
+  
+    .voteBtn {
+      padding: 10px;
+      font-size: 1rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .headerTitle {
+      font-size: 2.2rem;
+    }
+  
+    .headerIcon {
+      font-size: 2rem;
+    }
+  
+    .headerTagline {
+      font-size: 1.1rem;
+    }
+  
+    .sectionTitle {
+      font-size: 1.6rem;
+    }
+  
+    .holoInput {
+      padding: 12px;
+      font-size: 1rem;
+    }
+  
+    .actionBtn, .launchBtn {
+      padding: 12px;
+      font-size: 1rem;
+    }
+  
+    .overviewTitle {
+      font-size: 1.4rem;
+    }
+  
+    .trendingPoll {
+      font-size: 1rem;
+    }
+  
+    .pollTitle {
+      font-size: 1.4rem;
+    }
+  
+    .voteBtn {
+      font-size: 0.9rem;
+    }
+  
+    .expiryText {
+      font-size: 0.9rem;
+    }
+  }

@@ -1,263 +1,372 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../services/supabase/supabaseClient";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import { useWallet } from "@solana/wallet-adapter-react";
-import Link from 'next/link';
+import Link from "next/link";
+import {
+  FaPoll,
+  FaFire,
+  FaVoteYea,
+  FaPlus,
+  FaRocket,
+  FaBars,
+  FaTimes,
+  FaHome,
+  FaExchangeAlt,
+  FaWallet,
+} from "react-icons/fa";
+import styles from "../../styles/PollsPage.module.css";
 
-
-export default function Polls() {
+export default function PollsPage() {
+  const { publicKey } = useWallet();
+  const { balance } = UseAmethystBalance();
   const [polls, setPolls] = useState([]);
   const [trendingPolls, setTrendingPolls] = useState([]);
+  const [userVotes, setUserVotes] = useState(new Set()); // Track polls user has voted on
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [expiresAt, setExpiresAt] = useState("");
   const [totalVotes, setTotalVotes] = useState(0);
   const [showPolls, setShowPolls] = useState(false);
-  const { balance } = UseAmethystBalance();
-  const { publicKey } = useWallet();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetchPolls();
-  }, []);
+    if (publicKey) {
+      fetchPolls();
+      fetchUserVotes();
+    }
+  }, [publicKey]);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   async function fetchPolls() {
-    setLoading(true);
+    try {
+      setLoading(true);
+      setError("");
 
-    // Fetch all polls
-    const { data: pollsData, error: pollsError } = await supabase
-      .from("polls")
-      .select("*")
-      .order("created_at", { ascending: false });
+      const { data: pollsData, error: pollsError } = await supabase
+        .from("polls")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (pollsError) console.error(pollsError);
-    else setPolls(pollsData);
+      if (pollsError) throw new Error(`Failed to fetch polls: ${pollsError.message}`);
 
-    // Fetch votes count
-    const { data: votesData, error: votesError } = await supabase
-      .from("votes")
-      .select("*");
+      const { data: votesData, error: votesError } = await supabase
+        .from("votes")
+        .select("*");
 
-    if (votesError) console.error(votesError);
-    else setTotalVotes(votesData.length);
+      if (votesError) throw new Error(`Failed to fetch votes: ${votesError.message}`);
 
-    // Fetch trending polls (most voted)
-    const { data: trendingData, error: trendingError } = await supabase
-      .from("polls")
-      .select("*, votes(count)")
-      .order("votes.count", { ascending: false })
-      .limit(3);
+      const { data: trendingData, error: trendingError } = await supabase
+        .rpc("get_trending_polls")
+        .limit(3);
 
-    if (trendingError) console.error(trendingError);
-    else setTrendingPolls(trendingData);
+      if (trendingError) {
+        console.error("Trending Polls Error:", trendingError);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("polls")
+          .select("*, votes(count)")
+          .order("votes_count", { ascending: false, referencedTable: "votes" })
+          .limit(3);
 
-    setLoading(false);
+        if (fallbackError) throw new Error(`Fallback failed: ${fallbackError.message}`);
+        setTrendingPolls(
+          fallbackData.map((poll) => ({
+            ...poll,
+            votes_count: poll.votes?.count || 0,
+          })) || []
+        );
+      } else {
+        setTrendingPolls(trendingData || []);
+      }
+
+      setPolls(pollsData || []);
+      setTotalVotes(votesData?.length || 0);
+    } catch (err) {
+      setError(err.message);
+      console.error("Fetch Polls Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchUserVotes() {
+    if (!publicKey) return;
+
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const { data: votesData, error: votesError } = await supabase
+        .from("votes")
+        .select("poll_id")
+        .eq("user_id", userId);
+
+      if (votesError) throw new Error(`Failed to fetch user votes: ${votesError.message}`);
+
+      const votedPollIds = new Set(votesData.map((vote) => vote.poll_id));
+      setUserVotes(votedPollIds);
+    } catch (err) {
+      setError(err.message);
+      console.error("Fetch User Votes Error:", err);
+    }
   }
 
   async function getUserId() {
     if (!publicKey) return null;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("users")
       .select("id")
       .eq("wallet_address", publicKey.toString())
       .single();
-    return data ? data.id : null;
+    if (error) {
+      console.error("Error fetching user ID:", error);
+      return null;
+    }
+    return data?.id || null;
   }
 
   async function createPoll() {
     const userId = await getUserId();
     if (!userId) {
-      alert("You must connect your wallet first!");
+      setError("Please connect your wallet!");
       return;
     }
 
     if (question.trim() === "" || options.some((opt) => opt.trim() === "")) {
-      alert("Please fill in the question and all options.");
+      setError("Question and all options are required!");
       return;
     }
 
-    const newPoll = {
-      user_id: userId,
-      question,
-      options,
-      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-    };
+    try {
+      setError("");
+      const newPoll = {
+        user_id: userId,
+        question,
+        options,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      };
 
-    const { error } = await supabase.from("polls").insert(newPoll);
-    if (error) alert("Error creating poll!");
-    else {
-      alert("Poll created successfully!");
+      const { error } = await supabase.from("polls").insert(newPoll);
+      if (error) throw new Error(`Failed to create poll: ${error.message}`);
+
       fetchPolls();
       setQuestion("");
       setOptions(["", ""]);
       setExpiresAt("");
+    } catch (err) {
+      setError(err.message);
+      console.error(err);
     }
   }
 
   async function vote(pollId, choice) {
     const userId = await getUserId();
     if (!userId) {
-      alert("You must connect your wallet first!");
+      setError("Please connect your wallet to vote!");
       return;
     }
 
-    const { error } = await supabase.from("votes").insert({
-      poll_id: pollId,
-      user_id: userId,
-      choice,
-    });
+    if (userVotes.has(pollId)) {
+      setError("You’ve already voted on this poll!");
+      return;
+    }
 
-    if (error) alert("You can only vote once per poll!");
-    else fetchPolls();
+    try {
+      setError("");
+      const { data, error } = await supabase.from("votes").insert({
+        poll_id: pollId,
+        user_id: userId,
+        choice,
+      });
+
+      if (error) throw new Error(`Voting failed: ${error.message}`);
+
+      setUserVotes((prev) => new Set([...prev, pollId])); // Update client-side state
+      fetchPolls(); // Refresh poll data
+    } catch (err) {
+      setError(err.message);
+      console.error(err);
+    }
   }
 
   return (
-    <div>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-3 shadow">
-  <div className="container">
-    {/* Brand Logo & Name */}
-    <Link href="/" className="navbar-brand d-flex align-items-center">
-      <img
-        src="/images/logo.jpg" // Ensure the image is in the public folder
-        alt="Sempai HQ"
-        className="navbar-logo me-2"
-        style={{ width: "45px", height: "45px", borderRadius: "50%", objectFit: "cover" }}
-      />
-      <span className="fs-5 fw-bold text-white">Sempai HQ</span>
-    </Link>
-
-    {/* Navbar Toggle Button for Mobile */}
-    <button
-      className="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarNav"
-      aria-controls="navbarNav"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span className="navbar-toggler-icon"></span>
-    </button>
-
-    {/* Navbar Links */}
-    <div className="collapse navbar-collapse" id="navbarNav">
-      <ul className="navbar-nav ms-auto">
-        <li className="nav-item">
-          <Link href="/" className="nav-link text-light fw-semibold hover-effect">
-            Home
+    <div className={styles.pollsContainer}>
+      {/* Floating Navbar */}
+      <nav className={styles.pollsNavbar}>
+        <div className={styles.navbarContent}>
+          <Link href="/" className={styles.nexusLogo}>
+            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logoImage} />
+            <span className={styles.logoText}>Sempai HQ</span>
           </Link>
-        </li>
-        <li className="nav-item">
-          <Link href="/swap" className="nav-link text-light fw-semibold hover-effect">
-            Swap
-          </Link>
-        </li>
-      </ul>
-
-    
-    </div>
-  </div>
-</nav>
-
-<div className="poll-container">
-      
-
-      <h2 className="title">🔥 Community Polls 🔥</h2>
-    
-      <div className="row">
-        {/* Poll Creation Section - Takes up 5/8 of the width */}
-        {balance > 0 && (
-          <div className="col-lg-7 mb-4">
-            <div className="poll-card">
-              <h4>Create a Poll</h4>
-              <input
-                type="text"
-                className="poll-input"
-                placeholder="Enter your question"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-              />
-              {options.map((opt, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  className="poll-input"
-                  placeholder={`Option ${index + 1}`}
-                  value={opt}
-                  onChange={(e) => {
-                    const newOptions = [...options];
-                    newOptions[index] = e.target.value;
-                    setOptions(newOptions);
-                  }}
-                />
-              ))}
-              <button className="poll-button mb-2" onClick={() => setOptions([...options, ""])}>
-                ➕ Add Option
-              </button>
-              <p>Expiration Date(Optional)</p>
-              <input
-                type="datetime-local"
-                className="poll-input"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-              />
-              <button className="poll-submit" onClick={createPoll}>
-                🚀 Create Poll
-              </button>
-            </div>
-          </div>
-        )}
-    
-        {/* Poll Display Section - Takes up 3/8 of the width */}
-        <div className="col-lg-5">
-          {/* Show All Polls Button */}
-          <div className="poll-card" onClick={() => setShowPolls(!showPolls)} style={{ cursor: "pointer" }}>
-            <h5>📜 Community Polls Created</h5>
-          </div>
-    
-          {/* Total Votes Cast */}
-          <div className="poll-card">
-            <h5>🗳️ Total Votes Cast: {totalVotes}</h5>
-          </div>
-    
-          {/* Trending Polls */}
-          <div className="poll-card">
-            <h5>🔥 Trending Polls 🔥</h5>
-            {trendingPolls.length === 0 ? (
-              <p>No trending polls yet.</p>
-            ) : (
-              trendingPolls.map((poll) => <p key={poll.id} className="mb-1">{poll.question}</p>)
-            )}
+          <button className={styles.menuButton} onClick={toggleMenu}>
+            {menuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+          <div className={`${styles.navItems} ${menuOpen ? styles.navItemsOpen : ""}`}>
+            <Link href="/" className={styles.navItem}>
+              <FaHome /> Home
+            </Link>
+            <Link href="/swap" className={styles.navItem}>
+              <FaExchangeAlt /> Swap
+            </Link>
           </div>
         </div>
-      </div>
-    
-      {/* Community Polls */}
-      {showPolls &&
-        (loading ? (
-          <p className="loading-text">⏳ Loading polls...</p>
-        ) : (
-          polls.map((poll) => (
-            <div key={poll.id} className="poll-card">
-              <h5>{poll.question}</h5>
-              {poll.options.map((opt, index) => (
-                <button
-                  key={index}
-                  className="poll-option"
-                  onClick={() => vote(poll.id, opt)}
-                  disabled={balance === 0}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          ))
-        ))}
-    </div>
-    </div>
-   
+      </nav>
 
+      {/* Header */}
+      <header className={styles.pollsHeader}>
+        <h1 className={styles.headerTitle}>
+          <FaPoll className={styles.headerIcon} /> Polls Nexus
+        </h1>
+        <p className={styles.headerTagline}>Your Voice Shapes the Cosmos</p>
+        {publicKey && (
+          <p className={styles.balanceInfo}>
+            <FaWallet /> Balance: {balance} AME
+          </p>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className={styles.pollsMain}>
+        {error && (
+          <div className={styles.errorMessage}>
+            <span>{error}</span>
+            <button onClick={() => setError("")} className={styles.closeError}>
+              ×
+            </button>
+          </div>
+        )}
+
+        <div className={styles.pollsGrid}>
+          {/* Left: Poll Creation */}
+          {balance > 0 && (
+            <section className={styles.createSection}>
+              <div className={styles.holoCard}>
+                <h2 className={styles.sectionTitle}>
+                  <FaRocket className={styles.sectionIcon} /> Create Poll
+                </h2>
+                <input
+                  type="text"
+                  className={styles.holoInput}
+                  placeholder="Pose Your Question"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                />
+                {options.map((opt, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    className={styles.holoInput}
+                    placeholder={`Option ${index + 1}`}
+                    value={opt}
+                    onChange={(e) => {
+                      const newOptions = [...options];
+                      newOptions[index] = e.target.value;
+                      setOptions(newOptions);
+                    }}
+                  />
+                ))}
+                <button
+                  className={styles.actionBtn}
+                  onClick={() => setOptions([...options, ""])}
+                >
+                  <FaPlus /> Add Option
+                </button>
+                <label className={styles.expiryLabel}>Set Expiration (Optional)</label>
+                <input
+                  type="datetime-local"
+                  className={styles.holoInput}
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                />
+                <button className={styles.launchBtn} onClick={createPoll}>
+                  <FaRocket /> Launch
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Right: Overview */}
+          <section className={styles.overviewSection}>
+            <div
+              className={styles.holoCard}
+              onClick={() => setShowPolls(!showPolls)}
+            >
+              <h3 className={styles.overviewTitle}>
+                <FaPoll /> All Polls ({polls.length})
+              </h3>
+            </div>
+            <div className={styles.holoCard}>
+              <h3 className={styles.overviewTitle}>
+                <FaVoteYea /> Votes Cast: {totalVotes}
+              </h3>
+            </div>
+            <div className={styles.holoCard}>
+              <h3 className={styles.overviewTitle}>
+                <FaFire /> Trending
+              </h3>
+              {trendingPolls.length === 0 ? (
+                <p className={styles.noContent}>No trending polls yet.</p>
+              ) : (
+                trendingPolls.map((poll) => (
+                  <div key={poll.id} className={styles.trendingPoll}>
+                    <span>{poll.question}</span>
+                    <span className={styles.voteCount}>{poll.votes_count}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* All Polls */}
+        {showPolls && (
+          <section className={styles.allPollsSection}>
+            {loading ? (
+              <div className={styles.loader}>
+                <FaPoll className={styles.loaderIcon} />
+                <span>Loading Nexus...</span>
+              </div>
+            ) : polls.length === 0 ? (
+              <p className={styles.noContent}>No polls in the cosmos yet.</p>
+            ) : (
+              <div className={styles.pollsList}>
+                {polls.map((poll) => {
+                  const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
+                  const hasVoted = userVotes.has(poll.id);
+                  return (
+                    <div key={poll.id} className={styles.pollCard}>
+                      <h3 className={styles.pollTitle}>{poll.question}</h3>
+                      <div className={styles.optionsList}>
+                        {poll.options.map((opt, index) => (
+                          <button
+                            key={index}
+                            className={`${styles.voteBtn} ${hasVoted ? styles.votedBtn : ""}`}
+                            onClick={() => vote(poll.id, opt)}
+                            disabled={balance === 0 || isExpired || hasVoted}
+                          >
+                            <FaVoteYea className={styles.voteIcon} /> {opt}
+                            {hasVoted && <span className={styles.votedText}> (Voted)</span>}
+                          </button>
+                        ))}
+                      </div>
+                      {poll.expires_at && (
+                        <p className={styles.expiryText}>
+                          {isExpired ? "Expired" : "Expires"}: {new Date(poll.expires_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
   );
 }

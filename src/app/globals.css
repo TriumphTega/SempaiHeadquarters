@@ -23,9 +23,6 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  overflow-y: auto; /* Explicitly allow vertical scrolling */
-  min-height: 100vh; /* Ensure they take at least the viewport height */
-  height: auto; /* Allow height to grow with content */
 }
 
 body {
@@ -52,3 +49,5 @@ a {
     color-scheme: dark;
   }
 }
+
+
