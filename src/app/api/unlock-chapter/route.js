@@ -1,46 +1,72 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { RPC_URL } from "@/constants";
+import { DEVNET_RPC_URL } from "@/constants";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
-const connection = new Connection(RPC_URL, "confirmed");
+const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
+const connection = new Connection(DEVNET_RPC_URL, "confirmed");
 
-// Fetch SOL price in USD from CoinGecko
 const fetchSolPrice = async () => {
   try {
-    const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
-    );
+    const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
     const data = await response.json();
     return data.solana.usd;
   } catch (error) {
     console.error("Error fetching SOL price:", error);
-    throw new Error("Failed to fetch SOL price");
+    return null;
+  }
+};
+
+const fetchSmpPrice = async () => {
+  try {
+    // Placeholder: Replace "smp-token-id" with actual CoinGecko ID if available
+    const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd");
+    const data = await response.json();
+    return data["smp-token-id"]?.usd || null;
+  } catch (error) {
+    console.error("Error fetching SMP price:", error);
+    return null;
   }
 };
 
 export async function POST(req) {
   try {
-    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, sol_amount } = await req.json();
-    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, sol_amount });
+    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency } = await req.json();
+    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency });
 
     if (!["3CHAPTERS", "FULL"].includes(subscription_type)) {
       console.log("Invalid subscription type:", subscription_type);
       return new Response(JSON.stringify({ error: "Invalid subscription type" }), { status: 400 });
     }
 
-    // Fetch real-time SOL price
-    const solPrice = await fetchSolPrice();
-    const usdAmount = subscription_type === "3CHAPTERS" ? 3 : 15; // $3 or $15
-    const expectedSolAmount = usdAmount / solPrice; // Expected SOL amount
-    const expectedLamports = Math.round(expectedSolAmount * LAMPORTS_PER_SOL);
+    const usdAmount = subscription_type === "3CHAPTERS" ? 3 : 15;
+    let expectedAmount, decimals, mint;
 
-    // Allow a small tolerance (e.g., 2% of lamports) due to rounding and price fluctuations
+    if (currency === "SOL") {
+      const solPrice = await fetchSolPrice();
+      if (!solPrice) throw new Error("Failed to fetch SOL price");
+      expectedAmount = usdAmount / solPrice;
+      decimals = 9;
+    } else if (currency === "USDC") {
+      expectedAmount = usdAmount; // USDC is $1
+      decimals = 6;
+      mint = USDC_MINT_ADDRESS;
+    } else if (currency === "SMP") {
+      const smpPrice = await fetchSmpPrice();
+      if (!smpPrice) throw new Error("SMP price unavailable");
+      expectedAmount = usdAmount / smpPrice;
+      decimals = 9; // Adjust if SMP uses different decimals
+      mint = SMP_MINT_ADDRESS;
+    } else {
+      return new Response(JSON.stringify({ error: "Unsupported currency" }), { status: 400 });
+    }
+
     const tolerance = 0.02;
-    const minLamports = Math.round(expectedLamports * (1 - tolerance));
-    const maxLamports = Math.round(expectedLamports * (1 + tolerance));
-
-    console.log(`Expected USD: $${usdAmount}, SOL Price: $${solPrice}, Expected SOL: ${expectedSolAmount}, Expected Lamports: ${expectedLamports}, Range: ${minLamports}-${maxLamports}`);
+    const minAmount = expectedAmount * (1 - tolerance);
+    const maxAmount = expectedAmount * (1 + tolerance);
 
     let tx = null;
     for (let i = 0; i < 3; i++) {
@@ -78,12 +104,24 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid transaction: sender or receiver missing" }), { status: 400 });
     }
 
-    const amountTransferredLamports = tx.meta.postBalances[receiverIndex] - tx.meta.preBalances[receiverIndex];
-    const amountTransferredSol = amountTransferredLamports / LAMPORTS_PER_SOL;
-    console.log("Amount transferred (SOL):", amountTransferredSol, "Lamports:", amountTransferredLamports);
+    let amountTransferred;
+    if (currency === "SOL") {
+      amountTransferred = (tx.meta.postBalances[receiverIndex] - tx.meta.preBalances[receiverIndex]) / LAMPORTS_PER_SOL;
+    } else {
+      const preTokenBalances = tx.meta.preTokenBalances?.find(b => b.mint === mint && b.accountIndex === senderIndex);
+      const postTokenBalances = tx.meta.postTokenBalances?.find(b => b.mint === mint && b.accountIndex === receiverIndex);
+      if (!preTokenBalances || !postTokenBalances) {
+        console.log("Token balances not found:", { preTokenBalances, postTokenBalances });
+        return new Response(JSON.stringify({ error: "Invalid token transfer" }), { status: 400 });
+      }
+      amountTransferred = (preTokenBalances.uiTokenAmount.uiAmount - (postTokenBalances.uiTokenAmount.uiAmount || 0)) ||
+                         (postTokenBalances.uiTokenAmount.uiAmount / (10 ** decimals));
+    }
 
-    if (amountTransferredLamports < minLamports || amountTransferredLamports > maxLamports) {
-      console.log("Incorrect payment amount:", { expectedSol: expectedSolAmount, actualSol: amountTransferredSol });
+    console.log("Amount transferred:", amountTransferred, "Expected range:", minAmount, "-", maxAmount);
+
+    if (amountTransferred < minAmount || amountTransferred > maxAmount) {
+      console.log("Incorrect payment amount:", { expected: expectedAmount, actual: amountTransferred });
       return new Response(JSON.stringify({ error: "Incorrect payment amount" }), { status: 400 });
     }
 
@@ -138,7 +176,8 @@ export async function POST(req) {
       story_id,
       chapter_unlocked_till,
       transaction_id: signature,
-      payment_amount: amountTransferredSol, // Store actual SOL amount paid
+      payment_amount: amountTransferred,
+      payment_currency: currency,
       subscription_type,
       expires_at,
       chapters_purchased: subscription_type === "3CHAPTERS" ? 3 : null,

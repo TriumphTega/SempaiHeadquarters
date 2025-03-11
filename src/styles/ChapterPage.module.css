@@ -888,3 +888,51 @@
     transform: scale(1);
   }
 }
+.subscriptionOption {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.optionTitle {
+  font-size: 1.2rem;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.unlockButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 300px;
+  margin: 10px auto;
+  padding: 10px 15px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.threeChapters {
+  background-color: #ff4500; /* Orange for 3 chapters */
+}
+
+.fullChapters {
+  background-color: #ffd700; /* Gold for full unlock */
+  color: #333;
+}
+
+.unlockButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buttonText {
+  flex-grow: 1;
+  text-align: center;
+}
+
+.price {
+  font-size: 0.9rem;
+  margin-left: 10px;
+}

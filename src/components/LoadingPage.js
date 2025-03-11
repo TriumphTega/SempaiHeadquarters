@@ -10,7 +10,7 @@ export default function LoadingPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 3000); // 3-second delay, adjustable
+    }, 30000); // 3-second delay, adjustable
 
     return () => clearTimeout(timer); // Cleanup on unmount
   }, []);

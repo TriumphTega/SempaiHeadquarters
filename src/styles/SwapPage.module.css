@@ -375,3 +375,64 @@
       padding: 10px 15px;
     }
   }
+  /* Existing styles remain unchanged, add these at the end */
+
+/* Ensure these are added to your SwapPage.module.css file */
+
+/* Button styles (adjust if needed to avoid conflicts) */
+.swapButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #ff5900; /* Example background, adjust to your theme */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.swapButton:disabled {
+  background-color: #000000;
+  cursor: not-allowed;
+}
+
+/* Swirling icon */
+.swirlIcon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #00ffcc; /* Neon cyan */
+  border-right: 3px solid #ff00ff; /* Neon magenta */
+  border-radius: 50%;
+  animation: swirl 1s linear infinite; /* Simple spin */
+}
+
+/* Swirl animation */
+@keyframes swirl {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulsing effect for extra cosmic flair */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

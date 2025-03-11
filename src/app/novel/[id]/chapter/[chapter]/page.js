@@ -6,6 +6,7 @@ import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
@@ -14,22 +15,12 @@ import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
-import { RPC_URL } from "../../../../../constants";
+import { DEVNET_RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
+const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
-const connection = new Connection(RPC_URL, "confirmed");
-
-const fetchSolPrice = async () => {
-  try {
-    const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-    const data = await response.json();
-    return data.solana.usd;
-  } catch (error) {
-    console.error("Error fetching SOL price:", error);
-    throw new Error("Failed to fetch SOL price");
-  }
-};
+const connection = new Connection(DEVNET_RPC_URL, "confirmed");
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();
@@ -48,18 +39,45 @@ export default function ChapterPage() {
   const [advanceInfo, setAdvanceInfo] = useState(null);
   const [canUnlockNextThree, setCanUnlockNextThree] = useState(false);
   const [solPrice, setSolPrice] = useState(null);
+  const [smpPrice, setSmpPrice] = useState(null);
+  const usdcPrice = 1; // USDC is pegged to $1
 
-  useEffect(() => {
-    const getSolPrice = async () => {
+  const fetchPrices = async () => {
+    const fetchSolPrice = async () => {
       try {
-        const price = await fetchSolPrice();
-        setSolPrice(price);
-      } catch (err) {
-        setError("Unable to fetch SOL price. Using default values.");
-        setSolPrice(100);
+        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+        const data = await response.json();
+        return data.solana.usd;
+      } catch (error) {
+        console.error("Error fetching SOL price:", error);
+        return null;
       }
     };
-    getSolPrice();
+
+    const fetchSmpPrice = async () => {
+      try {
+        // Placeholder: Replace "smp-token-id" with actual CoinGecko ID if available
+        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd");
+        const data = await response.json();
+        return data["smp-token-id"]?.usd || null;
+      } catch (error) {
+        console.error("Error fetching SMP price:", error);
+        return null;
+      }
+    };
+
+    const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
+    return { solPrice: sol || 100, smpPrice: smp }; // Default SOL to 100 if fetch fails
+  };
+
+  // Initial fetch for UI display
+  useEffect(() => {
+    const getInitialPrices = async () => {
+      const { solPrice: initialSol, smpPrice: initialSmp } = await fetchPrices();
+      setSolPrice(initialSol);
+      setSmpPrice(initialSmp);
+    };
+    getInitialPrices();
   }, []);
 
   const updateTokenBalance = useCallback(async () => {
@@ -267,7 +285,6 @@ export default function ChapterPage() {
 
       if (eventInsertError) throw new Error(`Error inserting wallet events: ${eventInsertError.message}`);
 
-      // Update novel_interactions
       const { data: interaction, error: interactionError } = await supabase
         .from("novel_interactions")
         .select("id, read_count")
@@ -307,7 +324,6 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      // Only show connect popup for chapters > 2 when not connected
       if (!connected && chapterNum > 2) {
         setShowConnectPopup(true);
         setLoading(false);
@@ -369,7 +385,6 @@ export default function ChapterPage() {
 
       console.log("Checking access - Chapter:", chapterNum, "Total Chapters:", totalChapters, "Advance Info:", chapterAdvanceInfo);
 
-      // Chapters 1 and 2 are always free unless marked as advance
       if (chapterNum <= 2) {
         if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
           console.log("Chapter 1 or 2 is free or past release date, unlocking");
@@ -447,76 +462,117 @@ export default function ChapterPage() {
     }
   };
 
-  const handlePayment = async (subscriptionType) => {
+  const getAssociatedTokenAddress = async (owner, mint) => {
+    return await PublicKey.findProgramAddress(
+      [
+        owner.toBuffer(),
+        TOKEN_PROGRAM_ID.toBuffer(),
+        mint.toBuffer(),
+      ],
+      new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+    );
+  };
+
+  const handlePayment = async (subscriptionType, currency) => {
     if (!publicKey) {
       alert("Please connect your wallet");
       return;
     }
-
-    if (!solPrice) {
-      setError("SOL price not available. Please try again later.");
-      return;
-    }
-
+  
+    const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15;
+    let amount, decimals, mint;
+  
     try {
-      const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15;
-      const solAmount = usdAmount / solPrice;
-      const lamports = Math.round(solAmount * LAMPORTS_PER_SOL);
-
-      console.log(`Subscription: ${subscriptionType}, USD: $${usdAmount}, SOL: ${solAmount}, Lamports: ${lamports}`);
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-
-      const transaction = new Transaction({
-        recentBlockhash: blockhash,
-        feePayer: publicKey,
-      }).add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: new PublicKey(TARGET_WALLET),
-          lamports,
-        })
-      );
-
-      const signature = await sendTransaction(transaction, connection, {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
-
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight,
-      }, "confirmed");
-
-      const response = await fetch("/api/unlock-chapter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          story_id: id,
-          subscription_type: subscriptionType,
-          signature,
-          userPublicKey: publicKey.toString(),
-          current_chapter: parseInt(chapter, 10),
-          sol_amount: solAmount,
-        }),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setIsLocked(false);
-        setSuccessMessage(`Payment successful! ${subscriptionType === "FULL" ? "All chapters" : `Up to Chapter ${result.chapter_unlocked_till + 1} unlocked as released`}`);
-        setTimeout(() => setSuccessMessage(""), 5000);
-        await checkAccess(userId);
+      // Fetch fresh prices before payment
+      const { solPrice: freshSolPrice, smpPrice: freshSmpPrice } = await fetchPrices();
+      setSolPrice(freshSolPrice); // Update UI (async, won't affect this call)
+      setSmpPrice(freshSmpPrice); // Update UI (async, won't affect this call)
+  
+      if (currency === "SOL") {
+        if (!freshSolPrice) throw new Error("SOL price not available");
+        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL); // Use freshSolPrice directly
+        decimals = 9;
+  
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          feePayer: publicKey,
+        }).add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new PublicKey(TARGET_WALLET),
+            lamports: amount,
+          })
+        );
+  
+        const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+  
+        await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
       } else {
-        setError(result.error);
+        const price = currency === "USDC" ? usdcPrice : freshSmpPrice; // Use freshSmpPrice directly
+        if (!price) throw new Error(`${currency} price not available`);
+        mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
+        decimals = currency === "USDC" ? 6 : 9; // USDC: 6 decimals, SMP: assuming 9
+        amount = Math.round((usdAmount / price) * (10 ** decimals));
+  
+        const sourceATA = (await getAssociatedTokenAddress(publicKey, mint))[0];
+        const destATA = (await getAssociatedTokenAddress(new PublicKey(TARGET_WALLET), mint))[0];
+  
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          feePayer: publicKey,
+        }).add(
+          createTransferInstruction(
+            sourceATA,
+            destATA,
+            publicKey,
+            amount,
+            [],
+            TOKEN_PROGRAM_ID
+          )
+        );
+  
+        const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+  
+        await processUnlock(subscriptionType, signature, amount / (10 ** decimals), currency);
       }
     } catch (error) {
-      console.error("Payment Error:", error);
-      setError("Payment failed: " + error.message);
+      console.error(`${currency} Payment Error:`, error);
+      setError(`Payment failed: ${error.message}`);
     }
   };
+  const processUnlock = async (subscriptionType, signature, amount, currency) => {
+    const response = await fetch("/api/unlock-chapter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        story_id: id,
+        subscription_type: subscriptionType,
+        signature,
+        userPublicKey: publicKey.toString(),
+        current_chapter: parseInt(chapter, 10),
+        amount,
+        currency,
+      }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setIsLocked(false);
+      setSuccessMessage(`Payment successful! ${subscriptionType === "FULL" ? "All chapters" : `Up to Chapter ${result.chapter_unlocked_till + 1} unlocked as released`}`);
+      setTimeout(() => setSuccessMessage(""), 5000);
+      await checkAccess(userId);
+    } else {
+      setError(result.error);
+    }
+  };
+
+  // Rest of your component remains unchanged...
+
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -618,6 +674,10 @@ export default function ChapterPage() {
 
   const threeChaptersSol = solPrice ? (3 / solPrice).toFixed(4) : "Loading...";
   const fullChaptersSol = solPrice ? (15 / solPrice).toFixed(4) : "Loading...";
+  const threeChaptersUsdc = (3 / usdcPrice).toFixed(2);
+  const fullChaptersUsdc = (15 / usdcPrice).toFixed(2);
+  const threeChaptersSmp = smpPrice ? (3 / smpPrice).toFixed(2) : "N/A";
+  const fullChaptersSmp = smpPrice ? (15 / smpPrice).toFixed(2) : "N/A";
 
   return (
     <div className={`${styles.page} ${styles.dark}`}>
@@ -681,39 +741,82 @@ export default function ChapterPage() {
 
         {isLocked ? (
           <div className={styles.lockedContent}>
-          <div className={styles.lockIconWrapper}>
-            <FaLock className={styles.lockIcon} />
-          </div>
-          {advanceInfo?.is_advance ? (
-            <p className={styles.message}>{releaseDateMessage }</p>
-          ) : (
-            <p className={styles.message}>
-              <FaLock className={styles.messageIcon} /> This chapter is locked
+            <div className={styles.lockIconWrapper}>
+              <FaLock className={styles.lockIcon} />
+            </div>
+            {advanceInfo?.is_advance ? (
+              <p className={styles.message}>{releaseDateMessage }</p>
+            ) : (
+              <p className={styles.message}>
+                <FaLock className={styles.messageIcon} /> This chapter is locked
+              </p>
+            )}
+            <p className={styles.subMessage}>
+              <FaGem className={styles.gemIcon} /> Unlock with a subscription
             </p>
-          )}
-          <p className={styles.subMessage}>
-            <FaGem className={styles.gemIcon} /> Unlock with a subscription (SOL)
-          </p>
-          <button
-            onClick={() => handlePayment("3CHAPTERS")}
-            className={`${styles.unlockButton} ${styles.threeChapters}`}
-            disabled={!canUnlockNextThree || !solPrice}
-            title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
-          >
-            <FaRocket className={styles.buttonIcon} />
-            <span className={styles.buttonText}>Unlock 3 Chapters</span>
-            <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
-          </button>
-          <button
-            onClick={() => handlePayment("FULL")}
-            className={`${styles.unlockButton} ${styles.fullChapters}`}
-            disabled={!solPrice}
-          >
-            <FaCrown className={styles.buttonIcon} />
-            <span className={styles.buttonText}>Unlock All Chapters</span>
-            <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
-          </button>
-        </div>
+            <div className={styles.paymentOptions}>
+              {/* SOL Payments */}
+              <button
+                onClick={() => handlePayment("3CHAPTERS", "SOL")}
+                className={`${styles.unlockButton} ${styles.threeChapters}`}
+                disabled={!canUnlockNextThree || !solPrice}
+                title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
+              >
+                <FaRocket className={styles.buttonIcon} />
+                <span className={styles.buttonText}>3 Chapters (SOL)</span>
+                <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
+              </button>
+              <button
+                onClick={() => handlePayment("FULL", "SOL")}
+                className={`${styles.unlockButton} ${styles.fullChapters}`}
+                disabled={!solPrice}
+              >
+                <FaCrown className={styles.buttonIcon} />
+                <span className={styles.buttonText}>All Chapters (SOL)</span>
+                <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
+              </button>
+              {/* USDC Payments */}
+              <button
+                onClick={() => handlePayment("3CHAPTERS", "USDC")}
+                className={`${styles.unlockButton} ${styles.threeChapters}`}
+                disabled={!canUnlockNextThree}
+                title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
+              >
+                <FaRocket className={styles.buttonIcon} />
+                <span className={styles.buttonText}>3 Chapters (USDC)</span>
+                <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
+              </button>
+              <button
+                onClick={() => handlePayment("FULL", "USDC")}
+                className={`${styles.unlockButton} ${styles.fullChapters}`}
+              >
+                <FaCrown className={styles.buttonIcon} />
+                <span className={styles.buttonText}>All Chapters (USDC)</span>
+                <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
+              </button>
+              {/* SMP Payments */}
+              <button
+                onClick={() => handlePayment("3CHAPTERS", "SMP")}
+                className={`${styles.unlockButton} ${styles.threeChapters}`}
+                disabled={!canUnlockNextThree || !smpPrice}
+                title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
+              >
+                <FaRocket className={styles.buttonIcon} />
+                <span className={styles.buttonText}>3 Chapters (SMP)</span>
+                <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
+              </button>
+              <button
+                onClick={() => handlePayment("FULL", "SMP")}
+                className={`${styles.unlockButton} ${styles.fullChapters}`}
+                disabled={!smpPrice}
+                title={!smpPrice ? "SMP price unavailable" : ""}
+              >
+                <FaCrown className={styles.buttonIcon} />
+                <span className={styles.buttonText}>All Chapters (SMP)</span>
+                <span className={styles.price}>$15 / {fullChaptersSmp} SMP</span>
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <div className={styles.chapterContent}>

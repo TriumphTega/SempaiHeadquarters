@@ -1,36 +1,20 @@
-import {
-  Connection,
-  ComputeBudgetProgram,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  LAMPORTS_PER_SOL,
-} from "@solana/web3.js";
-import {
-  createAssociatedTokenAccountIdempotentInstruction,
-  createBurnInstruction,
-  createCloseAccountInstruction,
-  createTransferInstruction,
-  getAssociatedTokenAddressSync,
-  unpackAccount,
-} from "@solana/spl-token";
+import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
+import fetch from "cross-fetch"; // Ensure installed: npm i cross-fetch
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
 
-const TREASURY_WALLET = new PublicKey(
-  "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58",
-);
-
-const BACKEND_KEYPAIR = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(process.env.BACKEND_WALLET_KEYPAIR ?? "[]")),
-);
+// Define allowed token mints
+const TOKEN_MINTS = {
+  SOL: new PublicKey("So11111111111111111111111111111111111111112"), // Wrapped SOL mint
+  JUP: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"), // Jupiter token mint
+  AMETHYST: AMETHYST_MINT_ADDRESS,
+  SMP: SMP_MINT_ADDRESS,
+};
 
 const connection = new Connection(RPC_URL);
 
 export async function POST(req) {
   const body = await req.json();
-
-  const { userAddress, amethystAmount } = body ?? {};
+  const { userAddress, amount, inputMint, outputMint } = body ?? {};
 
   let user;
   try {
@@ -41,127 +25,101 @@ export async function POST(req) {
         error: "invalid public key",
         message: `could not parse ${userAddress} as public key: ${e?.message}`,
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  const amethystAta = {
-    treasury: getAssociatedTokenAddressSync(
-      AMETHYST_MINT_ADDRESS,
-      TREASURY_WALLET,
-    ),
-    user: getAssociatedTokenAddressSync(AMETHYST_MINT_ADDRESS, user),
-  };
-  const smpAta = {
-    treasury: getAssociatedTokenAddressSync(
-      SMP_MINT_ADDRESS,
-      BACKEND_KEYPAIR.publicKey,
-    ),
-    user: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, user),
-  };
-
-  const [userAmethystAccountInfo, userSmbAccountInfo] =
-    await connection.getMultipleAccountsInfo([amethystAta.user, smpAta.user]);
-
-  if (!userAmethystAccountInfo)
+  // Validate input and output mints
+  const validMints = Object.values(TOKEN_MINTS).map((mint) => mint.toString());
+  if (!validMints.includes(inputMint) || !validMints.includes(outputMint)) {
     return Response.json(
       {
-        error: "could not fetch user's amethyst token account",
-        message: `${amethystAta.user} does not exist`,
+        error: "invalid token",
+        message: "Only SOL, JUP, AMETHYST, and SMP are supported for swapping.",
       },
-      { status: 400 },
+      { status: 400 }
     );
+  }
 
-  const userAmethystAccount = unpackAccount(
-    amethystAta.user,
-    userAmethystAccountInfo,
-  );
-
-  let rawAmethystAmount;
-  if (typeof amethystAmount === "number")
-    rawAmethystAmount = BigInt(Math.floor(amethystAmount * 1_000_000));
-  else rawAmethystAmount = userAmethystAccount.amount;
-
-  if (rawAmethystAmount > userAmethystAccount.amount)
+  if (inputMint === outputMint) {
     return Response.json(
       {
-        error: "insufficient balance",
-        message: `${user} is swapping ${rawAmethystAmount} but has ${userAmethystAccount.amount}`,
+        error: "invalid swap",
+        message: "Input and output tokens must be different.",
       },
-      { status: 400 },
+      { status: 400 }
     );
+  }
 
-  const rawSmpAmount = (rawAmethystAmount * 125n) / 100n;
-  const amethystBurnAmount = (rawAmethystAmount * 25n) / 100n;
-  const amethystTransferAmount = rawAmethystAmount - amethystBurnAmount;
+  // Convert amount to lamports (assuming 6 decimals for SMP/Amethyst, 9 for SOL/JUP)
+  const decimals = inputMint === TOKEN_MINTS.SOL.toString() || inputMint === TOKEN_MINTS.JUP.toString() ? 9 : 6;
+  const rawAmount = BigInt(Math.floor(amount * 10 ** decimals));
 
-  const transaction = new Transaction();
-  // add priority fees
-  transaction.add(
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
-  );
+  try {
+    // Step 1: Get a quote from Jupiter API
+    const quoteResponse = await (
+      await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`
+      )
+    ).json();
 
-  // create smb ata if it doesn't exist
-  if (!userSmbAccountInfo)
-    transaction.add(
-      createAssociatedTokenAccountIdempotentInstruction(
-        user,
-        smpAta.user,
-        user,
-        SMP_MINT_ADDRESS,
-      ),
+    if (quoteResponse.error) {
+      return Response.json(
+        {
+          error: "quote failed",
+          message: quoteResponse.error,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Get the serialized swap transaction
+    const swapResponse = await (
+      await fetch("https://quote-api.jup.ag/v6/swap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          quoteResponse,
+          userPublicKey: user.toString(),
+          wrapAndUnwrapSol: inputMint === TOKEN_MINTS.SOL.toString() || outputMint === TOKEN_MINTS.SOL.toString(), // Handle SOL wrapping
+          dynamicComputeUnitLimit: true,
+          prioritizationFeeLamports: {
+            priorityLevelWithMaxLamports: {
+              maxLamports: 10000000, // 0.01 SOL max priority fee
+              priorityLevel: "high",
+            },
+          },
+        }),
+      })
+    ).json();
+
+    if (swapResponse.error) {
+      return Response.json(
+        {
+          error: "swap transaction failed",
+          message: swapResponse.error,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { swapTransaction } = swapResponse;
+
+    // Step 3: Return the serialized transaction
+    const transactionBuf = Buffer.from(swapTransaction, "base64");
+    return Response.json({
+      transaction: transactionBuf.toString("base64"),
+    });
+  } catch (error) {
+    console.error("Swap API error:", error);
+    return Response.json(
+      {
+        error: "internal server error",
+        message: error.message,
+      },
+      { status: 500 }
     );
-
-  transaction.add(
-    // transfer 75% amethyst from user -> treasury
-    createTransferInstruction(
-      amethystAta.user,
-      amethystAta.treasury,
-      user,
-      amethystTransferAmount,
-    ),
-
-    // burn 25% amethyst
-    createBurnInstruction(
-      amethystAta.user,
-      AMETHYST_MINT_ADDRESS,
-      user,
-      amethystBurnAmount,
-    ),
-
-    // transfer smp from treasury -> user
-    createTransferInstruction(
-      smpAta.treasury,
-      smpAta.user,
-      BACKEND_KEYPAIR.publicKey,
-      rawSmpAmount,
-    ),
-  );
-
-  // close token account if empty
-  if (userAmethystAccount.amount === rawAmethystAmount)
-    transaction.add(
-      createCloseAccountInstruction(amethystAta.user, user, user),
-    );
-
-  // charge user 0.01 sol
-  transaction.add(
-    SystemProgram.transfer({
-      fromPubkey: user,
-      toPubkey: TREASURY_WALLET,
-      lamports: Math.floor(0.01 * LAMPORTS_PER_SOL),
-    }),
-  );
-
-  const blockhashInfo = await connection.getLatestBlockhash("finalized");
-  transaction.feePayer = user;
-  transaction.recentBlockhash = blockhashInfo.blockhash;
-  transaction.partialSign(BACKEND_KEYPAIR);
-
-  return Response.json({
-    blockhashInfo,
-    transaction: transaction
-      .serialize({ requireAllSignatures: false })
-      .toString("base64"),
-  });
+  }
 }
