@@ -14,14 +14,14 @@ import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export default function WalletProvider({ children }) {
-  const network = WalletAdapterNetwork.Devnet; // Use Devnet for testing; switch to Mainnet for production
-  const endpoint = clusterApiUrl(network); // Dynamically sets endpoint based on network
+  const network = WalletAdapterNetwork.Mainnet; // Switched to Mainnet
+  const endpoint = clusterApiUrl(network); // Uses Mainnet endpoint
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
     ],
-    [] // Empty dependency array since wallets don’t change
+    []
   );
 
   return (
