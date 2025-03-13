@@ -15,12 +15,12 @@ import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
-import { DEVNET_RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
+import { RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
-const connection = new Connection(DEVNET_RPC_URL, "confirmed");
+const connection = new Connection(RPC_URL, "confirmed");
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();

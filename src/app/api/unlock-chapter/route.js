@@ -1,13 +1,13 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { DEVNET_RPC_URL } from "@/constants";
+import { RPC_URL } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
-const connection = new Connection(DEVNET_RPC_URL, "confirmed");
+const connection = new Connection(RPC_URL, "confirmed");
 
 const fetchSolPrice = async () => {
   try {
