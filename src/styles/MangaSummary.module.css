@@ -1,0 +1,55 @@
+.cosmicContainer {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a2525 100%); /* Black to deep teal */
+  color: #d1d5db; /* Soft gray for text */
+  font-family: "Inter", sans-serif; /* Clean, modern font */
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.cosmicContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"%3E%3Cg fill="none" stroke="%232a3535" stroke-width="1" opacity="0.2"%3E%3Ccircle r="400" cx="400" cy="400"/%3E%3Ccircle r="350" cx="400" cy="400"/%3E%3Ccircle r="300" cx="400" cy="400"/%3E%3C/g%3E%3C/svg%3E') center/cover;
+  z-index: 0;
+  opacity: 0.3; /* Static subtle overlay, no animation */
+}
+
+/* Removed cosmicPulse animation to avoid glow */
+
+.summaryHeader {
+  padding: 100px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.summaryTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff; /* White for prominence */
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+.summaryText {
+  font-size: 1.2rem;
+  color: #8b9a9a; /* Muted teal-gray for text */
+  line-height: 1.6;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .summaryTitle {
+    font-size: 2rem;
+  }
+  .summaryText {
+    font-size: 1rem;
+  }
+}

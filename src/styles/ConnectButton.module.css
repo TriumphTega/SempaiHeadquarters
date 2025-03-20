@@ -1,0 +1,154 @@
+.connectButtonWrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .walletButton {
+    background: linear-gradient(90deg, #f7c948, #f39c12);
+    border: none;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .walletButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .connectedStatus {
+    color: #28a745;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  
+  .successMessage {
+    color: #17a2b8;
+    font-size: 0.85rem;
+    margin: 0;
+    animation: fadeIn 0.5s ease-in;
+  }
+  
+  .loadingContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #f39c12;
+  }
+  
+  .spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid #f39c12;
+    border-top: 3px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .errorContainer {
+    text-align: center;
+    color: #dc3545;
+  }
+  
+  .retryButton {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .retryButton:hover {
+    background: #c82333;
+  }
+  
+  .referralPromptOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  .referralPrompt {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.5s ease-out;
+  }
+  
+  .promptTitle {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+  }
+  
+  .promptMessage {
+    font-size: 1rem;
+    color: #7f8c8d;
+    margin-bottom: 1.5rem;
+  }
+  
+  .promptButtons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .updateButton {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .updateButton:hover {
+    background: #2980b9;
+  }
+  
+  .laterButton {
+    background: #95a5a6;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .laterButton:hover {
+    background: #7f8c8d;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }

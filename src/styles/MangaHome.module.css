@@ -1,0 +1,487 @@
+/* Cosmic Container */
+.cosmicContainer {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a2525 100%); /* Black to deep teal */
+  color: #d1d5db; /* Soft gray for text */
+  font-family: "Inter", sans-serif; /* Clean, modern font */
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Cosmic Background Effects */
+.cosmicContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"%3E%3Cg fill="none" stroke="%232a3535" stroke-width="1" opacity="0.2"%3E%3Ccircle r="400" cx="400" cy="400"/%3E%3Ccircle r="350" cx="400" cy="400"/%3E%3Ccircle r="300" cx="400" cy="400"/%3E%3C/g%3E%3C/svg%3E') center/cover;
+  z-index: 0;
+  opacity: 0.3; /* Static subtle overlay, no animation */
+}
+
+/* Removed cosmicPulse animation to avoid glow */
+
+/* Navbar */
+.cosmicNavbar {
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1100px;
+  background: #0f1414; /* Slightly lighter black */
+  border: 1px solid #2a3535; /* Subtle teal border */
+  border-radius: 12px;
+  padding: 10px 20px;
+  z-index: 1000;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cosmicNavbar:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.navbarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cosmicLogo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoImage {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid #2a3535;
+  transition: transform 0.3s ease;
+}
+
+.cosmicLogo:hover .logoImage {
+  transform: scale(1.1); /* Subtle scale, no rotation */
+}
+
+.logoText {
+  margin-left: 12px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #d1d5db;
+  transition: color 0.3s ease;
+}
+
+.cosmicLogo:hover .logoText {
+  color: #ffffff;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  color: #8b9a9a; /* Muted teal-gray */
+  font-size: 2rem;
+  cursor: pointer;
+  display: none;
+  transition: color 0.3s ease;
+}
+
+.menuButton:hover {
+  color: #d1d5db;
+}
+
+.navItems {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navItem {
+  color: #8b9a9a;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.navItem:hover {
+  background: #1a2525;
+  color: #d1d5db;
+  transform: translateY(-2px);
+}
+
+.connectBtn {
+  background: #1a2525;
+  border: 1px solid #2a3535;
+  padding: 8px 20px;
+  border-radius: 8px;
+  color: #ffffff !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.connectBtn:hover {
+  background: #2a3535;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+.cosmicHeader {
+  text-align: center;
+  padding: 130px 20px 50px;
+  position: relative;
+  z-index: 1;
+}
+
+.headerTitle {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  transition: color 0.3s ease;
+}
+
+.headerTagline {
+  font-size: 1.4rem;
+  color: #8b9a9a;
+  margin: 20px 0;
+}
+
+/* Manga Grid */
+.cosmicGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+  padding: 0 25px 60px;
+  max-width: 1500px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.mangaCard {
+  position: relative;
+  background: #0f1414;
+  border: 1px solid #2a3535;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.mangaCard:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.mangaLink {
+  display: block;
+  text-decoration: none;
+  position: relative;
+}
+
+.mangaCover {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  transition: all 0.3s ease;
+}
+
+.mangaCard:hover .mangaCover {
+  filter: brightness(1.1);
+}
+
+.mangaOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to top, rgba(15, 20, 20, 0.9), transparent);
+  padding: 15px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mangaCard:hover .mangaOverlay {
+  opacity: 1;
+}
+
+.mangaTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d1d5db;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+.mangaSummary {
+  font-size: 0.9rem;
+  color: #8b9a9a;
+  line-height: 1.4;
+}
+
+.artistContainer {
+  padding: 12px;
+  text-align: center;
+  background: #0f1414;
+}
+
+.artistLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  color: #8b9a9a;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.artistLink:hover {
+  color: #d1d5db;
+}
+
+.brushIcon {
+  font-size: 1.3rem;
+  transition: transform 0.3s ease;
+}
+
+.artistLink:hover .brushIcon {
+  transform: scale(1.1);
+}
+
+.noManga {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.6rem;
+  color: #8b9a9a;
+}
+
+/* Wallet Panel */
+.walletPanel {
+  position: absolute;
+  background: #0f1414;
+  border: 1px solid #2a3535;
+  border-radius: 12px;
+  z-index: 1000;
+  transition: max-height 0.4s ease;
+  width: 320px;
+  max-height: 70px;
+  overflow: hidden;
+  cursor: move;
+  user-select: none;
+}
+
+.walletPanelOpen {
+  max-height: 300px;
+}
+
+.dragging {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.walletToggle {
+  background: none;
+  border: none;
+  color: #8b9a9a;
+  font-size: 1.3rem;
+  padding: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.3s ease;
+}
+
+.walletToggle:hover {
+  color: #d1d5db;
+}
+
+.walletSummary {
+  font-size: 1.1rem;
+  color: #d1d5db;
+}
+
+.walletContent {
+  padding: 15px;
+}
+
+.walletContent p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.balanceLabel,
+.pointsLabel {
+  color: #8b9a9a;
+  font-weight: 500;
+}
+
+/* Connect Callout */
+.connectCallout {
+  position: absolute;
+  text-align: center;
+  padding: 20px;
+  background: #0f1414;
+  border: 1px solid #2a3535;
+  border-radius: 12px;
+  max-width: 550px;
+  z-index: 1;
+  cursor: move;
+  user-select: none;
+  transition: transform 0.3s ease;
+}
+
+.connectCallout:hover {
+  transform: translateY(-2px);
+}
+
+.connectCallout p {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  color: #d1d5db;
+}
+
+.walletConnectBtn {
+  background: #1a2525 !important;
+  border: 1px solid #2a3535 !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.walletConnectBtn:hover {
+  background: #2a3535 !important;
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cosmicNavbar {
+    width: 95%;
+    padding: 8px 15px;
+  }
+
+  .menuButton {
+    display: block;
+  }
+
+  .navItems {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #0f1414;
+    flex-direction: column;
+    padding: 20px;
+    border-radius: 0 0 12px 12px;
+    border: 1px solid #2a3535;
+    border-top: none;
+  }
+
+  .navItemsOpen {
+    display: flex;
+  }
+
+  .navItem,
+  .connectBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .cosmicHeader {
+    padding: 110px 15px 40px;
+  }
+
+  .headerTitle {
+    font-size: 2.8rem;
+  }
+
+  .headerTagline {
+    font-size: 1.2rem;
+  }
+
+  .cosmicGrid {
+    grid-template-columns: 1fr;
+    padding: 0 15px 80px;
+  }
+
+  .mangaCover {
+    height: 350px;
+  }
+
+  .mangaCard:hover {
+    transform: translateY(-8px);
+  }
+
+  .walletPanel {
+    width: 90%;
+    max-width: 320px;
+  }
+
+  .walletPanelOpen {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerTitle {
+    font-size: 2.2rem;
+  }
+
+  .headerTagline {
+    font-size: 1rem;
+  }
+
+  .mangaTitle {
+    font-size: 1.3rem;
+  }
+
+  .mangaSummary {
+    font-size: 0.8rem;
+  }
+
+  .artistLink {
+    font-size: 0.9rem;
+  }
+
+  .brushIcon {
+    font-size: 1.1rem;
+  }
+
+  .walletToggle {
+    font-size: 1.1rem;
+    padding: 12px;
+  }
+
+  .walletSummary {
+    font-size: 0.9rem;
+  }
+
+  .walletContent {
+    padding: 12px;
+  }
+
+  .walletContent p {
+    font-size: 0.9rem;
+  }
+}

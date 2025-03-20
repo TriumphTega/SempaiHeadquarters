@@ -1,44 +1,41 @@
-/* Base Styles */
+/* Base styles */
 .page {
   min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
-  transition: background 0.3s ease, color 0.3s ease;
+  font-family: 'Georgia', serif;
+  display: flex;
+  flex-direction: column;
 }
 
 .darkMode {
-  background: #000;
-  color: #fff;
+  background: #1a1a1a;
+  color: #e0e0e0;
 }
 
 .lightMode {
-  background: #f9f9f9;
+  background: #f5f5f5;
   color: #333;
 }
 
 /* Navbar */
 .navbar {
-  position: fixed;
+  background: #2c2c2c;
+  padding: 1rem;
+  position: sticky;
   top: 0;
-  width: 100%;
-  padding: 10px 0;
   z-index: 1000;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .navbarOpen {
-  background: transparent;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #383838;
 }
 
 .navContainer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1300px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 15px;
 }
 
 .logoLink {
@@ -48,581 +45,383 @@
 }
 
 .logo {
-  width: 40px;
   height: 40px;
-  border-radius: 50%;
-  border: 2px solid rgba(243, 99, 22, 0.8);
-  transition: transform 0.5s ease, box-shadow 0.5s ease;
-}
-
-.logo:hover {
-  transform: rotate(360deg) scale(1.1);
-  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
+  margin-right: 0.5rem;
 }
 
 .logoText {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: bold;
-  margin-left: 10px;
-  color: #ff6200;
-  text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
-  transition: color 0.3s ease;
-}
-
-.logoText:hover {
-  color: #ff8345;
+  color: #f39c12;
 }
 
 .menuToggle {
-  background: transparent;
+  background: none;
   border: none;
+  color: #f39c12;
   font-size: 1.5rem;
-  color: #ff6200;
   cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.menuToggle:hover {
-  transform: scale(1.2);
+  display: none;
 }
 
 .navLinks {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 1.5rem;
+}
+
+.navLinksOpen {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #383838;
+  padding: 1rem;
 }
 
 .navLink {
-  font-size: 0.9rem;
+  color: #f39c12;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
-}
-
-.darkMode .navLink {
-  color: #fff;
-}
-
-.lightMode .navLink {
-  color: #333;
+  gap: 0.5rem;
+  transition: color 0.3s ease;
 }
 
 .navLink:hover {
-  background: rgba(243, 99, 22, 0.4);
-  transform: translateY(-2px);
-  color: #ff6200;
+  color: #e67e22;
 }
 
 .themeToggle {
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 1.2rem;
-  color: #ff6200;
+  color: #f39c12;
+  font-size: 1.5rem;
   cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.themeToggle:hover {
-  transform: scale(1.2);
 }
 
 .connectButton {
-  background: rgba(243, 99, 22, 0.8);
-  color: #fff !important;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.9rem;
-  transition: background 0.3s ease, transform 0.3s ease;
+  margin-left: 1rem;
 }
 
-.connectButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
-}
-
+/* Blur overlay for mobile menu */
 .blurOverlay {
-  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  z-index: 999;
 }
 
 /* Header */
 .header {
-  padding: 40px 15px;
   text-align: center;
-  background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(0, 0, 0, 0.9));
-}
-
-.darkMode .header {
-  background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(0, 0, 0, 0.9));
-}
-
-.lightMode .header {
-  background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(245, 245, 245, 0.9));
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #2c2c2c, #383838);
+  color: #e0e0e0;
 }
 
 .headerTitle {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
+  font-size: 2.5rem;
+  margin: 0;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-  animation: titleGlow 2s infinite alternate;
-}
-
-@keyframes titleGlow {
-  0% { text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8); }
-  100% { text-shadow: 0 4px 25px rgba(243, 99, 22, 1); }
+  justify-content: center;
+  gap: 0.5rem;
+  color: #f39c12;
 }
 
 .headerSubtitle {
-  font-size: 1.1rem;
-  margin-top: 8px;
+  font-size: 1.2rem;
+  margin: 0.5rem 0 0;
   opacity: 0.9;
 }
 
-.darkMode .headerSubtitle {
-  color: #ccc;
-}
-
-.lightMode .headerSubtitle {
-  color: #666;
-}
-
-/* Main */
+/* Main content */
 .main {
-  padding: 20px 15px;
-  max-width: 1300px;
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .connectPrompt, .accessDenied {
   text-align: center;
-  padding: 30px;
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-  margin: 20px auto;
-}
-
-.darkMode .connectPrompt, .darkMode .accessDenied {
-  background: rgba(20, 20, 20, 0.9);
-}
-
-.lightMode .connectPrompt, .lightMode .accessDenied {
-  background: rgba(255, 255, 255, 0.9);
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin: 2rem auto;
+  max-width: 500px;
 }
 
 .connectIcon, .deniedIcon {
-  font-size: 2rem;
-  color: #ff6200;
-  margin-bottom: 10px;
-}
-
-.connectPrompt p, .accessDenied p {
-  font-size: 1rem;
-  margin-bottom: 15px;
-}
-
-.darkMode .connectPrompt p, .darkMode .accessDenied p {
-  color: #ccc;
-}
-
-.lightMode .connectPrompt p, .lightMode .accessDenied p {
-  color: #666;
+  font-size: 3rem;
+  color: #e74c3c;
+  margin-bottom: 1rem;
 }
 
 .connectButtonPrompt {
-  background: rgba(243, 99, 22, 0.8);
-  color: #fff !important;
-  padding: 8px 15px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.9rem;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-
-.connectButtonPrompt:hover {
-  background: #ff6200;
-  transform: scale(1.05);
+  margin-top: 1rem;
 }
 
 .backLink {
+  color: #f39c12;
+  text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #ff6200;
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .backLink:hover {
-  color: #ff8345;
+  color: #e67e22;
 }
 
+/* Dashboard */
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 2rem;
 }
 
-/* Form Section */
-.formSection {
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-}
-
-.darkMode .formSection {
-  background: rgba(20, 20, 20, 0.95);
-}
-
-.lightMode .formSection {
-  background: rgba(255, 255, 255, 0.95);
+.formSection, .novelsSection, .writersSection {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
-  color: #ff6200;
-  text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
+  font-size: 1.8rem;
+  color: #f39c12;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 15px;
+  gap: 0.5rem;
 }
 
-.novelForm {
+/* Form */
+.novelForm, .announcementForm {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1.5rem;
 }
 
 .inputGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.5rem;
 }
 
 .label {
-  font-size: 0.9rem;
-  color: #ff6200;
-  font-weight: bold;
+  font-size: 1.1rem;
+  color: #f39c12;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 .input, .textarea {
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 0.9rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.darkMode .input, .darkMode .textarea {
-  background: rgba(0, 0, 0, 0.8);
-  color: #e0e0e0;
-}
-
-.lightMode .input, .lightMode .textarea {
-  background: rgba(245, 245, 245, 0.8);
-  color: #333;
+  padding: 0.75rem;
+  border: 1px solid #383838;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 1rem;
+  font-family: 'Georgia', serif;
 }
 
 .input:focus, .textarea:focus {
-  border-color: #ff6200;
-  box-shadow: 0 0 8px rgba(243, 99, 22, 0.5);
   outline: none;
+  border-color: #f39c12;
+  box-shadow: 0 0 5px rgba(243, 156, 18, 0.5);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
 }
 
 .fileInput {
-  padding: 5px;
+  padding: 0.5rem 0;
 }
 
 .imagePreview {
-  max-width: 150px;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  max-width: 200px;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .chapterSection {
-  border-top: 1px solid rgba(243, 99, 22, 0.4);
-  padding-top: 15px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
 }
 
 .chapterTitle {
-  font-size: 1.2rem;
-  color: #ff6200;
+  font-size: 1.4rem;
+  color: #f39c12;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.5rem;
 }
 
-.addChapterButton {
-  background: rgba(243, 99, 22, 0.8);
+.addChapterButton, .submitButton, .announcementButton {
+  background: #f39c12;
   color: #fff;
+  padding: 0.75rem 1.5rem;
   border: none;
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 0.9rem;
-  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
+  gap: 0.5rem;
+  transition: background 0.3s ease;
 }
 
-.addChapterButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
+.addChapterButton:hover, .submitButton:hover, .announcementButton:hover {
+  background: #e67e22;
 }
 
 .chapterList {
   list-style: none;
   padding: 0;
-  margin: 15px 0;
+  margin: 1rem 0;
 }
 
 .chapterItem {
   display: flex;
-  flex-direction: column;
-  border: 1px solid rgba(243, 99, 22, 0.4);
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 8px;
-  transition: box-shadow 0.3s ease;
-}
-
-.darkMode .chapterItem {
-  background: rgba(30, 30, 30, 0.9);
-}
-
-.lightMode .chapterItem {
-  background: rgba(245, 245, 245, 0.9);
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s ease;
 }
 
 .chapterItem:hover {
-  box-shadow: 0 4px 10px rgba(243, 99, 22, 0.3);
+  transform: translateX(5px);
 }
 
 .chapterText {
   flex: 1;
-  margin-bottom: 8px;
 }
 
 .chapterText strong {
-  font-size: 1rem;
-  color: #ff6200;
+  color: #f39c12;
 }
 
 .chapterText p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.chapterText small {
   font-size: 0.8rem;
-  margin: 3px 0 0;
-}
-
-.darkMode .chapterText p {
-  color: #ccc;
-}
-
-.lightMode .chapterText p {
-  color: #666;
+  color: #e74c3c;
 }
 
 .chapterActions {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .editButton, .deleteButton {
-  background: rgba(243, 99, 22, 0.6);
-  color: #fff;
+  background: none;
   border: none;
-  padding: 6px;
-  border-radius: 10px;
+  color: #f39c12;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
+  transition: color 0.3s ease;
 }
 
 .editButton:hover {
-  background: #ff6200;
-  transform: scale(1.1);
+  color: #e67e22;
 }
 
 .deleteButton {
-  background: rgba(220, 53, 69, 0.6);
+  color: #e74c3c;
 }
 
 .deleteButton:hover {
-  background: #dc3545;
-  transform: scale(1.1);
-}
-
-.submitButton {
-  background: rgba(243, 99, 22, 0.8);
-  color: #fff;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 20px;
-  font-size: 1rem;
-  font-weight: bold;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.submitButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
-  box-shadow: 0 4px 10px rgba(243, 99, 22, 0.8);
+  color: #c0392b;
 }
 
 /* Novels Section */
-.novelsSection {
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-}
-
-.darkMode .novelsSection {
-  background: rgba(20, 20, 20, 0.95);
-}
-
-.lightMode .novelsSection {
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.noNovels {
-  text-align: center;
-  font-size: 1rem;
-}
-
-.darkMode .noNovels {
-  color: #ccc;
-}
-
-.lightMode .noNovels {
-  color: #666;
-}
-
 .novelsGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
 }
 
 .novelCard {
-  border: 1px solid rgba(243, 99, 22, 0.4);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.darkMode .novelCard {
-  background: rgba(30, 30, 30, 0.9);
-}
-
-.lightMode .novelCard {
-  background: rgba(245, 245, 245, 0.9);
-}
-
 .novelCard:hover {
-  transform: scale(1.02);
-  box-shadow: 0 6px 15px rgba(243, 99, 22, 0.5);
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .novelImage {
   width: 100%;
-  height: 150px;
+  height: 250px;
   object-fit: cover;
 }
 
 .novelInfo {
-  padding: 10px;
+  padding: 1rem;
 }
 
 .novelTitle {
+  margin: 0;
   font-size: 1.2rem;
-  color: #ff6200;
-  margin-bottom: 8px;
+  color: #f39c12;
 }
 
 .novelSummary {
+  margin: 0.5rem 0;
   font-size: 0.9rem;
-  margin-bottom: 10px;
-}
-
-.darkMode .novelSummary {
-  color: #ccc;
-}
-
-.lightMode .novelSummary {
-  color: #666;
+  opacity: 0.8;
 }
 
 .editNovelButton {
-  background: rgba(243, 99, 22, 0.8);
+  background: #f39c12;
   color: #fff;
+  padding: 0.5rem 1rem;
   border: none;
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 0.9rem;
-  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
+  gap: 0.5rem;
+  transition: background 0.3s ease;
 }
 
 .editNovelButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
+  background: #e67e22;
+}
+
+.noNovels, .noWriters {
+  text-align: center;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 /* Writers Section */
-.writersSection {
-  border: 1px solid rgba(243, 99, 22, 0.6);
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-}
-
-.darkMode .writersSection {
-  background: rgba(20, 20, 20, 0.95);
-}
-
-.lightMode .writersSection {
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.noWriters {
-  text-align: center;
-  font-size: 1rem;
-}
-
-.darkMode .noWriters {
-  color: #ccc;
-}
-
-.lightMode .noWriters {
-  color: #666;
-}
-
 .writersList {
   list-style: none;
   padding: 0;
@@ -630,315 +429,96 @@
 
 .writerItem {
   display: flex;
-  flex-direction: column;
-  padding: 10px;
-  border: 1px solid rgba(243, 99, 22, 0.4);
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.darkMode .writerItem {
-  background: rgba(30, 30, 30, 0.9);
-}
-
-.lightMode .writerItem {
-  background: rgba(245, 245, 245, 0.9);
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
 }
 
 .writerId {
-  font-size: 0.8rem;
-  margin-top: 5px;
+  font-size: 0.9rem;
+  opacity: 0.7;
 }
 
-.darkMode .writerId {
-  color: #ccc;
-}
-
-.lightMode .writerId {
-  color: #666;
+/* Announcement Section */
+.announcementSection {
+  margin-top: 2rem;
 }
 
 /* Footer */
 .footer {
-  padding: 20px 0;
+  background: #2c2c2c;
+  padding: 1rem;
   text-align: center;
-  box-shadow: 0 -2px 15px rgba(243, 99, 22, 0.2);
-}
-
-.darkMode .footer {
-  background: rgba(20, 20, 20, 0.9);
-}
-
-.lightMode .footer {
-  background: rgba(245, 245, 245, 0.9);
+  color: #e0e0e0;
 }
 
 .footerText {
+  margin: 0;
   font-size: 0.9rem;
-  opacity: 0.8;
-  text-shadow: 0 1px 4px rgba(243, 99, 22, 0.3);
 }
 
-.darkMode .footerText {
-  color: #fff;
-}
-
-.lightMode .footerText {
-  color: #333;
-}
-
-/* Mobile Styles */
+/* Responsive Design */
 @media (max-width: 768px) {
-  .navbar {
-    padding: 8px 0;
-    background: rgba(20, 20, 20, 0.95);
-  }
-
-  .navbarOpen {
-    background: transparent;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
   .menuToggle {
     display: block;
   }
 
   .navLinks {
     display: none;
-    flex-direction: column;
-    width: 100%;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    padding: 10px;
-    background: rgba(20, 20, 20, 0.95);
-    box-shadow: 0 4px 10px rgba(243, 99, 22, 0.2);
-  }
-
-  .lightMode .navLinks {
-    background: rgba(245, 245, 245, 0.95);
   }
 
   .navLinksOpen {
     display: flex;
-    animation: slideDown 0.3s ease-out;
-  }
-
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .blurOverlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    z-index: 999;
-  }
-
-  .navLink, .connectButton, .themeToggle {
-    width: 100%;
-    justify-content: center;
-    padding: 8px 0;
-    font-size: 0.8rem;
-  }
-
-  .header {
-    padding: 30px 10px;
-  }
-
-  .headerTitle {
-    font-size: 1.6rem;
-  }
-
-  .headerSubtitle {
-    font-size: 0.9rem;
   }
 
   .main {
-    padding: 15px 10px;
-  }
-
-  .formSection, .novelsSection, .writersSection {
-    padding: 15px;
-  }
-
-  .sectionTitle {
-    font-size: 1.2rem;
-  }
-
-  .input, .textarea {
-    font-size: 0.8rem;
-    padding: 6px;
-  }
-
-  .imagePreview {
-    max-width: 120px;
-  }
-
-  .chapterTitle {
-    font-size: 1rem;
-  }
-
-  .addChapterButton, .submitButton {
-    padding: 8px 12px;
-    font-size: 0.8rem;
-  }
-
-  .chapterItem {
-    padding: 8px;
-  }
-
-  .chapterText strong {
-    font-size: 0.9rem;
-  }
-
-  .chapterText p {
-    font-size: 0.7rem;
-  }
-
-  .editButton, .deleteButton {
-    padding: 4px;
-  }
-
-  .novelImage {
-    height: 120px;
-  }
-
-  .novelTitle {
-    font-size: 1rem;
-  }
-
-  .novelSummary {
-    font-size: 0.8rem;
-  }
-
-  .editNovelButton {
-    padding: 5px 10px;
-    font-size: 0.8rem;
-  }
-
-  .writerItem {
-    padding: 8px;
-  }
-}
-
-/* Desktop Styles */
-@media (min-width: 769px) {
-  .navbar {
-    padding: 10px 0;
-    background: rgba(20, 20, 20, 0.95);
-  }
-
-  .lightMode .navbar {
-    background: rgba(245, 245, 245, 0.95);
-  }
-
-  .menuToggle {
-    display: none;
-  }
-
-  .navLinks {
-    display: flex;
-  }
-
-  .header {
-    padding: 60px 20px;
+    padding: 1rem;
   }
 
   .headerTitle {
-    font-size: 3rem;
-  }
-
-  .headerSubtitle {
-    font-size: 1.4rem;
-  }
-
-  .main {
-    padding: 40px 20px;
-  }
-
-  .formSection, .novelsSection, .writersSection {
-    padding: 30px;
-  }
-
-  .sectionTitle {
     font-size: 2rem;
   }
 
-  .input, .textarea {
-    font-size: 1rem;
-    padding: 10px;
-  }
-
-  .chapterItem {
-    flex-direction: row;
-    padding: 15px;
+  .sectionTitle {
+    font-size: 1.5rem;
   }
 
   .novelsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 
   .novelImage {
     height: 200px;
   }
-}
-.announcementSection {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+
+  .dashboard {
+    gap: 1.5rem;
+  }
 }
 
-.announcementForm {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
+@media (max-width: 480px) {
+  .headerTitle {
+    font-size: 1.8rem;
+  }
 
-.announcementButton {
-  background: #00d4ff;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background 0.3s;
-}
+  .sectionTitle {
+    font-size: 1.3rem;
+  }
 
-.announcementButton:hover {
-  background: #00b0d8;
-}
-/* Adjust DatePicker to match your input style */
-.react-datepicker-wrapper {
-  display: block;
-}
+  .input, .textarea {
+    font-size: 0.9rem;
+  }
 
-.react-datepicker__input-container input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background: #fff;
-  color: #333;
-  font-size: 1rem;
-}
+  .chapterItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
 
-.darkMode .react-datepicker__input-container input {
-  background: #333;
-  color: #fff;
-  border-color: #555;
+  .chapterActions {
+    margin-top: 0.5rem;
+  }
 }

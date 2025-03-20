@@ -245,15 +245,7 @@
   margin-bottom: 10px;
 }
 
-.gifSearchInput {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #E0E0E0;
-  border-radius: 20px;
-  font-size: 14px;
-  outline: none;
-  margin-right: 10px;
-}
+
 
 .closeButton {
   background: none;

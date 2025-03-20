@@ -7,14 +7,14 @@ import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
 import { FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import styles from "./WritersProfile.module.css";
+import styles from "./CreatorsProfile.module.css"; // Updated to CreatorsProfile.module.css
 import Link from "next/link";
 
-export default function WritersProfilePage() {
+export default function CreatorsProfilePage() {
   const { connected, publicKey } = useWallet();
   const router = useRouter();
-  const [isWriter, setIsWriter] = useState(false);
-  const [writerData, setWriterData] = useState(null);
+  const [userRole, setUserRole] = useState("writer"); // "writer", "artist", "both", "superuser"
+  const [creatorData, setCreatorData] = useState(null);
   const [novels, setNovels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,55 +24,41 @@ export default function WritersProfilePage() {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   useEffect(() => {
-    console.log("Wallet State:", { connected, publicKey: publicKey?.toString() });
-    const checkWallet = () => {
-      if (connected && publicKey) {
-        setWalletReady(true);
-      } else {
-        const timeout = setTimeout(() => {
-          if (connected && publicKey) setWalletReady(true);
-        }, 500);
-        return () => clearTimeout(timeout);
-      }
-    };
-    checkWallet();
+    if (connected && publicKey) setWalletReady(true);
   }, [connected, publicKey]);
 
   useEffect(() => {
     if (!walletReady) return;
 
-    const fetchWriterDetails = async () => {
+    const fetchCreatorDetails = async () => {
       try {
         const walletAddress = publicKey.toString();
-        console.log("Fetching user data for wallet:", walletAddress);
 
         const { data: user, error: userError } = await supabase
           .from("users")
-          .select("id, isWriter, name, image") // Added image field
+          .select("id, isWriter, isArtist, isSuperuser, name, image")
           .eq("wallet_address", walletAddress)
           .single();
 
-        if (userError || !user) {
-          throw new Error(`User not found: ${userError?.message || "No user data"}`);
-        }
+        if (userError || !user) throw new Error(`User not found: ${userError?.message || "No user data"}`);
 
-        console.log("User data:", user);
-
-        if (!user.isWriter) {
-          console.log("User is not a writer, redirecting to /profile");
+        // Determine user role
+        if (user.isSuperuser) setUserRole("superuser");
+        else if (user.isWriter && user.isArtist) setUserRole("both");
+        else if (user.isArtist) setUserRole("artist");
+        else if (user.isWriter) setUserRole("writer");
+        else {
           router.push("/profile");
           return;
         }
 
         const { data: profile, error: profileError } = await supabase
-          .from("writer_profiles")
+          .from("writer_profiles") // Assuming this table is still used for creators
           .select("bio, twitter, discord, website")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (profileError && profileError.code !== "PGRST116") {
-          console.error("Profile fetch error:", profileError);
-        }
+        if (profileError && profileError.code !== "PGRST116") console.error("Profile fetch error:", profileError);
 
         const { data: novelsData, error: novelsError } = await supabase
           .from("novels")
@@ -81,29 +67,22 @@ export default function WritersProfilePage() {
 
         if (novelsError) throw new Error(`Novels fetch error: ${novelsError.message}`);
 
-        console.log("Novels data:", novelsData);
-
-        setIsWriter(true);
-        setWriterData({ ...user, ...profile });
+        setCreatorData({ ...user, ...profile });
         setNovels(novelsData || []);
       } catch (err) {
-        console.error("Error in fetchWriterDetails:", err.message);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWriterDetails();
+    fetchCreatorDetails();
   }, [walletReady, publicKey, router]);
 
-  const handleNavigation = (path) => {
-    console.log("Navigating to:", path);
-    router.push(path);
-  };
+  const handleNavigation = (path) => router.push(path);
 
   return (
-    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
+    <div className={`${styles.page} ${styles[userRole]} ${menuOpen ? styles.menuActive : ""}`}>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
@@ -131,41 +110,35 @@ export default function WritersProfilePage() {
               <WalletMultiButton className={styles.connectButton} />
             </div>
           </div>
-        ) : error || !isWriter ? (
+        ) : error ? (
           <div className={styles.content}>
             <h1 className={styles.title}>Profile</h1>
-            <p className={styles.error}>{error || "You are not registered as a writer."}</p>
+            <p className={styles.error}>{error}</p>
             <button onClick={() => handleNavigation("/profile")} className={styles.navButton}>
-              <img
-                src={writerData?.image || "/images/default-profile.jpg"}
-                alt="Profile"
-                className={styles.profileIcon}
-              /> Back to Profile
+              <img src={creatorData?.image || "/images/default-profile.jpg"} alt="Profile" className={styles.profileIcon} />
+              Back to Profile
             </button>
           </div>
         ) : (
           <div className={styles.content}>
-            <h1 className={styles.title}>My Profile</h1>
+            <h1 className={styles.title}>My Creator Profile</h1>
             <section className={styles.profileCard}>
               <h2 className={styles.sectionTitle}>
-                <img
-                  src={writerData?.image || "/images/default-profile.jpg"}
-                  alt="Profile"
-                  className={styles.profileIcon}
-                /> {writerData?.name || publicKey.toString().slice(0, 8)}
+                <img src={creatorData?.image || "/images/default-profile.jpg"} alt="Profile" className={styles.profileIcon} />
+                {creatorData?.name || publicKey.toString().slice(0, 8)}
               </h2>
-              <p className={styles.bio}>{writerData?.bio || "No bio provided."}</p>
+              <p className={styles.bio}>{creatorData?.bio || "No bio provided."}</p>
               <div className={styles.socials}>
-                {writerData?.twitter && (
-                  <a href={`https://twitter.com/${writerData.twitter}`} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
-                    <FaTwitter /> @{writerData.twitter}
+                {creatorData?.twitter && (
+                  <a href={`https://twitter.com/${creatorData.twitter}`} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                    <FaTwitter /> @{creatorData.twitter}
                   </a>
                 )}
-                {writerData?.discord && (
-                  <span className={styles.socialLink}><FaDiscord /> {writerData.discord}</span>
+                {creatorData?.discord && (
+                  <span className={styles.socialLink}><FaDiscord /> {creatorData.discord}</span>
                 )}
-                {writerData?.website && (
-                  <a href={writerData.website} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                {creatorData?.website && (
+                  <a href={creatorData.website} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                     <FaGlobe /> Website
                   </a>
                 )}
@@ -188,7 +161,7 @@ export default function WritersProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className={styles.placeholder}>No creations yet. Start writing!</p>
+                <p className={styles.placeholder}>No creations yet. Start creating!</p>
               )}
             </section>
             <div className={styles.profileActions}>

@@ -1,0 +1,229 @@
+/* Base page styles */
+.page {
+  min-height: 100vh;
+  color: #fff;
+  font-family: "Orbitron", sans-serif;
+  position: relative;
+  overflow: hidden; /* Changed from overflow-x: hidden and overflow-y: auto */
+
+  isolation: isolate;
+}
+
+/* Default Writer Theme (Orange Sci-Fi) */
+.writer {
+  background: linear-gradient(145deg, #0d1b2a 0%, #1b263b 100%);
+}
+.writer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(243, 99, 22, 0.15), rgba(13, 27, 42, 0.8));
+  z-index: -1;
+  animation: gradientPulse 12s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Artist Theme (Cosmic Purple) */
+.artist {
+  background: linear-gradient(145deg, #1a0b2e 0%, #2e1a47 100%);
+}
+.artist::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(147, 51, 234, 0.2), rgba(26, 11, 46, 0.8));
+  z-index: -1;
+  animation: gradientPulse 10s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Both/Superuser Theme (Golden God-like) */
+.both, .superuser {
+  background: linear-gradient(145deg, #1c1400 0%, #3d2a00 100%);
+}
+.both::before, .superuser::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.25), rgba(28, 20, 0, 0.7));
+  z-index: -1;
+  animation: goldenShimmer 8s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+}
+
+/* Navbar */
+.navbar {
+  padding: 20px 0;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: slideIn 0.6s ease-out;
+}
+.writer .navbar { background: linear-gradient(to bottom, rgba(27, 38, 59, 0.95), rgba(13, 27, 42, 0.9)); border-bottom: 2px solid rgba(243, 99, 22, 0.7); }
+.artist .navbar { background: linear-gradient(to bottom, rgba(42, 24, 71, 0.95), rgba(26, 11, 46, 0.9)); border-bottom: 2px solid rgba(147, 51, 234, 0.7); }
+.both .navbar, .superuser .navbar { background: linear-gradient(to bottom, rgba(61, 42, 0, 0.95), rgba(28, 20, 0, 0.9)); border-bottom: 2px solid rgba(255, 215, 0, 0.7); }
+
+.navContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 25px;
+}
+
+.logoLink { display: flex; align-items: center; text-decoration: none; }
+.logo { width: 65px; height: 65px; border-radius: 50%; transition: transform 0.5s ease, box-shadow 0.4s ease; }
+.writer .logo { border: 3px solid rgba(243, 99, 22, 0.9); }
+.artist .logo { border: 3px solid rgba(147, 51, 234, 0.9); }
+.both .logo, .superuser .logo { border: 3px solid rgba(255, 215, 0, 0.9); }
+.logo:hover {
+  transform: rotate(360deg) scale(1.05);
+}
+.writer .logo:hover { box-shadow: 0 0 25px rgba(243, 99, 22, 0.8); }
+.artist .logo:hover { box-shadow: 0 0 25px rgba(147, 51, 234, 0.8); }
+.both .logo:hover, .superuser .logo:hover { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+
+.logoText { font-size: 1.8rem; font-weight: 700; margin-left: 15px; transition: text-shadow 0.3s ease; }
+.writer .logoText { color: #ff6200; text-shadow: 0 0 12px rgba(243, 99, 22, 0.7); }
+.artist .logoText { color: #9333ea; text-shadow: 0 0 12px rgba(147, 51, 234, 0.7); }
+.both .logoText, .superuser .logoText { color: #ffd700; text-shadow: 0 0 12px rgba(255, 215, 0, 0.7); }
+.writer .logoText:hover { text-shadow: 0 0 20px rgba(243, 99, 22, 1); }
+.artist .logoText:hover { text-shadow: 0 0 20px rgba(147, 51, 234, 1); }
+.both .logoText:hover, .superuser .logoText:hover { text-shadow: 0 0 20px rgba(255, 215, 0, 1); }
+
+.menuToggle { background: transparent; border: none; font-size: 2rem; display: none; cursor: pointer; transition: transform 0.3s ease, color 0.3s ease; }
+.writer .menuToggle { color: #ff6200; }
+.artist .menuToggle { color: #9333ea; }
+.both .menuToggle, .superuser .menuToggle { color: #ffd700; }
+.menuToggle:hover { transform: scale(1.2) rotate(90deg); color: #fff; }
+
+.navLinks { display: flex; align-items: center; gap: 25px; }
+.navLink { font-size: 1.3rem; text-decoration: none; display: flex; align-items: center; gap: 10px; padding: 12px 25px; border-radius: 30px; color: #fff; transition: all 0.3s ease; }
+.writer .navLink { background: rgba(243, 99, 22, 0.25); }
+.artist .navLink { background: rgba(147, 51, 234, 0.25); }
+.both .navLink, .superuser .navLink { background: rgba(255, 215, 0, 0.25); }
+.writer .navLink:hover { background: rgba(243, 99, 22, 0.9); box-shadow: 0 5px 20px rgba(243, 99, 22, 0.6); }
+.artist .navLink:hover { background: rgba(147, 51, 234, 0.9); box-shadow: 0 5px 20px rgba(147, 51, 234, 0.6); }
+.both .navLink:hover, .superuser .navLink:hover { background: rgba(255, 215, 0, 0.9); box-shadow: 0 5px 20px rgba(255, 215, 0, 0.6); }
+.navLink:hover { transform: translateY(-3px); }
+
+/* Main content */
+.main { padding: 80px 20px; min-height: calc(100vh - 82px); }
+.writer .main { background: radial-gradient(circle at center, rgba(243, 99, 22, 0.05) 0%, transparent 70%); }
+.artist .main { background: radial-gradient(circle at center, rgba(147, 51, 234, 0.05) 0%, transparent 70%); }
+.both .main, .superuser .main { background: radial-gradient(circle at center, rgba(255, 215, 0, 0.05) 0%, transparent 70%); }
+
+.content { width: 100%; max-width: 1200px; margin: 0 auto; }
+
+/* Title */
+.title { font-size: 3.2rem; text-align: center; margin-bottom: 50px; animation: neonGlow 2s infinite alternate; }
+.writer .title { color: #ff6200; text-shadow: 0 0 15px rgba(243, 99, 22, 0.8); }
+.artist .title { color: #9333ea; text-shadow: 0 0 15px rgba(147, 51, 234, 0.8); }
+.both .title, .superuser .title { color: #ffd700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+
+/* Profile card */
+.profileCard { background: rgba(20, 20, 20, 0.9); border-radius: 20px; padding: 40px; max-width: 700px; margin: 0 auto 60px; animation: fadeIn 0.7s ease-out; backdrop-filter: blur(5px); }
+.writer .profileCard { border: 2px solid rgba(243, 99, 22, 0.6); box-shadow: 0 0 30px rgba(243, 99, 22, 0.4); }
+.artist .profileCard { border: 2px solid rgba(147, 51, 234, 0.6); box-shadow: 0 0 30px rgba(147, 51, 234, 0.4); }
+.both .profileCard, .superuser .profileCard { border: 2px solid rgba(255, 215, 0, 0.6); box-shadow: 0 0 30px rgba(255, 215, 0, 0.4); }
+
+.sectionTitle { font-size: 2rem; color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+.writer .sectionTitle { text-shadow: 0 0 10px rgba(243, 99, 22, 0.5); }
+.artist .sectionTitle { text-shadow: 0 0 10px rgba(147, 51, 234, 0.5); }
+.both .sectionTitle, .superuser .sectionTitle { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+
+.bio { font-size: 1.2rem; color: #dcdcdc; line-height: 1.6; margin-bottom: 25px; }
+
+.socials { display: flex; flex-wrap: wrap; gap: 25px; margin-bottom: 25px; }
+.socialLink { text-decoration: none; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; }
+.writer .socialLink { color: rgba(243, 99, 22, 0.9); }
+.artist .socialLink { color: rgba(147, 51, 234, 0.9); }
+.both .socialLink, .superuser .socialLink { color: rgba(255, 215, 0, 0.9); }
+.writer .socialLink:hover { color: #fff; text-shadow: 0 0 10px rgba(243, 99, 22, 0.8); }
+.artist .socialLink:hover { color: #fff; text-shadow: 0 0 10px rgba(147, 51, 234, 0.8); }
+.both .socialLink:hover, .superuser .socialLink:hover { color: #fff; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); }
+.socialLink:hover { transform: scale(1.1); }
+
+.walletInfo { font-size: 1.2rem; color: #dcdcdc; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.writer .walletInfo { text-shadow: 0 0 5px rgba(243, 99, 22, 0.4); }
+.artist .walletInfo { text-shadow: 0 0 5px rgba(147, 51, 234, 0.4); }
+.both .walletInfo, .superuser .walletInfo { text-shadow: 0 0 5px rgba(255, 215, 0, 0.4); }
+
+/* Novels section */
+.novelsSection { max-width: 1200px; margin: 0 auto 60px; }
+.novelGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+.novelCard { background: rgba(20, 20, 20, 0.9); border-radius: 15px; padding: 20px; text-align: center; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); }
+.writer .novelCard { border: 2px solid rgba(243, 99, 22, 0.6); }
+.artist .novelCard { border: 2px solid rgba(147, 51, 234, 0.6); }
+.both .novelCard, .superuser .novelCard { border: 2px solid rgba(255, 215, 0, 0.6); }
+.writer .novelCard:hover { border-color: rgba(243, 99, 22, 0.9); box-shadow: 0 10px 25px rgba(243, 99, 22, 0.5); }
+.artist .novelCard:hover { border-color: rgba(147, 51, 234, 0.9); box-shadow: 0 10px 25px rgba(147, 51, 234, 0.5); }
+.both .novelCard:hover, .superuser .novelCard:hover { border-color: rgba(255, 215, 0, 0.9); box-shadow: 0 10px 25px rgba(255, 215, 0, 0.5); }
+.novelCard:hover { transform: translateY(-8px); }
+
+.novelImage { width: 100%; height: 180px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); }
+.novelTitle { font-size: 1.5rem; color: #fff; margin-bottom: 12px; }
+.writer .novelTitle { text-shadow: 0 0 5px rgba(243, 99, 22, 0.4); }
+.artist .novelTitle { text-shadow: 0 0 5px rgba(147, 51, 234, 0.4); }
+.both .novelTitle, .superuser .novelTitle { text-shadow: 0 0 5px rgba(255, 215, 0, 0.4); }
+.novelSummary { font-size: 1rem; color: #b0b0b0; margin-bottom: 20px; line-height: 1.5; }
+
+.novelButton, .navButton { color: #fff; padding: 12px 25px; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s ease; }
+.writer .novelButton, .writer .navButton { background: linear-gradient(135deg, rgba(243, 99, 22, 0.9), rgba(255, 98, 0, 0.7)); }
+.artist .novelButton, .artist .navButton { background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(167, 139, 250, 0.7)); }
+.both .novelButton, .superuser .novelButton, .both .navButton, .superuser .navButton { background: linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 165, 0, 0.7)); }
+.writer .novelButton:hover, .writer .navButton:hover { background: linear-gradient(135deg, rgba(243, 99, 22, 1), rgba(255, 98, 0, 0.9)); box-shadow: 0 5px 20px rgba(243, 99, 22, 0.7); }
+.artist .novelButton:hover, .artist .navButton:hover { background: linear-gradient(135deg, rgba(147, 51, 234, 1), rgba(167, 139, 250, 0.9)); box-shadow: 0 5px 20px rgba(147, 51, 234, 0.7); }
+.both .novelButton:hover, .superuser .novelButton:hover, .both .navButton:hover, .superuser .navButton:hover { background: linear-gradient(135deg, rgba(255, 215, 0, 1), rgba(255, 165, 0, 0.9)); box-shadow: 0 5px 20px rgba(255, 215, 0, 0.7); }
+.novelButton:hover, .navButton:hover { transform: scale(1.05); }
+
+/* Profile actions */
+.profileActions { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 40px; }
+
+/* Error and placeholder */
+.errorContainer { text-align: center; padding: 40px; }
+.error { font-size: 1.6rem; margin-bottom: 30px; text-shadow: 0 0 10px rgba(243, 99, 22, 0.5); animation: shake 0.5s ease; }
+.writer .error { color: rgba(243, 99, 22, 0.9); }
+.artist .error { color: rgba(147, 51, 234, 0.9); }
+.both .error, .superuser .error { color: rgba(255, 215, 0, 0.9); }
+.placeholder { font-size: 1.3rem; color: #888; text-align: center; padding: 20px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); }
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .menuActive::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(6px); z-index: 998; display: block; animation: fadeIn 0.3s ease-out; }
+  .menuToggle { display: block; }
+  .navLinks { display: none; flex-direction: column; width: 100%; position: absolute; top: 100%; left: 0; padding: 30px; background: rgba(20, 20, 20, 0.95); box-shadow: 0 6px 20px rgba(243, 99, 22, 0.5); z-index: 999; border-radius: 0 0 15px 15px; }
+  .navLinksOpen { display: flex; animation: slideDownMenu 0.4s ease-out; }
+  .main { padding: 60px 15px; }
+  .title { font-size: 2.5rem; margin-bottom: 40px; }
+  .profileCard { padding: 30px; }
+  .sectionTitle { font-size: 1.8rem; }
+  .novelGrid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+  .novelImage { height: 160px; }
+}
+
+/* Animations */
+@keyframes gradientPulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+@keyframes goldenShimmer { 0% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.02); } 100% { opacity: 0.5; transform: scale(1); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes slideDownMenu { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes neonGlow { from { text-shadow: 0 0 10px currentColor; } to { text-shadow: 0 0 20px currentColor; } }
+
+.profileIcon { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
+.writer .profileIcon { border: 2px solid rgba(243, 99, 22, 0.7); }
+.artist .profileIcon { border: 2px solid rgba(147, 51, 234, 0.7); }
+.both .profileIcon, .superuser .profileIcon { border: 2px solid rgba(255, 215, 0, 0.7); }

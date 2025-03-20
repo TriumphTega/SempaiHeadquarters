@@ -1,0 +1,222 @@
+/* Container */
+.container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1a1a1a; /* Dark black */
+    padding: 1rem;
+  }
+  
+  /* Wrapper */
+  .wrapper {
+    background: #2c2c2c; /* Lighter black */
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    width: 100%;
+    max-width: 800px; /* Wider for application list */
+  }
+  
+  /* Title */
+  .title {
+    text-align: center;
+    font-size: 2rem;
+    color: #ff9900; /* Dark orange */
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 5px rgba(255, 153, 0, 0.5);
+  }
+  
+  /* Loading */
+  .loading {
+    color: #ff9900;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  
+  /* Connect container */
+  .connectContainer {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .connectContainer p {
+    color: #e0e0e0; /* Light gray */
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .btnConnect {
+    background: linear-gradient(45deg, #ff9900, #cc7a00); /* Dark orange gradient */
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .btnConnect:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(255, 153, 0, 0.7);
+  }
+  
+  /* Error */
+  .error {
+    color: #e74c3c; /* Bright red */
+    text-align: center;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Applications list */
+  .applicationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .applicationCard {
+    background: #3d3d3d; /* Darker gray-black */
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #ff9900; /* Dark orange border */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s;
+  }
+  
+  .applicationCard:hover {
+    transform: translateY(-5px);
+  }
+  
+  .applicationDetails {
+    color: #e0e0e0; /* Light gray */
+  }
+  
+  .applicationName {
+    font-size: 1.25rem;
+    color: #ff9900; /* Dark orange */
+    margin-bottom: 0.75rem;
+  }
+  
+  .applicationDetails p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+  }
+  
+  .applicationDetails strong {
+    color: #ff9900; /* Dark orange */
+  }
+  
+  .link {
+    color: #ff9900;
+    text-decoration: none;
+  }
+  
+  .link:hover {
+    text-decoration: underline;
+  }
+  
+  /* Action buttons */
+  .actionButtons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: flex-end;
+  }
+  
+  .btnApprove {
+    background: linear-gradient(45deg, #2ecc71, #27ae60); /* Green gradient */
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .btnApprove:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.7);
+  }
+  
+  .btnReject {
+    background: linear-gradient(45deg, #e74c3c, #c0392b); /* Red gradient */
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .btnReject:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.7);
+  }
+  
+  /* No applications */
+  .noApplications {
+    color: #e0e0e0;
+    text-align: center;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+  }
+  
+  /* Alerts */
+  .alertDanger {
+    background: rgba(231, 76, 60, 0.2); /* Red with transparency */
+    color: #e74c3c; /* Bright red */
+    padding: 0.75rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 480px) {
+    .wrapper {
+      padding: 1.5rem;
+    }
+  
+    .title {
+      font-size: 1.5rem;
+    }
+  
+    .applicationCard {
+      padding: 1rem;
+    }
+  
+    .applicationName {
+      font-size: 1.1rem;
+    }
+  
+    .applicationDetails p {
+      font-size: 0.85rem;
+    }
+  
+    .actionButtons {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  
+    .btnApprove,
+    .btnReject {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+  
+    .btnConnect {
+      padding: 0.6rem 1.2rem;
+      font-size: 0.9rem;
+    }
+  }

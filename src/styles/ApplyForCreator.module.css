@@ -1,0 +1,210 @@
+/* Base container */
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a; /* Dark black shade */
+  padding: 1rem;
+}
+
+/* Form wrapper */
+.formWrapper {
+  background: #2c2c2c; /* Slightly lighter black */
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Title */
+.title {
+  text-align: center;
+  font-size: 1.75rem;
+  color: #ff9900; /* Dark orange */
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 5px rgba(255, 153, 0, 0.5);
+}
+
+/* Connect wallet container */
+.connectContainer {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.connectContainer p {
+  color: #e0e0e0; /* Light gray for contrast */
+  margin-bottom: 0.75rem;
+}
+
+.btnConnect {
+  background: linear-gradient(45deg, #ff9900, #cc7a00); /* Dark orange gradient */
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.btnConnect:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.7);
+}
+
+/* Wallet connected text */
+.walletConnected {
+  color: #ff9900; /* Dark orange */
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Form styling */
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup label {
+  color: #ff9900; /* Dark orange */
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.input,
+.select {
+  background: #3d3d3d; /* Darker gray-black */
+  color: #e0e0e0; /* Light gray text */
+  padding: 0.75rem;
+  border: 1px solid #ff9900; /* Dark orange border */
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #cc7a00; /* Slightly darker orange on focus */
+}
+
+.input:disabled,
+.select:disabled {
+  background: #333333; /* Even darker when disabled */
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Apply button for reason */
+.btnApply {
+  background: linear-gradient(45deg, #ff9900, #cc7a00); /* Dark orange gradient */
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.btnApply:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.7);
+}
+
+.btnApply:disabled {
+  background: #666666; /* Gray when disabled */
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Reason preview */
+.reasonPreview {
+  margin-top: 0.75rem;
+  color: #ff9900; /* Dark orange */
+  font-size: 0.9rem;
+}
+
+/* Alerts */
+.alertDanger {
+  background: rgba(231, 76, 60, 0.2); /* Red with transparency */
+  color: #e74c3c; /* Bright red text */
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.alertSuccess {
+  background: rgba(46, 204, 113, 0.2); /* Green with transparency */
+  color: #2ecc71; /* Bright green text */
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Submit button */
+.btnSubmit {
+  background: linear-gradient(45deg, #ff9900, #cc7a00); /* Dark orange gradient */
+  color: #fff;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.btnSubmit:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.7);
+}
+
+.btnSubmit:disabled {
+  background: #666666; /* Gray when disabled */
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .formWrapper {
+    padding: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .input,
+  .select,
+  .btnApply,
+  .btnSubmit {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+
+  .btnConnect {
+    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem;
+  }
+
+  .walletConnected {
+    font-size: 0.8rem;
+  }
+
+  .reasonPreview {
+    font-size: 0.8rem;
+  }
+}

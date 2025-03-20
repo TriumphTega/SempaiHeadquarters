@@ -8,34 +8,23 @@ import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
-  FaHome,
-  FaBars,
-  FaTimes,
-  FaBookOpen,
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaUpload,
-  FaUserShield,
-  FaGem,
-  FaSun,
-  FaMoon,
-  FaImage,
-  FaBullhorn,
+  FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
+  FaUserShield, FaGem, FaSun, FaMoon, FaImage, FaBullhorn
 } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
 import styles from "../../styles/CreatorsDashboard.module.css";
 
-export default function CreatorsDashboard() {
+export default function NovelDashboard() {
   const { connected, publicKey } = useWallet();
   const [novelTitle, setNovelTitle] = useState("");
-  const [novelImage, setNovelImage] = useState("");
+  const [novelImage, setNovelImage] = useState(null); // Changed to store File object
+  const [novelImageUrl, setNovelImageUrl] = useState(""); // Store the URL for preview/display
   const [novelSummary, setNovelSummary] = useState("");
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [newChapterContent, setNewChapterContent] = useState("");
   const [newChapterIsAdvance, setNewChapterIsAdvance] = useState(false);
-  const [newChapterReleaseDate, setNewChapterReleaseDate] = useState(null); // Changed to null for DatePicker
+  const [newChapterReleaseDate, setNewChapterReleaseDate] = useState(null);
   const [novelsList, setNovelsList] = useState([]);
   const [selectedNovel, setSelectedNovel] = useState(null);
   const [chapterTitles, setChapterTitles] = useState([]);
@@ -51,7 +40,7 @@ export default function CreatorsDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
-  const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null); // Changed to null for DatePicker
+  const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -140,9 +129,8 @@ export default function CreatorsDashboard() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setNovelImage(reader.result);
-      reader.readAsDataURL(file);
+      setNovelImage(file); // Store the File object
+      setNovelImageUrl(URL.createObjectURL(file)); // Temporary preview URL
     } else {
       alert("Please upload a valid image file.");
     }
@@ -182,11 +170,7 @@ export default function CreatorsDashboard() {
       setChapterContents((prev) => [...prev, newChapterContent]);
       setAdvanceChapters((prev) => [
         ...prev,
-        {
-          index,
-          is_advance: newChapterIsAdvance,
-          free_release_date: newChapterIsAdvance ? (newChapterReleaseDate ? newChapterReleaseDate.toISOString() : null) : null,
-        },
+        { index, is_advance: newChapterIsAdvance, free_release_date: newChapterIsAdvance ? (newChapterReleaseDate ? newChapterReleaseDate.toISOString() : null) : null },
       ]);
     }
 
@@ -197,9 +181,9 @@ export default function CreatorsDashboard() {
   };
 
   const handleEditChapter = (e, index) => {
-    e.preventDefault(); // Prevent form submission
-    setNewChapterTitle(chapterTitles[index]);
-    setNewChapterContent(chapterContents[index]);
+    e.preventDefault();
+    setNewChapterTitle(chapterTitles[index] || "");
+    setNewChapterContent(chapterContents[index] || "");
     const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false, free_release_date: null };
     setNewChapterIsAdvance(advanceInfo.is_advance);
     setNewChapterReleaseDate(advanceInfo.free_release_date ? new Date(advanceInfo.free_release_date) : null);
@@ -218,10 +202,15 @@ export default function CreatorsDashboard() {
   };
 
   const handleEditNovel = (novel) => {
+    if (novel.user_id !== currentUserId && !isSuperuser) {
+      alert("You can only edit your own novels unless you are a superuser.");
+      return;
+    }
     setSelectedNovel(novel);
-    setNovelTitle(novel.title);
-    setNovelImage(novel.image);
-    setNovelSummary(novel.summary);
+    setNovelTitle(novel.title || "");
+    setNovelImage(null); // Reset file input
+    setNovelImageUrl(novel.image || ""); // Use existing URL for preview
+    setNovelSummary(novel.summary || "");
     setChapterTitles(novel.chaptertitles || []);
     setChapterContents(novel.chaptercontents || []);
     setAdvanceChapters(novel.advance_chapters || []);
@@ -230,26 +219,38 @@ export default function CreatorsDashboard() {
   const handleNovelSubmit = async (e) => {
     e.preventDefault();
 
-    if (!novelTitle.trim() || !novelImage || !novelSummary.trim()) {
+    if (!novelTitle.trim() || (!novelImage && !selectedNovel?.image) || !novelSummary.trim()) {
       alert("Please fill in all novel details.");
       return;
     }
 
-    const novelData = {
-      user_id: currentUserId,
-      title: novelTitle,
-      image: novelImage,
-      summary: novelSummary,
-      chaptertitles: chapterTitles,
-      chaptercontents: chapterContents,
-      advance_chapters: advanceChapters,
-    };
-
     setLoading(true);
     try {
-      let novelId, chapterNumber, message;
+      let imageUrl = selectedNovel ? selectedNovel.image : "";
+      if (novelImage) {
+        const fileName = `${currentUserId}/${Date.now()}-${novelImage.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("covers")
+          .upload(fileName, novelImage, { upsert: true });
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+        imageUrl = supabase.storage.from("covers").getPublicUrl(fileName).data.publicUrl;
+      }
 
+      const novelData = {
+        user_id: currentUserId,
+        title: novelTitle,
+        image: imageUrl,
+        summary: novelSummary,
+        chaptertitles: chapterTitles,
+        chaptercontents: chapterContents,
+        advance_chapters: advanceChapters,
+      };
+
+      let novelId, chapterNumber, message;
       if (selectedNovel) {
+        if (selectedNovel.user_id !== currentUserId && !isSuperuser) {
+          throw new Error("You can only update your own novels unless you are a superuser.");
+        }
         const { error } = await supabase.from("novels").update(novelData).eq("id", selectedNovel.id);
         if (error) throw new Error(error.message);
 
@@ -285,7 +286,7 @@ export default function CreatorsDashboard() {
       fetchNovels();
     } catch (err) {
       console.error("Error submitting novel:", err.message);
-      alert("An error occurred. Please try again.");
+      alert(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -348,7 +349,7 @@ export default function CreatorsDashboard() {
       setAnnouncementReleaseDate(null);
     } catch (err) {
       console.error("Error sending announcement:", err.message);
-      alert("Failed to send announcement. Please try again.");
+      alert(`Failed to send announcement: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -356,7 +357,8 @@ export default function CreatorsDashboard() {
 
   const resetForm = () => {
     setNovelTitle("");
-    setNovelImage("");
+    setNovelImage(null);
+    setNovelImageUrl("");
     setNovelSummary("");
     setNewChapterTitle("");
     setNewChapterContent("");
@@ -386,12 +388,8 @@ export default function CreatorsDashboard() {
             {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <button onClick={toggleTheme} className={styles.themeToggle}>
-              {isDarkMode ? <FaSun /> : <FaMoon />}
-            </button>
+            <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
+            <button onClick={toggleTheme} className={styles.themeToggle}>{isDarkMode ? <FaSun /> : <FaMoon />}</button>
             <ConnectButton className={styles.connectButton} />
           </div>
         </div>
@@ -400,9 +398,7 @@ export default function CreatorsDashboard() {
       {menuOpen && <div className={styles.blurOverlay}></div>}
 
       <header className={styles.header}>
-        <h1 className={styles.headerTitle}>
-          <FaUserShield /> Creator’s Vault
-        </h1>
+        <h1 className={styles.headerTitle}><FaUserShield /> Writer’s Vault</h1>
         <p className={styles.headerSubtitle}>Craft and curate your literary masterpieces.</p>
       </header>
 
@@ -410,16 +406,14 @@ export default function CreatorsDashboard() {
         {!connected ? (
           <div className={styles.connectPrompt}>
             <FaGem className={styles.connectIcon} />
-            <p>Connect your wallet to access the Creator’s Vault.</p>
+            <p>Connect your wallet to access the Writer’s Vault.</p>
             <ConnectButton className={styles.connectButtonPrompt} />
           </div>
         ) : !isWriter && !isSuperuser ? (
           <div className={styles.accessDenied}>
             <FaTimes className={styles.deniedIcon} />
-            <p>Access Denied. Only creators and superusers may enter.</p>
-            <Link href="/" className={styles.backLink}>
-              <FaHome /> Return Home
-            </Link>
+            <p>Access Denied. Only writers and superusers may enter.</p>
+            <Link href="/" className={styles.backLink}><FaHome /> Return Home</Link>
           </div>
         ) : (
           <div className={styles.dashboard}>
@@ -439,22 +433,11 @@ export default function CreatorsDashboard() {
                     required
                   />
                 </div>
-
                 <div className={styles.inputGroup}>
-                  <label className={styles.label}>
-                    <FaImage /> Cover Image
-                  </label>
-                  {novelImage && (
-                    <img src={novelImage} alt="Preview" className={styles.imagePreview} />
-                  )}
-                  <input
-                    type="file"
-                    onChange={handleImageChange}
-                    className={styles.fileInput}
-                    required={!selectedNovel}
-                  />
+                  <label className={styles.label}><FaImage /> Cover Image</label>
+                  {novelImageUrl && <img src={novelImageUrl} alt="Preview" className={styles.imagePreview} />}
+                  <input type="file" onChange={handleImageChange} className={styles.fileInput} required={!selectedNovel} />
                 </div>
-
                 <div className={styles.inputGroup}>
                   <label className={styles.label}>Summary</label>
                   <textarea
@@ -466,11 +449,8 @@ export default function CreatorsDashboard() {
                     required
                   />
                 </div>
-
                 <div className={styles.chapterSection}>
-                  <h3 className={styles.chapterTitle}>
-                    <FaPlus /> Chapters
-                  </h3>
+                  <h3 className={styles.chapterTitle}><FaPlus /> Chapters</h3>
                   <div className={styles.inputGroup}>
                     <label className={styles.label}>Chapter Title</label>
                     <input
@@ -494,11 +474,7 @@ export default function CreatorsDashboard() {
                   </div>
                   <div className={styles.inputGroup}>
                     <label className={styles.label}>
-                      <input
-                        type="checkbox"
-                        checked={newChapterIsAdvance}
-                        onChange={(e) => setNewChapterIsAdvance(e.target.checked)}
-                      />
+                      <input type="checkbox" checked={newChapterIsAdvance} onChange={(e) => setNewChapterIsAdvance(e.target.checked)} />
                       Mark as Advance Chapter
                     </label>
                     {newChapterIsAdvance && (
@@ -517,7 +493,6 @@ export default function CreatorsDashboard() {
                     <FaPlus /> {editChapterIndex !== null ? "Update" : "Add"}
                   </button>
                 </div>
-
                 {chapterTitles.length > 0 && (
                   <ul className={styles.chapterList}>
                     {chapterTitles.map((title, index) => {
@@ -527,39 +502,23 @@ export default function CreatorsDashboard() {
                           <span className={styles.chapterText}>
                             <strong>{title}</strong>
                             <p>{chapterContents[index].slice(0, 50)}...</p>
-                            {advanceInfo.is_advance && (
-                              <small>Advance (Free on: {advanceInfo.free_release_date || "TBD"})</small>
-                            )}
+                            {advanceInfo.is_advance && <small>Advance (Free on: {advanceInfo.free_release_date || "TBD"})</small>}
                           </span>
                           <div className={styles.chapterActions}>
-                            <button
-                              type="button" // Explicitly set to prevent form submission
-                              onClick={(e) => handleEditChapter(e, index)}
-                              className={styles.editButton}
-                            >
-                              <FaEdit />
-                            </button>
-                            <button onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}>
-                              <FaTrash />
-                            </button>
+                            <button type="button" onClick={(e) => handleEditChapter(e, index)} className={styles.editButton}><FaEdit /></button>
+                            <button onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}><FaTrash /></button>
                           </div>
                         </li>
                       );
                     })}
                   </ul>
                 )}
-
-                <button type="submit" className={styles.submitButton}>
-                  <FaUpload /> {selectedNovel ? "Update" : "Publish"}
-                </button>
+                <button type="submit" className={styles.submitButton}><FaUpload /> {selectedNovel ? "Update" : "Publish"}</button>
               </form>
 
-              {/* Announcement Section */}
               {selectedNovel && (
                 <div className={styles.announcementSection}>
-                  <h3 className={styles.sectionTitle}>
-                    <FaBullhorn /> Announce to Readers
-                  </h3>
+                  <h3 className={styles.sectionTitle}><FaBullhorn /> Announce to Readers</h3>
                   <form onSubmit={handleAnnouncementSubmit} className={styles.announcementForm}>
                     <div className={styles.inputGroup}>
                       <label className={styles.label}>Announcement Title</label>
@@ -595,18 +554,14 @@ export default function CreatorsDashboard() {
                         className={styles.input}
                       />
                     </div>
-                    <button type="submit" className={styles.announcementButton}>
-                      <FaBullhorn /> Send Announcement
-                    </button>
+                    <button type="submit" className={styles.announcementButton}><FaBullhorn /> Send Announcement</button>
                   </form>
                 </div>
               )}
             </section>
 
             <section className={styles.novelsSection}>
-              <h2 className={styles.sectionTitle}>
-                <FaBookOpen /> Your Manuscripts
-              </h2>
+              <h2 className={styles.sectionTitle}><FaBookOpen /> Your Manuscripts</h2>
               {novelsList.length === 0 ? (
                 <p className={styles.noNovels}>No manuscripts yet. Start creating!</p>
               ) : (
@@ -616,15 +571,10 @@ export default function CreatorsDashboard() {
                       <img src={novel.image} alt={novel.title} className={styles.novelImage} />
                       <div className={styles.novelInfo}>
                         <h3 className={styles.novelTitle}>{novel.title}</h3>
-                        <p className={styles.novelSummary}>
-                          {novel.summary.slice(0, 50)}...
-                        </p>
-                        <button
-                          onClick={() => handleEditNovel(novel)}
-                          className={styles.editNovelButton}
-                        >
-                          <FaEdit /> Edit
-                        </button>
+                        <p className={styles.novelSummary}>{novel.summary.slice(0, 50)}...</p>
+                        {(novel.user_id === currentUserId || isSuperuser) && (
+                          <button onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -634,9 +584,7 @@ export default function CreatorsDashboard() {
 
             {isSuperuser && (
               <section className={styles.writersSection}>
-                <h2 className={styles.sectionTitle}>
-                  <FaUserShield /> Writers
-                </h2>
+                <h2 className={styles.sectionTitle}><FaUserShield /> Writers</h2>
                 {writers.length === 0 ? (
                   <p className={styles.noWriters}>No writers found.</p>
                 ) : (

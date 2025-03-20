@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ import {
   FaGamepad,
   FaBullhorn,
   FaFeatherAlt,
+  FaShareAlt,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -53,8 +54,11 @@ export default function Home() {
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
+  const [isArtist, setIsArtist] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
   const [userId, setUserId] = useState(null);
   const [novels, setNovels] = useState([]);
+  const [manga, setManga] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,51 +69,103 @@ export default function Home() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [amount, setAmount] = useState(0);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [referralPosition, setReferralPosition] = useState({ x: 50, y: 50 });
+  const [showCreatorChoice, setShowCreatorChoice] = useState(false);
+
+  const referralRef = useRef(null);
+  const dragStartPos = useRef({ x: 0, y: 0 });
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   const toggleMenu = () => {
-    setMenuOpen((prev) => {
-      console.log("Toggling menu, new state:", !prev);
-      return !prev;
-    });
+    setMenuOpen((prev) => !prev);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
   };
 
   const toggleNotifications = (e) => {
     e.stopPropagation();
     if (toggleNotifications.lastToggle && Date.now() - toggleNotifications.lastToggle < 100) return;
     toggleNotifications.lastToggle = Date.now();
-
-    setNotificationsOpen((prev) => {
-      console.log("Toggling notifications, new state:", !prev);
-      return !prev;
-    });
+    setNotificationsOpen((prev) => !prev);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
   };
   toggleNotifications.lastToggle = 0;
 
   const toggleConnectPopup = () => {
-    setShowConnectPopup((prev) => {
-      console.log("Toggling connect popup, new state:", !prev);
-      return !prev;
-    });
+    setShowConnectPopup((prev) => !prev);
     setMenuOpen(false);
     setNotificationsOpen(false);
     setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
   };
 
   const toggleAnnouncements = () => {
-    setAnnouncementsOpen((prev) => {
-      console.log("Toggling announcements, new state:", !prev);
-      return !prev;
-    });
+    setAnnouncementsOpen((prev) => !prev);
     setMenuOpen(false);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
+  };
+
+  const toggleReferral = () => {
+    setIsReferralOpen((prev) => !prev);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
+    setShowCreatorChoice(false);
+  };
+
+  const handleMouseDown = (e) => {
+    dragStartPos.current = { x: e.clientX - referralPosition.x, y: e.clientY - referralPosition.y };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    const newX = e.clientX - dragStartPos.current.x;
+    const newY = e.clientY - dragStartPos.current.y;
+    const boundedX = Math.max(0, Math.min(newX, window.innerWidth - (referralRef.current?.offsetWidth || 200)));
+    const boundedY = Math.max(0, Math.min(newY, window.innerHeight - (referralRef.current?.offsetHeight || 100)));
+    setReferralPosition({ x: boundedX, y: boundedY });
+  };
+
+  const handleMouseUp = () => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    dragStartPos.current = { x: touch.clientX - referralPosition.x, y: touch.clientY - referralPosition.y };
+    document.addEventListener("touchmove", handleTouchMove);
+    document.addEventListener("touchend", handleTouchEnd);
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    const newX = touch.clientX - dragStartPos.current.x;
+    const newY = touch.clientY - dragStartPos.current.y;
+    const boundedX = Math.max(0, Math.min(newX, window.innerWidth - (referralRef.current?.offsetWidth || 200)));
+    const boundedY = Math.max(0, Math.min(newY, window.innerHeight - (referralRef.current?.offsetHeight || 100)));
+    setReferralPosition({ x: boundedX, y: boundedY });
+  };
+
+  const handleTouchEnd = () => {
+    document.removeEventListener("touchmove", handleTouchMove);
+    document.removeEventListener("touchend", handleTouchEnd);
   };
 
   const fetchNotifications = useCallback(async () => {
@@ -120,31 +176,27 @@ export default function Home() {
 
     const fetchWithRetry = async () => {
       try {
-        const { data: user, error: userError } = await supabase
+        const { data: user } = await supabase
           .from("users")
           .select("id")
           .eq("wallet_address", walletAddress)
           .single();
+        if (!user) throw new Error("User not found");
 
-        if (userError || !user) throw new Error("User not found");
-
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("notifications")
           .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id")
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
 
-        if (error) throw new Error(`Failed to fetch notifications: ${error.message}`);
         setNotifications(data || []);
       } catch (err) {
         if (retryCount < maxRetries) {
           retryCount++;
-          console.warn(`Retry ${retryCount}/${maxRetries}: ${err.message}`);
           await new Promise((res) => setTimeout(res, 1000 * retryCount));
           return fetchWithRetry();
         }
-        console.error(err.message);
         setError("Failed to load notifications.");
       }
     };
@@ -156,149 +208,155 @@ export default function Home() {
     if (!connected || !publicKey) return;
     try {
       const walletAddress = publicKey.toString();
-      const { data: user, error: userError } = await supabase
+      const { data: user } = await supabase
         .from("users")
         .select("id")
         .eq("wallet_address", walletAddress)
         .single();
+      if (!user) throw new Error("User not found");
 
-      if (userError || !user) throw new Error("User not found");
-
-      const { error } = await supabase
+      await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("user_id", user.id);
-
-      if (error) throw new Error("Failed to mark notifications as read");
       setNotifications([]);
       setNotificationsOpen(false);
     } catch (err) {
-      console.error(err.message);
       setError("Failed to update notifications.");
     }
   }, [connected, publicKey]);
 
   const fetchUserDetails = useCallback(async () => {
     if (!connected || !publicKey) return;
+
+    const walletAddress = publicKey.toString();
     try {
-      const walletAddress = publicKey.toString();
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, isWriter")
+        .select("id, isWriter, isArtist, isSuperuser, referral_code")
         .eq("wallet_address", walletAddress)
         .single();
 
-      if (error) throw new Error("Failed to fetch user details");
-      setIsWriter(user?.isWriter || false);
-      setUserId(user?.id);
+      if (error && error.code !== "PGRST116") throw error;
+
+      if (user) {
+        setIsWriter(user.isWriter || false);
+        setIsArtist(user.isArtist || false);
+        setIsSuperuser(user.isSuperuser || false);
+        setUserId(user.id);
+        setReferralCode(user.referral_code || "");
+      }
     } catch (err) {
-      console.error(err.message);
-      setError("Failed to verify writer status.");
+      setError(`Failed to fetch user details: ${err.message}`);
     }
   }, [connected, publicKey]);
 
   const checkCreatorLogin = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setIsCreatorLoggedIn(!!user);
-  }, []);
+    setIsCreatorLoggedIn(connected);
+  }, [connected]);
 
   const fetchNovels = useCallback(async () => {
     try {
-      const { data: novelsData, error: novelsError } = await supabase
+      const { data: novelsData, error } = await supabase
         .from("novels")
         .select("id, title, image, summary, user_id");
 
-      if (novelsError) throw new Error(`Failed to fetch novels: ${novelsError.message}`);
-      console.log("Fetched novels:", novelsData);
-
+      if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
         setNovels([]);
         return;
       }
 
-      const userIds = novelsData.map(novel => novel.user_id).filter(id => id);
-      if (userIds.length === 0) {
-        setNovels(novelsData.map(novel => ({ ...novel, writer: { name: "Unknown", isWriter: false } })));
-        return;
-      }
-
+      const userIds = novelsData.map((novel) => novel.user_id).filter((id) => id);
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, name, isWriter")
         .in("id", userIds);
 
-      if (usersError) throw new Error(`Failed to fetch writer details: ${usersError.message}`);
-      console.log("Fetched users for novels:", usersData);
+      if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
 
       const usersMap = usersData.reduce((acc, user) => {
         acc[user.id] = { name: user.name || "Unknown", isWriter: user.isWriter || false };
         return acc;
       }, {});
 
-      const enrichedNovels = novelsData.map(novel => ({
+      const enrichedNovels = novelsData.map((novel) => ({
         ...novel,
         writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
       }));
-
       setNovels(enrichedNovels);
     } catch (err) {
-      console.error("Error in fetchNovels:", err.message);
-      setError("Failed to load novels.");
+      setError(err.message);
+    }
+  }, []);
+
+  const fetchManga = useCallback(async () => {
+    try {
+      const { data: mangaData, error } = await supabase
+        .from("manga")
+        .select("id, title, cover_image, summary, user_id, status")
+        .in("status", ["ongoing", "completed"]);
+
+      if (error) throw new Error(`Failed to fetch manga: ${error.message}`);
+      if (!mangaData || mangaData.length === 0) {
+        setManga([]);
+        return;
+      }
+
+      const userIds = mangaData.map((manga) => manga.user_id).filter((id) => id);
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, name, isArtist")
+        .in("id", userIds);
+
+      if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
+
+      const usersMap = usersData.reduce((acc, user) => {
+        acc[user.id] = { name: user.name || "Unknown", isArtist: user.isArtist || false };
+        return acc;
+      }, {});
+
+      const enrichedManga = mangaData.map((manga) => ({
+        ...manga,
+        image: manga.cover_image,
+        writer: usersMap[manga.user_id] || { name: "Unknown", isArtist: false },
+      }));
+      setManga(enrichedManga);
+    } catch (err) {
+      setError(err.message);
     }
   }, []);
 
   const fetchAnnouncements = useCallback(async () => {
     try {
-      const response = await fetch(`/api/announcements${publicKey ? `?publicKey=${publicKey.toString()}` : ''}`);
-      if (!response.ok) throw new Error(`API fetch failed with status ${response.status}`);
+      const response = await fetch(`/api/announcements${publicKey ? `?publicKey=${publicKey.toString()}` : ""}`);
       const { data } = await response.json();
-      console.log("API announcements response:", data);
-
       const recentAnnouncements = data
-        .filter(announcement => {
+        .filter((announcement) => {
           const createdAt = new Date(announcement.created_at);
           const now = new Date();
-          const diffInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
-          return diffInDays <= 7;
+          return (now - createdAt) / (1000 * 60 * 60 * 24) <= 7;
         })
         .slice(0, 5);
 
-      if (!recentAnnouncements.length) {
-        setAnnouncements([]);
-        setLoading(false);
-        return;
-      }
-
-      // Extract user IDs from the nested users object
-      const userIds = recentAnnouncements.map(a => a.users?.id).filter(id => id);
-      if (!userIds.length) {
-        setAnnouncements(recentAnnouncements.map(a => ({ ...a, name: "Unknown" })));
-        setLoading(false);
-        return;
-      }
-
-      const { data: usersData, error: usersError } = await supabase
+      const userIds = recentAnnouncements.map((a) => a.users?.id).filter((id) => id);
+      const { data: usersData } = await supabase
         .from("users")
         .select("id, name")
         .in("id", userIds);
-
-      if (usersError) throw new Error(`Failed to fetch user data for announcements: ${usersError.message}`);
-      console.log("Fetched users for announcements:", usersData);
 
       const userMap = usersData.reduce((acc, user) => {
         acc[user.id] = user.name || "Unknown";
         return acc;
       }, {});
 
-      const enrichedAnnouncements = recentAnnouncements.map(announcement => ({
+      const enrichedAnnouncements = recentAnnouncements.map((announcement) => ({
         ...announcement,
         name: userMap[announcement.users?.id] || "Unknown",
-        user_id: announcement.users?.id, // Use this for the profile link
+        user_id: announcement.users?.id,
       }));
-
       setAnnouncements(enrichedAnnouncements);
     } catch (err) {
-      console.error("Error fetching announcements:", err.message);
       setError("Failed to load announcements.");
     } finally {
       setLoading(false);
@@ -310,27 +368,42 @@ export default function Home() {
       setShowConnectPopup(true);
       return;
     }
-    setPageLoading(true);
     try {
       const walletAddress = publicKey.toString();
       const { data: user, error } = await supabase
         .from("users")
-        .select("isWriter")
+        .select("isWriter, isArtist, isSuperuser")
         .eq("wallet_address", walletAddress)
         .single();
 
-      if (error || !user) throw new Error("User not found or not a writer");
-      if (user.isWriter) {
-        router.push("/creators-dashboard");
-      } else {
+      if (error || !user) throw new Error("User not found");
+
+      const { isWriter, isArtist, isSuperuser } = user;
+
+      if (!isWriter && !isArtist && !isSuperuser) {
+        setPageLoading(true);
         router.push("/apply");
+      } else if (isSuperuser || (isWriter && isArtist)) {
+        setShowCreatorChoice(true);
+        setMenuOpen(false); // Close the mobile menu when showing the popup
+      } else if (isWriter) {
+        setPageLoading(true);
+        router.push("/novel-creators-dashboard");
+      } else if (isArtist) {
+        setPageLoading(true);
+        router.push("/manga-creators-dashboard");
       }
     } catch (err) {
-      console.error(err.message);
       setError(err.message);
       setPageLoading(false);
     }
   }, [connected, publicKey, router]);
+
+  const handleCreatorChoice = (path) => {
+    setShowCreatorChoice(false);
+    setPageLoading(true);
+    router.push(path);
+  };
 
   const handleNavigation = (path) => {
     setPageLoading(true);
@@ -338,30 +411,83 @@ export default function Home() {
     setNotificationsOpen(false);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
     router.push(path);
   };
 
-  const handleNovelNavigation = (novelId) => {
+  const handleNovelNavigation = (id) => {
     setPageLoading(true);
     setMenuOpen(false);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
-    router.push(`/novel/${novelId}`);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
+    router.push(`/novel/${id}`);
+  };
+
+  const handleMangaNavigation = (id) => {
+    setPageLoading(true);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
+    router.push(`/manga/${id}`);
+  };
+
+  const fetchBalance = async () => {
+    if (!connected || !publicKey) return;
+    const walletAddress = publicKey.toString();
+
+    const { data } = await supabase
+      .from("users")
+      .select("weekly_points")
+      .eq("wallet_address", walletAddress)
+      .single();
+    if (data) setAmount(data.weekly_points);
+  };
+
+  const copyReferralLink = () => {
+    const link = `${window.location.origin}/?ref=${referralCode}`;
+    navigator.clipboard.writeText(link);
+    alert("Referral link copied to clipboard!");
   };
 
   useEffect(() => {
-    checkCreatorLogin();
-    fetchUserDetails();
-    fetchNovels();
-    fetchNotifications();
-    fetchAnnouncements();
-  }, [checkCreatorLogin, fetchUserDetails, fetchNovels, fetchNotifications, fetchAnnouncements]);
+    const loadData = async () => {
+      await Promise.all([
+        checkCreatorLogin(),
+        fetchUserDetails(),
+        fetchNovels(),
+        fetchManga(),
+        fetchNotifications(),
+        fetchAnnouncements(),
+        fetchBalance(),
+      ]);
+      setLoading(false);
+    };
+    loadData();
+  }, [
+    checkCreatorLogin,
+    fetchUserDetails,
+    fetchNovels,
+    fetchManga,
+    fetchNotifications,
+    fetchAnnouncements,
+    connected,
+    publicKey,
+  ]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
       const notificationButton = document.querySelector(`.${styles.notificationButton}`);
       const notificationDropdown = document.querySelector(`.${styles.notificationDropdown}`);
+      const referralButton = document.querySelector(`.${styles.referralToggle}`);
+      const referralDropdown = document.querySelector(`.${styles.referralDropdown}`);
+      const choicePopup = document.querySelector(`.${styles.creatorChoicePopup}`);
       if (
         notificationsOpen &&
         !notificationButton?.contains(e.target) &&
@@ -369,30 +495,43 @@ export default function Home() {
       ) {
         setNotificationsOpen(false);
       }
+      if (
+        isReferralOpen &&
+        !referralButton?.contains(e.target) &&
+        !referralDropdown?.contains(e.target)
+      ) {
+        setIsReferralOpen(false);
+      }
+      if (
+        showCreatorChoice &&
+        !choicePopup?.contains(e.target)
+      ) {
+        setShowCreatorChoice(false);
+      }
     };
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
-  }, [notificationsOpen]);
+  }, [notificationsOpen, isReferralOpen, showCreatorChoice]);
 
-  const novelCarouselSettings = {
-    dots: true,
-    infinite: true,
+  const carouselSettings = (itemCount) => ({
+    dots: itemCount > 1,
+    infinite: itemCount > 1,
     speed: 700,
-    slidesToShow: 3,
+    slidesToShow: Math.min(itemCount, 3),
     slidesToScroll: 1,
-    autoplay: true,
+    autoplay: itemCount > 1,
     autoplaySpeed: 2500,
-    arrows: true,
+    arrows: itemCount > 1,
     prevArrow: <PrevArrow />,
     nextArrow: <NextArrow />,
-    centerMode: true,
-    centerPadding: "20px",
+    centerMode: itemCount > 1,
+    centerPadding: itemCount > 1 ? "20px" : "0px",
     responsive: [
-      { breakpoint: 1024, settings: { slidesToShow: 2, centerPadding: "30px" } },
-      { breakpoint: 768, settings: { slidesToShow: 2, centerPadding: "20px" } },
-      { breakpoint: 480, settings: { slidesToShow: 1, centerPadding: "10px" } },
+      { breakpoint: 1024, settings: { slidesToShow: Math.min(itemCount, 2), centerPadding: itemCount > 1 ? "30px" : "0px" } },
+      { breakpoint: 768, settings: { slidesToShow: Math.min(itemCount, 2), centerPadding: itemCount > 1 ? "20px" : "0px" } },
+      { breakpoint: 480, settings: { slidesToShow: 1, centerPadding: "0px" } },
     ],
-  };
+  });
 
   const announcementCarouselSettings = {
     dots: true,
@@ -408,15 +547,14 @@ export default function Home() {
     fade: true,
     pauseOnHover: true,
     adaptiveHeight: true,
-    customPaging: (i) => (
-      <button className={styles.customDot}>{i + 1}</button>
-    ),
+    customPaging: (i) => <button className={styles.customDot}>{i + 1}</button>,
   };
 
   if (loading || pageLoading) return <LoadingPage />;
 
   return (
-    <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark} ${menuOpen ? styles.menuActive : ""}`}>
+    <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
+      <div className={styles.backgroundAnimation}></div>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
@@ -434,8 +572,8 @@ export default function Home() {
               <FaExchangeAlt className={styles.navIcon} /> Swap
             </Link>
             <Link
-              href={connected && isWriter ? `/writers-profile/${userId}` : "/editprofile"}
-              onClick={() => (connected ? handleNavigation(isWriter ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
+              href={connected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
+              onClick={() => (connected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
               className={styles.navLink}
             >
               <FaUser className={styles.navIcon} /> Profile
@@ -447,24 +585,18 @@ export default function Home() {
               <FaGamepad className={styles.navIcon} /> Kaito's Adventure
             </Link>
             <button onClick={handleCreatorAccess} className={styles.actionButton}>
-              {isWriter ? "Creator Dashboard" : "Become a Creator"}
+              {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
             </button>
             {connected && (
               <div className={styles.notificationWrapper}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleNotifications(e);
-                  }}
-                  className={styles.notificationButton}
-                >
+                <button onClick={toggleNotifications} className={styles.notificationButton}>
                   <FaBell className={styles.bellIcon} />
                   {notifications.length > 0 && (
                     <span className={styles.notificationBadge}>{notifications.length}</span>
                   )}
                 </button>
                 {notificationsOpen && (
-                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ''}`}>
+                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
                     {notifications.length > 0 ? (
                       <>
                         {notifications.map((notif) => (
@@ -496,6 +628,11 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            )}
+            {connected && (
+              <button onClick={toggleReferral} className={styles.referralToggle}>
+                <FaShareAlt className={styles.referralIcon} />
+              </button>
             )}
             <button onClick={toggleTheme} className={styles.themeToggle}>
               {theme === "dark" ? <FaSun /> : <FaMoon />}
@@ -543,11 +680,6 @@ export default function Home() {
                             <span className={styles.announcementDate}>
                               {new Date(announcement.created_at).toLocaleDateString()}
                             </span>
-                            {announcement.release_date && (
-                              <span className={styles.announcementRelease}>
-                                {new Date(announcement.release_date).toLocaleDateString()}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -560,81 +692,162 @@ export default function Home() {
             )}
           </div>
           <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
-          <p className={styles.heroSubtitle}>Discover Novels, Earn Tokens, Unleash Your Imagination</p>
-          <button onClick={() => handleNavigation("/novels")} className={styles.heroButton}>
-            <FaBookOpen className={styles.heroIcon} /> Explore Now
-          </button>
+          <p className={styles.heroSubtitle}>Explore Novels & Manga, Earn Tokens, Unleash Your Imagination</p>
+          <div className={styles.heroButtons}>
+            <button onClick={() => handleNavigation("/novels")} className={styles.heroButton}>
+              <FaBookOpen className={styles.heroIcon} /> Explore Novels
+            </button>
+            <button onClick={() => handleNavigation("/manga")} className={styles.heroButton}>
+              <FaBookOpen className={styles.heroIcon} /> Explore Manga
+            </button>
+          </div>
         </div>
       </header>
-      <section className={styles.novelsSection}>
-        <h2 className={styles.sectionTitle}>Featured</h2>
-        {error && <div className={styles.errorAlert}>{error}</div>}
-        <Slider {...novelCarouselSettings} className={styles.carousel}>
-          {novels.map((novel) => (
-            <div key={novel.id} className={styles.carouselItem}>
-              <div className={styles.novelCard}>
-                <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNovelNavigation(novel.id); }}>
-                  <img src={novel.image} alt={novel.title} className={styles.novelImage} />
-                  <div className={styles.novelOverlay}>
-                    <h3 className={styles.novelTitle}>{novel.title}</h3>
-                  </div>
-                </Link>
-                {novel.writer.isWriter && (
-                  <Link
-                    href={`/writers-profile/${novel.user_id}`}
-                    onClick={() => handleNavigation(`/writers-profile/${novel.user_id}`)}
-                    className={styles.writerName}
-                  >
-                    <FaFeatherAlt className={styles.writerBadge} /> {novel.writer.name}
-                  </Link>
+
+      <main className={styles.mainContent}>
+        {connected && isReferralOpen && (
+          <div
+            ref={referralRef}
+            className={styles.referralDropdown}
+            style={{ left: `${referralPosition.x}px`, top: `${referralPosition.y}px` }}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          >
+            <div className={styles.referralHeader}>Referral</div>
+            <p>Code: <strong>{referralCode || "N/A"}</strong></p>
+            <p>Amount: <strong>{amount}</strong> points</p>
+            <button onClick={copyReferralLink} className={styles.referralButton}>
+              Copy Link
+            </button>
+          </div>
+        )}
+        {showCreatorChoice && (
+          <div className={styles.creatorChoiceOverlay}>
+            <div className={styles.creatorChoicePopup}>
+              <button onClick={() => setShowCreatorChoice(false)} className={styles.closePopupButton}>
+                <FaTimes />
+              </button>
+              <h3 className={styles.popupTitle}>Choose Your Dashboard</h3>
+              <p className={styles.popupMessage}>You have multiple creator roles. Which dashboard would you like to access?</p>
+              <div className={styles.choiceButtons}>
+                {(isWriter || isSuperuser) && (
+                  <button onClick={() => handleCreatorChoice("/novel-creators-dashboard")} className={styles.choiceButton}>
+                    Novel Creators Dashboard
+                  </button>
+                )}
+                {(isArtist || isSuperuser) && (
+                  <button onClick={() => handleCreatorChoice("/manga-creators-dashboard")} className={styles.choiceButton}>
+                    Manga Creators Dashboard
+                  </button>
                 )}
               </div>
             </div>
-          ))}
-          {/* Static carousel items remain unchanged */}
-          <div className={styles.carouselItem}>
-            <div className={styles.novelCard}>
-              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
-                <img src="/background.jpg" alt="Kaito Brewmaster" className={styles.novelImage} />
-                <div className={styles.novelOverlay}>
-                  <h3 className={styles.novelTitle}>Kaito Brewmaster</h3>
-                </div>
-              </Link>
-            </div>
           </div>
-          <div className={styles.carouselItem}>
-            <div className={styles.novelCard}>
-              <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>
-                <img src="/images/novel-3.jpg" alt="Hoard" className={styles.novelImage} />
-                <div className={styles.novelOverlay}>
-                  <h3 className={styles.novelTitle}>Hoard</h3>
+        )}
+        <section className={styles.contentSection}>
+          <h2 className={styles.sectionTitle}>Featured Novels</h2>
+          {error && <div className={styles.errorAlert}>{error}</div>}
+          {novels.length > 0 ? (
+            <Slider {...carouselSettings(novels.length)} className={styles.carousel}>
+              {novels.map((novel) => (
+                <div key={novel.id} className={styles.carouselItem}>
+                  <div className={styles.contentCard}>
+                    <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNovelNavigation(novel.id); }}>
+                      <img src={novel.image} alt={novel.title} className={styles.contentImage} />
+                      <div className={styles.contentOverlay}>
+                        <h3 className={styles.contentTitle}>{novel.title}</h3>
+                        <p className={styles.contentSummary}>{novel.summary}</p>
+                      </div>
+                    </Link>
+                    {novel.writer.isWriter && (
+                      <Link
+                        href={`/writers-profile/${novel.user_id}`}
+                        onClick={() => handleNavigation(`/writers-profile/${novel.user_id}`)}
+                        className={styles.writerName}
+                      >
+                        <FaFeatherAlt className={styles.writerBadge} /> {novel.writer.name}
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </Link>
-            </div>
-          </div>
-          <div className={styles.carouselItem}>
-            <div className={styles.novelCard}>
-              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
-                <img src="/images/novel-4.jpg" alt="KISS" className={styles.novelImage} />
-                <div className={styles.novelOverlay}>
-                  <h3 className={styles.novelTitle}>KISS</h3>
-                </div>
-              </Link>
-            </div>
-          </div>
-          <div className={styles.carouselItem}>
-            <div className={styles.novelCard}>
-              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
-                <img src="/images/dao.jpg" alt="DAO Governance" className={styles.novelImage} />
-                <div className={styles.novelOverlay}>
-                  <h3 className={styles.novelTitle}>DAO Governance</h3>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </Slider>
-      </section>
+              ))}
+            </Slider>
+          ) : (
+            <p className={styles.noContent}>No novels available yet.</p>
+          )}
+        </section>
 
+        <section className={styles.contentSection}>
+          <h2 className={styles.sectionTitle}>Featured Manga</h2>
+          {error && <div className={styles.errorAlert}>{error}</div>}
+          {manga.length > 0 ? (
+            <Slider {...carouselSettings(manga.length)} className={styles.carousel}>
+              {manga.map((mangaItem) => (
+                <div key={mangaItem.id} className={styles.carouselItem}>
+                  <div className={styles.contentCard}>
+                    <Link href={`/manga/${mangaItem.id}`} onClick={(e) => { e.preventDefault(); handleMangaNavigation(mangaItem.id); }}>
+                      <img src={mangaItem.image} alt={mangaItem.title} className={styles.contentImage} />
+                      <div className={styles.contentOverlay}>
+                        <h3 className={styles.contentTitle}>{mangaItem.title}</h3>
+                        <p className={styles.contentSummary}>{mangaItem.summary}</p>
+                      </div>
+                    </Link>
+                    {mangaItem.writer.isArtist && (
+                      <Link
+                        href={`/writers-profile/${mangaItem.user_id}`}
+                        onClick={() => handleNavigation(`/writers-profile/${mangaItem.user_id}`)}
+                        className={styles.writerName}
+                      >
+                        <FaFeatherAlt className={styles.writerBadge} /> {mangaItem.writer.name}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </Slider>
+          ) : (
+            <p className={styles.noContent}>No manga available yet.</p>
+          )}
+        </section>
+
+        <section className={styles.featuresSection}>
+          <h2 className={styles.sectionTitle}>Explore More</h2>
+          <div className={styles.featuresGrid}>
+            <div className={styles.featureCard}>
+              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
+                <img src="/background.jpg" alt="Kaito Adventure" className={styles.featureImage} />
+                <div className={styles.featureOverlay}>
+                  <h3 className={styles.featureTitle}>Kaito's Adventure</h3>
+                </div>
+              </Link>
+            </div>
+            <div className={styles.featureCard}>
+              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
+                <img src="/images/dao.jpg" alt="DAO Governance" className={styles.featureImage} />
+                <div className={styles.featureOverlay}>
+                  <h3 className={styles.featureTitle}>DAO Governance</h3>
+                </div>
+              </Link>
+            </div>
+            <div className={styles.featureCard}>
+              <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>
+                <img src="/images/novel-3.jpg" alt="Hoard" className={styles.featureImage} />
+                <div className={styles.featureOverlay}>
+                  <h3 className={styles.featureTitle}>Hoard</h3>
+                </div>
+              </Link>
+            </div>
+            <div className={styles.featureCard}>
+              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
+                <img src="/images/novel-4.jpg" alt="KISS" className={styles.featureImage} />
+                <div className={styles.featureOverlay}>
+                  <h3 className={styles.featureTitle}>KISS</h3>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {showConnectPopup && (
         <div className={styles.connectPopupOverlay}>

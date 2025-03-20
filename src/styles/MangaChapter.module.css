@@ -1,0 +1,271 @@
+/* Base page styles */
+.page {
+  position: relative;
+  min-height: 100vh;
+  background: #1a1a1a; /* Dark gray base */
+  color: #d1d5db; /* Your preferred gray */
+  font-family: "Poppins", sans-serif;
+  overflow-x: hidden;
+}
+
+/* Animated background with gold tints */
+.backgroundAnimation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #1a1a1a, rgba(218, 165, 32, 0.1)); /* Subtle gold tint */
+  z-index: -1;
+  overflow: hidden;
+}
+
+.backgroundAnimation::before {
+  content: "";
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle, rgba(218, 165, 32, 0.3) 10%, transparent 60%);
+  animation: goldSwirl 25s infinite ease-in-out;
+  opacity: 0.5;
+}
+
+.backgroundAnimation::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"%3E%3Cpath d="M400 50 L450 150 L550 150 L475 225 L500 325 L400 275 L300 325 L325 225 L250 150 L350 150 Z" fill="none" stroke="%23DAA520" stroke-width="2" opacity="0.4"/%3E%3C/svg%3E') repeat;
+  animation: starPulse 18s infinite alternate;
+}
+
+@keyframes goldSwirl {
+  0% { transform: translate(-25%, -25%) rotate(0deg); }
+  50% { transform: translate(-25%, -25%) rotate(180deg); }
+  100% { transform: translate(-25%, -25%) rotate(360deg); }
+}
+
+@keyframes starPulse {
+  0% { opacity: 0.4; transform: scale(0.95); }
+  100% { opacity: 0.7; transform: scale(1.05); }
+}
+
+/* Fixed, semi-transparent navbar */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(26, 26, 26, 0.85);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  border-bottom: 1px solid rgba(218, 165, 32, 0.2); /* Subtle gold outline */
+}
+
+.navLink {
+  color: #d1d5db;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.navLink:hover {
+  color: #daa520; /* Gold on hover */
+}
+
+.walletButton {
+  background: rgba(218, 165, 32, 0.2);
+  border: 1px solid #daa520;
+  color: #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Main content */
+.content {
+  margin-top: 80px; /* Space for fixed navbar */
+  padding: 2rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  text-align: center;
+  color: #ffffff;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(218, 165, 32, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+/* Payment section */
+.paymentSection {
+  background: rgba(26, 26, 26, 0.9);
+  padding: 2rem;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.lockIcon {
+  font-size: 3rem;
+  color: #daa520;
+  margin-bottom: 1rem;
+}
+
+.paymentButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.paymentButtons button {
+  padding: 0.75rem 1.5rem;
+  background: #1a1a1a;
+  border: 1px solid #daa520;
+  color: #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.paymentButtons button:hover:not(:disabled) {
+  background: rgba(218, 165, 32, 0.2);
+}
+
+.paymentButtons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.success, .error, .warning {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+.success {
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+}
+
+.error {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff0000;
+}
+
+.warning {
+  background: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+}
+
+/* Manga pages */
+.mangaContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mangaPage {
+  width: 100%;
+  max-width: 1000px;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.mangaPage:hover {
+  transform: scale(1.01);
+}
+
+.chapterNav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.navButton {
+  padding: 0.75rem 1.5rem;
+  background: #1a1a1a;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  color: #d1d5db;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.3s ease;
+}
+
+.navButton:hover {
+  background: rgba(218, 165, 32, 0.2);
+}
+
+.chapterSelect {
+  padding: 0.5rem;
+  background: #1a1a1a;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  color: #d1d5db;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.downloadButton {
+  padding: 0.75rem 1.5rem;
+  background: #1a1a1a;
+  border: 1px solid #daa520;
+  color: #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.3s ease;
+}
+
+.downloadButton:hover {
+  background: rgba(218, 165, 32, 0.2);
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(26, 26, 26, 0.9);
+  border-top: 1px solid rgba(218, 165, 32, 0.2);
+  color: #d1d5db;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mangaPage {
+    width: 90%; /* 90% width on mobile */
+  }
+
+  .navbar {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .paymentButtons {
+    flex-direction: column;
+  }
+
+  .chapterNav {
+    flex-direction: column;
+  }
+}
