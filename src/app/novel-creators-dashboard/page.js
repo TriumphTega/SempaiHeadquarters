@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Select from "react-select"; // Import react-select
 import {
   FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
   FaUserShield, FaGem, FaSun, FaMoon, FaImage, FaBullhorn
@@ -15,11 +16,35 @@ import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
 import styles from "../../styles/CreatorsDashboard.module.css";
 
+// Predefined tag options
+const TAG_OPTIONS = [
+  { value: "Action", label: "Action" },
+  { value: "Adult(18+)", label: "Adult(18+)" },
+  { value: "Adventure", label: "Adventure" },
+  { value: "Comedy", label: "Comedy" },
+  { value: "Drama", label: "Drama" },
+  { value: "Fantasy", label: "Fantasy" },
+  { value: "Horror", label: "Horror" },
+  { value: "Mystery", label: "Mystery" },
+  { value: "Romance", label: "Romance" },
+  { value: "Sci-Fi", label: "Sci-Fi" },
+  { value: "Slice of Life", label: "Slice of Life" },
+  { value: "Supernatural", label: "Supernatural" },
+  { value: "Thriller", label: "Thriller" },
+  { value: "Historical", label: "Historical" },
+  { value: "Sports", label: "Sports" },
+  { value: "Psychological", label: "Psychological" },
+  { value: "Shonen", label: "Shonen" },
+  { value: "Shojo", label: "Shojo" },
+  { value: "Seinen", label: "Seinen" },
+  { value: "Josei", label: "Josei" },
+];
+
 export default function NovelDashboard() {
   const { connected, publicKey } = useWallet();
   const [novelTitle, setNovelTitle] = useState("");
-  const [novelImage, setNovelImage] = useState(null); // Changed to store File object
-  const [novelImageUrl, setNovelImageUrl] = useState(""); // Store the URL for preview/display
+  const [novelImage, setNovelImage] = useState(null);
+  const [novelImageUrl, setNovelImageUrl] = useState("");
   const [novelSummary, setNovelSummary] = useState("");
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [newChapterContent, setNewChapterContent] = useState("");
@@ -41,6 +66,7 @@ export default function NovelDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
+  const [tags, setTags] = useState([]); // Tags as array of objects for react-select
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -82,7 +108,7 @@ export default function NovelDashboard() {
 
     setLoading(true);
     try {
-      let query = supabase.from("novels").select("*");
+      let query = supabase.from("novels").select("*, viewers_count, tags");
       if (!isSuperuser) query = query.eq("user_id", currentUserId);
 
       const { data, error } = await query;
@@ -129,8 +155,8 @@ export default function NovelDashboard() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
-      setNovelImage(file); // Store the File object
-      setNovelImageUrl(URL.createObjectURL(file)); // Temporary preview URL
+      setNovelImage(file);
+      setNovelImageUrl(URL.createObjectURL(file));
     } else {
       alert("Please upload a valid image file.");
     }
@@ -208,12 +234,13 @@ export default function NovelDashboard() {
     }
     setSelectedNovel(novel);
     setNovelTitle(novel.title || "");
-    setNovelImage(null); // Reset file input
-    setNovelImageUrl(novel.image || ""); // Use existing URL for preview
+    setNovelImage(null);
+    setNovelImageUrl(novel.image || "");
     setNovelSummary(novel.summary || "");
     setChapterTitles(novel.chaptertitles || []);
     setChapterContents(novel.chaptercontents || []);
     setAdvanceChapters(novel.advance_chapters || []);
+    setTags(novel.tags ? novel.tags.map(tag => ({ value: tag, label: tag })) : []); // Convert tags to Select format
   };
 
   const handleNovelSubmit = async (e) => {
@@ -244,6 +271,8 @@ export default function NovelDashboard() {
         chaptertitles: chapterTitles,
         chaptercontents: chapterContents,
         advance_chapters: advanceChapters,
+        tags: tags.map(tag => tag.value), // Extract values for saving
+        viewers_count: selectedNovel ? selectedNovel.viewers_count : 0
       };
 
       let novelId, chapterNumber, message;
@@ -369,10 +398,54 @@ export default function NovelDashboard() {
     setAdvanceChapters([]);
     setSelectedNovel(null);
     setEditChapterIndex(null);
+    setTags([]);
   };
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
+  // Custom styles for react-select to match theme
+  const selectStyles = {
+    control: (base) => ({
+      ...base,
+      backgroundColor: isDarkMode ? "#2a2a2a" : "#fff",
+      borderColor: isDarkMode ? "#444" : "#ccc",
+      color: isDarkMode ? "#fff" : "#000",
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: isDarkMode ? "#2a2a2a" : "#fff",
+    }),
+    option: (base, { isFocused, isSelected }) => ({
+      ...base,
+      backgroundColor: isSelected
+        ? isDarkMode ? "#555" : "#ddd"
+        : isFocused
+        ? isDarkMode ? "#444" : "#eee"
+        : isDarkMode ? "#2a2a2a" : "#fff",
+      color: isDarkMode ? "#fff" : "#000",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: isDarkMode ? "#555" : "#ddd",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: isDarkMode ? "#fff" : "#000",
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      color: isDarkMode ? "#fff" : "#000",
+      ":hover": {
+        backgroundColor: "#ff4444",
+        color: "#fff",
+      },
+    }),
+    input: (base) => ({
+      ...base,
+      color: isDarkMode ? "#fff" : "#000",
+    }),
+  };
 
   if (loading) return <LoadingPage />;
 
@@ -447,6 +520,19 @@ export default function NovelDashboard() {
                     className={styles.textarea}
                     rows="3"
                     required
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Tags</label>
+                  <Select
+                    isMulti
+                    options={TAG_OPTIONS}
+                    value={tags}
+                    onChange={(selected) => setTags(selected || [])}
+                    placeholder="Select tags..."
+                    isClearable
+                    styles={selectStyles}
+                    className={styles.tagSelect}
                   />
                 </div>
                 <div className={styles.chapterSection}>
@@ -572,6 +658,8 @@ export default function NovelDashboard() {
                       <div className={styles.novelInfo}>
                         <h3 className={styles.novelTitle}>{novel.title}</h3>
                         <p className={styles.novelSummary}>{novel.summary.slice(0, 50)}...</p>
+                        <p className={styles.novelTags}>Tags: {novel.tags?.join(", ") || "None"}</p>
+                        <p className={styles.novelViewers}>Viewers: {novel.viewers_count || 0}</p>
                         {(novel.user_id === currentUserId || isSuperuser) && (
                           <button onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
                         )}

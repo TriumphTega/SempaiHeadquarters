@@ -22,6 +22,8 @@ import {
   FaBullhorn,
   FaFeatherAlt,
   FaShareAlt,
+  FaEye,
+  FaStar,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -259,7 +261,7 @@ export default function Home() {
     try {
       const { data: novelsData, error } = await supabase
         .from("novels")
-        .select("id, title, image, summary, user_id");
+        .select("id, title, image, summary, user_id, tags");
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -280,11 +282,53 @@ export default function Home() {
         return acc;
       }, {});
 
-      const enrichedNovels = novelsData.map((novel) => ({
-        ...novel,
-        writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
-      }));
-      setNovels(enrichedNovels);
+      const { data: interactionsData, error: interactionsError } = await supabase
+        .from("novel_interactions")
+        .select("novel_id, user_id");
+
+      if (interactionsError) throw new Error(`Failed to fetch novel interactions: ${interactionsError.message}`);
+
+      const viewerCounts = interactionsData.reduce((acc, interaction) => {
+        if (!acc[interaction.novel_id]) acc[interaction.novel_id] = new Set();
+        acc[interaction.novel_id].add(interaction.user_id);
+        return acc;
+      }, {});
+
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from("chapter_ratings")
+        .select("content_id, rating")
+        .eq("content_type", "novel");
+
+      if (ratingsError) throw new Error(`Failed to fetch novel ratings: ${ratingsError.message}`);
+
+      const ratingsMap = ratingsData.reduce((acc, rating) => {
+        if (!acc[rating.content_id]) acc[rating.content_id] = [];
+        acc[rating.content_id].push(rating.rating);
+        return acc;
+      }, {});
+
+      const enrichedNovels = novelsData.map((novel) => {
+        const ratings = ratingsMap[novel.id] || [];
+        const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
+        const uniqueViewers = viewerCounts[novel.id] ? viewerCounts[novel.id].size : 0;
+        return {
+          ...novel,
+          writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
+          viewers: uniqueViewers,
+          averageRating: averageRating.toFixed(1),
+          isAdult: novel.tags && novel.tags.includes("Adult(18+)"),
+        };
+      });
+
+      // Sort by viewers (descending), then averageRating (descending), then title (alphabetically)
+      const sortedNovels = enrichedNovels.sort((a, b) => {
+        if (b.viewers !== a.viewers) return b.viewers - a.viewers;
+        if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
+        return a.title.localeCompare(b.title);
+      });
+
+      // Limit to top 5
+      setNovels(sortedNovels.slice(0, 5));
     } catch (err) {
       setError(err.message);
     }
@@ -294,7 +338,7 @@ export default function Home() {
     try {
       const { data: mangaData, error } = await supabase
         .from("manga")
-        .select("id, title, cover_image, summary, user_id, status")
+        .select("id, title, cover_image, summary, user_id, status, tags")
         .in("status", ["ongoing", "completed"]);
 
       if (error) throw new Error(`Failed to fetch manga: ${error.message}`);
@@ -316,12 +360,54 @@ export default function Home() {
         return acc;
       }, {});
 
-      const enrichedManga = mangaData.map((manga) => ({
-        ...manga,
-        image: manga.cover_image,
-        writer: usersMap[manga.user_id] || { name: "Unknown", isArtist: false },
-      }));
-      setManga(enrichedManga);
+      const { data: interactionsData, error: interactionsError } = await supabase
+        .from("manga_interactions")
+        .select("manga_id, user_id");
+
+      if (interactionsError) throw new Error(`Failed to fetch manga interactions: ${interactionsError.message}`);
+
+      const viewerCounts = interactionsData.reduce((acc, interaction) => {
+        if (!acc[interaction.manga_id]) acc[interaction.manga_id] = new Set();
+        acc[interaction.manga_id].add(interaction.user_id);
+        return acc;
+      }, {});
+
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from("chapter_ratings")
+        .select("content_id, rating")
+        .eq("content_type", "manga");
+
+      if (ratingsError) throw new Error(`Failed to fetch manga ratings: ${ratingsError.message}`);
+
+      const ratingsMap = ratingsData.reduce((acc, rating) => {
+        if (!acc[rating.content_id]) acc[rating.content_id] = [];
+        acc[rating.content_id].push(rating.rating);
+        return acc;
+      }, {});
+
+      const enrichedManga = mangaData.map((manga) => {
+        const ratings = ratingsMap[manga.id] || [];
+        const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
+        const uniqueViewers = viewerCounts[manga.id] ? viewerCounts[manga.id].size : 0;
+        return {
+          ...manga,
+          image: manga.cover_image,
+          writer: usersMap[manga.user_id] || { name: "Unknown", isArtist: false },
+          viewers: uniqueViewers,
+          averageRating: averageRating.toFixed(1),
+          isAdult: manga.tags && manga.tags.includes("Adult(18+)"),
+        };
+      });
+
+      // Sort by viewers (descending), then averageRating (descending), then title (alphabetically)
+      const sortedManga = enrichedManga.sort((a, b) => {
+        if (b.viewers !== a.viewers) return b.viewers - a.viewers;
+        if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
+        return a.title.localeCompare(b.title);
+      });
+
+      // Limit to top 5
+      setManga(sortedManga.slice(0, 5));
     } catch (err) {
       setError(err.message);
     }
@@ -385,7 +471,7 @@ export default function Home() {
         router.push("/apply");
       } else if (isSuperuser || (isWriter && isArtist)) {
         setShowCreatorChoice(true);
-        setMenuOpen(false); // Close the mobile menu when showing the popup
+        setMenuOpen(false);
       } else if (isWriter) {
         setPageLoading(true);
         router.push("/novel-creators-dashboard");
@@ -756,7 +842,16 @@ export default function Home() {
                       <img src={novel.image} alt={novel.title} className={styles.contentImage} />
                       <div className={styles.contentOverlay}>
                         <h3 className={styles.contentTitle}>{novel.title}</h3>
+                        {novel.isAdult && <span className={styles.adultWarning}>Adult(18+)</span>}
                         <p className={styles.contentSummary}>{novel.summary}</p>
+                        <div className={styles.contentStats}>
+                          <span className={styles.viewers}>
+                            <FaEye /> {novel.viewers} Views
+                          </span>
+                          <span className={styles.rating}>
+                            <FaStar /> {novel.averageRating}
+                          </span>
+                        </div>
                       </div>
                     </Link>
                     {novel.writer.isWriter && (
@@ -789,7 +884,16 @@ export default function Home() {
                       <img src={mangaItem.image} alt={mangaItem.title} className={styles.contentImage} />
                       <div className={styles.contentOverlay}>
                         <h3 className={styles.contentTitle}>{mangaItem.title}</h3>
+                        {mangaItem.isAdult && <span className={styles.adultWarning}>Adult(18+)</span>}
                         <p className={styles.contentSummary}>{mangaItem.summary}</p>
+                        <div className={styles.contentStats}>
+                          <span className={styles.viewers}>
+                            <FaEye /> {mangaItem.viewers} Views
+                          </span>
+                          <span className={styles.rating}>
+                            <FaStar /> {mangaItem.averageRating}
+                          </span>
+                        </div>
                       </div>
                     </Link>
                     {mangaItem.writer.isArtist && (

@@ -936,3 +936,32 @@
   font-size: 0.9rem;
   margin-left: 10px;
 }
+.ratingSection {
+  margin-top: 20px;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.userRating, .averageRating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.star {
+  color: #555; /* Empty star color */
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.filledStar {
+  color: #ffd700; /* Gold color for filled stars */
+}
+
+.averageRating .star {
+  cursor: default; /* Disable cursor for average rating stars */
+}

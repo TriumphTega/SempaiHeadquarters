@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { use } from "react"; // Added for unwrapping params Promise
+import { use } from "react"; // For unwrapping params Promise
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { supabase } from "../../../services/supabase/supabaseClient";
@@ -9,6 +9,7 @@ import { FaHome, FaBars, FaTimes, FaBook, FaUser, FaWallet, FaCoins, FaStar, FaL
 import ConnectButton from "../../../components/ConnectButton";
 import LoadingPage from "../../../components/LoadingPage";
 import DraggableWalletPanel from "../../../components/DraggableWalletPanel";
+import MangaDetailCommentSection from "../../../components/MangaDetailCommentSection"; // Import the new component
 import styles from "../../../styles/MangaDetail.module.css";
 
 export default function MangaDetail({ params }) {
@@ -130,6 +131,13 @@ export default function MangaDetail({ params }) {
             ))}
           </div>
         </section>
+
+        {/* Add MangaDetailCommentSection here */}
+        {connected && (
+          <section className={styles.comments}>
+            <MangaDetailCommentSection mangaId={id} mangaTitle={manga.title} />
+          </section>
+        )}
       </main>
 
       {connected && (
@@ -139,7 +147,7 @@ export default function MangaDetail({ params }) {
           weeklyPoints={weeklyPoints}
           toggleWalletPanel={toggleWalletPanel}
           walletPanelOpen={walletPanelOpen}
-          onDragStart={() => setIsDragging(true)} // Add drag handlers
+          onDragStart={() => setIsDragging(true)}
           onDragEnd={() => setIsDragging(false)}
         />
       )}

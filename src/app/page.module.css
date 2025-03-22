@@ -1175,6 +1175,34 @@
   transform: scale(1.05);
 }
 
+/* Add these styles at the bottom of page.module.css */
+.contentStats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.viewers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating svg {
+  color: #ffd700; /* Gold color for star */
+}
+
 @media (max-width: 480px) {
   .creatorChoicePopup {
     width: 85%;

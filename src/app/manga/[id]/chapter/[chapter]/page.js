@@ -14,13 +14,14 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
-import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload } from "react-icons/fa";
+import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
-import JSZip from "jszip"; // Add JSZip for ZIP creation
-import { saveAs } from "file-saver"; // Add file-saver for download
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 import styles from "../../../../../styles/MangaChapter.module.css";
 import { RPC_URL } from "@/constants";
+import MangaCommentSection from "../../../../../components/MangaCommentSection"; // Import the new component
 
 const MERCHANT_WALLET = new PublicKey("3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -45,6 +46,8 @@ export default function MangaChapter() {
   const { balance } = UseAmethystBalance();
   const [userId, setUserId] = useState(null);
   const [isFirstChapter, setIsFirstChapter] = useState(false);
+  const [userRating, setUserRating] = useState(null);
+  const [averageRating, setAverageRating] = useState(null);
 
   const fetchPrices = async () => {
     try {
@@ -75,7 +78,7 @@ export default function MangaChapter() {
 
     const { data: chaptersData } = await supabase
       .from("manga_chapters")
-      .select("id, title")
+      .select("id, title, chapter_number")
       .eq("manga_id", mangaId)
       .order("chapter_number", { ascending: true });
 
@@ -87,6 +90,75 @@ export default function MangaChapter() {
       if (chapterData.is_premium && !isFirstChapter) setPaymentRequired(true);
     }
     setLoading(false);
+  };
+
+  const fetchRatings = async () => {
+    if (!userId || !chapter) return;
+    const chapterNum = chapters.find((ch) => ch.id === chapterId)?.chapter_number;
+
+    if (userRating === null) {
+      const { data: userRatingData, error: userError } = await supabase
+        .from("chapter_ratings")
+        .select("rating")
+        .eq("user_id", userId)
+        .eq("content_type", "manga")
+        .eq("content_id", mangaId)
+        .eq("chapter_number", chapterNum)
+        .single();
+      if (userError && userError.code !== "PGRST116") {
+        console.error("Error fetching user rating:", userError);
+      } else {
+        setUserRating(userRatingData?.rating || null);
+      }
+    }
+
+    const { data: ratingsData, error: avgError } = await supabase
+      .from("chapter_ratings")
+      .select("rating")
+      .eq("content_type", "manga")
+      .eq("content_id", mangaId)
+      .eq("chapter_number", chapterNum);
+    if (avgError) {
+      console.error("Error fetching average rating:", avgError);
+    } else {
+      const avg = ratingsData?.length
+        ? ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length
+        : null;
+      setAverageRating(avg);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && chapter && (isFirstChapter || paymentConfirmed)) fetchRatings();
+  }, [loading, chapter, isFirstChapter, paymentConfirmed]);
+
+  const handleRating = async (rating) => {
+    if (!userId || !connected) return;
+    setUserRating(rating);
+    const chapterNum = chapters.find((ch) => ch.id === chapterId)?.chapter_number;
+
+    const { data, error } = await supabase
+      .from("chapter_ratings")
+      .upsert(
+        {
+          user_id: userId,
+          content_type: "manga",
+          content_id: mangaId,
+          chapter_number: chapterNum,
+          rating,
+        },
+        {
+          onConflict: ["user_id", "content_type", "content_id", "chapter_number"],
+        }
+      );
+
+    if (error) {
+      console.error("Error saving rating:", error);
+      setError("Failed to save rating. Please try again.");
+      setUserRating(null);
+      return;
+    }
+    await fetchRatings();
   };
 
   const getAssociatedTokenAddress = async (owner, mint) => {
@@ -129,14 +201,13 @@ export default function MangaChapter() {
 
             const signature = await sendTransaction(transaction, connection, { skipPreflight: false });
             await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-            console.log("SOL Payment Signature:", signature, "Amount:", amount / LAMPORTS_PER_SOL);
             setTransactionSignature(signature);
             await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency);
             return;
           } else if (currency === "USDC") {
             mint = USDC_MINT;
             decimals = 6;
-            amount = Math.round((usdAmount / usdcPrice) * (10 ** decimals));
+            amount = Math.round((usdAmount / usdcPrice) * 10 ** decimals);
 
             const sourceATA = (await getAssociatedTokenAddress(publicKey, mint))[0];
             const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
@@ -146,21 +217,13 @@ export default function MangaChapter() {
               recentBlockhash: blockhash,
               feePayer: publicKey,
             }).add(
-              createTransferInstruction(
-                sourceATA,
-                destATA,
-                publicKey,
-                amount,
-                [],
-                TOKEN_PROGRAM_ID
-              )
+              createTransferInstruction(sourceATA, destATA, publicKey, amount, [], TOKEN_PROGRAM_ID)
             );
 
             const signature = await sendTransaction(transaction, connection, { skipPreflight: false });
             await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-            console.log("USDC Payment Signature:", signature, "Amount:", amount / (10 ** decimals));
             setTransactionSignature(signature);
-            await processUnlock(signature, amount / (10 ** decimals), currency);
+            await processUnlock(signature, amount / 10 ** decimals, currency);
             return;
           }
         } catch (error) {
@@ -173,7 +236,7 @@ export default function MangaChapter() {
             alert("Wallet connection lost. Please reconnect and try again.");
             return;
           }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     };
@@ -195,7 +258,6 @@ export default function MangaChapter() {
         amount,
         currency,
       };
-      console.log("Sending to API:", payload);
       const response = await fetch("/api/unlock-manga-chapter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,7 +312,7 @@ export default function MangaChapter() {
       const fetchPromises = chapter.manga_pages.map(async (page, index) => {
         const response = await fetch(page.image_url);
         const blob = await response.blob();
-        zip.file(`page_${index + 1}.jpg`, blob); // Assuming JPG; adjust if needed
+        zip.file(`page_${index + 1}.jpg`, blob);
       });
 
       await Promise.all(fetchPromises);
@@ -379,8 +441,12 @@ export default function MangaChapter() {
 
       const updates = [
         supabase.from("users").update({ weekly_points: newReaderBalance }).eq("id", user.id),
-        ...(mangaOwner.id !== user.id ? [supabase.from("users").update({ balance: newAuthorBalance }).eq("id", mangaOwner.id)] : []),
-        ...(team.id !== user.id && team.id !== mangaOwner.id ? [supabase.from("users").update({ balance: newTeamBalance }).eq("id", team.id)] : []),
+        ...(mangaOwner.id !== user.id
+          ? [supabase.from("users").update({ balance: newAuthorBalance }).eq("id", mangaOwner.id)]
+          : []),
+        ...(team.id !== user.id && team.id !== mangaOwner.id
+          ? [supabase.from("users").update({ balance: newTeamBalance }).eq("id", team.id)]
+          : []),
       ];
 
       const results = await Promise.all(updates);
@@ -467,14 +533,12 @@ export default function MangaChapter() {
           })
           .eq("id", interaction.id);
       } else {
-        await supabase
-          .from("manga_interactions")
-          .insert({
-            user_id: user.id,
-            manga_id: mangaId,
-            last_read_at: new Date().toISOString(),
-            read_count: 1,
-          });
+        await supabase.from("manga_interactions").insert({
+          user_id: user.id,
+          manga_id: mangaId,
+          last_read_at: new Date().toISOString(),
+          read_count: 1,
+        });
       }
 
       setSuccessMessage("Points credited successfully!");
@@ -486,7 +550,12 @@ export default function MangaChapter() {
   }, [publicKey, chapter, mangaId, chapterId, balance, paymentConfirmed, isFirstChapter]);
 
   useEffect(() => {
-    if (!loading && chapter && (connected || isFirstChapter) && (!chapter.is_premium || paymentConfirmed || isFirstChapter)) {
+    if (
+      !loading &&
+      chapter &&
+      (connected || isFirstChapter) &&
+      (!chapter.is_premium || paymentConfirmed || isFirstChapter)
+    ) {
       updateTokenBalance();
     }
   }, [loading, chapter, connected, paymentConfirmed, isFirstChapter, updateTokenBalance]);
@@ -504,7 +573,6 @@ export default function MangaChapter() {
 
   const solAmount = solPrice ? (2.5 / solPrice).toFixed(5) : "Loading...";
   const usdcAmount = (2.5 / usdcPrice).toFixed(2);
-
   const canDownload = connected && (isFirstChapter || (chapter.is_premium && paymentConfirmed));
 
   return (
@@ -528,11 +596,7 @@ export default function MangaChapter() {
             <FaGem /> {successMessage}
           </div>
         )}
-        {warningMessage && (
-          <div className={styles.warning}>
-            {warningMessage}
-          </div>
-        )}
+        {warningMessage && <div className={styles.warning}>{warningMessage}</div>}
         {error && <div className={styles.error}>{error}</div>}
 
         {!connected && !isFirstChapter ? (
@@ -549,14 +613,16 @@ export default function MangaChapter() {
               <button onClick={() => handlePayment("SOL")} disabled={!solPrice}>
                 Pay {solAmount} SOL
               </button>
-              <button onClick={() => handlePayment("USDC")}>
-                Pay {usdcAmount} USDC
-              </button>
+              <button onClick={() => handlePayment("USDC")}>Pay {usdcAmount} USDC</button>
             </div>
             {transactionSignature && (
               <p>
                 Tx:{" "}
-                <a href={`https://explorer.solana.com/tx/${transactionSignature}?cluster=devnet`} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={`https://explorer.solana.com/tx/${transactionSignature}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {transactionSignature.slice(0, 8)}...
                 </a>
               </p>
@@ -593,6 +659,34 @@ export default function MangaChapter() {
               <button onClick={handleDownload} className={styles.downloadButton}>
                 <FaDownload /> Download Chapter
               </button>
+            )}
+            {connected && (isFirstChapter || paymentConfirmed) && (
+              <div className={styles.ratingSection}>
+                <div className={styles.userRating}>
+                  <span>Your Rating: </span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={`${styles.star} ${star <= (userRating || 0) ? styles.filledStar : ""}`}
+                      onClick={() => handleRating(star)}
+                    />
+                  ))}
+                </div>
+                <div className={styles.averageRating}>
+                  <span>Average Rating: </span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={`${styles.star} ${star <= Math.round(averageRating || 0) ? styles.filledStar : ""}`}
+                    />
+                  ))}
+                  {averageRating ? ` (${averageRating.toFixed(1)} / 5)` : " (No ratings yet)"}
+                </div>
+              </div>
+            )}
+            {/* Add MangaCommentSection here */}
+            {connected && (isFirstChapter || paymentConfirmed) && (
+              <MangaCommentSection mangaId={mangaId} chapterId={chapterId} />
             )}
           </div>
         )}

@@ -311,3 +311,10 @@
     grid-template-columns: 1fr;
   }
 }
+/* Existing styles remain unchanged, add this at the bottom */
+.comments {
+  margin-top: 40px;
+  padding: 20px;
+  background: #1a1a1a; /* Match your dark theme */
+  border-radius: 8px;
+}

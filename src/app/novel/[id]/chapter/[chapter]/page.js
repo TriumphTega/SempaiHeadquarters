@@ -10,7 +10,7 @@ import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown, FaStar } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
@@ -41,6 +41,8 @@ export default function ChapterPage() {
   const [solPrice, setSolPrice] = useState(null);
   const [smpPrice, setSmpPrice] = useState(null);
   const usdcPrice = 1; // USDC is pegged to $1
+  const [userRating, setUserRating] = useState(null); // User's rating
+  const [averageRating, setAverageRating] = useState(null); // Average rating
 
   const fetchPrices = async () => {
     const fetchSolPrice = async () => {
@@ -56,7 +58,6 @@ export default function ChapterPage() {
 
     const fetchSmpPrice = async () => {
       try {
-        // Placeholder: Replace "smp-token-id" with actual CoinGecko ID if available
         const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd");
         const data = await response.json();
         return data["smp-token-id"]?.usd || null;
@@ -70,7 +71,6 @@ export default function ChapterPage() {
     return { solPrice: sol || 100, smpPrice: smp }; // Default SOL to 100 if fetch fails
   };
 
-  // Initial fetch for UI display
   useEffect(() => {
     const getInitialPrices = async () => {
       const { solPrice: initialSol, smpPrice: initialSmp } = await fetchPrices();
@@ -385,6 +385,20 @@ export default function ChapterPage() {
 
       console.log("Checking access - Chapter:", chapterNum, "Total Chapters:", totalChapters, "Advance Info:", chapterAdvanceInfo);
 
+      if (!isLocked) {
+        const { data: currentNovel, error: fetchError } = await supabase
+          .from("novels")
+          .select("viewers_count")
+          .eq("id", id)
+          .single();
+        if (!fetchError) {
+          await supabase
+            .from("novels")
+            .update({ viewers_count: (currentNovel.viewers_count || 0) + 1 })
+            .eq("id", id);
+        }
+      }
+
       if (chapterNum <= 2) {
         if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
           console.log("Chapter 1 or 2 is free or past release date, unlocking");
@@ -462,6 +476,75 @@ export default function ChapterPage() {
     }
   };
 
+  const fetchRatings = async () => {
+    if (!userId) return;
+    const chapterNum = parseInt(chapter, 10);
+  
+    // Fetch user's rating
+    if (userRating === null) {
+      const { data: userRatingData, error: userError } = await supabase
+        .from("chapter_ratings")
+        .select("rating")
+        .eq("user_id", userId)
+        .eq("content_type", "novel") // Assuming 'novel' for this context
+        .eq("content_id", id)
+        .eq("chapter_number", chapterNum)
+        .single();
+      if (userError && userError.code !== "PGRST116") { // Ignore "no rows" error
+        console.error("Error fetching user rating:", userError);
+      } else {
+        setUserRating(userRatingData?.rating || null);
+      }
+    }
+  
+    // Fetch average rating
+    const { data: ratingsData, error: avgError } = await supabase
+      .from("chapter_ratings")
+      .select("rating")
+      .eq("content_type", "novel")
+      .eq("content_id", id)
+      .eq("chapter_number", chapterNum);
+    if (avgError) {
+      console.error("Error fetching average rating:", avgError);
+    } else {
+      const avg = ratingsData?.length
+        ? ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length
+        : null;
+      setAverageRating(avg);
+    }
+  };
+  
+  useEffect(() => {
+    if (!isLocked) fetchRatings();
+  }, [isLocked]);
+  
+  const handleRating = async (rating) => {
+    if (!userId || !connected) return;
+    setUserRating(rating); // Optimistically update UI
+    const chapterNum = parseInt(chapter, 10);
+  
+    const { data, error } = await supabase
+      .from("chapter_ratings")
+      .upsert({
+        user_id: userId,
+        content_type: "novel", // Hardcoding as 'novel' for this page
+        content_id: id,
+        chapter_number: chapterNum,
+        rating
+      }, {
+        onConflict: ["user_id", "content_type", "content_id", "chapter_number"] // Match your unique constraint
+      });
+  
+    if (error) {
+      console.error("Error saving rating:", error);
+      setError("Failed to save rating. Please try again.");
+      setUserRating(null); // Revert on failure
+      return;
+    }
+    console.log("Rating saved successfully:", data);
+    await fetchRatings(); // Refresh ratings after successful save
+  };
+
   const getAssociatedTokenAddress = async (owner, mint) => {
     return await PublicKey.findProgramAddress(
       [
@@ -478,21 +561,20 @@ export default function ChapterPage() {
       alert("Please connect your wallet");
       return;
     }
-  
+
     const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15;
     let amount, decimals, mint;
-  
+
     try {
-      // Fetch fresh prices before payment
       const { solPrice: freshSolPrice, smpPrice: freshSmpPrice } = await fetchPrices();
-      setSolPrice(freshSolPrice); // Update UI (async, won't affect this call)
-      setSmpPrice(freshSmpPrice); // Update UI (async, won't affect this call)
-  
+      setSolPrice(freshSolPrice);
+      setSmpPrice(freshSmpPrice);
+
       if (currency === "SOL") {
         if (!freshSolPrice) throw new Error("SOL price not available");
-        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL); // Use freshSolPrice directly
+        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
         decimals = 9;
-  
+
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
         const transaction = new Transaction({
           recentBlockhash: blockhash,
@@ -504,21 +586,21 @@ export default function ChapterPage() {
             lamports: amount,
           })
         );
-  
+
         const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
         await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-  
+
         await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
       } else {
-        const price = currency === "USDC" ? usdcPrice : freshSmpPrice; // Use freshSmpPrice directly
+        const price = currency === "USDC" ? usdcPrice : freshSmpPrice;
         if (!price) throw new Error(`${currency} price not available`);
         mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
-        decimals = currency === "USDC" ? 6 : 9; // USDC: 6 decimals, SMP: assuming 9
+        decimals = currency === "USDC" ? 6 : 9;
         amount = Math.round((usdAmount / price) * (10 ** decimals));
-  
+
         const sourceATA = (await getAssociatedTokenAddress(publicKey, mint))[0];
         const destATA = (await getAssociatedTokenAddress(new PublicKey(TARGET_WALLET), mint))[0];
-  
+
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
         const transaction = new Transaction({
           recentBlockhash: blockhash,
@@ -533,10 +615,10 @@ export default function ChapterPage() {
             TOKEN_PROGRAM_ID
           )
         );
-  
+
         const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
         await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-  
+
         await processUnlock(subscriptionType, signature, amount / (10 ** decimals), currency);
       }
     } catch (error) {
@@ -544,6 +626,7 @@ export default function ChapterPage() {
       setError(`Payment failed: ${error.message}`);
     }
   };
+
   const processUnlock = async (subscriptionType, signature, amount, currency) => {
     const response = await fetch("/api/unlock-chapter", {
       method: "POST",
@@ -570,9 +653,6 @@ export default function ChapterPage() {
       setError(result.error);
     }
   };
-
-  // Rest of your component remains unchanged...
-
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -755,7 +835,6 @@ export default function ChapterPage() {
               <FaGem className={styles.gemIcon} /> Unlock with a subscription
             </p>
             <div className={styles.paymentOptions}>
-              {/* SOL Payments */}
               <button
                 onClick={() => handlePayment("3CHAPTERS", "SOL")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
@@ -775,7 +854,6 @@ export default function ChapterPage() {
                 <span className={styles.buttonText}>All Chapters (SOL)</span>
                 <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
               </button>
-              {/* USDC Payments */}
               <button
                 onClick={() => handlePayment("3CHAPTERS", "USDC")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
@@ -794,7 +872,6 @@ export default function ChapterPage() {
                 <span className={styles.buttonText}>All Chapters (USDC)</span>
                 <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
               </button>
-              {/* SMP Payments */}
               <button
                 onClick={() => handlePayment("3CHAPTERS", "SMP")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
@@ -853,6 +930,31 @@ export default function ChapterPage() {
                 ))}
               </select>
             </div>
+
+            {connected && !isLocked && (
+              <div className={styles.ratingSection}>
+                <div className={styles.userRating}>
+                  <span>Your Rating: </span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={`${styles.star} ${star <= (userRating || 0) ? styles.filledStar : ""}`}
+                      onClick={() => handleRating(star)}
+                    />
+                  ))}
+                </div>
+                <div className={styles.averageRating}>
+                  <span>Average Rating: </span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={`${styles.star} ${star <= Math.round(averageRating || 0) ? styles.filledStar : ""}`}
+                    />
+                  ))}
+                  {averageRating ? ` (${averageRating.toFixed(1)} / 5)` : " (No ratings yet)"}
+                </div>
+              </div>
+            )}
 
             <CommentSection novelId={novel.id} chapter={chapterTitle} />
           </>

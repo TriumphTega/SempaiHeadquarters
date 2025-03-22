@@ -7,11 +7,36 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Select from "react-select"; // Import react-select
 import { FaHome, FaBars, FaTimes, FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem, FaSun, FaMoon, FaBullhorn, FaPaintBrush, FaLayerGroup, FaCamera } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
-import styles from "../../styles/MangaDashboard.module.css"; // Assuming this is the correct path now
+import styles from "../../styles/MangaDashboard.module.css";
 import imageCompression from "browser-image-compression";
+
+// Predefined tag options for production
+const TAG_OPTIONS = [
+  { value: "Action", label: "Action" },
+  { value: "Adult(18+)", label: "Action(18+)" },
+  { value: "Adventure", label: "Adventure" },
+  { value: "Comedy", label: "Comedy" },
+  { value: "Drama", label: "Drama" },
+  { value: "Fantasy", label: "Fantasy" },
+  { value: "Horror", label: "Horror" },
+  { value: "Mystery", label: "Mystery" },
+  { value: "Romance", label: "Romance" },
+  { value: "Sci-Fi", label: "Sci-Fi" },
+  { value: "Slice of Life", label: "Slice of Life" },
+  { value: "Supernatural", label: "Supernatural" },
+  { value: "Thriller", label: "Thriller" },
+  { value: "Historical", label: "Historical" },
+  { value: "Sports", label: "Sports" },
+  { value: "Psychological", label: "Psychological" },
+  { value: "Shonen", label: "Shonen" },
+  { value: "Shojo", label: "Shojo" },
+  { value: "Seinen", label: "Seinen" },
+  { value: "Josei", label: "Josei" },
+];
 
 export default function MangaDashboard() {
   const { connected, publicKey } = useWallet();
@@ -36,11 +61,11 @@ export default function MangaDashboard() {
   const [noticeTitle, setNoticeTitle] = useState("");
   const [noticeText, setNoticeText] = useState("");
   const [noticeDate, setNoticeDate] = useState(null);
+  const [tags, setTags] = useState([]); // Tags as array of objects for react-select
   const chapterInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const router = useRouter();
 
-  // Check user access and roles
   const verifyUserAccess = async () => {
     if (!connected || !publicKey) {
       setIsLoading(false);
@@ -74,13 +99,14 @@ export default function MangaDashboard() {
     }
   };
 
-  // Fetch user's manga
   const loadManga = async () => {
     if (!userId) return;
 
     setIsLoading(true);
     try {
-      const query = isAdmin ? supabase.from("manga").select("*") : supabase.from("manga").select("*").eq("user_id", userId);
+      const query = isAdmin 
+        ? supabase.from("manga").select("*, viewers_count, tags")
+        : supabase.from("manga").select("*, viewers_count, tags").eq("user_id", userId);
       const { data, error } = await query;
       if (error) throw new Error("Failed to fetch manga");
 
@@ -92,7 +118,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Fetch artists (for admin)
   const loadArtists = async () => {
     if (!isAdmin) return;
 
@@ -123,7 +148,6 @@ export default function MangaDashboard() {
     }
   }, [userId, isArtist, isAdmin]);
 
-  // Handle cover image upload
   const uploadCoverImage = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
@@ -134,7 +158,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Handle chapter pages upload with compression
   const uploadChapterPages = async (e) => {
     const files = Array.from(e.target.files);
     const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, initialQuality: 0.85 };
@@ -157,7 +180,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Add or update a chapter
   const manageChapter = () => {
     if (!chapterTitle.trim() || chapterPages.length === 0) {
       alert("Chapter title and at least one page are required.");
@@ -174,11 +196,10 @@ export default function MangaDashboard() {
     clearChapterForm();
   };
 
-  // Edit an existing chapter
   const editChapter = (e, idx) => {
     e.preventDefault();
     const chapter = chapters[idx];
-    setChapterTitle(chapter.title || ""); // Ensure chapterTitle is never undefined
+    setChapterTitle(chapter.title || "");
     setChapterPages(chapter.pages || []);
     setIsPremium(chapter.isPremium || false);
     setEditingChapterIdx(idx);
@@ -186,22 +207,20 @@ export default function MangaDashboard() {
     chapterInputRef.current?.focus();
   };
 
-  // Remove a chapter
   const deleteChapter = (idx) => {
     setChapters((prev) => prev.filter((_, i) => i !== idx));
     if (editingChapterIdx === idx) setEditingChapterIdx(null);
   };
 
-  // Load manga for editing
   const loadMangaForEdit = async (manga) => {
     setActiveManga(manga);
-    setTitle(manga.title || ""); // Ensure title is never undefined
+    setTitle(manga.title || "");
     setCoverPreview(manga.cover_image || "");
-    setSummary(manga.summary || ""); // Ensure summary is never undefined
+    setSummary(manga.summary || "");
+    setTags(manga.tags ? manga.tags.map(tag => ({ value: tag, label: tag })) : []); // Convert tags to Select format
     await fetchChapters(manga.id);
   };
 
-  // Fetch chapters for a manga
   const fetchChapters = async (mangaId) => {
     try {
       const { data: chapterData, error } = await supabase
@@ -228,7 +247,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Submit manga
   const submitManga = async (e) => {
     e.preventDefault();
     if (!title.trim() || (!coverImage && !coverPreview) || !summary.trim()) {
@@ -253,6 +271,8 @@ export default function MangaDashboard() {
         summary,
         author: (await supabase.from("users").select("name").eq("id", userId).single()).data?.name || "Unknown",
         status: "ongoing",
+        tags: tags.map(tag => tag.value), // Extract values for saving
+        viewers_count: activeManga ? activeManga.viewers_count : 0
       };
 
       let mangaId;
@@ -307,7 +327,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Send announcement
   const sendNotice = async (e) => {
     e.preventDefault();
     if (!activeManga) {
@@ -358,7 +377,6 @@ export default function MangaDashboard() {
     }
   };
 
-  // Clear form
   const clearForm = () => {
     setTitle("");
     setCoverImage(null);
@@ -367,6 +385,7 @@ export default function MangaDashboard() {
     clearChapterForm();
     setChapters([]);
     setActiveManga(null);
+    setTags([]);
   };
 
   const clearChapterForm = () => {
@@ -376,14 +395,55 @@ export default function MangaDashboard() {
     setEditingChapterIdx(null);
   };
 
-  // Toggle UI elements
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const toggleTheme = () => setIsDarkTheme((prev) => !prev);
 
-  // Trigger file input click
   const triggerFileInput = (type) => {
     fileInputRef.current.dataset.type = type;
     fileInputRef.current.click();
+  };
+
+  // Custom styles for react-select to match your theme
+  const selectStyles = {
+    control: (base) => ({
+      ...base,
+      backgroundColor: isDarkTheme ? "#2a2a2a" : "#fff",
+      borderColor: isDarkTheme ? "#444" : "#ccc",
+      color: isDarkTheme ? "#fff" : "#000",
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: isDarkTheme ? "#2a2a2a" : "#fff",
+    }),
+    option: (base, { isFocused, isSelected }) => ({
+      ...base,
+      backgroundColor: isSelected
+        ? isDarkTheme ? "#555" : "#ddd"
+        : isFocused
+        ? isDarkTheme ? "#444" : "#eee"
+        : isDarkTheme ? "#2a2a2a" : "#fff",
+      color: isDarkTheme ? "#fff" : "#000",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: isDarkTheme ? "#555" : "#ddd",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: isDarkTheme ? "#fff" : "#000",
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      color: isDarkTheme ? "#fff" : "#000",
+      ":hover": {
+        backgroundColor: "#ff4444",
+        color: "#fff",
+      },
+    }),
+    input: (base) => ({
+      ...base,
+      color: isDarkTheme ? "#fff" : "#000",
+    }),
   };
 
   if (isLoading) return <LoadingPage />;
@@ -434,6 +494,27 @@ export default function MangaDashboard() {
                 <div className={styles.field}>
                   <label>Summary</label>
                   <textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Brief summary" required />
+                </div>
+                <div className={styles.field}>
+                  <label>Tags</label>
+                  <Select
+                    isMulti
+                    options={TAG_OPTIONS}
+                    value={tags}
+                    onChange={(selected) => setTags(selected || [])}
+                    placeholder="Select or type tags..."
+                    isClearable
+                    styles={selectStyles}
+                    className={styles.tagSelect}
+                    isSearchable
+                    createOptionPosition="first"
+                    allowCreateWhileLoading={false}
+                    formatCreateLabel={(inputValue) => `Add "${inputValue}"`}
+                    onCreateOption={(inputValue) => {
+                      const newTag = { value: inputValue, label: inputValue };
+                      setTags((prev) => [...prev, newTag]);
+                    }}
+                  />
                 </div>
                 <div className={styles.chapterEditor}>
                   <h2><FaPlus /> Chapters</h2>
@@ -528,6 +609,8 @@ export default function MangaDashboard() {
                       <div className={styles.cardInfo}>
                         <h3>{manga.title}</h3>
                         <p>{manga.summary.slice(0, 50)}...</p>
+                        <p>Tags: {manga.tags?.join(", ") || "None"}</p>
+                        <p>Viewers: {manga.viewers_count || 0}</p>
                         <FaEdit className={styles.icon} onClick={() => loadMangaForEdit(manga)} />
                       </div>
                     </div>
