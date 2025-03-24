@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react"; // Added useContext
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -16,6 +16,7 @@ import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
 import { RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
+import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -26,6 +27,9 @@ export default function ChapterPage() {
   const { id, chapter } = useParams();
   const router = useRouter();
   const { connected, publicKey, sendTransaction } = useWallet();
+  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
+  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,8 +85,8 @@ export default function ChapterPage() {
   }, []);
 
   const updateTokenBalance = useCallback(async () => {
-    if (!publicKey || !novel || !chapter || !id) {
-      console.warn("Missing required data for token update:", { publicKey, novel, chapter, id });
+    if (!activeWalletAddress || !novel || !chapter || !id) {
+      console.warn("Missing required data for token update:", { activeWalletAddress, novel, chapter, id });
       return;
     }
 
@@ -90,7 +94,7 @@ export default function ChapterPage() {
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, wallet_address, weekly_points")
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activeWalletAddress)
         .single();
 
       if (userError || !userData) throw new Error("User not found");
@@ -149,7 +153,7 @@ export default function ChapterPage() {
 
       if (teamError || !team) throw new Error("Team not found");
 
-      const eventDetails = `${publicKey.toString()}${novel.title || "Untitled"}${chapter}`
+      const eventDetails = `${activeWalletAddress}${novel.title || "Untitled"}${chapter}`
         .replace(/[^a-zA-Z0-9]/g, '')
         .substring(0, 255);
 
@@ -159,7 +163,7 @@ export default function ChapterPage() {
         .from("wallet_events")
         .select("id")
         .eq("event_details", eventDetails)
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activeWalletAddress)
         .limit(1);
 
       if (eventError) throw new Error(`Error checking wallet events: ${eventError.message}`);
@@ -251,7 +255,7 @@ export default function ChapterPage() {
           source_chain: "SOL",
           source_currency: "Token",
           amount_change: readerReward,
-          wallet_address: publicKey.toString(),
+          wallet_address: activeWalletAddress,
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
         },
@@ -319,29 +323,29 @@ export default function ChapterPage() {
       setError(error.message);
       console.error("Unexpected error in updateTokenBalance:", error);
     }
-  }, [publicKey, novel, chapter, balance, id, setWarningMessage, setSuccessMessage, setError]);
+  }, [activeWalletAddress, novel, chapter, balance, id, setWarningMessage, setSuccessMessage, setError]);
 
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      if (!connected && chapterNum > 2) {
+      if (!isWalletConnected && chapterNum > 2) {
         setShowConnectPopup(true);
         setLoading(false);
         return;
       }
 
-      let { data: user, error: userError } = connected
+      let { data: user, error: userError } = isWalletConnected
         ? await supabase
             .from("users")
             .select("id")
-            .eq("wallet_address", publicKey?.toString())
+            .eq("wallet_address", activeWalletAddress)
             .single()
         : { data: null, error: null };
 
-      if (connected && userError && userError.code === "PGRST116") {
+      if (isWalletConnected && userError && userError.code === "PGRST116") {
         const { data: newUser, error: insertError } = await supabase
           .from("users")
-          .insert([{ wallet_address: publicKey.toString() }])
+          .insert([{ wallet_address: activeWalletAddress }])
           .select("id")
           .single();
 
@@ -352,7 +356,7 @@ export default function ChapterPage() {
           return;
         }
         user = newUser;
-      } else if (connected && userError) {
+      } else if (isWalletConnected && userError) {
         console.error("Error fetching user:", userError);
         setError("Failed to fetch user.");
         setLoading(false);
@@ -363,7 +367,7 @@ export default function ChapterPage() {
       await checkAccess(user?.id);
     }
     initialize();
-  }, [connected, publicKey, id, chapter]);
+  }, [isWalletConnected, activeWalletAddress, id, chapter]);
 
   const checkAccess = async (userId) => {
     try {
@@ -479,24 +483,24 @@ export default function ChapterPage() {
   const fetchRatings = async () => {
     if (!userId) return;
     const chapterNum = parseInt(chapter, 10);
-  
+
     // Fetch user's rating
     if (userRating === null) {
       const { data: userRatingData, error: userError } = await supabase
         .from("chapter_ratings")
         .select("rating")
         .eq("user_id", userId)
-        .eq("content_type", "novel") // Assuming 'novel' for this context
+        .eq("content_type", "novel")
         .eq("content_id", id)
         .eq("chapter_number", chapterNum)
         .single();
-      if (userError && userError.code !== "PGRST116") { // Ignore "no rows" error
+      if (userError && userError.code !== "PGRST116") {
         console.error("Error fetching user rating:", userError);
       } else {
         setUserRating(userRatingData?.rating || null);
       }
     }
-  
+
     // Fetch average rating
     const { data: ratingsData, error: avgError } = await supabase
       .from("chapter_ratings")
@@ -513,28 +517,28 @@ export default function ChapterPage() {
       setAverageRating(avg);
     }
   };
-  
+
   useEffect(() => {
     if (!isLocked) fetchRatings();
   }, [isLocked]);
-  
+
   const handleRating = async (rating) => {
-    if (!userId || !connected) return;
+    if (!userId || !isWalletConnected) return;
     setUserRating(rating); // Optimistically update UI
     const chapterNum = parseInt(chapter, 10);
-  
+
     const { data, error } = await supabase
       .from("chapter_ratings")
       .upsert({
         user_id: userId,
-        content_type: "novel", // Hardcoding as 'novel' for this page
+        content_type: "novel",
         content_id: id,
         chapter_number: chapterNum,
         rating
       }, {
-        onConflict: ["user_id", "content_type", "content_id", "chapter_number"] // Match your unique constraint
+        onConflict: ["user_id", "content_type", "content_id", "chapter_number"]
       });
-  
+
     if (error) {
       console.error("Error saving rating:", error);
       setError("Failed to save rating. Please try again.");
@@ -557,7 +561,7 @@ export default function ChapterPage() {
   };
 
   const handlePayment = async (subscriptionType, currency) => {
-    if (!publicKey) {
+    if (!activeWalletAddress) {
       alert("Please connect your wallet");
       return;
     }
@@ -570,26 +574,34 @@ export default function ChapterPage() {
       setSolPrice(freshSolPrice);
       setSmpPrice(freshSmpPrice);
 
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      let signature;
+
       if (currency === "SOL") {
         if (!freshSolPrice) throw new Error("SOL price not available");
         amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
         decimals = 9;
 
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
         const transaction = new Transaction({
           recentBlockhash: blockhash,
-          feePayer: publicKey,
+          feePayer: new PublicKey(activeWalletAddress),
         }).add(
           SystemProgram.transfer({
-            fromPubkey: publicKey,
+            fromPubkey: new PublicKey(activeWalletAddress),
             toPubkey: new PublicKey(TARGET_WALLET),
             lamports: amount,
           })
         );
 
-        const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
-        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+        if (embeddedWallet && signAndSendTransaction) {
+          signature = await signAndSendTransaction(transaction);
+        } else if (sendTransaction) {
+          signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
+        } else {
+          throw new Error("Wallet signing method not available.");
+        }
 
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
         await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
       } else {
         const price = currency === "USDC" ? usdcPrice : freshSmpPrice;
@@ -598,27 +610,32 @@ export default function ChapterPage() {
         decimals = currency === "USDC" ? 6 : 9;
         amount = Math.round((usdAmount / price) * (10 ** decimals));
 
-        const sourceATA = (await getAssociatedTokenAddress(publicKey, mint))[0];
+        const sourceATA = (await getAssociatedTokenAddress(new PublicKey(activeWalletAddress), mint))[0];
         const destATA = (await getAssociatedTokenAddress(new PublicKey(TARGET_WALLET), mint))[0];
 
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
         const transaction = new Transaction({
           recentBlockhash: blockhash,
-          feePayer: publicKey,
+          feePayer: new PublicKey(activeWalletAddress),
         }).add(
           createTransferInstruction(
             sourceATA,
             destATA,
-            publicKey,
+            new PublicKey(activeWalletAddress),
             amount,
             [],
             TOKEN_PROGRAM_ID
           )
         );
 
-        const signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
-        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+        if (embeddedWallet && signAndSendTransaction) {
+          signature = await signAndSendTransaction(transaction);
+        } else if (sendTransaction) {
+          signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
+        } else {
+          throw new Error("Wallet signing method not available.");
+        }
 
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
         await processUnlock(subscriptionType, signature, amount / (10 ** decimals), currency);
       }
     } catch (error) {
@@ -636,7 +653,7 @@ export default function ChapterPage() {
         story_id: id,
         subscription_type: subscriptionType,
         signature,
-        userPublicKey: publicKey.toString(),
+        userPublicKey: activeWalletAddress,
         current_chapter: parseInt(chapter, 10),
         amount,
         currency,
@@ -681,10 +698,10 @@ export default function ChapterPage() {
   }, [fetchNovel]);
 
   useEffect(() => {
-    if (!loading && novel && (connected || parseInt(chapter, 10) <= 2) && !isLocked) {
-      if (connected) updateTokenBalance();
+    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 2) && !isLocked) {
+      if (isWalletConnected) updateTokenBalance();
     }
-  }, [loading, novel, connected, isLocked, chapter, updateTokenBalance]);
+  }, [loading, novel, isWalletConnected, isLocked, chapter, updateTokenBalance]);
 
   const readText = (text) => {
     if ("speechSynthesis" in window) {
@@ -705,7 +722,7 @@ export default function ChapterPage() {
   if (loading) return <LoadingPage />;
 
   const chapterNum = parseInt(chapter, 10);
-  if (!connected && chapterNum > 2) {
+  if (!isWalletConnected && chapterNum > 2) {
     return (
       <div className={styles.connectPopupOverlay}>
         <div className={styles.connectPopup}>
@@ -768,7 +785,7 @@ export default function ChapterPage() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -931,7 +948,7 @@ export default function ChapterPage() {
               </select>
             </div>
 
-            {connected && !isLocked && (
+            {isWalletConnected && !isLocked && (
               <div className={styles.ratingSection}>
                 <div className={styles.userRating}>
                   <span>Your Rating: </span>

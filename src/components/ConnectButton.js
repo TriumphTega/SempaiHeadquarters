@@ -1,22 +1,29 @@
+// components/ConnectButton.js
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { supabase } from "../services/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
+import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import styles from "../styles/ConnectButton.module.css";
 
 export default function ConnectButton() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWallet(); // External wallet
+  const { wallet: embeddedWallet, createEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userCreated, setUserCreated] = useState(false);
   const [showReferralPrompt, setShowReferralPrompt] = useState(false);
+  const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [privateKey, setPrivateKey] = useState(null); // Store private key temporarily
 
-  const createUserAndBalance = useCallback(async () => {
-    if (!connected || !publicKey) return;
+  const createUserAndBalance = useCallback(async (walletAddress) => {
+    if (!walletAddress) return;
 
     setIsLoading(true);
     setError(null);
@@ -24,13 +31,9 @@ export default function ConnectButton() {
     setShowReferralPrompt(false);
 
     try {
-      const walletAddress = publicKey.toString();
       console.log("Wallet connected:", walletAddress);
-
-      // Store wallet address in localStorage for persistence
       localStorage.setItem("walletAddress", walletAddress);
 
-      // Check if the user already exists
       const { data: existingUser, error: fetchError } = await supabase
         .from("users")
         .select("id, referral_code, has_updated_profile")
@@ -43,11 +46,10 @@ export default function ConnectButton() {
       }
 
       let userId = existingUser?.id;
-      const url = new URL(window.location.href); // Get referral code from URL directly
+      const url = new URL(window.location.href);
       const referralCodeFromUrl = url.searchParams.get("ref");
       let referredBy = null;
 
-      // Handle referral logic
       if (referralCodeFromUrl && !existingUser) {
         const { data: referrer, error: referrerError } = await supabase
           .from("users")
@@ -61,7 +63,6 @@ export default function ConnectButton() {
         }
       }
 
-      // If no user exists, create one
       if (!existingUser) {
         const newReferralCode = `${walletAddress.slice(0, 4)}${Math.random()
           .toString(36)
@@ -89,7 +90,6 @@ export default function ConnectButton() {
         console.log("New user created successfully:", newUser);
         setUserCreated(true);
 
-        // Create wallet_balances entry with user_id
         const { error: balanceError } = await supabase
           .from("wallet_balances")
           .insert({
@@ -108,7 +108,6 @@ export default function ConnectButton() {
         console.log("Wallet balance initialized successfully.");
       }
 
-      // Check referral prompt conditions
       if (referralCodeFromUrl && !existingUser?.has_updated_profile) {
         setShowReferralPrompt(true);
       }
@@ -118,10 +117,33 @@ export default function ConnectButton() {
     } finally {
       setIsLoading(false);
     }
-  }, [connected, publicKey]);
+  }, []);
+
+  const handleCreateEmbeddedWallet = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long!");
+      return;
+    }
+    const result = await createEmbeddedWallet(password);
+    if (result) {
+      const { publicKey, privateKey: newPrivateKey } = result;
+      await createUserAndBalance(publicKey);
+      setPrivateKey(newPrivateKey); // Show private key to user
+      setShowEmbeddedForm(false);
+      setPassword("");
+      setConfirmPassword("");
+    }
+  };
 
   useEffect(() => {
-    createUserAndBalance();
+    if (connected && publicKey) {
+      createUserAndBalance(publicKey.toString());
+    }
   }, [connected, publicKey, createUserAndBalance]);
 
   const handlePromptClose = () => {
@@ -134,7 +156,13 @@ export default function ConnectButton() {
     router.push("/editprofile");
   };
 
-  if (isLoading) {
+  const copyPrivateKey = () => {
+    navigator.clipboard.writeText(privateKey);
+    alert("Private key copied to clipboard! Store it securely.");
+    setPrivateKey(null); // Clear after copying
+  };
+
+  if (isLoading || embeddedLoading) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.spinner}></div>
@@ -143,11 +171,11 @@ export default function ConnectButton() {
     );
   }
 
-  if (error) {
+  if (error || embeddedError) {
     return (
       <div className={styles.errorContainer}>
-        <p>Error: {error}</p>
-        <button className={styles.retryButton} onClick={createUserAndBalance}>
+        <p>Error: {error || embeddedError}</p>
+        <button className={styles.retryButton} onClick={() => setError(null)}>
           Retry
         </button>
       </div>
@@ -156,10 +184,89 @@ export default function ConnectButton() {
 
   return (
     <div className={styles.connectButtonWrapper}>
-      <WalletMultiButton className={styles.walletButton} />
-      {connected && <span className={styles.connectedStatus}></span>}
+      {connected ? (
+        <WalletMultiButton className={styles.walletButton} />
+      ) : embeddedWallet ? (
+        <div className={styles.walletInfo}>
+          <span>Connected: {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}</span>
+          <button className={styles.disconnectButton} onClick={() => {
+            localStorage.removeItem("embeddedWalletPublicKey");
+            localStorage.removeItem("embeddedWalletSecretEncrypted");
+            window.location.reload(); // Simplistic disconnect
+          }}>
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <>
+          <WalletMultiButton className={styles.walletButton} />
+          <button
+            className={styles.embeddedButton}
+            onClick={() => setShowEmbeddedForm(true)}
+          >
+            Create In-App Wallet
+          </button>
+        </>
+      )}
+      {(connected || embeddedWallet) && <span className={styles.connectedStatus}></span>}
       {userCreated && (
         <p className={styles.successMessage}>Welcome aboard! Your account is ready.</p>
+      )}
+
+      {showEmbeddedForm && !connected && !embeddedWallet && (
+        <div className={styles.embeddedFormOverlay}>
+          <div className={styles.embeddedForm}>
+            <h3>Create Your Wallet</h3>
+            <p className={styles.securityNote}>
+              Your private key will be generated client-side. No one, including developers, can access it. Save it securely!
+            </p>
+            <form onSubmit={handleCreateEmbeddedWallet}>
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={styles.input}
+              />
+              <input
+                type="password"
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={styles.input}
+              />
+              <button type="submit" className={styles.submitButton}>
+                Create Wallet
+              </button>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setShowEmbeddedForm(false)}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {privateKey && (
+        <div className={styles.privateKeyOverlay}>
+          <div className={styles.privateKeyBox}>
+            <h3>Your Private Key</h3>
+            <p className={styles.securityNote}>
+              Save this securely! It’s your only way to recover your wallet. We don’t store it.
+            </p>
+            <textarea
+              readOnly
+              value={privateKey}
+              className={styles.privateKeyText}
+            />
+            <button onClick={copyPrivateKey} className={styles.copyButton}>
+              Copy & Close
+            </button>
+          </div>
+        </div>
       )}
 
       {showReferralPrompt && (

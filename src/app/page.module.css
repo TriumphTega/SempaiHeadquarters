@@ -100,7 +100,6 @@
   position: relative;
   min-height: 100vh;
   color: rgba(243, 99, 22, 0.5);
-  font-family: "Orbitron", sans-serif;
   overflow-x: hidden;
   background: #000000; /* Solid black base */
 }

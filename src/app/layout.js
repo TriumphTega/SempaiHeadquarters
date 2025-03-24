@@ -1,7 +1,8 @@
+// app/layout.js
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
-
-import WalletProvider from "../components/WalletProvider"; // Adjust path if necessary
+import WalletProvider from "../components/WalletProvider"; // Existing external wallet provider
+import { EmbeddedWalletProvider } from "../components/EmbeddedWalletProvider"; // New embedded wallet provider
 
 export const metadata = {
   title: "Sempai HQ",
@@ -19,7 +20,9 @@ export default function RootLayout({ children }) {
         {/* Add additional head elements like favicon or fonts here */}
       </head>
       <body>
-        <WalletProvider>{children}</WalletProvider>
+        <WalletProvider>
+          <EmbeddedWalletProvider>{children}</EmbeddedWalletProvider>
+        </WalletProvider>
       </body>
     </html>
   );

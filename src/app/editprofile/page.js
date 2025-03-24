@@ -1,18 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react"; // Added useContext
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useRouter } from "next/navigation"; // Replace useSearchParams with useRouter
-import {  FaUser,  FaEnvelope,  FaCamera,  FaGem,  FaBolt,  FaSave,  FaHome,  FaExchangeAlt,  FaBars,  FaTimes,  FaBook, FaTwitter,FaDiscord, FaGlobe, FaPen} from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import {
+  FaUser,
+  FaEnvelope,
+  FaCamera,
+  FaGem,
+  FaBolt,
+  FaSave,
+  FaHome,
+  FaExchangeAlt,
+  FaBars,
+  FaTimes,
+  FaBook,
+  FaTwitter,
+  FaDiscord,
+  FaGlobe,
+  FaPen,
+} from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import styles from "./EditProfile.module.css";
 import Link from "next/link";
+import ConnectButton from "../../components/ConnectButton";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 
 export default function EditProfile() {
   const { connected, publicKey } = useWallet();
-  const router = useRouter(); // Use useRouter instead of useSearchParams
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Now useContext is defined
+  const router = useRouter();
   const [userId, setUserId] = useState(null);
   const [isCreator, setIsCreator] = useState(false);
   const [name, setName] = useState("");
@@ -33,10 +52,10 @@ export default function EditProfile() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!connected || !publicKey) return;
+      const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+      if (!connected && !embeddedWallet) return;
 
       try {
-        const walletAddress = publicKey.toString();
         const { data: user, error: userError } = await supabase
           .from("users")
           .select("id, email, name, image, isWriter, isArtist, isSuperuser, referred_by, has_updated_profile, weekly_points")
@@ -58,8 +77,6 @@ export default function EditProfile() {
         setImageUrl(user.image || "");
         setIsCreator(user.isWriter || user.isArtist);
 
-        // Access query params with useRouter
-        const refCode = router.query?.ref;
         setIsNewUser(!user.has_updated_profile && !!user.referred_by);
         if (!user.has_updated_profile && user.referred_by) {
           setReferralMessage("Update your profile to claim 100 points and reward your inviter with 100 points!");
@@ -88,7 +105,7 @@ export default function EditProfile() {
     };
 
     fetchUserData();
-  }, [connected, publicKey, router]); // Add router to dependency array
+  }, [connected, publicKey, embeddedWallet]);
 
   const getRewardAmount = () => {
     const balanceNum = Number(balance);
@@ -109,7 +126,8 @@ export default function EditProfile() {
     }
 
     try {
-      const fileName = `${publicKey.toString()}-${Date.now()}.${file.name.split(".").pop()}`;
+      const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+      const fileName = `${walletAddress}-${Date.now()}.${file.name.split(".").pop()}`;
       const { error: uploadError } = await supabase.storage
         .from("sempai")
         .upload(`profile-images/${fileName}`, file, {
@@ -146,6 +164,7 @@ export default function EditProfile() {
 
       if (fetchError) throw new Error("Error fetching user data: " + fetchError.message);
 
+      const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
       const { error: userError } = await supabase
         .from("users")
         .update({
@@ -154,7 +173,7 @@ export default function EditProfile() {
           image: imageUrl,
           has_updated_profile: true,
         })
-        .eq("id", userId);
+        .eq("wallet_address", walletAddress);
 
       if (userError) throw new Error("Error updating user: " + userError.message);
 
@@ -208,7 +227,7 @@ export default function EditProfile() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -217,6 +236,7 @@ export default function EditProfile() {
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
             <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
             <Link href="/creators-profile" className={styles.navLink}><FaExchangeAlt /> View Profile</Link>
+            <ConnectButton />
           </div>
         </div>
       </nav>
@@ -230,14 +250,16 @@ export default function EditProfile() {
             <div className={styles.balanceItem}><FaBolt /> Multiplier: {rewardAmount}</div>
           </div>
 
-          {!connected ? (
+          {!connected && !embeddedWallet ? (
             <div className={styles.connectWrapper}>
               <p className={styles.connectText}>Connect your wallet to edit your profile</p>
-              <WalletMultiButton className={styles.connectButton} />
+              <ConnectButton />
             </div>
           ) : (
             <>
-              <p className={styles.walletText}><FaUser /> {formatUsername(publicKey.toString())}</p>
+              <p className={styles.walletText}>
+                <FaUser /> {formatUsername(publicKey?.toString() || embeddedWallet?.publicKey)}
+              </p>
               {referralMessage && <div className={styles.alertInfo}>{referralMessage}</div>}
             </>
           )}
@@ -252,7 +274,7 @@ export default function EditProfile() {
                 placeholder="Username"
                 className={styles.input}
                 required
-                disabled={!connected}
+                disabled={!connected && !embeddedWallet}
               />
             </div>
             <div className={styles.inputGroup}>
@@ -264,7 +286,7 @@ export default function EditProfile() {
                 placeholder="Email"
                 className={styles.input}
                 required
-                disabled={!connected}
+                disabled={!connected && !embeddedWallet}
               />
             </div>
             <div className={styles.imageGroup}>
@@ -277,7 +299,7 @@ export default function EditProfile() {
                     onChange={handleImageChange}
                     className={styles.fileInput}
                     accept="image/*"
-                    disabled={!connected}
+                    disabled={!connected && !embeddedWallet}
                   />
                 </label>
               </div>
@@ -297,18 +319,18 @@ export default function EditProfile() {
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="Bio"
                     className={styles.textarea}
-                    disabled={!connected}
+                    disabled={!connected && !embeddedWallet}
                   />
                 </div>
                 <div className={styles.inputGroup}>
-                  <FaTwitter className={styles.inputIcon} /> {/* Updated to FaXTwitter */}
+                  <FaTwitter className={styles.inputIcon} />
                   <input
                     type="text"
                     value={twitter}
                     onChange={(e) => setTwitter(e.target.value)}
                     placeholder="X Handle (e.g., username)"
                     className={styles.input}
-                    disabled={!connected}
+                    disabled={!connected && !embeddedWallet}
                   />
                 </div>
                 <div className={styles.inputGroup}>
@@ -319,7 +341,7 @@ export default function EditProfile() {
                     onChange={(e) => setDiscord(e.target.value)}
                     placeholder="Discord ID (e.g., user#1234)"
                     className={styles.input}
-                    disabled={!connected}
+                    disabled={!connected && !embeddedWallet}
                   />
                 </div>
                 <div className={styles.inputGroup}>
@@ -330,7 +352,7 @@ export default function EditProfile() {
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="Website URL"
                     className={styles.input}
-                    disabled={!connected}
+                    disabled={!connected && !embeddedWallet}
                   />
                 </div>
               </>
@@ -338,7 +360,7 @@ export default function EditProfile() {
 
             {error && <div className={styles.alertError}>{error}</div>}
             {success && <div className={styles.alertSuccess}>{success}</div>}
-            <button type="submit" className={styles.submitButton} disabled={!connected}>
+            <button type="submit" className={styles.submitButton} disabled={!connected && !embeddedWallet}>
               <FaSave /> Save Changes
             </button>
           </form>

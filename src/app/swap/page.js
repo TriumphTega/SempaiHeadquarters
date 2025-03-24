@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react"; // Added useContext
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
@@ -11,6 +11,7 @@ import { FaHome, FaBars, FaTimes, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt } fr
 import TreasuryBalance from "../../components/TreasuryBalance";
 import styles from "../../styles/SwapPage.module.css";
 import ConnectButton from "../../components/ConnectButton";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 const connection = new Connection(RPC_URL);
 
@@ -24,6 +25,9 @@ const TOKEN_MINTS = {
 
 export default function SwapPage() {
   const { connected, publicKey, sendTransaction, signTransaction } = useWallet();
+  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
+  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
   const [amount, setAmount] = useState("");
   const [coinFrom, setCoinFrom] = useState("AMETHYST");
   const [coinTo, setCoinTo] = useState("SMP");
@@ -33,17 +37,17 @@ export default function SwapPage() {
   const router = useRouter();
 
   const checkBalance = async () => {
-    if (!publicKey) return;
+    if (!activeWalletAddress) return;
 
     try {
       const mintAddress = TOKEN_MINTS[coinFrom];
       let balance = 0;
 
       if (coinFrom === "SOL") {
-        const solBalance = await connection.getBalance(publicKey);
+        const solBalance = await connection.getBalance(new PublicKey(activeWalletAddress));
         balance = solBalance / 1_000_000_000; // 9 decimals
       } else {
-        const ataAddress = getAssociatedTokenAddressSync(mintAddress, publicKey);
+        const ataAddress = getAssociatedTokenAddressSync(mintAddress, new PublicKey(activeWalletAddress));
         const ataInfo = await connection.getAccountInfo(ataAddress);
         if (ataInfo) {
           const ata = unpackAccount(ataAddress, ataInfo);
@@ -58,15 +62,15 @@ export default function SwapPage() {
   };
 
   useEffect(() => {
-    if (connected) checkBalance();
-  }, [connected, publicKey, coinFrom]);
+    if (isWalletConnected) checkBalance();
+  }, [isWalletConnected, activeWalletAddress, coinFrom]);
 
   const handleSwap = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount.");
       return;
     }
-    if (!connected) {
+    if (!isWalletConnected) {
       alert("Please connect your wallet first.");
       return;
     }
@@ -74,50 +78,59 @@ export default function SwapPage() {
       alert("Please select different tokens to swap.");
       return;
     }
-  
+
     setLoading(true);
-  
+
     try {
       const inputMint = TOKEN_MINTS[coinFrom].toString();
       const outputMint = TOKEN_MINTS[coinTo].toString();
       console.log("Swapping:", { inputMint, outputMint, amount });
-  
+
       const response = await fetch("/api/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userAddress: publicKey.toString(),
+          userAddress: activeWalletAddress,
           amount: parseFloat(amount),
           inputMint,
           outputMint,
         }),
       }).then((r) => r.json());
-  
+
       console.log("API Response:", response);
-  
+
       const { transaction, error, message } = response;
-  
+
       if (error) {
         alert(`${error}: ${message}`);
         return;
       }
-  
+
       const swapTransactionBuf = Buffer.from(transaction, "base64");
       const swapTransaction = VersionedTransaction.deserialize(swapTransactionBuf);
-      const signedTransaction = await signTransaction(swapTransaction);
-  
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
-        skipPreflight: false,
-        maxRetries: 2,
-      });
-  
+
+      let signature;
+      if (embeddedWallet && signAndSendTransaction) {
+        // Embedded wallet swap
+        signature = await signAndSendTransaction(swapTransaction);
+      } else if (signTransaction && sendTransaction) {
+        // External wallet swap
+        const signedTransaction = await signTransaction(swapTransaction);
+        signature = await sendTransaction(signedTransaction, connection, {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+      } else {
+        throw new Error("Wallet signing method not available.");
+      }
+
       const latestBlockHash = await connection.getLatestBlockhash();
       await connection.confirmTransaction({
         blockhash: latestBlockHash.blockhash,
         lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
         signature,
       });
-  
+
       alert(`Swap successful! Signature: ${signature}`);
       checkBalance();
     } catch (error) {
@@ -136,7 +149,7 @@ export default function SwapPage() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -166,7 +179,7 @@ export default function SwapPage() {
       {/* Swap Form */}
       <main className={styles.main}>
         <div className={styles.swapCard}>
-          {!connected ? (
+          {!isWalletConnected ? (
             <div className={styles.connectPrompt}>
               <FaWallet className={styles.walletIcon} />
               <p>Please connect your wallet to initiate a swap.</p>

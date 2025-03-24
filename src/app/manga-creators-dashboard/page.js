@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react"; // Add useContext
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Add this import
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import Select from "react-select"; // Import react-select
+import Select from "react-select";
 import { FaHome, FaBars, FaTimes, FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem, FaSun, FaMoon, FaBullhorn, FaPaintBrush, FaLayerGroup, FaCamera } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
 import ConnectButton from "../../components/ConnectButton";
@@ -40,6 +41,7 @@ const TAG_OPTIONS = [
 
 export default function MangaDashboard() {
   const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Add embedded wallet context
   const [title, setTitle] = useState("");
   const [coverImage, setCoverImage] = useState(null);
   const [coverPreview, setCoverPreview] = useState("");
@@ -61,20 +63,24 @@ export default function MangaDashboard() {
   const [noticeTitle, setNoticeTitle] = useState("");
   const [noticeText, setNoticeText] = useState("");
   const [noticeDate, setNoticeDate] = useState(null);
-  const [tags, setTags] = useState([]); // Tags as array of objects for react-select
+  const [tags, setTags] = useState([]);
   const chapterInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const router = useRouter();
 
+  // Determine the active wallet address (external or embedded)
+  const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
+  const isWalletConnected = connected || !!embeddedWallet;
+
   const verifyUserAccess = async () => {
-    if (!connected || !publicKey) {
+    if (!isWalletConnected || !activePublicKey) {
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const wallet = publicKey.toString();
+      const wallet = activePublicKey.toString(); // Use active wallet address
       const { data, error } = await supabase
         .from("users")
         .select("id, isArtist, isSuperuser")
@@ -139,7 +145,7 @@ export default function MangaDashboard() {
 
   useEffect(() => {
     verifyUserAccess();
-  }, [connected, publicKey]);
+  }, [connected, publicKey, embeddedWallet]); // Add embeddedWallet to dependencies
 
   useEffect(() => {
     if (userId && (isArtist || isAdmin)) {
@@ -217,7 +223,7 @@ export default function MangaDashboard() {
     setTitle(manga.title || "");
     setCoverPreview(manga.cover_image || "");
     setSummary(manga.summary || "");
-    setTags(manga.tags ? manga.tags.map(tag => ({ value: tag, label: tag })) : []); // Convert tags to Select format
+    setTags(manga.tags ? manga.tags.map(tag => ({ value: tag, label: tag })) : []);
     await fetchChapters(manga.id);
   };
 
@@ -271,7 +277,7 @@ export default function MangaDashboard() {
         summary,
         author: (await supabase.from("users").select("name").eq("id", userId).single()).data?.name || "Unknown",
         status: "ongoing",
-        tags: tags.map(tag => tag.value), // Extract values for saving
+        tags: tags.map(tag => tag.value),
         viewers_count: activeManga ? activeManga.viewers_count : 0
       };
 
@@ -465,7 +471,7 @@ export default function MangaDashboard() {
       </nav>
 
       <main className={styles.main}>
-        {!connected ? (
+        {!isWalletConnected ? ( // Updated condition
           <div className={styles.unauthorized}>
             <FaGem />
             <p>Connect your wallet to access the Artist’s Studio.</p>

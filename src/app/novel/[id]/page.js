@@ -94,7 +94,7 @@ export default function NovelPage() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>

@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react"; // Added useContext
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
 import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import styles from "../CreatorsProfile.module.css"; // Updated to CreatorsProfile.module.css
+import styles from "../CreatorsProfile.module.css";
 import Link from "next/link";
+import ConnectButton from "@/components/ConnectButton"; // Added ConnectButton
+import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 export default function CreatorsProfilePage() {
   const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Access embedded wallet
   const router = useRouter();
   const { userId } = useParams();
   const [userRole, setUserRole] = useState("writer"); // "writer", "artist", "both", "superuser"
@@ -26,8 +29,8 @@ export default function CreatorsProfilePage() {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   useEffect(() => {
-    if (connected && publicKey) setWalletReady(true);
-  }, [connected, publicKey]);
+    if (connected || embeddedWallet) setWalletReady(true); // Check both external and embedded wallets
+  }, [connected, publicKey, embeddedWallet]);
 
   useEffect(() => {
     const fetchProfileDetails = async () => {
@@ -57,10 +60,13 @@ export default function CreatorsProfilePage() {
           return;
         }
 
-        if (walletReady && publicKey && user.wallet_address === publicKey.toString()) setIsOwnProfile(true);
+        // Check if this is the user's own profile using either external or embedded wallet
+        if (walletReady && (publicKey?.toString() === user.wallet_address || embeddedWallet?.publicKey === user.wallet_address)) {
+          setIsOwnProfile(true);
+        }
 
         const { data: profile, error: profileError } = await supabase
-          .from("writer_profiles") // Assuming this table is still used for creators
+          .from("writer_profiles")
           .select("bio, twitter, discord, website")
           .eq("user_id", user.id)
           .maybeSingle();
@@ -84,7 +90,7 @@ export default function CreatorsProfilePage() {
     };
 
     fetchProfileDetails();
-  }, [userId, walletReady, publicKey]);
+  }, [userId, walletReady, publicKey, embeddedWallet]); // Added embeddedWallet to dependencies
 
   const handleNavigation = (path) => router.push(path);
 
@@ -95,7 +101,7 @@ export default function CreatorsProfilePage() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -106,6 +112,7 @@ export default function CreatorsProfilePage() {
             {isOwnProfile && (
               <Link href="/editprofile" className={styles.navLink}><FaExchangeAlt /> Edit Profile</Link>
             )}
+            <ConnectButton /> {/* Added ConnectButton for wallet status */}
           </div>
         </div>
       </nav>

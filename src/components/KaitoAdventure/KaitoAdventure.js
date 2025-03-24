@@ -1,7 +1,6 @@
- 
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useContext } from "react"; // Added useContext
 import Head from "next/head";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -34,6 +33,7 @@ import GuideModal from "./modals/GuideModal";
 import LeaderboardModal from "./modals/LeaderboardModal";
 import { FaStar } from "react-icons/fa";
 import { Card, ProgressBar } from "react-bootstrap";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 // ---- Constants Section ----
 const defaultPlayer = {
@@ -152,10 +152,15 @@ const skillTrees = {
 // ---- KaitoAdventure Component ----
 const KaitoAdventure = () => {
   const { publicKey, connected } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Access embedded wallet
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
+  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
+
   const defaultPlayerMemo = useMemo(() => ({
     ...defaultPlayer,
-    wallet_address: publicKey ? publicKey.toString() : null,
-  }), [publicKey]);
+    wallet_address: activeWalletAddress || null,
+  }), [activeWalletAddress]);
+
   const [player, setPlayer] = useState(defaultPlayerMemo);
   const [currentTown, setCurrentTown] = useState("Sakura Village");
   const [gameMessage, setGameMessage] = useState("Welcome to Kaito's Adventure!");
@@ -200,7 +205,7 @@ const KaitoAdventure = () => {
 
   // ---- Persistence and Supabase Sync ----
   useEffect(() => {
-    if (!connected || !publicKey) {
+    if (!isWalletConnected || !activeWalletAddress) {
       setPlayer(defaultPlayerMemo);
       setModals(prev => ({ ...prev, guide: true }));
       return;
@@ -208,11 +213,10 @@ const KaitoAdventure = () => {
 
     const loadPlayer = async () => {
       try {
-        const walletAddress = publicKey.toString();
         const { data, error } = await supabase
           .from('players')
           .select('*')
-          .eq('wallet_address', walletAddress)
+          .eq('wallet_address', activeWalletAddress)
           .single();
 
         if (error && error.code !== 'PGRST116') {
@@ -224,7 +228,7 @@ const KaitoAdventure = () => {
         if (data) {
           playerData = { ...defaultPlayerMemo, ...data, recipes: defaultPlayerMemo.recipes };
         } else {
-          playerData = { ...defaultPlayerMemo, wallet_address: walletAddress };
+          playerData = { ...defaultPlayerMemo, wallet_address: activeWalletAddress };
           const { error: insertError } = await supabase
             .from('players')
             .insert([playerData]);
@@ -254,7 +258,7 @@ const KaitoAdventure = () => {
     };
 
     loadPlayer();
-  }, [connected, publicKey, defaultPlayerMemo]);
+  }, [isWalletConnected, activeWalletAddress, defaultPlayerMemo]);
 
   const saveToLocalStorage = useCallback(
     debounce(() => {
@@ -270,7 +274,7 @@ const KaitoAdventure = () => {
 
   const syncPlayerToSupabase = useCallback(
     debounce(async () => {
-      if (!connected || !publicKey || !player.wallet_address || typeof window === "undefined") {
+      if (!isWalletConnected || !activeWalletAddress || !player.wallet_address || typeof window === "undefined") {
         console.warn("Cannot sync to Supabase: Wallet not connected or wallet_address is null");
         return;
       }
@@ -308,11 +312,11 @@ const KaitoAdventure = () => {
         console.error("Error syncing to Supabase:", error);
       }
     }, 1000),
-    [player, connected, publicKey]
+    [player, isWalletConnected, activeWalletAddress]
   );
 
   useEffect(() => {
-    if (connected && publicKey && player.wallet_address) {
+    if (isWalletConnected && activeWalletAddress && player.wallet_address) {
       syncPlayerToSupabase();
       saveToLocalStorage();
     }
@@ -320,7 +324,7 @@ const KaitoAdventure = () => {
       syncPlayerToSupabase.cancel();
       saveToLocalStorage.cancel();
     };
-  }, [syncPlayerToSupabase, saveToLocalStorage, player, connected, publicKey]);
+  }, [syncPlayerToSupabase, saveToLocalStorage, player, isWalletConnected, activeWalletAddress]);
 
   // ---- Weather System ----
   useEffect(() => {
@@ -778,7 +782,7 @@ const KaitoAdventure = () => {
 
   // ---- Leaderboard ----
   const fetchLeaderboardData = useCallback(async () => {
-    if (!connected || !publicKey || typeof window === "undefined") return;
+    if (!isWalletConnected || !activeWalletAddress || typeof window === "undefined") return;
     try {
       const { data, error } = await supabase
         .from('players')
@@ -797,15 +801,15 @@ const KaitoAdventure = () => {
       setLeaderboardData([]);
       setGameMessage("Failed to load leaderboard.");
     }
-  }, [connected, publicKey, player.wallet_address]);
+  }, [isWalletConnected, activeWalletAddress, player.wallet_address]);
 
   useEffect(() => {
-    if (connected && publicKey && modals.leaderboard) {
+    if (isWalletConnected && activeWalletAddress && modals.leaderboard) {
       fetchLeaderboardData();
     }
     const interval = setInterval(fetchLeaderboardData, 10000);
     return () => clearInterval(interval);
-  }, [fetchLeaderboardData, modals.leaderboard, connected, publicKey]);
+  }, [fetchLeaderboardData, modals.leaderboard, isWalletConnected, activeWalletAddress]);
 
   // ---- Equipment ----
   const equipItem = useCallback((itemName) => {
@@ -1153,37 +1157,31 @@ const KaitoAdventure = () => {
         </Button>
         <Row className="justify-content-center">
           <Col md={10}>
-
-
-          <Card className={`${styles.gildedCard} ${styles.cardPulse}`} style={{ background: "rgba(255, 255, 255, 0.9)" }}>
-
-
-            <PlayerStats player={player} xpProgress={xpProgress} />
-            <TownInfo currentTown={currentTown} townLevels={townLevels} weather={weather} currentEvent={currentEvent} eventTimer={eventTimer} formatCountdown={formatCountdown} />
-            <GameMessage message={gameMessage} />
-            <InventoryList 
-              player={player} 
-              setPlayer={setPlayer} 
-              equipItem={equipItem} 
-              useGatherPotion={useGatherPotion} 
-              sortInventory={sortInventory} 
-              upgradeInventory={upgradeInventory} 
-              rareItems={rare_items} 
-            />
-            <ActionBar 
-              toggleModal={toggleModal} 
-              startCombat={startCombat} 
-              travel={travel} 
-              currentTown={currentTown} 
-              towns={towns} 
-              player={player} 
-              countdown={countdown} 
-              queuedCountdown={queuedCountdown} 
-              formatCountdown={formatCountdown} 
-            />
-  </Card>
-
-
+            <Card className={`${styles.gildedCard} ${styles.cardPulse}`} style={{ background: "rgba(255, 255, 255, 0.9)" }}>
+              <PlayerStats player={player} xpProgress={xpProgress} />
+              <TownInfo currentTown={currentTown} townLevels={townLevels} weather={weather} currentEvent={currentEvent} eventTimer={eventTimer} formatCountdown={formatCountdown} />
+              <GameMessage message={gameMessage} />
+              <InventoryList 
+                player={player} 
+                setPlayer={setPlayer} 
+                equipItem={equipItem} 
+                useGatherPotion={useGatherPotion} 
+                sortInventory={sortInventory} 
+                upgradeInventory={upgradeInventory} 
+                rareItems={rare_items} 
+              />
+              <ActionBar 
+                toggleModal={toggleModal} 
+                startCombat={startCombat} 
+                travel={travel} 
+                currentTown={currentTown} 
+                towns={towns} 
+                player={player} 
+                countdown={countdown} 
+                queuedCountdown={queuedCountdown} 
+                formatCountdown={formatCountdown} 
+              />
+            </Card>
           </Col>
         </Row>
       </Container>
@@ -1312,7 +1310,7 @@ const KaitoAdventure = () => {
       </ModalWrapper>
       <ModalWrapper show={modals.leaderboard} onHide={() => toggleModal("leaderboard")} title="Leaderboard">
         <LeaderboardModal 
-          connected={connected} 
+          connected={isWalletConnected} // Updated to use isWalletConnected
           leaderboardData={leaderboardData} 
           toggleModal={toggleModal} 
         />

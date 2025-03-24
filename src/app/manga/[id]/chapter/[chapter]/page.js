@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react"; // Added useContext
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -21,7 +21,8 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import styles from "../../../../../styles/MangaChapter.module.css";
 import { RPC_URL } from "@/constants";
-import MangaCommentSection from "../../../../../components/MangaCommentSection"; // Import the new component
+import MangaCommentSection from "../../../../../components/MangaCommentSection";
+import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 const MERCHANT_WALLET = new PublicKey("3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -32,6 +33,9 @@ export default function MangaChapter() {
   const { id: mangaId, chapter: chapterId } = useParams();
   const router = useRouter();
   const { connected, publicKey, sendTransaction } = useWallet();
+  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
+  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +137,7 @@ export default function MangaChapter() {
   }, [loading, chapter, isFirstChapter, paymentConfirmed]);
 
   const handleRating = async (rating) => {
-    if (!userId || !connected) return;
+    if (!userId || !isWalletConnected) return;
     setUserRating(rating);
     const chapterNum = chapters.find((ch) => ch.id === chapterId)?.chapter_number;
 
@@ -169,7 +173,7 @@ export default function MangaChapter() {
   };
 
   const handlePayment = async (currency) => {
-    if (!publicKey || !connected) {
+    if (!activeWalletAddress) {
       alert("Please connect your wallet first.");
       return;
     }
@@ -182,24 +186,32 @@ export default function MangaChapter() {
         try {
           const freshSolPrice = await fetchPrices();
           setSolPrice(freshSolPrice);
+          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+          let signature;
 
           if (currency === "SOL") {
             amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
             decimals = 9;
 
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
             const transaction = new Transaction({
               recentBlockhash: blockhash,
-              feePayer: publicKey,
+              feePayer: new PublicKey(activeWalletAddress),
             }).add(
               SystemProgram.transfer({
-                fromPubkey: publicKey,
+                fromPubkey: new PublicKey(activeWalletAddress),
                 toPubkey: MERCHANT_WALLET,
                 lamports: amount,
               })
             );
 
-            const signature = await sendTransaction(transaction, connection, { skipPreflight: false });
+            if (embeddedWallet && signAndSendTransaction) {
+              signature = await signAndSendTransaction(transaction);
+            } else if (sendTransaction) {
+              signature = await sendTransaction(transaction, connection, { skipPreflight: false });
+            } else {
+              throw new Error("Wallet signing method not available.");
+            }
+
             await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
             setTransactionSignature(signature);
             await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency);
@@ -209,18 +221,24 @@ export default function MangaChapter() {
             decimals = 6;
             amount = Math.round((usdAmount / usdcPrice) * 10 ** decimals);
 
-            const sourceATA = (await getAssociatedTokenAddress(publicKey, mint))[0];
+            const sourceATA = (await getAssociatedTokenAddress(new PublicKey(activeWalletAddress), mint))[0];
             const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
 
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
             const transaction = new Transaction({
               recentBlockhash: blockhash,
-              feePayer: publicKey,
+              feePayer: new PublicKey(activeWalletAddress),
             }).add(
-              createTransferInstruction(sourceATA, destATA, publicKey, amount, [], TOKEN_PROGRAM_ID)
+              createTransferInstruction(sourceATA, destATA, new PublicKey(activeWalletAddress), amount, [], TOKEN_PROGRAM_ID)
             );
 
-            const signature = await sendTransaction(transaction, connection, { skipPreflight: false });
+            if (embeddedWallet && signAndSendTransaction) {
+              signature = await signAndSendTransaction(transaction);
+            } else if (sendTransaction) {
+              signature = await sendTransaction(transaction, connection, { skipPreflight: false });
+            } else {
+              throw new Error("Wallet signing method not available.");
+            }
+
             await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
             setTransactionSignature(signature);
             await processUnlock(signature, amount / 10 ** decimals, currency);
@@ -251,7 +269,7 @@ export default function MangaChapter() {
   const processUnlock = async (signature, amount, currency) => {
     try {
       const payload = {
-        user_wallet: publicKey.toString(),
+        user_wallet: activeWalletAddress,
         manga_id: mangaId,
         chapter_id: chapterId,
         signature,
@@ -270,7 +288,7 @@ export default function MangaChapter() {
         setSuccessMessage("Payment successful! Chapter unlocked.");
         setTimeout(() => setSuccessMessage(""), 5000);
         await supabase.from("user_payments").insert({
-          user_wallet: publicKey.toString(),
+          user_wallet: activeWalletAddress,
           chapter_id: chapterId,
           manga_id: mangaId,
           paid_at: new Date().toISOString(),
@@ -285,11 +303,11 @@ export default function MangaChapter() {
   };
 
   const checkExistingPayment = async () => {
-    if (!publicKey || !chapter?.is_premium || isFirstChapter) return;
+    if (!activeWalletAddress || !chapter?.is_premium || isFirstChapter) return;
     const { data } = await supabase
       .from("user_payments")
       .select("id")
-      .eq("user_wallet", publicKey.toString())
+      .eq("user_wallet", activeWalletAddress)
       .eq("chapter_id", chapterId)
       .eq("manga_id", mangaId)
       .maybeSingle();
@@ -329,17 +347,17 @@ export default function MangaChapter() {
 
   useEffect(() => {
     async function initialize() {
-      if (connected && publicKey) {
+      if (isWalletConnected && activeWalletAddress) {
         let { data: user, error: userError } = await supabase
           .from("users")
           .select("id")
-          .eq("wallet_address", publicKey.toString())
+          .eq("wallet_address", activeWalletAddress)
           .single();
 
         if (userError && userError.code === "PGRST116") {
           const { data: newUser, error: insertError } = await supabase
             .from("users")
-            .insert([{ wallet_address: publicKey.toString() }])
+            .insert([{ wallet_address: activeWalletAddress }])
             .select("id")
             .single();
           if (insertError) {
@@ -358,20 +376,20 @@ export default function MangaChapter() {
       await fetchChapter();
     }
     initialize();
-  }, [connected, publicKey, chapterId, mangaId]);
+  }, [isWalletConnected, activeWalletAddress, chapterId, mangaId]);
 
   useEffect(() => {
-    if (chapter?.is_premium && connected && !isFirstChapter) checkExistingPayment();
-  }, [connected, publicKey, chapter, isFirstChapter]);
+    if (chapter?.is_premium && isWalletConnected && !isFirstChapter) checkExistingPayment();
+  }, [isWalletConnected, activeWalletAddress, chapter, isFirstChapter]);
 
   const updateTokenBalance = useCallback(async () => {
-    if (!publicKey || !chapter || !mangaId || !chapterId) return;
+    if (!activeWalletAddress || !chapter || !mangaId || !chapterId) return;
 
     try {
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, wallet_address, weekly_points")
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activeWalletAddress)
         .single();
 
       if (userError || !userData) throw new Error("User not found");
@@ -405,7 +423,7 @@ export default function MangaChapter() {
 
       if (teamError || !team) throw new Error("Team not found");
 
-      const eventDetails = `${publicKey.toString()}${chapter.title || "Untitled"}${chapterId}`
+      const eventDetails = `${activeWalletAddress}${chapter.title || "Untitled"}${chapterId}`
         .replace(/[^a-zA-Z0-9]/g, "")
         .substring(0, 255);
 
@@ -413,7 +431,7 @@ export default function MangaChapter() {
         .from("wallet_events")
         .select("id")
         .eq("event_details", eventDetails)
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activeWalletAddress)
         .limit(1);
 
       if (eventError) throw new Error(`Error checking wallet events: ${eventError.message}`);
@@ -484,7 +502,7 @@ export default function MangaChapter() {
           source_chain: "SOL",
           source_currency: "Token",
           amount_change: readerReward,
-          wallet_address: publicKey.toString(),
+          wallet_address: activeWalletAddress,
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
         },
@@ -547,18 +565,18 @@ export default function MangaChapter() {
       setError(error.message);
       console.error("Unexpected error in updateTokenBalance:", error);
     }
-  }, [publicKey, chapter, mangaId, chapterId, balance, paymentConfirmed, isFirstChapter]);
+  }, [activeWalletAddress, chapter, mangaId, chapterId, balance, paymentConfirmed, isFirstChapter]);
 
   useEffect(() => {
     if (
       !loading &&
       chapter &&
-      (connected || isFirstChapter) &&
+      (isWalletConnected || isFirstChapter) &&
       (!chapter.is_premium || paymentConfirmed || isFirstChapter)
     ) {
       updateTokenBalance();
     }
-  }, [loading, chapter, connected, paymentConfirmed, isFirstChapter, updateTokenBalance]);
+  }, [loading, chapter, isWalletConnected, paymentConfirmed, isFirstChapter, updateTokenBalance]);
 
   const handleChapterChange = (e) => {
     router.push(`/manga/${mangaId}/chapter/${e.target.value}`);
@@ -573,7 +591,7 @@ export default function MangaChapter() {
 
   const solAmount = solPrice ? (2.5 / solPrice).toFixed(5) : "Loading...";
   const usdcAmount = (2.5 / usdcPrice).toFixed(2);
-  const canDownload = connected && (isFirstChapter || (chapter.is_premium && paymentConfirmed));
+  const canDownload = isWalletConnected && (isFirstChapter || (chapter.is_premium && paymentConfirmed));
 
   return (
     <div className={styles.page}>
@@ -599,7 +617,7 @@ export default function MangaChapter() {
         {warningMessage && <div className={styles.warning}>{warningMessage}</div>}
         {error && <div className={styles.error}>{error}</div>}
 
-        {!connected && !isFirstChapter ? (
+        {!isWalletConnected && !isFirstChapter ? (
           <div className={styles.paymentSection}>
             <FaLock className={styles.lockIcon} />
             <p>Please connect your wallet to read this chapter.</p>
@@ -651,7 +669,7 @@ export default function MangaChapter() {
             <select value={chapterId} onChange={handleChapterChange} className={styles.chapterSelect}>
               {chapters.map((ch) => (
                 <option key={ch.id} value={ch.id}>
-                  {ch.title || `Chapter ${ch.id}`}
+                  {ch.title || `Chapter ${ ch.id}`}
                 </option>
               ))}
             </select>
@@ -660,7 +678,7 @@ export default function MangaChapter() {
                 <FaDownload /> Download Chapter
               </button>
             )}
-            {connected && (isFirstChapter || paymentConfirmed) && (
+            {isWalletConnected && (isFirstChapter || paymentConfirmed) && (
               <div className={styles.ratingSection}>
                 <div className={styles.userRating}>
                   <span>Your Rating: </span>
@@ -684,8 +702,7 @@ export default function MangaChapter() {
                 </div>
               </div>
             )}
-            {/* Add MangaCommentSection here */}
-            {connected && (isFirstChapter || paymentConfirmed) && (
+            {isWalletConnected && (isFirstChapter || paymentConfirmed) && (
               <MangaCommentSection mangaId={mangaId} chapterId={chapterId} />
             )}
           </div>

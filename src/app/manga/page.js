@@ -251,7 +251,7 @@ export default function MangaPage() {
       <nav className={styles.mangaNavbar}>
         <div className={styles.navbarContent}>
           <Link href="/" className={styles.mangaLogo}>
-            <img src="/images/logo.jpg" alt="SempaiHQ" className={styles.logoImage} />
+            <img src="/images/logo.jpeg" alt="SempaiHQ" className={styles.logoImage} />
             <span className={styles.logoText}>SempaiHQ Manga</span>
           </Link>
           <button className={styles.menuButton} onClick={toggleMenu}>

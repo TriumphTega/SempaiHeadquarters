@@ -1,10 +1,12 @@
+// app/page.js
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
+import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
 import {
   FaHome,
   FaExchangeAlt,
@@ -24,6 +26,7 @@ import {
   FaShareAlt,
   FaEye,
   FaStar,
+  FaWallet
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -52,7 +55,8 @@ const NextArrow = (props) => {
 };
 
 export default function Home() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWallet(); // External wallet
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Embedded wallet
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
@@ -79,6 +83,9 @@ export default function Home() {
 
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
+
+  const isWalletConnected = connected || embeddedWallet; // Check if either wallet is connected
+  const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey; // Use whichever is available
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
@@ -171,8 +178,7 @@ export default function Home() {
   };
 
   const fetchNotifications = useCallback(async () => {
-    if (!connected || !publicKey) return;
-    const walletAddress = publicKey.toString();
+    if (!isWalletConnected || !walletPublicKey) return;
     let retryCount = 0;
     const maxRetries = 3;
 
@@ -181,7 +187,7 @@ export default function Home() {
         const { data: user } = await supabase
           .from("users")
           .select("id")
-          .eq("wallet_address", walletAddress)
+          .eq("wallet_address", walletPublicKey)
           .single();
         if (!user) throw new Error("User not found");
 
@@ -204,16 +210,15 @@ export default function Home() {
     };
 
     await fetchWithRetry();
-  }, [connected, publicKey]);
+  }, [isWalletConnected, walletPublicKey]);
 
   const markAsRead = useCallback(async () => {
-    if (!connected || !publicKey) return;
+    if (!isWalletConnected || !walletPublicKey) return;
     try {
-      const walletAddress = publicKey.toString();
       const { data: user } = await supabase
         .from("users")
         .select("id")
-        .eq("wallet_address", walletAddress)
+        .eq("wallet_address", walletPublicKey)
         .single();
       if (!user) throw new Error("User not found");
 
@@ -226,17 +231,16 @@ export default function Home() {
     } catch (err) {
       setError("Failed to update notifications.");
     }
-  }, [connected, publicKey]);
+  }, [isWalletConnected, walletPublicKey]);
 
   const fetchUserDetails = useCallback(async () => {
-    if (!connected || !publicKey) return;
+    if (!isWalletConnected || !walletPublicKey) return;
 
-    const walletAddress = publicKey.toString();
     try {
       const { data: user, error } = await supabase
         .from("users")
         .select("id, isWriter, isArtist, isSuperuser, referral_code")
-        .eq("wallet_address", walletAddress)
+        .eq("wallet_address", walletPublicKey)
         .single();
 
       if (error && error.code !== "PGRST116") throw error;
@@ -251,11 +255,11 @@ export default function Home() {
     } catch (err) {
       setError(`Failed to fetch user details: ${err.message}`);
     }
-  }, [connected, publicKey]);
+  }, [isWalletConnected, walletPublicKey]);
 
   const checkCreatorLogin = useCallback(async () => {
-    setIsCreatorLoggedIn(connected);
-  }, [connected]);
+    setIsCreatorLoggedIn(isWalletConnected);
+  }, [isWalletConnected]);
 
   const fetchNovels = useCallback(async () => {
     try {
@@ -320,14 +324,12 @@ export default function Home() {
         };
       });
 
-      // Sort by viewers (descending), then averageRating (descending), then title (alphabetically)
       const sortedNovels = enrichedNovels.sort((a, b) => {
         if (b.viewers !== a.viewers) return b.viewers - a.viewers;
         if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
         return a.title.localeCompare(b.title);
       });
 
-      // Limit to top 5
       setNovels(sortedNovels.slice(0, 5));
     } catch (err) {
       setError(err.message);
@@ -399,14 +401,12 @@ export default function Home() {
         };
       });
 
-      // Sort by viewers (descending), then averageRating (descending), then title (alphabetically)
       const sortedManga = enrichedManga.sort((a, b) => {
         if (b.viewers !== a.viewers) return b.viewers - a.viewers;
         if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
         return a.title.localeCompare(b.title);
       });
 
-      // Limit to top 5
       setManga(sortedManga.slice(0, 5));
     } catch (err) {
       setError(err.message);
@@ -415,7 +415,7 @@ export default function Home() {
 
   const fetchAnnouncements = useCallback(async () => {
     try {
-      const response = await fetch(`/api/announcements${publicKey ? `?publicKey=${publicKey.toString()}` : ""}`);
+      const response = await fetch(`/api/announcements${walletPublicKey ? `?publicKey=${walletPublicKey}` : ""}`);
       const { data } = await response.json();
       const recentAnnouncements = data
         .filter((announcement) => {
@@ -447,19 +447,18 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [walletPublicKey]);
 
   const handleCreatorAccess = useCallback(async () => {
-    if (!connected || !publicKey) {
+    if (!isWalletConnected || !walletPublicKey) {
       setShowConnectPopup(true);
       return;
     }
     try {
-      const walletAddress = publicKey.toString();
       const { data: user, error } = await supabase
         .from("users")
         .select("isWriter, isArtist, isSuperuser")
-        .eq("wallet_address", walletAddress)
+        .eq("wallet_address", walletPublicKey)
         .single();
 
       if (error || !user) throw new Error("User not found");
@@ -483,7 +482,7 @@ export default function Home() {
       setError(err.message);
       setPageLoading(false);
     }
-  }, [connected, publicKey, router]);
+  }, [isWalletConnected, walletPublicKey, router]);
 
   const handleCreatorChoice = (path) => {
     setShowCreatorChoice(false);
@@ -525,13 +524,11 @@ export default function Home() {
   };
 
   const fetchBalance = async () => {
-    if (!connected || !publicKey) return;
-    const walletAddress = publicKey.toString();
-
+    if (!isWalletConnected || !walletPublicKey) return;
     const { data } = await supabase
       .from("users")
       .select("weekly_points")
-      .eq("wallet_address", walletAddress)
+      .eq("wallet_address", walletPublicKey)
       .single();
     if (data) setAmount(data.weekly_points);
   };
@@ -563,8 +560,8 @@ export default function Home() {
     fetchManga,
     fetchNotifications,
     fetchAnnouncements,
-    connected,
-    publicKey,
+    isWalletConnected,
+    walletPublicKey,
   ]);
 
   useEffect(() => {
@@ -642,91 +639,94 @@ export default function Home() {
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
       <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
+  <div className={styles.navContainer}>
+    <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
+      <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+      <span className={styles.logoText}>Sempai HQ</span>
+    </Link>
+    <button className={styles.menuToggle} onClick={toggleMenu}>
+      {menuOpen ? <FaTimes /> : <FaBars />}
+    </button>
+    <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+      <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+        <FaHome className={styles.navIcon} /> Home
+      </Link>
+      <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
+        <FaExchangeAlt className={styles.navIcon} /> Swap
+      </Link>
+      <Link
+        href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
+        onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
+        className={styles.navLink}
+      >
+        <FaUser className={styles.navIcon} /> Profile
+      </Link>
+      <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
+        <FaComments className={styles.navIcon} /> Chat
+      </Link>
+      <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
+        <FaGamepad className={styles.navIcon} /> Kaito's Adventure
+      </Link>
+      <Link href="/wallet-import" onClick={() => handleNavigation("/wallet-import")} className={styles.navLink}>
+        <FaWallet className={styles.navIcon} /> Import Wallet
+      </Link>
+      <button onClick={handleCreatorAccess} className={styles.actionButton}>
+        {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
+      </button>
+      {isWalletConnected && (
+        <div className={styles.notificationWrapper}>
+          <button onClick={toggleNotifications} className={styles.notificationButton}>
+            <FaBell className={styles.bellIcon} />
+            {notifications.length > 0 && (
+              <span className={styles.notificationBadge}>{notifications.length}</span>
+            )}
           </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href="/swap" onClick={() => (connected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
-              <FaExchangeAlt className={styles.navIcon} /> Swap
-            </Link>
-            <Link
-              href={connected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
-              onClick={() => (connected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
-              className={styles.navLink}
-            >
-              <FaUser className={styles.navIcon} /> Profile
-            </Link>
-            <Link href="/chat" onClick={() => (connected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
-              <FaComments className={styles.navIcon} /> Chat
-            </Link>
-            <Link href="/kaito-adventure" onClick={() => (connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
-              <FaGamepad className={styles.navIcon} /> Kaito's Adventure
-            </Link>
-            <button onClick={handleCreatorAccess} className={styles.actionButton}>
-              {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
-            </button>
-            {connected && (
-              <div className={styles.notificationWrapper}>
-                <button onClick={toggleNotifications} className={styles.notificationButton}>
-                  <FaBell className={styles.bellIcon} />
-                  {notifications.length > 0 && (
-                    <span className={styles.notificationBadge}>{notifications.length}</span>
-                  )}
-                </button>
-                {notificationsOpen && (
-                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
-                    {notifications.length > 0 ? (
-                      <>
-                        {notifications.map((notif) => (
-                          <div key={notif.id} className={styles.notificationItem}>
-                            {notif.type === "reply" && notif.comment_id ? (
-                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                                📩 Someone replied: "{notif.message}"
-                              </Link>
-                            ) : notif.type === "new_chapter" ? (
-                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                                📖 {notif.message}
-                              </Link>
-                            ) : notif.type === "reward" ? (
-                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                                🎉 Weekly reward received!
-                              </Link>
-                            ) : (
-                              <span>{notif.message || "New notification"}</span>
-                            )}
-                          </div>
-                        ))}
-                        <button onClick={markAsRead} className={styles.markReadButton}>
-                          Mark All as Read
-                        </button>
-                      </>
-                    ) : (
-                      <div className={styles.noNotifications}>No new notifications</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {connected && (
-              <button onClick={toggleReferral} className={styles.referralToggle}>
-                <FaShareAlt className={styles.referralIcon} />
-              </button>
-            )}
-            <button onClick={toggleTheme} className={styles.themeToggle}>
-              {theme === "dark" ? <FaSun /> : <FaMoon />}
-            </button>
-            <ConnectButton className={styles.connectButton} />
-          </div>
+          {notificationsOpen && (
+            <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
+              {notifications.length > 0 ? (
+                <>
+                  {notifications.map((notif) => (
+                    <div key={notif.id} className={styles.notificationItem}>
+                      {notif.type === "reply" && notif.comment_id ? (
+                        <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                          📩 Someone replied: "{notif.message}"
+                        </Link>
+                      ) : notif.type === "new_chapter" ? (
+                        <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                          📖 {notif.message}
+                        </Link>
+                      ) : notif.type === "reward" ? (
+                        <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                          🎉 Weekly reward received!
+                        </Link>
+                      ) : (
+                        <span>{notif.message || "New notification"}</span>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={markAsRead} className={styles.markReadButton}>
+                    Mark All as Read
+                  </button>
+                </>
+              ) : (
+                <div className={styles.noNotifications}>No new notifications</div>
+              )}
+            </div>
+          )}
         </div>
-      </nav>
+      )}
+      {isWalletConnected && (
+        <button onClick={toggleReferral} className={styles.referralToggle}>
+          <FaShareAlt className={styles.referralIcon} />
+        </button>
+      )}
+      <button onClick={toggleTheme} className={styles.themeToggle}>
+        {theme === "dark" ? <FaSun /> : <FaMoon />}
+      </button>
+      <ConnectButton className={styles.connectButton} />
+    </div>
+  </div>
+</nav>
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>
@@ -791,7 +791,7 @@ export default function Home() {
       </header>
 
       <main className={styles.mainContent}>
-        {connected && isReferralOpen && (
+        {isWalletConnected && isReferralOpen && (
           <div
             ref={referralRef}
             className={styles.referralDropdown}
@@ -918,7 +918,7 @@ export default function Home() {
           <h2 className={styles.sectionTitle}>Explore More</h2>
           <div className={styles.featuresGrid}>
             <div className={styles.featureCard}>
-              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
+              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
                 <img src="/background.jpg" alt="Kaito Adventure" className={styles.featureImage} />
                 <div className={styles.featureOverlay}>
                   <h3 className={styles.featureTitle}>Kaito's Adventure</h3>
@@ -926,7 +926,7 @@ export default function Home() {
               </Link>
             </div>
             <div className={styles.featureCard}>
-              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
+              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
                 <img src="/images/dao.jpg" alt="DAO Governance" className={styles.featureImage} />
                 <div className={styles.featureOverlay}>
                   <h3 className={styles.featureTitle}>DAO Governance</h3>
@@ -942,7 +942,7 @@ export default function Home() {
               </Link>
             </div>
             <div className={styles.featureCard}>
-              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); connected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
+              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
                 <img src="/images/novel-4.jpg" alt="KISS" className={styles.featureImage} />
                 <div className={styles.featureOverlay}>
                   <h3 className={styles.featureTitle}>KISS</h3>
@@ -961,7 +961,7 @@ export default function Home() {
             </button>
             <h3 className={styles.popupTitle}>Connect Your Wallet</h3>
             <p className={styles.popupMessage}>Please connect your wallet to access this content.</p>
-            <WalletMultiButton className={styles.connectWalletButton} />
+            <ConnectButton />
           </div>
         </div>
       )}

@@ -253,7 +253,7 @@ export default function NovelsPage() {
       <nav className={styles.libraryNavbar}>
         <div className={styles.navbarContent}>
           <Link href="/" className={styles.libraryLogo}>
-            <img src="/images/logo.jpg" alt="SempaiHQ" className={styles.logoImage} />
+            <img src="/images/logo.jpeg" alt="SempaiHQ" className={styles.logoImage} />
             <span className={styles.logoText}>SempaiHQ Library</span>
           </Link>
           <button className={styles.menuButton} onClick={toggleMenu}>

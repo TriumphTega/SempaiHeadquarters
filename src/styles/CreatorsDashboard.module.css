@@ -1,7 +1,6 @@
 /* Base styles */
 .page {
   min-height: 100vh;
-  font-family: 'Georgia', serif;
   display: flex;
   flex-direction: column;
 }
@@ -234,7 +233,6 @@
   background: rgba(255, 255, 255, 0.1);
   color: inherit;
   font-size: 1rem;
-  font-family: 'Georgia', serif;
 }
 
 .input:focus, .textarea:focus {

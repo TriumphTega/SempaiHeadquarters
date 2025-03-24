@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Add this import
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import Select from "react-select"; // Import react-select
+import Select from "react-select";
 import {
   FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
   FaUserShield, FaGem, FaSun, FaMoon, FaImage, FaBullhorn
@@ -42,6 +43,7 @@ const TAG_OPTIONS = [
 
 export default function NovelDashboard() {
   const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Add embedded wallet context
   const [novelTitle, setNovelTitle] = useState("");
   const [novelImage, setNovelImage] = useState(null);
   const [novelImageUrl, setNovelImageUrl] = useState("");
@@ -66,19 +68,23 @@ export default function NovelDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
-  const [tags, setTags] = useState([]); // Tags as array of objects for react-select
+  const [tags, setTags] = useState([]);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
+  // Determine the active wallet address (external or embedded)
+  const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
+  const isWalletConnected = connected || !!embeddedWallet;
+
   const handleCreatorAccess = async () => {
-    if (!connected || !publicKey) {
+    if (!isWalletConnected || !activePublicKey) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const walletAddress = publicKey.toString();
+      const walletAddress = activePublicKey.toString(); // Use active wallet address
       const { data, error } = await supabase
         .from("users")
         .select("id, isWriter, isSuperuser")
@@ -143,7 +149,7 @@ export default function NovelDashboard() {
 
   useEffect(() => {
     handleCreatorAccess();
-  }, [connected, publicKey]);
+  }, [connected, publicKey, embeddedWallet]); // Add embeddedWallet to dependencies
 
   useEffect(() => {
     if (currentUserId && (isWriter || isSuperuser)) {
@@ -240,7 +246,7 @@ export default function NovelDashboard() {
     setChapterTitles(novel.chaptertitles || []);
     setChapterContents(novel.chaptercontents || []);
     setAdvanceChapters(novel.advance_chapters || []);
-    setTags(novel.tags ? novel.tags.map(tag => ({ value: tag, label: tag })) : []); // Convert tags to Select format
+    setTags(novel.tags ? novel.tags.map(tag => ({ value: tag, label: tag })) : []);
   };
 
   const handleNovelSubmit = async (e) => {
@@ -271,7 +277,7 @@ export default function NovelDashboard() {
         chaptertitles: chapterTitles,
         chaptercontents: chapterContents,
         advance_chapters: advanceChapters,
-        tags: tags.map(tag => tag.value), // Extract values for saving
+        tags: tags.map(tag => tag.value),
         viewers_count: selectedNovel ? selectedNovel.viewers_count : 0
       };
 
@@ -454,7 +460,7 @@ export default function NovelDashboard() {
       <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -476,7 +482,7 @@ export default function NovelDashboard() {
       </header>
 
       <main className={styles.main}>
-        {!connected ? (
+        {!isWalletConnected ? ( // Updated condition
           <div className={styles.connectPrompt}>
             <FaGem className={styles.connectIcon} />
             <p>Connect your wallet to access the Writer’s Vault.</p>

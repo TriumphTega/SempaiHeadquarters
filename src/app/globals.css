@@ -1,3 +1,12 @@
+/* Define the custom font */
+@font-face {
+  font-family: 'AnimeAce'; /* Name you’ll use in font-family */
+  src: url('/fonts/animeace.ttf') format('truetype'); /* Path relative to /public */
+  font-weight: normal; /* Adjust if your font has specific weights */
+  font-style: normal; /* Adjust if your font has specific styles */
+}
+
+/* Root variables */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -25,18 +34,23 @@ body {
   overflow-x: hidden;
 }
 
+/* Apply the font and reduce size to 70% */
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'AnimeAce', Arial, Helvetica, sans-serif; /* Use custom font with fallbacks */
+  font-size: 60%; /* Reduces font size to 70% of default (approx 11.2px from 16px) */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure all elements inherit the font and size */
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  font-family: inherit; /* Inherit AnimeAce from body */
+  font-size: inherit; /* Inherit the reduced size from body */
 }
 
 a {
@@ -49,5 +63,3 @@ a {
     color-scheme: dark;
   }
 }
-
-

@@ -1,154 +1,329 @@
+/* styles/ConnectButton.module.css */
 .connectButtonWrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .walletButton {
-    background: linear-gradient(90deg, #f7c948, #f39c12);
-    border: none;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    border-radius: 8px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  
-  .walletButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-  
-  .connectedStatus {
-    color: #28a745;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-  
-  .successMessage {
-    color: #17a2b8;
-    font-size: 0.85rem;
-    margin: 0;
-    animation: fadeIn 0.5s ease-in;
-  }
-  
-  .loadingContainer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #f39c12;
-  }
-  
-  .spinner {
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 3px solid #f39c12;
-    border-top: 3px solid transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  .errorContainer {
-    text-align: center;
-    color: #dc3545;
-  }
-  
-  .retryButton {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .retryButton:hover {
-    background: #c82333;
-  }
-  
-  .referralPromptOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    animation: fadeIn 0.3s ease-in;
-  }
-  
-  .referralPrompt {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 12px;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.5s ease-out;
-  }
-  
-  .promptTitle {
-    font-size: 1.5rem;
-    color: #2c3e50;
-    margin-bottom: 1rem;
-  }
-  
-  .promptMessage {
-    font-size: 1rem;
-    color: #7f8c8d;
-    margin-bottom: 1.5rem;
-  }
-  
-  .promptButtons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-  }
-  
-  .updateButton {
-    background: #3498db;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-  }
-  
-  .updateButton:hover {
-    background: #2980b9;
-  }
-  
-  .laterButton {
-    background: #95a5a6;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-  }
-  
-  .laterButton:hover {
-    background: #7f8c8d;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: #1a1a1a; /* Dark background */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.walletButton {
+  background: #333; /* Slightly lighter black */
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.walletButton:hover {
+  background: rgba(243, 99, 22, 0.9); /* Orange accent */
+  transform: translateY(-2px);
+}
+
+.embeddedButton {
+  background: rgba(243, 99, 22, 1); /* Solid orange */
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.embeddedButton:hover {
+  background: rgba(243, 99, 22, 0.8);
+  transform: translateY(-2px);
+}
+
+.walletInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  background: #333;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.disconnectButton {
+  background: #000; /* Pure black */
+  color: rgba(243, 99, 22, 1);
+  padding: 6px 12px;
+  border: 1px solid rgba(243, 99, 22, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.disconnectButton:hover {
+  background: rgba(243, 99, 22, 0.9);
+  color: #fff;
+}
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.spinner {
+  border: 3px solid #333;
+  border-top: 3px solid rgba(243, 99, 22, 1);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorContainer {
+  color: rgba(243, 99, 22, 1);
+  text-align: center;
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.retryButton {
+  background: rgba(243, 99, 22, 0.9);
+  color: #fff;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.3s ease;
+}
+
+.retryButton:hover {
+  background: rgba(243, 99, 22, 1);
+}
+
+.connectedStatus {
+  width: 12px;
+  height: 12px;
+  background: rgba(243, 99, 22, 0.8);
+  border-radius: 50%;
+  border: 2px solid #1a1a1a;
+}
+
+.successMessage {
+  color: rgba(243, 99, 22, 0.8);
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.embeddedFormOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.embeddedForm {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.input:focus {
+  border-color: rgba(243, 99, 22, 0.8);
+  outline: none;
+}
+
+.submitButton,
+.cancelButton {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  margin: 5px;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.submitButton {
+  background: rgba(243, 99, 22, 1);
+  color: #fff;
+}
+
+.submitButton:hover {
+  background: rgba(243, 99, 22, 0.8);
+  transform: translateY(-2px);
+}
+
+.cancelButton {
+  background: #333;
+  color: #fff;
+}
+
+.cancelButton:hover {
+  background: #555;
+  transform: translateY(-2px);
+}
+
+.privateKeyOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.privateKeyBox {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.privateKeyText {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  font-family: monospace;
+  resize: none;
+  height: 100px;
+}
+
+.copyButton {
+  background: rgba(243, 99, 22, 1);
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.copyButton:hover {
+  background: rgba(243, 99, 22, 0.8);
+  transform: translateY(-2px);
+}
+
+.securityNote {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 15px;
+}
+
+.referralPromptOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.referralPrompt {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.promptTitle {
+  font-size: 20px;
+  color: rgba(243, 99, 22, 1);
+  margin-bottom: 10px;
+}
+
+.promptMessage {
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.promptButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.updateButton,
+.laterButton {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.updateButton {
+  background: rgba(243, 99, 22, 1);
+  color: #fff;
+}
+
+.updateButton:hover {
+  background: rgba(243, 99, 22, 0.8);
+  transform: translateY(-2px);
+}
+
+.laterButton {
+  background: #333;
+  color: #fff;
+}
+
+.laterButton:hover {
+  background: #555;
+  transform: translateY(-2px);
+}

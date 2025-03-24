@@ -2,7 +2,6 @@
   min-height: 100vh;
   background: linear-gradient(180deg, #0a0a0a 0%, #1a2525 100%); /* Black to deep teal */
   color: #d1d5db; /* Soft gray for text */
-  font-family: "Inter", sans-serif; /* Clean, modern font */
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;

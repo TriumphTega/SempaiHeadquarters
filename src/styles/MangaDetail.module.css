@@ -4,7 +4,6 @@
   min-height: 100vh;
   background: rgba(17, 17, 17, 0.9); /* Semi-transparent black to show animation */
   color: #cccccc; /* Light gray for text */
-  font-family: "Roboto", sans-serif;
   overflow-x: hidden;
 }
 

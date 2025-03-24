@@ -1,0 +1,116 @@
+/* Black and dark orange theme */
+.page {
+  background-color: #000000; /* Black */
+}
+
+.header {
+  background-color: #1a1a1a; /* Dark gray for contrast */
+  border-color: #92400e; /* Dark orange border */
+}
+
+.logoLink {
+  color: #d97706; /* Dark orange */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.logoLink:hover {
+  color: #f59e0b; /* Lighter orange on hover */
+}
+
+.backLink {
+  color: #d97706; /* Dark orange */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.backLink:hover {
+  color: #f59e0b; /* Lighter orange on hover */
+}
+
+.title {
+  color: #d97706; /* Dark orange */
+  animation: fadeIn 1s ease-out;
+}
+
+.subtitle {
+  color: #9ca3af; /* Gray for text */
+  max-width: 600px;
+}
+
+.mintButton {
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-orange {
+  background-color: #d97706; /* Dark orange */
+  border: none;
+  color: #ffffff;
+}
+
+.btn-orange:hover {
+  background-color: #b45309; /* Slightly darker orange */
+  transform: scale(1.05);
+}
+
+.btn-orange:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #f59e0b; /* Lighter orange ring */
+}
+
+.btn-secondary {
+  background-color: #92400e; /* Muted dark orange for disabled state */
+  border: none;
+  color: #ffffff;
+  cursor: not-allowed;
+}
+
+.buttonGlow {
+  background: #d97706; /* Dark orange glow */
+  opacity: 0.2;
+  filter: blur(10px);
+  border-radius: 8px;
+  z-index: -1;
+  animation: pulse 2s infinite;
+}
+
+.footer {
+  background-color: #1a1a1a; /* Dark gray */
+  border-color: #92400e; /* Dark orange border */
+}
+
+.text-orange {
+  color: #d97706; /* Dark orange */
+}
+
+.text-gray {
+  color: #9ca3af; /* Gray text */
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
