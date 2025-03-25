@@ -1,22 +1,22 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useContext } from "react"; // Added useContext
+import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL, Keypair } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown, FaStar } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown, FaStar, FaWallet } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
 import { RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
-import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
+import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -26,10 +26,14 @@ const connection = new Connection(RPC_URL, "confirmed");
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const router = useRouter();
-  const { connected, publicKey, sendTransaction } = useWallet();
-  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
-  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
-  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
+  const { connected, publicKey, sendTransaction } = useWallet(); // External wallet (e.g., Phantom)
+  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext); // Embedded wallet
+
+  // Determine active wallet (prioritize embedded wallet if available)
+  const activePublicKey = embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
+  const activeWalletAddress = activePublicKey?.toString();
+  const isWalletConnected = !!activePublicKey;
+
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,8 +49,10 @@ export default function ChapterPage() {
   const [solPrice, setSolPrice] = useState(null);
   const [smpPrice, setSmpPrice] = useState(null);
   const usdcPrice = 1; // USDC is pegged to $1
-  const [userRating, setUserRating] = useState(null); // User's rating
-  const [averageRating, setAverageRating] = useState(null); // Average rating
+  const [userRating, setUserRating] = useState(null);
+  const [averageRating, setAverageRating] = useState(null);
+  const [showTransactionPopup, setShowTransactionPopup] = useState(false);
+  const [transactionDetails, setTransactionDetails] = useState(null);
 
   const fetchPrices = async () => {
     const fetchSolPrice = async () => {
@@ -323,7 +329,7 @@ export default function ChapterPage() {
       setError(error.message);
       console.error("Unexpected error in updateTokenBalance:", error);
     }
-  }, [activeWalletAddress, novel, chapter, balance, id, setWarningMessage, setSuccessMessage, setError]);
+  }, [activeWalletAddress, novel, chapter, balance, id]);
 
   useEffect(() => {
     async function initialize() {
@@ -387,8 +393,6 @@ export default function ChapterPage() {
         : { is_advance: false, free_release_date: null };
       setAdvanceInfo(chapterAdvanceInfo);
 
-      console.log("Checking access - Chapter:", chapterNum, "Total Chapters:", totalChapters, "Advance Info:", chapterAdvanceInfo);
-
       if (!isLocked) {
         const { data: currentNovel, error: fetchError } = await supabase
           .from("novels")
@@ -405,7 +409,6 @@ export default function ChapterPage() {
 
       if (chapterNum <= 2) {
         if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
-          console.log("Chapter 1 or 2 is free or past release date, unlocking");
           setIsLocked(false);
           setCanUnlockNextThree(false);
           return;
@@ -438,10 +441,8 @@ export default function ChapterPage() {
         }
       }
       setCanUnlockNextThree(allPreviousUnlocked);
-      console.log("Can unlock next three:", allPreviousUnlocked);
 
       if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
-        console.log("Chapter is free or past release date, unlocking");
         setIsLocked(false);
       } else if (userId) {
         const { data: unlock, error: unlockError } = await supabase
@@ -455,19 +456,15 @@ export default function ChapterPage() {
 
         if (unlock) {
           const expired = unlock.expires_at && new Date(unlock.expires_at) < new Date();
-          console.log("Unlock Data:", unlock, "Expired:", expired);
           if (!expired) {
             if (unlock.chapter_unlocked_till === -1 || (unlock.chapter_unlocked_till >= chapterNum && chapterNum < totalChapters)) {
-              console.log("Chapter is within unlocked range or full unlock, unlocking");
               setIsLocked(false);
               return;
             }
           }
         }
-        console.log("Chapter is locked, no valid unlock");
         setIsLocked(true);
       } else {
-        console.log("Chapter requires wallet connection and subscription");
         setIsLocked(true);
       }
     } catch (err) {
@@ -484,7 +481,6 @@ export default function ChapterPage() {
     if (!userId) return;
     const chapterNum = parseInt(chapter, 10);
 
-    // Fetch user's rating
     if (userRating === null) {
       const { data: userRatingData, error: userError } = await supabase
         .from("chapter_ratings")
@@ -501,7 +497,6 @@ export default function ChapterPage() {
       }
     }
 
-    // Fetch average rating
     const { data: ratingsData, error: avgError } = await supabase
       .from("chapter_ratings")
       .select("rating")
@@ -524,7 +519,7 @@ export default function ChapterPage() {
 
   const handleRating = async (rating) => {
     if (!userId || !isWalletConnected) return;
-    setUserRating(rating); // Optimistically update UI
+    setUserRating(rating);
     const chapterNum = parseInt(chapter, 10);
 
     const { data, error } = await supabase
@@ -542,11 +537,10 @@ export default function ChapterPage() {
     if (error) {
       console.error("Error saving rating:", error);
       setError("Failed to save rating. Please try again.");
-      setUserRating(null); // Revert on failure
+      setUserRating(null);
       return;
     }
-    console.log("Rating saved successfully:", data);
-    await fetchRatings(); // Refresh ratings after successful save
+    await fetchRatings();
   };
 
   const getAssociatedTokenAddress = async (owner, mint) => {
@@ -560,91 +554,175 @@ export default function ChapterPage() {
     );
   };
 
-  const handlePayment = async (subscriptionType, currency) => {
-    if (!activeWalletAddress) {
-      alert("Please connect your wallet");
+  const initiatePayment = async (subscriptionType, currency) => {
+    if (!activeWalletAddress || !activePublicKey) {
+      setError("Please connect your wallet");
       return;
     }
 
     const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15;
-    let amount, decimals, mint;
+    let amount, decimals, mint, displayAmount;
 
     try {
       const { solPrice: freshSolPrice, smpPrice: freshSmpPrice } = await fetchPrices();
       setSolPrice(freshSolPrice);
       setSmpPrice(freshSmpPrice);
 
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      let signature;
-
       if (currency === "SOL") {
         if (!freshSolPrice) throw new Error("SOL price not available");
         amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
         decimals = 9;
-
-        const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          feePayer: new PublicKey(activeWalletAddress),
-        }).add(
-          SystemProgram.transfer({
-            fromPubkey: new PublicKey(activeWalletAddress),
-            toPubkey: new PublicKey(TARGET_WALLET),
-            lamports: amount,
-          })
-        );
-
-        if (embeddedWallet && signAndSendTransaction) {
-          signature = await signAndSendTransaction(transaction);
-        } else if (sendTransaction) {
-          signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
-        } else {
-          throw new Error("Wallet signing method not available.");
-        }
-
-        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-        await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
+        displayAmount = (amount / LAMPORTS_PER_SOL).toFixed(4);
       } else {
         const price = currency === "USDC" ? usdcPrice : freshSmpPrice;
         if (!price) throw new Error(`${currency} price not available`);
         mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
         decimals = currency === "USDC" ? 6 : 9;
         amount = Math.round((usdAmount / price) * (10 ** decimals));
+        displayAmount = (amount / (10 ** decimals)).toFixed(2);
+      }
 
-        const sourceATA = (await getAssociatedTokenAddress(new PublicKey(activeWalletAddress), mint))[0];
+      setTransactionDetails({
+        subscriptionType,
+        currency,
+        amount,
+        displayAmount,
+        decimals,
+        mint,
+      });
+      setShowTransactionPopup(true);
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      setError(`Failed to initiate payment: ${error.message}`);
+    }
+  };
+
+  const confirmPayment = async () => {
+    if (!transactionDetails) return;
+
+    const { subscriptionType, currency, amount, decimals, mint } = transactionDetails;
+
+    if (!activePublicKey) {
+      setError("No wallet selected. Please connect a wallet and try again.");
+      setShowTransactionPopup(false);
+      return;
+    }
+
+    try {
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      let signature;
+
+      const balance = await connection.getBalance(activePublicKey);
+      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000; // Add 5000 lamports for fee
+
+      if (balance < minBalanceRequired) {
+        throw new Error(
+          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available, need at least ${(minBalanceRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL`
+        );
+      }
+
+      if (currency === "SOL") {
+        const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          feePayer: activePublicKey,
+        }).add(
+          SystemProgram.transfer({
+            fromPubkey: activePublicKey,
+            toPubkey: new PublicKey(TARGET_WALLET),
+            lamports: amount,
+          })
+        );
+
+        if (embeddedWallet) {
+          console.log("Using embedded wallet for SOL transaction");
+          const password = prompt("Enter your wallet password to proceed:"); // Replace with secure input method
+          if (!password) throw new Error("Password required for embedded wallet.");
+          const secretKey = getSecretKey(password);
+          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+          const keypair = Keypair.fromSecretKey(secretKey);
+          transaction.sign(keypair);
+          signature = await connection.sendRawTransaction(transaction.serialize());
+        } else if (connected && sendTransaction) {
+          console.log("Using external wallet for SOL transaction");
+          signature = await sendTransaction(transaction, connection, {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          });
+        } else {
+          throw new Error("No valid wallet available for signing the transaction.");
+        }
+
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
+        await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
+      } else {
+        const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
         const destATA = (await getAssociatedTokenAddress(new PublicKey(TARGET_WALLET), mint))[0];
 
         const transaction = new Transaction({
           recentBlockhash: blockhash,
-          feePayer: new PublicKey(activeWalletAddress),
+          feePayer: activePublicKey,
         }).add(
           createTransferInstruction(
             sourceATA,
             destATA,
-            new PublicKey(activeWalletAddress),
+            activePublicKey,
             amount,
             [],
             TOKEN_PROGRAM_ID
           )
         );
 
-        if (embeddedWallet && signAndSendTransaction) {
-          signature = await signAndSendTransaction(transaction);
-        } else if (sendTransaction) {
-          signature = await sendTransaction(transaction, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
+        if (embeddedWallet) {
+          console.log("Using embedded wallet for token transaction");
+          const password = prompt("Enter your wallet password to proceed:"); // Replace with secure input method
+          if (!password) throw new Error("Password required for embedded wallet.");
+          const secretKey = getSecretKey(password);
+          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+          const keypair = Keypair.fromSecretKey(secretKey);
+          transaction.sign(keypair);
+          signature = await connection.sendRawTransaction(transaction.serialize());
+        } else if (connected && sendTransaction) {
+          console.log("Using external wallet for token transaction");
+          signature = await sendTransaction(transaction, connection, {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          });
         } else {
-          throw new Error("Wallet signing method not available.");
+          throw new Error("No valid wallet available for signing the transaction.");
         }
 
-        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
         await processUnlock(subscriptionType, signature, amount / (10 ** decimals), currency);
       }
     } catch (error) {
       console.error(`${currency} Payment Error:`, error);
       setError(`Payment failed: ${error.message}`);
+    } finally {
+      setShowTransactionPopup(false);
+      setTransactionDetails(null);
     }
   };
 
   const processUnlock = async (subscriptionType, signature, amount, currency) => {
+    console.log("Sending to /api/unlock-chapter:", {
+      user_id: userId,
+      story_id: id,
+      subscription_type: subscriptionType,
+      signature,
+      userPublicKey: activeWalletAddress,
+      current_chapter: parseInt(chapter, 10),
+      amount,
+      currency,
+      solPrice,
+      smpPrice,
+    });
+
     const response = await fetch("/api/unlock-chapter", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -657,6 +735,8 @@ export default function ChapterPage() {
         current_chapter: parseInt(chapter, 10),
         amount,
         currency,
+        solPrice,
+        smpPrice,
       }),
     });
 
@@ -668,6 +748,7 @@ export default function ChapterPage() {
       await checkAccess(userId);
     } else {
       setError(result.error);
+      console.error("Unlock API error:", result.error);
     }
   };
 
@@ -853,7 +934,7 @@ export default function ChapterPage() {
             </p>
             <div className={styles.paymentOptions}>
               <button
-                onClick={() => handlePayment("3CHAPTERS", "SOL")}
+                onClick={() => initiatePayment("3CHAPTERS", "SOL")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
                 disabled={!canUnlockNextThree || !solPrice}
                 title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
@@ -863,7 +944,7 @@ export default function ChapterPage() {
                 <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
               </button>
               <button
-                onClick={() => handlePayment("FULL", "SOL")}
+                onClick={() => initiatePayment("FULL", "SOL")}
                 className={`${styles.unlockButton} ${styles.fullChapters}`}
                 disabled={!solPrice}
               >
@@ -872,7 +953,7 @@ export default function ChapterPage() {
                 <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
               </button>
               <button
-                onClick={() => handlePayment("3CHAPTERS", "USDC")}
+                onClick={() => initiatePayment("3CHAPTERS", "USDC")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
                 disabled={!canUnlockNextThree}
                 title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
@@ -882,7 +963,7 @@ export default function ChapterPage() {
                 <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
               </button>
               <button
-                onClick={() => handlePayment("FULL", "USDC")}
+                onClick={() => initiatePayment("FULL", "USDC")}
                 className={`${styles.unlockButton} ${styles.fullChapters}`}
               >
                 <FaCrown className={styles.buttonIcon} />
@@ -890,7 +971,7 @@ export default function ChapterPage() {
                 <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
               </button>
               <button
-                onClick={() => handlePayment("3CHAPTERS", "SMP")}
+                onClick={() => initiatePayment("3CHAPTERS", "SMP")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
                 disabled={!canUnlockNextThree || !smpPrice}
                 title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
@@ -900,7 +981,7 @@ export default function ChapterPage() {
                 <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
               </button>
               <button
-                onClick={() => handlePayment("FULL", "SMP")}
+                onClick={() => initiatePayment("FULL", "SMP")}
                 className={`${styles.unlockButton} ${styles.fullChapters}`}
                 disabled={!smpPrice}
                 title={!smpPrice ? "SMP price unavailable" : ""}
@@ -977,6 +1058,57 @@ export default function ChapterPage() {
           </>
         )}
       </div>
+
+      {showTransactionPopup && transactionDetails && (
+        <div className={styles.transactionPopupOverlay}>
+          <div className={styles.transactionPopup}>
+            <button
+              onClick={() => setShowTransactionPopup(false)}
+              className={styles.closePopupButton}
+            >
+              <FaTimes />
+            </button>
+            <h3 className={styles.popupTitle}>
+              <FaWallet className="me-2" /> Confirm Transaction
+            </h3>
+            <p className={styles.popupMessage}>
+              You are about to unlock{" "}
+              {transactionDetails.subscriptionType === "3CHAPTERS" ? "3 chapters" : "all chapters"} for:
+            </p>
+            <div className={styles.transactionDetails}>
+              <p>
+                <strong>Amount:</strong> {transactionDetails.displayAmount} {transactionDetails.currency}
+              </p>
+              <p>
+                <strong>USD Value:</strong> ${transactionDetails.subscriptionType === "3CHAPTERS" ? "3" : "15"}
+              </p>
+              <p>
+                <strong>Wallet:</strong> {activeWalletAddress.slice(0, 6)}...{activeWalletAddress.slice(-4)}
+              </p>
+              <p>
+                <strong>To:</strong> {TARGET_WALLET.slice(0, 6)}...{TARGET_WALLET.slice(-4)}
+              </p>
+            </div>
+            <div className={styles.popupButtons}>
+              <button
+                onClick={confirmPayment}
+                className={`${styles.confirmButton} btn btn-primary`}
+              >
+                Confirm Payment
+              </button>
+              <button
+                onClick={() => setShowTransactionPopup(false)}
+                className={`${styles.cancelButton} btn btn-secondary`}
+              >
+                Cancel
+              </button>
+            </div>
+            <p className={styles.popupNote}>
+              {embeddedWallet ? "You will be prompted for your password." : "Please approve the transaction in your wallet."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <footer className={styles.footer}>
         <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
