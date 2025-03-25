@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase/supabaseClient"; // Adjust path as needed
-import { useWallet } from "@solana/wallet-adapter-react";
 import { FaComment, FaReply, FaTimes, FaTrash, FaEye, FaEyeSlash } from "react-icons/fa";
 import UseAmethystBalance from "./UseAmethystBalance"; // Adjust path as needed
 import styles from "../styles/MangaCommentSection.module.css"; // Reuse or create a new CSS module
@@ -76,23 +75,23 @@ const formatUsername = (username) => {
   return username;
 };
 
-export default function MangaCommentSection({ mangaId, chapterId }) {
-  const { publicKey } = useWallet();
+export default function MangaCommentSection({ mangaId, chapterId, isWalletConnected, activePublicKey }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
   const { balance } = UseAmethystBalance();
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!publicKey) return;
+    if (!isWalletConnected || !activePublicKey) return;
 
     const fetchUserId = async () => {
       const { data: user, error } = await supabase
         .from("users")
         .select("id")
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activePublicKey.toString())
         .single();
 
       if (error || !user) {
@@ -103,11 +102,11 @@ export default function MangaCommentSection({ mangaId, chapterId }) {
     };
 
     fetchUserId();
-  }, [publicKey]);
+  }, [isWalletConnected, activePublicKey]);
 
   const deleteComment = async (commentId) => {
     const { error } = await supabase
-      .from("manga_comments") // New table for manga comments
+      .from("manga_comments")
       .delete()
       .eq("id", commentId)
       .eq("user_id", currentUserId);
@@ -141,16 +140,23 @@ export default function MangaCommentSection({ mangaId, chapterId }) {
   }, [mangaId, chapterId]);
 
   const handleCommentSubmit = async () => {
+    if (!isWalletConnected || !activePublicKey) {
+      setError("Please connect your wallet to post a comment.");
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
     if (!newComment.trim()) return;
 
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, name, weekly_points, wallet_address")
-      .eq("wallet_address", publicKey.toString())
+      .eq("wallet_address", activePublicKey.toString())
       .single();
 
     if (userError || !user) {
       console.error("Error fetching user:", userError);
+      setError("Failed to fetch user data. Please try again.");
       return;
     }
 
@@ -166,7 +172,8 @@ export default function MangaCommentSection({ mangaId, chapterId }) {
         .gte("created_at", oneMinuteAgo);
 
       if (recentComments.length > 0) {
-        alert("You can only post one comment per minute.");
+        setError("You can only post one comment per minute.");
+        setTimeout(() => setError(null), 5000);
         return;
       }
 
@@ -237,10 +244,16 @@ export default function MangaCommentSection({ mangaId, chapterId }) {
       setComments((prev) => [comment, ...prev]);
     } catch (error) {
       console.error("Error submitting comment:", error.message);
+      setError("Failed to submit comment. Please try again.");
     }
   };
 
   const addReply = (parentId) => {
+    if (!isWalletConnected || !activePublicKey) {
+      setError("Please connect your wallet to reply.");
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
     setReplyingTo(parentId);
   };
 
@@ -271,15 +284,27 @@ export default function MangaCommentSection({ mangaId, chapterId }) {
       <h4 className={styles.title}>
         <FaComment /> Comments
       </h4>
-      <textarea
-        className={styles.textarea}
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder={replyingTo ? "Type your reply..." : "Add your comment..."}
-      />
-      <button className={styles.postButton} onClick={handleCommentSubmit}>
-        <FaComment /> {replyingTo ? "Post Reply" : "Post Comment"}
-      </button>
+      {error && <div className={styles.error}>{error}</div>}
+      {!isWalletConnected ? (
+        <p className={styles.connectPrompt}>Please connect your wallet to comment.</p>
+      ) : (
+        <>
+          <textarea
+            className={styles.textarea}
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder={replyingTo ? "Type your reply..." : "Add your comment..."}
+            disabled={!isWalletConnected}
+          />
+          <button
+            className={styles.postButton}
+            onClick={handleCommentSubmit}
+            disabled={!isWalletConnected || !newComment.trim()}
+          >
+            <FaComment /> {replyingTo ? "Post Reply" : "Post Comment"}
+          </button>
+        </>
+      )}
       <div className={styles.commentsContainer}>
         {buildThread(comments).map((comment) => (
           <Comment

@@ -761,7 +761,8 @@ export default function MangaChapter() {
               </div>
             )}
             {isWalletConnected && (isFirstChapter || paymentConfirmed) && (
-              <MangaCommentSection mangaId={mangaId} chapterId={chapterId} />
+              <MangaCommentSection mangaId={mangaId} chapterId={chapterId} isWalletConnected={isWalletConnected}
+              activePublicKey={activePublicKey}/>
             )}
           </div>
         )}
