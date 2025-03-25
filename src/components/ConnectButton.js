@@ -1,4 +1,3 @@
-// components/ConnectButton.js
 "use client";
 
 import { useEffect, useState, useCallback, useContext } from "react";
@@ -8,9 +7,10 @@ import { supabase } from "../services/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import styles from "../styles/ConnectButton.module.css";
+import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes } from "react-icons/fa";
 
 export default function ConnectButton() {
-  const { connected, publicKey } = useWallet(); // External wallet
+  const { connected, publicKey } = useWallet();
   const { wallet: embeddedWallet, createEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +20,8 @@ export default function ConnectButton() {
   const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [privateKey, setPrivateKey] = useState(null); // Store private key temporarily
+  const [privateKey, setPrivateKey] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   const createUserAndBalance = useCallback(async (walletAddress) => {
     if (!walletAddress) return;
@@ -133,16 +134,18 @@ export default function ConnectButton() {
     if (result) {
       const { publicKey, privateKey: newPrivateKey } = result;
       await createUserAndBalance(publicKey);
-      setPrivateKey(newPrivateKey); // Show private key to user
+      setPrivateKey(newPrivateKey);
       setShowEmbeddedForm(false);
       setPassword("");
       setConfirmPassword("");
+      setShowPopup(false);
     }
   };
 
   useEffect(() => {
     if (connected && publicKey) {
       createUserAndBalance(publicKey.toString());
+      setShowPopup(false);
     }
   }, [connected, publicKey, createUserAndBalance]);
 
@@ -159,14 +162,14 @@ export default function ConnectButton() {
   const copyPrivateKey = () => {
     navigator.clipboard.writeText(privateKey);
     alert("Private key copied to clipboard! Store it securely.");
-    setPrivateKey(null); // Clear after copying
+    setPrivateKey(null);
   };
 
   if (isLoading || embeddedLoading) {
     return (
       <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <span>Connecting...</span>
+        <FaSpinner className={styles.spinner} />
+        <span>Warping...</span>
       </div>
     );
   }
@@ -176,7 +179,7 @@ export default function ConnectButton() {
       <div className={styles.errorContainer}>
         <p>Error: {error || embeddedError}</p>
         <button className={styles.retryButton} onClick={() => setError(null)}>
-          Retry
+          <FaRocket /> Retry
         </button>
       </div>
     );
@@ -184,59 +187,95 @@ export default function ConnectButton() {
 
   return (
     <div className={styles.connectButtonWrapper}>
-      {connected ? (
-        <WalletMultiButton className={styles.walletButton} />
-      ) : embeddedWallet ? (
-        <div className={styles.walletInfo}>
-          <span>Connected: {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}</span>
-          <button className={styles.disconnectButton} onClick={() => {
-            localStorage.removeItem("embeddedWalletPublicKey");
-            localStorage.removeItem("embeddedWalletSecretEncrypted");
-            window.location.reload(); // Simplistic disconnect
-          }}>
-            Disconnect
-          </button>
-        </div>
+      {connected || embeddedWallet ? (
+        embeddedWallet ? (
+          <div className={styles.walletInfo}>
+            <span>
+              <FaWallet /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
+            </span>
+            <button className={styles.disconnectButton} onClick={() => {
+              localStorage.removeItem("embeddedWalletPublicKey");
+              localStorage.removeItem("embeddedWalletSecretEncrypted");
+              window.location.reload();
+            }}>
+              <FaTimes />
+            </button>
+          </div>
+        ) : (
+          <WalletMultiButton className={styles.walletButton}>
+            <FaWallet className={styles.buttonIcon} />
+          </WalletMultiButton>
+        )
       ) : (
-        <>
-          <WalletMultiButton className={styles.walletButton} />
-          <button
-            className={styles.embeddedButton}
-            onClick={() => setShowEmbeddedForm(true)}
-          >
-            Create In-App Wallet
-          </button>
-        </>
+        <button
+          className={styles.singleButton}
+          onClick={() => setShowPopup(true)}
+        >
+          <FaWallet className={styles.buttonIcon} />
+        </button>
       )}
       {(connected || embeddedWallet) && <span className={styles.connectedStatus}></span>}
       {userCreated && (
-        <p className={styles.successMessage}>Welcome aboard! Your account is ready.</p>
+        <p className={styles.successMessage}>
+          <FaCheckCircle /> Welcome!
+        </p>
+      )}
+
+      {showPopup && !connected && !embeddedWallet && (
+        <div className={styles.popupOverlay}>
+          <div className={styles.popup}>
+            <button className={styles.closeButton} onClick={() => setShowPopup(false)}>
+              <FaTimes />
+            </button>
+            <h3>Choose Path</h3>
+            <div className={styles.popupOptions}>
+              <WalletMultiButton className={styles.popupWalletButton}>
+                 Connect Wallet <FaWallet className={styles.buttonIcon} />
+              </WalletMultiButton>
+              <button
+                className={styles.popupEmbeddedButton}
+                onClick={() => {
+                  setShowEmbeddedForm(true);
+                  setShowPopup(false);
+                }}
+              >
+                <FaRocket className={styles.buttonIcon} /> In-App Wallet
+              </button>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setShowPopup(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showEmbeddedForm && !connected && !embeddedWallet && (
         <div className={styles.embeddedFormOverlay}>
           <div className={styles.embeddedForm}>
-            <h3>Create Your Wallet</h3>
+            <h3><FaKey /> Forge Key</h3>
             <p className={styles.securityNote}>
-              Your private key will be generated client-side. No one, including developers, can access it. Save it securely!
+              Secure your cosmic key!
             </p>
             <form onSubmit={handleCreateEmbeddedWallet}>
               <input
                 type="password"
-                placeholder="Enter password"
+                placeholder="Code"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={styles.input}
               />
               <input
                 type="password"
-                placeholder="Confirm password"
+                placeholder="Confirm"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className={styles.input}
               />
               <button type="submit" className={styles.submitButton}>
-                Create Wallet
+                <FaRocket /> Create
               </button>
               <button
                 type="button"
@@ -253,9 +292,9 @@ export default function ConnectButton() {
       {privateKey && (
         <div className={styles.privateKeyOverlay}>
           <div className={styles.privateKeyBox}>
-            <h3>Your Private Key</h3>
+            <h3><FaKey /> Your Key</h3>
             <p className={styles.securityNote}>
-              Save this securely! It’s your only way to recover your wallet. We don’t store it.
+              Guard this well!
             </p>
             <textarea
               readOnly
@@ -263,7 +302,7 @@ export default function ConnectButton() {
               className={styles.privateKeyText}
             />
             <button onClick={copyPrivateKey} className={styles.copyButton}>
-              Copy & Close
+              <FaCopy /> Copy
             </button>
           </div>
         </div>
@@ -272,16 +311,16 @@ export default function ConnectButton() {
       {showReferralPrompt && (
         <div className={styles.referralPromptOverlay}>
           <div className={styles.referralPrompt}>
-            <h3 className={styles.promptTitle}>Welcome, New Adventurer!</h3>
+            <h3 className={styles.promptTitle}>Greetings!</h3>
             <p className={styles.promptMessage}>
-              You’ve been referred by a friend! Complete your profile to unlock exclusive rewards and join the community.
+              Update profile for rewards!
             </p>
             <div className={styles.promptButtons}>
               <button className={styles.updateButton} onClick={handleProfileUpdate}>
-                Update Profile Now
+                <FaRocket /> Update
               </button>
               <button className={styles.laterButton} onClick={handlePromptClose}>
-                Explore Home First
+                Later
               </button>
             </div>
           </div>

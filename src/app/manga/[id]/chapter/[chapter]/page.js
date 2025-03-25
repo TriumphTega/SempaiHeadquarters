@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useContext } from "react"; // Added useContext
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import {
   Connection,
@@ -12,6 +11,7 @@ import {
   Transaction,
   SystemProgram,
   LAMPORTS_PER_SOL,
+  Keypair,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
 import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
@@ -22,7 +22,8 @@ import { saveAs } from "file-saver";
 import styles from "../../../../../styles/MangaChapter.module.css";
 import { RPC_URL } from "@/constants";
 import MangaCommentSection from "../../../../../components/MangaCommentSection";
-import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
+import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
+import ConnectButton from "@/components/ConnectButton";
 
 const MERCHANT_WALLET = new PublicKey("3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -33,9 +34,10 @@ export default function MangaChapter() {
   const { id: mangaId, chapter: chapterId } = useParams();
   const router = useRouter();
   const { connected, publicKey, sendTransaction } = useWallet();
-  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
-  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
-  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
+  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
+  const activePublicKey = embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
+  const activeWalletAddress = activePublicKey?.toString();
+  const isWalletConnected = !!activePublicKey;
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,9 @@ export default function MangaChapter() {
   const [isFirstChapter, setIsFirstChapter] = useState(false);
   const [userRating, setUserRating] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
+  const [showTransactionPopup, setShowTransactionPopup] = useState(false);
+  const [transactionDetails, setTransactionDetails] = useState(null);
+  const [password, setPassword] = useState("");
 
   const fetchPrices = async () => {
     try {
@@ -172,97 +177,150 @@ export default function MangaChapter() {
     );
   };
 
-  const handlePayment = async (currency) => {
-    if (!activeWalletAddress) {
-      alert("Please connect your wallet first.");
+  const initiatePayment = async (currency) => {
+    if (!activeWalletAddress || !activePublicKey) {
+      setError("Please connect your wallet first.");
       return;
     }
 
     const usdAmount = 2.5;
-    let amount, decimals, mint;
-
-    const attemptTransaction = async (maxRetries = 2) => {
-      for (let i = 0; i <= maxRetries; i++) {
-        try {
-          const freshSolPrice = await fetchPrices();
-          setSolPrice(freshSolPrice);
-          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-          let signature;
-
-          if (currency === "SOL") {
-            amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
-            decimals = 9;
-
-            const transaction = new Transaction({
-              recentBlockhash: blockhash,
-              feePayer: new PublicKey(activeWalletAddress),
-            }).add(
-              SystemProgram.transfer({
-                fromPubkey: new PublicKey(activeWalletAddress),
-                toPubkey: MERCHANT_WALLET,
-                lamports: amount,
-              })
-            );
-
-            if (embeddedWallet && signAndSendTransaction) {
-              signature = await signAndSendTransaction(transaction);
-            } else if (sendTransaction) {
-              signature = await sendTransaction(transaction, connection, { skipPreflight: false });
-            } else {
-              throw new Error("Wallet signing method not available.");
-            }
-
-            await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-            setTransactionSignature(signature);
-            await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency);
-            return;
-          } else if (currency === "USDC") {
-            mint = USDC_MINT;
-            decimals = 6;
-            amount = Math.round((usdAmount / usdcPrice) * 10 ** decimals);
-
-            const sourceATA = (await getAssociatedTokenAddress(new PublicKey(activeWalletAddress), mint))[0];
-            const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
-
-            const transaction = new Transaction({
-              recentBlockhash: blockhash,
-              feePayer: new PublicKey(activeWalletAddress),
-            }).add(
-              createTransferInstruction(sourceATA, destATA, new PublicKey(activeWalletAddress), amount, [], TOKEN_PROGRAM_ID)
-            );
-
-            if (embeddedWallet && signAndSendTransaction) {
-              signature = await signAndSendTransaction(transaction);
-            } else if (sendTransaction) {
-              signature = await sendTransaction(transaction, connection, { skipPreflight: false });
-            } else {
-              throw new Error("Wallet signing method not available.");
-            }
-
-            await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-            setTransactionSignature(signature);
-            await processUnlock(signature, amount / 10 ** decimals, currency);
-            return;
-          }
-        } catch (error) {
-          console.error(`Attempt ${i + 1} failed:`, error);
-          if (i === maxRetries) {
-            setError(`Payment failed after ${maxRetries + 1} attempts: ${error.message}`);
-            throw error;
-          }
-          if (error.message.includes("Extension context invalidated")) {
-            alert("Wallet connection lost. Please reconnect and try again.");
-            return;
-          }
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    };
+    let amount, decimals, mint, displayAmount;
 
     try {
-      await attemptTransaction();
+      const freshSolPrice = await fetchPrices();
+      setSolPrice(freshSolPrice);
+
+      if (currency === "SOL") {
+        if (!freshSolPrice) throw new Error("SOL price not available");
+        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
+        decimals = 9;
+        displayAmount = (amount / LAMPORTS_PER_SOL).toFixed(5);
+      } else if (currency === "USDC") {
+        mint = USDC_MINT;
+        decimals = 6;
+        amount = Math.round((usdAmount / usdcPrice) * 10 ** decimals);
+        displayAmount = (amount / 10 ** decimals).toFixed(2);
+      } else {
+        throw new Error("Unsupported currency");
+      }
+
+      setTransactionDetails({
+        currency,
+        amount,
+        displayAmount,
+        decimals,
+        mint,
+      });
+      setShowTransactionPopup(true);
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      setError(`Failed to initiate payment: ${error.message}`);
+    }
+  };
+
+  const confirmPayment = async () => {
+    if (!transactionDetails || !activePublicKey) {
+      setError("No wallet selected or transaction details missing.");
+      setShowTransactionPopup(false);
+      return;
+    }
+
+    const { currency, amount, decimals, mint } = transactionDetails;
+
+    try {
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      let signature;
+
+      const balance = await connection.getBalance(activePublicKey);
+      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000;
+      if (balance < minBalanceRequired) {
+        throw new Error(
+          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available, need at least ${(minBalanceRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL`
+        );
+      }
+
+      if (currency === "SOL") {
+        const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          feePayer: activePublicKey,
+        }).add(
+          SystemProgram.transfer({
+            fromPubkey: activePublicKey,
+            toPubkey: MERCHANT_WALLET,
+            lamports: amount,
+          })
+        );
+
+        if (embeddedWallet) {
+          if (!password) throw new Error("Password required for embedded wallet.");
+          const secretKey = getSecretKey(password);
+          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+          const keypair = Keypair.fromSecretKey(secretKey);
+          transaction.sign(keypair);
+          signature = await connection.sendRawTransaction(transaction.serialize());
+        } else if (connected && sendTransaction) {
+          signature = await sendTransaction(transaction, connection, {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          });
+        } else {
+          throw new Error("No valid wallet available for signing the transaction.");
+        }
+
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
+        setTransactionSignature(signature);
+        await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency);
+      } else if (currency === "USDC") {
+        const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
+        const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
+
+        const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          feePayer: activePublicKey,
+        }).add(
+          createTransferInstruction(
+            sourceATA,
+            destATA,
+            activePublicKey,
+            amount,
+            [],
+            TOKEN_PROGRAM_ID
+          )
+        );
+
+        if (embeddedWallet) {
+          if (!password) throw new Error("Password required for embedded wallet.");
+          const secretKey = getSecretKey(password);
+          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+          const keypair = Keypair.fromSecretKey(secretKey);
+          transaction.sign(keypair);
+          signature = await connection.sendRawTransaction(transaction.serialize());
+        } else if (connected && sendTransaction) {
+          signature = await sendTransaction(transaction, connection, {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          });
+        } else {
+          throw new Error("No valid wallet available for signing the transaction.");
+        }
+
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
+        setTransactionSignature(signature);
+        await processUnlock(signature, amount / 10 ** decimals, currency);
+      }
     } catch (error) {
       console.error(`${currency} Payment Error:`, error);
+      setError(`Payment failed: ${error.message}`);
+    } finally {
+      setShowTransactionPopup(false);
+      setTransactionDetails(null);
+      setPassword("");
     }
   };
 
@@ -603,7 +661,7 @@ export default function MangaChapter() {
         <Link href={`/manga/${mangaId}`} className={styles.navLink}>
           <FaBookOpen /> Manga Hub
         </Link>
-        <WalletMultiButton className={styles.walletButton} />
+        <ConnectButton className={styles.walletButton} />
       </nav>
 
       <main className={styles.content}>
@@ -621,17 +679,17 @@ export default function MangaChapter() {
           <div className={styles.paymentSection}>
             <FaLock className={styles.lockIcon} />
             <p>Please connect your wallet to read this chapter.</p>
-            <WalletMultiButton className={styles.walletButton} />
+            <ConnectButton className={styles.walletButton} />
           </div>
         ) : paymentRequired && !paymentConfirmed ? (
           <div className={styles.paymentSection}>
             <FaLock className={styles.lockIcon} />
             <p>Unlock this chapter for $2.5</p>
             <div className={styles.paymentButtons}>
-              <button onClick={() => handlePayment("SOL")} disabled={!solPrice}>
+              <button onClick={() => initiatePayment("SOL")} disabled={!solPrice}>
                 Pay {solAmount} SOL
               </button>
-              <button onClick={() => handlePayment("USDC")}>Pay {usdcAmount} USDC</button>
+              <button onClick={() => initiatePayment("USDC")}>Pay {usdcAmount} USDC</button>
             </div>
             {transactionSignature && (
               <p>
@@ -669,7 +727,7 @@ export default function MangaChapter() {
             <select value={chapterId} onChange={handleChapterChange} className={styles.chapterSelect}>
               {chapters.map((ch) => (
                 <option key={ch.id} value={ch.id}>
-                  {ch.title || `Chapter ${ ch.id}`}
+                  {ch.title || `Chapter ${ch.chapter_number}`}
                 </option>
               ))}
             </select>
@@ -708,6 +766,72 @@ export default function MangaChapter() {
           </div>
         )}
       </main>
+
+      {showTransactionPopup && transactionDetails && (
+        <div className={styles.transactionPopupOverlay}>
+          <div className={styles.transactionPopup}>
+            <button
+              onClick={() => {
+                setShowTransactionPopup(false);
+                setPassword("");
+              }}
+              className={styles.closePopupButton}
+            >
+              ✕
+            </button>
+            <h3 className={styles.popupTitle}>Confirm Transaction</h3>
+            <p className={styles.popupMessage}>
+              You are about to unlock this chapter for:
+            </p>
+            <div className={styles.transactionDetails}>
+              <p>
+                <strong>Amount:</strong> {transactionDetails.displayAmount} {transactionDetails.currency}
+              </p>
+              <p>
+                <strong>USD Value:</strong> $2.5
+              </p>
+              <p>
+                <strong>Wallet:</strong> {activeWalletAddress?.slice(0, 6)}...{activeWalletAddress?.slice(-4)}
+              </p>
+              <p>
+                <strong>To:</strong> {MERCHANT_WALLET.toString().slice(0, 6)}...{MERCHANT_WALLET.toString().slice(-4)}
+              </p>
+            </div>
+            {embeddedWallet && (
+              <div className={styles.passwordInput}>
+                <label>Wallet Password:</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-control"
+                  placeholder="Enter your password"
+                />
+              </div>
+            )}
+            <div className={styles.popupButtons}>
+              <button
+                onClick={confirmPayment}
+                className={`${styles.confirmButton} btn btn-primary`}
+              >
+                Confirm Payment
+              </button>
+              <button
+                onClick={() => {
+                  setShowTransactionPopup(false);
+                  setPassword("");
+                }}
+                className={`${styles.cancelButton} btn btn-secondary`}
+              >
+                Cancel
+              </button>
+            </div>
+            <p className={styles.popupNote}>
+              {embeddedWallet ? "Enter your password to proceed." : "Please approve the transaction in your wallet."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <footer className={styles.footer}>
         <p>© 2025 SempaiHQ. All rights reserved.</p>

@@ -3,85 +3,205 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: #1a1a1a; /* Dark background */
+  gap: 8px;
+  padding: 8px;
+  background: #1a1a1a;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.2);
 }
 
-.walletButton {
-  background: #333; /* Slightly lighter black */
+.singleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #1a1a1a, rgba(243, 99, 22, 0.8));
   color: #fff;
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(243, 99, 22, 1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.singleButton:hover {
+  background: linear-gradient(45deg, rgba(243, 99, 22, 1), #1a1a1a);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+}
+
+.buttonIcon {
+  font-size: 16px;
+}
+
+/* Overlay styles for all popups */
+.popupOverlay,
+.embeddedFormOverlay,
+.privateKeyOverlay,
+.referralPromptOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><g fill="rgba(243, 99, 22, 0.1)"><circle cx="5" cy="5" r="1"/><circle cx="45" cy="45" r="1.5"/><circle cx="25" cy="10" r="0.5"/></g></svg>') repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Popup content styles */
+.popup,
+.embeddedForm,
+.privateKeyBox,
+.referralPrompt {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  width: 90%;
+  max-width: 320px;
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.5);
+  border: 1px solid rgba(243, 99, 22, 0.3);
+  animation: cosmicEntry 0.4s ease-out;
+}
+
+@keyframes cosmicEntry {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.closeButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: rgba(243, 99, 22, 1);
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.closeButton:hover {
+  transform: rotate(90deg);
+}
+
+.popupOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.popupWalletButton,
+.popupEmbeddedButton,
+.submitButton,
+.cancelButton,
+.copyButton,
+.updateButton,
+.laterButton,
+.retryButton,
+.disconnectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
+  font-size: 14px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
 }
 
-.walletButton:hover {
-  background: rgba(243, 99, 22, 0.9); /* Orange accent */
-  transform: translateY(-2px);
-}
-
-.embeddedButton {
-  background: rgba(243, 99, 22, 1); /* Solid orange */
+.popupWalletButton {
+  background: linear-gradient(45deg, #1a1a1a, #333);
   color: #fff;
-  padding: 10px 20px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
+  border: 1px solid rgba(243, 99, 22, 0.5);
 }
 
-.embeddedButton:hover {
+.popupWalletButton:hover {
+  background: linear-gradient(45deg, rgba(243, 99, 22, 0.9), #1a1a1a);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+}
+
+.popupEmbeddedButton,
+.submitButton,
+.copyButton,
+.updateButton {
+  background: rgba(243, 99, 22, 1);
+  color: #1a1a1a;
+}
+
+.popupEmbeddedButton:hover,
+.submitButton:hover,
+.copyButton:hover,
+.updateButton:hover {
   background: rgba(243, 99, 22, 0.8);
-  transform: translateY(-2px);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+}
+
+.cancelButton,
+.laterButton {
+  background: #333;
+  color: #fff;
+}
+
+.cancelButton:hover,
+.laterButton:hover {
+  background: #555;
+  transform: scale(1.05);
 }
 
 .walletInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #fff;
   background: #333;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .disconnectButton {
-  background: #000; /* Pure black */
+  background: #1a1a1a;
   color: rgba(243, 99, 22, 1);
-  padding: 6px 12px;
-  border: 1px solid rgba(243, 99, 22, 0.5);
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease, color 0.3s ease;
+  padding: 6px;
+  border: 1px solid rgba(243, 99, 22, 0.7);
 }
 
 .disconnectButton:hover {
   background: rgba(243, 99, 22, 0.9);
-  color: #fff;
+  color: #1a1a1a;
 }
 
 .loadingContainer {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: #fff;
+  font-size: 12px;
 }
 
 .spinner {
-  border: 3px solid #333;
-  border-top: 3px solid rgba(243, 99, 22, 1);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  font-size: 16px;
   animation: spin 1s linear infinite;
 }
 
@@ -94,19 +214,15 @@
   color: rgba(243, 99, 22, 1);
   text-align: center;
   background: #1a1a1a;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.3);
 }
 
 .retryButton {
   background: rgba(243, 99, 22, 0.9);
-  color: #fff;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  color: #1a1a1a;
   margin-top: 8px;
-  transition: background 0.3s ease;
 }
 
 .retryButton:hover {
@@ -114,216 +230,150 @@
 }
 
 .connectedStatus {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   background: rgba(243, 99, 22, 0.8);
   border-radius: 50%;
-  border: 2px solid #1a1a1a;
+  border: 1px solid #1a1a1a;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .successMessage {
-  color: rgba(243, 99, 22, 0.8);
-  font-size: 14px;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.embeddedFormOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  gap: 6px;
+  color: rgba(243, 99, 22, 0.8);
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: center;
+  animation: slideIn 0.5s ease-out;
 }
 
-.embeddedForm {
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .input {
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 1px solid #333;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid rgba(243, 99, 22, 0.3);
   border-radius: 6px;
   background: #000;
   color: #fff;
   font-size: 14px;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .input:focus {
-  border-color: rgba(243, 99, 22, 0.8);
+  border-color: rgba(243, 99, 22, 1);
+  box-shadow: 0 0 8px rgba(243, 99, 22, 0.4);
   outline: none;
-}
-
-.submitButton,
-.cancelButton {
-  padding: 10px 20px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  margin: 5px;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
-
-.submitButton {
-  background: rgba(243, 99, 22, 1);
-  color: #fff;
-}
-
-.submitButton:hover {
-  background: rgba(243, 99, 22, 0.8);
-  transform: translateY(-2px);
-}
-
-.cancelButton {
-  background: #333;
-  color: #fff;
-}
-
-.cancelButton:hover {
-  background: #555;
-  transform: translateY(-2px);
-}
-
-.privateKeyOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.privateKeyBox {
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .privateKeyText {
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 1px solid #333;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid rgba(243, 99, 22, 0.3);
   border-radius: 6px;
   background: #000;
   color: #fff;
   font-family: monospace;
   resize: none;
-  height: 100px;
-}
-
-.copyButton {
-  background: rgba(243, 99, 22, 1);
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
-
-.copyButton:hover {
-  background: rgba(243, 99, 22, 0.8);
-  transform: translateY(-2px);
+  height: 80px;
+  font-size: 12px;
 }
 
 .securityNote {
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 15px;
-}
-
-.referralPromptOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.referralPrompt {
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  color: rgba(243, 99, 22, 0.7);
+  margin-bottom: 12px;
+  font-style: italic;
 }
 
 .promptTitle {
-  font-size: 20px;
+  font-size: 18px;
   color: rgba(243, 99, 22, 1);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
 }
 
 .promptMessage {
-  font-size: 16px;
+  font-size: 14px;
   color: #fff;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .promptButtons {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.updateButton,
-.laterButton {
-  padding: 10px 20px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .connectButtonWrapper {
+    padding: 6px;
+  }
 
-.updateButton {
-  background: rgba(243, 99, 22, 1);
-  color: #fff;
-}
+  .singleButton {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+  }
 
-.updateButton:hover {
-  background: rgba(243, 99, 22, 0.8);
-  transform: translateY(-2px);
-}
+  .buttonIcon {
+    font-size: 14px;
+  }
 
-.laterButton {
-  background: #333;
-  color: #fff;
-}
+  .popup,
+  .embeddedForm,
+  .privateKeyBox,
+  .referralPrompt {
+    padding: 16px;
+    max-width: 280px;
+  }
 
-.laterButton:hover {
-  background: #555;
-  transform: translateY(-2px);
+  .popupWalletButton,
+  .popupEmbeddedButton,
+  .submitButton,
+  .cancelButton,
+  .copyButton,
+  .updateButton,
+  .laterButton {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .walletInfo {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .disconnectButton {
+    padding: 4px;
+  }
+
+  .input,
+  .privateKeyText {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .securityNote,
+  .promptMessage {
+    font-size: 11px;
+  }
+
+  .promptTitle {
+    font-size: 16px;
+  }
 }
