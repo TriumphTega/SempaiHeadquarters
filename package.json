@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
+    "@hello-pangea/dnd": "^18.0.1",
     "@irys/sdk": "^0.2.11",
     "@metaplex-foundation/js": "^0.20.1",
     "@solana/spl-token": "^0.4.12",

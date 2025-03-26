@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Add this import
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -13,7 +13,7 @@ import {
   FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
   FaUserShield, FaGem, FaSun, FaMoon, FaImage, FaBullhorn
 } from "react-icons/fa";
-import LoadingPage from "../../components/LoadingPage";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ConnectButton from "../../components/ConnectButton";
 import styles from "../../styles/CreatorsDashboard.module.css";
 
@@ -43,7 +43,7 @@ const TAG_OPTIONS = [
 
 export default function NovelDashboard() {
   const { connected, publicKey } = useWallet();
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Add embedded wallet context
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const [novelTitle, setNovelTitle] = useState("");
   const [novelImage, setNovelImage] = useState(null);
   const [novelImageUrl, setNovelImageUrl] = useState("");
@@ -62,29 +62,27 @@ export default function NovelDashboard() {
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [writers, setWriters] = useState([]);
   const [editChapterIndex, setEditChapterIndex] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed to false by default
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
   const [tags, setTags] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [chapterToDelete, setChapterToDelete] = useState(null);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
-  // Determine the active wallet address (external or embedded)
   const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
   const isWalletConnected = connected || !!embeddedWallet;
 
   const handleCreatorAccess = async () => {
-    if (!isWalletConnected || !activePublicKey) {
-      setLoading(false);
-      return;
-    }
+    if (!isWalletConnected || !activePublicKey) return;
 
     setLoading(true);
     try {
-      const walletAddress = activePublicKey.toString(); // Use active wallet address
+      const walletAddress = activePublicKey.toString();
       const { data, error } = await supabase
         .from("users")
         .select("id, isWriter, isSuperuser")
@@ -149,7 +147,7 @@ export default function NovelDashboard() {
 
   useEffect(() => {
     handleCreatorAccess();
-  }, [connected, publicKey, embeddedWallet]); // Add embeddedWallet to dependencies
+  }, [connected, publicKey, embeddedWallet]);
 
   useEffect(() => {
     if (currentUserId && (isWriter || isSuperuser)) {
@@ -227,10 +225,91 @@ export default function NovelDashboard() {
   };
 
   const handleRemoveChapter = (index) => {
+    setChapterToDelete(index);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteChapter = () => {
+    const index = chapterToDelete;
     setChapterTitles((prev) => prev.filter((_, i) => i !== index));
     setChapterContents((prev) => prev.filter((_, i) => i !== index));
-    setAdvanceChapters((prev) => prev.filter((c) => c.index !== index));
+    setAdvanceChapters((prev) => prev.filter((c) => c.index !== index).map((c) => ({
+      ...c,
+      index: c.index > index ? c.index - 1 : c.index,
+    })));
     if (editChapterIndex === index) setEditChapterIndex(null);
+    setShowDeleteConfirm(false);
+    setChapterToDelete(null);
+  };
+
+  const cancelDeleteChapter = () => {
+    setShowDeleteConfirm(false);
+    setChapterToDelete(null);
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destIndex = result.destination.index;
+
+    if (sourceIndex === destIndex) return;
+
+    setChapterTitles((prev) => {
+      const updated = [...prev];
+      const [movedTitle] = updated.splice(sourceIndex, 1);
+      updated.splice(destIndex, 0, movedTitle);
+      return updated;
+    });
+
+    setChapterContents((prev) => {
+      const updated = [...prev];
+      const [movedContent] = updated.splice(sourceIndex, 1);
+      updated.splice(destIndex, 0, movedContent);
+      return updated;
+    });
+
+    setAdvanceChapters((prev) => {
+      const updated = prev.map((chapter) => ({
+        ...chapter,
+        index: chapter.index === sourceIndex
+          ? destIndex
+          : chapter.index >= Math.min(sourceIndex, destIndex) && chapter.index <= Math.max(sourceIndex, destIndex)
+          ? chapter.index + (sourceIndex > destIndex ? 1 : -1)
+          : chapter.index,
+      }));
+      return updated;
+    });
+  };
+
+  const handleMoveChapterToIndex = (chapterIndex, newIndex) => {
+    if (newIndex < 0 || newIndex >= chapterTitles.length || chapterIndex === newIndex) return;
+
+    setChapterTitles((prev) => {
+      const updated = [...prev];
+      const [movedTitle] = updated.splice(chapterIndex, 1);
+      updated.splice(newIndex, 0, movedTitle);
+      return updated;
+    });
+
+    setChapterContents((prev) => {
+      const updated = [...prev];
+      const [movedContent] = updated.splice(chapterIndex, 1);
+      updated.splice(newIndex, 0, movedContent);
+      return updated;
+    });
+
+    setAdvanceChapters((prev) => {
+      const updated = prev.map((chapter) => ({
+        ...chapter,
+        index: chapter.index === chapterIndex
+          ? newIndex
+          : chapter.index >= Math.min(chapterIndex, newIndex) && chapter.index <= Math.max(chapterIndex, newIndex)
+          ? chapter.index + (chapterIndex > newIndex ? 1 : -1)
+          : chapter.index,
+      }));
+      return updated;
+    });
   };
 
   const handleEditNovel = (novel) => {
@@ -410,7 +489,6 @@ export default function NovelDashboard() {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
-  // Custom styles for react-select to match theme
   const selectStyles = {
     control: (base) => ({
       ...base,
@@ -453,8 +531,6 @@ export default function NovelDashboard() {
     }),
   };
 
-  if (loading) return <LoadingPage />;
-
   return (
     <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
       <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
@@ -482,7 +558,7 @@ export default function NovelDashboard() {
       </header>
 
       <main className={styles.main}>
-        {!isWalletConnected ? ( // Updated condition
+        {!isWalletConnected ? (
           <div className={styles.connectPrompt}>
             <FaGem className={styles.connectIcon} />
             <p>Connect your wallet to access the Writer’s Vault.</p>
@@ -586,26 +662,61 @@ export default function NovelDashboard() {
                   </button>
                 </div>
                 {chapterTitles.length > 0 && (
-                  <ul className={styles.chapterList}>
-                    {chapterTitles.map((title, index) => {
-                      const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false };
-                      return (
-                        <li key={index} className={styles.chapterItem}>
-                          <span className={styles.chapterText}>
-                            <strong>{title}</strong>
-                            <p>{chapterContents[index].slice(0, 50)}...</p>
-                            {advanceInfo.is_advance && <small>Advance (Free on: {advanceInfo.free_release_date || "TBD"})</small>}
-                          </span>
-                          <div className={styles.chapterActions}>
-                            <button type="button" onClick={(e) => handleEditChapter(e, index)} className={styles.editButton}><FaEdit /></button>
-                            <button onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}><FaTrash /></button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="chapters">
+                      {(provided) => (
+                        <ul className={styles.chapterList} {...provided.droppableProps} ref={provided.innerRef}>
+                          {chapterTitles.map((title, index) => {
+                            const advanceInfo = advanceChapters.find((c) => c.index === index) || { is_advance: false };
+                            return (
+                              <Draggable key={index} draggableId={`chapter-${index}`} index={index}>
+                                {(provided) => (
+                                  <li
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={styles.chapterItem}
+                                  >
+                                    <span className={styles.chapterText}>
+                                      <strong>{title}</strong>
+                                      <p>{chapterContents[index].slice(0, 50)}...</p>
+                                      {advanceInfo.is_advance && <small>Advance (Free on: {advanceInfo.free_release_date || "TBD"})</small>}
+                                    </span>
+                                    <div className={styles.chapterActions}>
+                                      <button type="button" onClick={(e) => handleEditChapter(e, index)} className={styles.editButton}><FaEdit /></button>
+                                      <button type="button" onClick={() => handleRemoveChapter(index)} className={styles.deleteButton}><FaTrash /></button>
+                                      <select
+                                        value={index}
+                                        onChange={(e) => handleMoveChapterToIndex(index, parseInt(e.target.value))}
+                                        className={styles.moveSelect}
+                                      >
+                                        {chapterTitles.map((_, i) => (
+                                          <option key={i} value={i}>
+                                            Move to Position {i + 1}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </li>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </ul>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 )}
-                <button type="submit" className={styles.submitButton}><FaUpload /> {selectedNovel ? "Update" : "Publish"}</button>
+                <button type="submit" className={styles.submitButton} disabled={loading}>
+                  {loading ? (
+                    <span className={styles.spinner}></span>
+                  ) : (
+                    <>
+                      <FaUpload /> {selectedNovel ? "Update" : "Publish"}
+                    </>
+                  )}
+                </button>
               </form>
 
               {selectedNovel && (
@@ -646,7 +757,15 @@ export default function NovelDashboard() {
                         className={styles.input}
                       />
                     </div>
-                    <button type="submit" className={styles.announcementButton}><FaBullhorn /> Send Announcement</button>
+                    <button type="submit" className={styles.announcementButton} disabled={loading}>
+                      {loading ? (
+                        <span className={styles.spinner}></span>
+                      ) : (
+                        <>
+                          <FaBullhorn /> Send Announcement
+                        </>
+                      )}
+                    </button>
                   </form>
                 </div>
               )}
@@ -667,7 +786,7 @@ export default function NovelDashboard() {
                         <p className={styles.novelTags}>Tags: {novel.tags?.join(", ") || "None"}</p>
                         <p className={styles.novelViewers}>Viewers: {novel.viewers_count || 0}</p>
                         {(novel.user_id === currentUserId || isSuperuser) && (
-                          <button onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
+                          <button type="button" onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
                         )}
                       </div>
                     </div>
@@ -696,6 +815,19 @@ export default function NovelDashboard() {
           </div>
         )}
       </main>
+
+      {showDeleteConfirm && (
+        <div className={styles.deleteConfirmOverlay}>
+          <div className={styles.deleteConfirmPopup}>
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete "<strong>{chapterTitles[chapterToDelete]}</strong>"? This action cannot be undone.</p>
+            <div className={styles.deleteConfirmButtons}>
+              <button type="button" onClick={confirmDeleteChapter} className={styles.confirmButton}>Yes, Delete</button>
+              <button type="button" onClick={cancelDeleteChapter} className={styles.cancelButton}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className={styles.footer}>
         <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
