@@ -1,4 +1,3 @@
-// app/page.js
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useContext } from "react";
@@ -55,8 +54,8 @@ const NextArrow = (props) => {
 };
 
 export default function Home() {
-  const { connected, publicKey } = useWallet(); // External wallet
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Embedded wallet
+  const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
@@ -84,8 +83,8 @@ export default function Home() {
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
 
-  const isWalletConnected = connected || embeddedWallet; // Check if either wallet is connected
-  const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey; // Use whichever is available
+  const isWalletConnected = connected || embeddedWallet;
+  const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey;
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
@@ -417,6 +416,8 @@ export default function Home() {
     try {
       const response = await fetch(`/api/announcements${walletPublicKey ? `?publicKey=${walletPublicKey}` : ""}`);
       const { data } = await response.json();
+
+      // Filter announcements to show only those from the last 7 days
       const recentAnnouncements = data
         .filter((announcement) => {
           const createdAt = new Date(announcement.created_at);
@@ -425,24 +426,33 @@ export default function Home() {
         })
         .slice(0, 5);
 
-      const userIds = recentAnnouncements.map((a) => a.users?.id).filter((id) => id);
-      const { data: usersData } = await supabase
+      // Fetch user names for announcements
+      const userIds = recentAnnouncements
+        .map((a) => a.users?.id)
+        .filter((id) => id && id !== undefined);
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, name")
-        .in("id", userIds);
-
+        .in("id", userIds.length > 0 ? userIds : ["none"]); // Avoid empty IN clause
+  
+      if (usersError) throw usersError;
+  
       const userMap = usersData.reduce((acc, user) => {
         acc[user.id] = user.name || "Unknown";
         return acc;
       }, {});
-
+  
+      // Enrich announcements with user names and handle null novels
       const enrichedAnnouncements = recentAnnouncements.map((announcement) => ({
         ...announcement,
         name: userMap[announcement.users?.id] || "Unknown",
         user_id: announcement.users?.id,
+        novels: announcement.novels || { id: null, title: "General Announcement" }, // Default for non-novel announcements
       }));
+
       setAnnouncements(enrichedAnnouncements);
     } catch (err) {
+      console.error("Error fetching announcements:", err);
       setError("Failed to load announcements.");
     } finally {
       setLoading(false);
@@ -639,94 +649,94 @@ export default function Home() {
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
       <nav className={styles.navbar}>
-  <div className={styles.navContainer}>
-    <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-      <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-      <span className={styles.logoText}>Sempai HQ</span>
-    </Link>
-    <button className={styles.menuToggle} onClick={toggleMenu}>
-      {menuOpen ? <FaTimes /> : <FaBars />}
-    </button>
-    <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-      <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-        <FaHome className={styles.navIcon} /> Home
-      </Link>
-      <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
-        <FaExchangeAlt className={styles.navIcon} /> Swap
-      </Link>
-      <Link
-        href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
-        onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
-        className={styles.navLink}
-      >
-        <FaUser className={styles.navIcon} /> Profile
-      </Link>
-      <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
-        <FaComments className={styles.navIcon} /> Chat
-      </Link>
-      <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
-        <FaGamepad className={styles.navIcon} /> Kaito's Adventure
-      </Link>
-      <Link href="/wallet-import" onClick={() => handleNavigation("/wallet-import")} className={styles.navLink}>
-        <FaWallet className={styles.navIcon} /> Import Wallet
-      </Link>
-      <button onClick={handleCreatorAccess} className={styles.actionButton}>
-        {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
-      </button>
-      {isWalletConnected && (
-        <div className={styles.notificationWrapper}>
-          <button onClick={toggleNotifications} className={styles.notificationButton}>
-            <FaBell className={styles.bellIcon} />
-            {notifications.length > 0 && (
-              <span className={styles.notificationBadge}>{notifications.length}</span>
-            )}
+        <div className={styles.navContainer}>
+          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
+            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+            <span className={styles.logoText}>Sempai HQ</span>
+          </Link>
+          <button className={styles.menuToggle} onClick={toggleMenu}>
+            {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
-          {notificationsOpen && (
-            <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
-              {notifications.length > 0 ? (
-                <>
-                  {notifications.map((notif) => (
-                    <div key={notif.id} className={styles.notificationItem}>
-                      {notif.type === "reply" && notif.comment_id ? (
-                        <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                          📩 Someone replied: "{notif.message}"
-                        </Link>
-                      ) : notif.type === "new_chapter" ? (
-                        <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                          📖 {notif.message}
-                        </Link>
-                      ) : notif.type === "reward" ? (
-                        <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                          🎉 Weekly reward received!
-                        </Link>
-                      ) : (
-                        <span>{notif.message || "New notification"}</span>
-                      )}
-                    </div>
-                  ))}
-                  <button onClick={markAsRead} className={styles.markReadButton}>
-                    Mark All as Read
-                  </button>
-                </>
-              ) : (
-                <div className={styles.noNotifications}>No new notifications</div>
-              )}
-            </div>
-          )}
+          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+              <FaHome className={styles.navIcon} /> Home
+            </Link>
+            <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
+              <FaExchangeAlt className={styles.navIcon} /> Swap
+            </Link>
+            <Link
+              href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
+              onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
+              className={styles.navLink}
+            >
+              <FaUser className={styles.navIcon} /> Profile
+            </Link>
+            <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
+              <FaComments className={styles.navIcon} /> Chat
+            </Link>
+            <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
+              <FaGamepad className={styles.navIcon} /> Kaito's Adventure
+            </Link>
+            <Link href="/wallet-import" onClick={() => handleNavigation("/wallet-import")} className={styles.navLink}>
+              <FaWallet className={styles.navIcon} /> Import Wallet
+            </Link>
+            <button onClick={handleCreatorAccess} className={styles.actionButton}>
+              {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
+            </button>
+            {isWalletConnected && (
+              <div className={styles.notificationWrapper}>
+                <button onClick={toggleNotifications} className={styles.notificationButton}>
+                  <FaBell className={styles.bellIcon} />
+                  {notifications.length > 0 && (
+                    <span className={styles.notificationBadge}>{notifications.length}</span>
+                  )}
+                </button>
+                {notificationsOpen && (
+                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
+                    {notifications.length > 0 ? (
+                      <>
+                        {notifications.map((notif) => (
+                          <div key={notif.id} className={styles.notificationItem}>
+                            {notif.type === "reply" && notif.comment_id ? (
+                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
+                                📩 Someone replied: "{notif.message}"
+                              </Link>
+                            ) : notif.type === "new_chapter" ? (
+                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
+                                📖 {notif.message}
+                              </Link>
+                            ) : notif.type === "reward" ? (
+                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
+                                🎉 Weekly reward received!
+                              </Link>
+                            ) : (
+                              <span>{notif.message || "New notification"}</span>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={markAsRead} className={styles.markReadButton}>
+                          Mark All as Read
+                        </button>
+                      </>
+                    ) : (
+                      <div className={styles.noNotifications}>No new notifications</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {isWalletConnected && (
+              <button onClick={toggleReferral} className={styles.referralToggle}>
+                <FaShareAlt className={styles.referralIcon} />
+              </button>
+            )}
+            <button onClick={toggleTheme} className={styles.themeToggle}>
+              {theme === "dark" ? <FaSun /> : <FaMoon />}
+            </button>
+            <ConnectButton className={styles.connectButton} />
+          </div>
         </div>
-      )}
-      {isWalletConnected && (
-        <button onClick={toggleReferral} className={styles.referralToggle}>
-          <FaShareAlt className={styles.referralIcon} />
-        </button>
-      )}
-      <button onClick={toggleTheme} className={styles.themeToggle}>
-        {theme === "dark" ? <FaSun /> : <FaMoon />}
-      </button>
-      <ConnectButton className={styles.connectButton} />
-    </div>
-  </div>
-</nav>
+      </nav>
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>
@@ -739,6 +749,14 @@ export default function Home() {
             </button>
             {announcementsOpen && (
               <div className={styles.announcementDropdown}>
+                {(isWriter || isArtist || isSuperuser) && (
+                  <button
+                    onClick={() => handleNavigation("/announcements")}
+                    className={styles.createAnnouncementButton}
+                  >
+                    <FaBullhorn className={styles.heroIcon} /> Create Announcement
+                  </button>
+                )}
                 {error && <div className={styles.errorAlert}>{error}</div>}
                 {announcements.length > 0 ? (
                   <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
@@ -756,13 +774,17 @@ export default function Home() {
                             >
                               <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
                             </Link>
-                            <Link
-                              href={`/novel/${announcement.novels.id}`}
-                              onClick={() => handleNovelNavigation(announcement.novels.id)}
-                              className={styles.announcementLink}
-                            >
-                              {announcement.novels.title}
-                            </Link>
+                            {announcement.novels.id ? (
+                              <Link
+                                href={`/novel/${announcement.novels.id}`}
+                                onClick={() => handleNovelNavigation(announcement.novels.id)}
+                                className={styles.announcementLink}
+                              >
+                                {announcement.novels.title}
+                              </Link>
+                            ) : (
+                              <span className={styles.announcementLink}>{announcement.novels.title}</span>
+                            )}
                             <span className={styles.announcementDate}>
                               {new Date(announcement.created_at).toLocaleDateString()}
                             </span>

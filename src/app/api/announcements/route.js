@@ -44,38 +44,99 @@ export async function GET(req) {
   const publicKey = url.searchParams.get("publicKey");
 
   try {
-    let query = supabase
-      .from("writer_announcements")
-      .select(`
-        id, title, message, created_at, release_date,
-        novels (id, title),
-        users (id, wallet_address)
-      `)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    let novelIds = [];
+    let userId = null;
+    let isWriter = false;
+    let isArtist = false;
 
+    // Fetch user details if publicKey is provided
     if (publicKey) {
-      const { data: user } = await supabase
+      const { data: user, error: userError } = await supabase
         .from("users")
-        .select("id")
+        .select("id, isWriter, isArtist")
         .eq("wallet_address", publicKey)
         .single();
 
+      if (userError) throw userError;
       if (user) {
-        const { data: interactions } = await supabase
+        userId = user.id;
+        isWriter = user.isWriter;
+        isArtist = user.isArtist;
+        const { data: interactions, error: interactionsError } = await supabase
           .from("novel_interactions")
           .select("novel_id")
           .eq("user_id", user.id);
 
-        const novelIds = interactions.map(i => i.novel_id);
-        query = query.in("novel_id", novelIds);
+        if (interactionsError) throw interactionsError;
+        novelIds = interactions.map((i) => i.novel_id);
       }
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    // Query writer_announcements
+    let writerQuery = supabase
+      .from("writer_announcements")
+      .select(`
+        id, title, message, created_at, release_date,
+        novels (id, title),
+        users!writer_id (id, wallet_address)
+      `)
+      .order("created_at", { ascending: false });
 
-    return new Response(JSON.stringify({ data }), { status: 200 });
+    if (novelIds.length > 0) {
+      writerQuery = writerQuery.in("novel_id", novelIds);
+    }
+
+    const { data: writerAnnouncements, error: writerError } = await writerQuery;
+    if (writerError) throw writerError;
+
+    // Query announcements with audience filtering
+    let announcementsQuery = supabase
+      .from("announcements")
+      .select(`
+        id, title, message, created_at, release_date, audience,
+        users!user_id (id, wallet_address)
+      `)
+      .order("created_at", { ascending: false });
+
+    const { data: generalAnnouncements, error: announcementsError } = await announcementsQuery;
+    if (announcementsError) throw announcementsError;
+
+    // Filter general announcements based on audience and user role
+    const filteredGeneralAnnouncements = generalAnnouncements.filter((ann) => {
+      if (ann.audience === "creators") {
+        return isWriter || isArtist; // Only writers or artists see "creators" announcements
+      }
+      return true; // All other audiences ("all", "writers", "artists") are visible to everyone
+    });
+
+    // Normalize writer_announcements
+    const normalizedWriterAnnouncements = writerAnnouncements.map((ann) => ({
+      id: ann.id,
+      title: ann.title,
+      message: ann.message,
+      created_at: ann.created_at,
+      release_date: ann.release_date,
+      novels: ann.novels ? { id: ann.novels.id, title: ann.novels.title } : null,
+      users: ann.users ? { id: ann.users.id, wallet_address: ann.users.wallet_address } : null,
+    }));
+
+    // Normalize filtered general announcements
+    const normalizedGeneralAnnouncements = filteredGeneralAnnouncements.map((ann) => ({
+      id: ann.id,
+      title: ann.title,
+      message: ann.message,
+      created_at: ann.created_at,
+      release_date: ann.release_date,
+      novels: null, // General announcements don’t have a novel association
+      users: ann.users ? { id: ann.users.id, wallet_address: ann.users.wallet_address } : null,
+    }));
+
+    // Combine and limit to 10 most recent
+    const combinedAnnouncements = [...normalizedWriterAnnouncements, ...normalizedGeneralAnnouncements]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10);
+
+    return new Response(JSON.stringify({ data: combinedAnnouncements }), { status: 200 });
   } catch (error) {
     console.error("Error fetching announcements:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
