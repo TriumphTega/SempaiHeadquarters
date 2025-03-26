@@ -14,7 +14,7 @@ import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export default function WalletProvider({ children }) {
-  const network = WalletAdapterNetwork.Devnet; // Switched to Mainnet
+  const network = WalletAdapterNetwork.Mainnet; // Switched to Mainnet
   const endpoint = clusterApiUrl(network); // Uses Mainnet endpoint
   const wallets = useMemo(
     () => [
