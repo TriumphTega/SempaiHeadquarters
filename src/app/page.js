@@ -649,11 +649,12 @@ export default function Home() {
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
       <div className={styles.announcementToggleWrapper}>
-  {/* Toggle button moved outside for clarity, assuming it’s already there */}
+
   {announcementsOpen && (
     <div className={styles.announcementDropdown}>
+      {/* Close button */}
       <button onClick={toggleAnnouncements} className={styles.closeAnnouncementButton}>
-        <FaTimes />
+        <FaTimes className={styles.closeIcon} />
       </button>
       {(isWriter || isArtist || isSuperuser) && (
         <button

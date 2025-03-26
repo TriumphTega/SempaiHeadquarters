@@ -496,63 +496,10 @@
 
 /* Announcement Styles */
 .announcementToggleWrapper {
-  position: fixed; /* Assuming you adopted the fixed positioning from earlier */
+  position: fixed; /* Assuming you adopted the previous fix */
   top: 0.75rem;
-  right: 0.25rem; /* From your latest shift request */
+  right: 0.25rem; /* From your last request */
   z-index: 2500;
-}
-
-.announcementDropdown {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.95);
-  border-radius: 10px;
-  padding: 0.75rem;
-  width: 90%;
-  max-width: 350px;
-  max-height: 50vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 16px rgba(243, 99, 22, 0.4);
-  z-index: 2500;
-  position: relative; /* Ensure the close button is positioned relative to this */
-}
-
-.closeAnnouncementButton {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition: transform 0.3s ease; /* Optional: add a hover effect */
-}
-
-.closeAnnouncementButton:hover {
-  transform: scale(1.1); /* Optional: slight scale on hover for feedback */
-}
-
-/* Ensure other content adjusts for the close button */
-.createAnnouncementButton {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background-color: #ff6f61;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-bottom: 10px;
-  margin-top: 1.5rem; /* Add space from the top to avoid overlap with close button */
-}
-
-.createAnnouncementButton:hover {
-  background-color: #e65b50;
 }
 
 .announcementToggle {
@@ -600,8 +547,81 @@
   max-height: 50vh;
   overflow-y: auto;
   box-shadow: 0 8px 16px rgba(243, 99, 22, 0.4);
-  z-index: 2000; /* Kept at 2000, below creatorChoiceOverlay */
+  z-index: 2500;
+  /* Add padding-top to avoid overlap with close button */
+  padding-top: 2.5rem; /* Space for the close button */
 }
+
+/* Close button styles */
+.closeAnnouncementButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.3s, color 0.3s;
+}
+
+.closeIcon {
+  font-size: 2rem; /* Large X for visibility */
+}
+
+.closeAnnouncementButton:hover .closeIcon {
+  transform: scale(1.1);
+  color: rgba(243, 99, 22, 1); /* Matches your theme on hover */
+}
+
+/* Ensure carousel and other content adjust for the close button */
+.announcementCarousel {
+  margin: 0;
+  z-index: 2500; /* Matches dropdown */
+}
+
+.announcementSlide {
+  padding: 0.5rem;
+}
+
+.announcementCard {
+  background: rgba(243, 99, 22, 0.1);
+  border-radius: 10px;
+  padding: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .announcementDropdown {
+    top: 50px;
+    width: 90%;
+    max-width: 300px;
+    padding-top: 2.5rem; /* Maintain space for close button */
+  }
+
+  .closeIcon {
+    font-size: 1.75rem; /* Slightly smaller for tablets */
+  }
+}
+
+@media (max-width: 480px) {
+  .announcementDropdown {
+    top: 45px;
+    width: 95%;
+    max-width: 280px;
+    padding-top: 2rem; /* Adjust for smaller screens */
+  }
+
+  .closeIcon {
+    font-size: 1.5rem; /* Still large but fits smaller screens */
+  }
+}
+
+
+
+
 .announcementCarousel {
   margin: 0;
   z-index: 2000;
