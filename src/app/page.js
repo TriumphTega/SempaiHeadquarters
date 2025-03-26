@@ -648,6 +648,63 @@ export default function Home() {
   return (
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
+      <div className={styles.announcementToggleWrapper}>
+  {/* Toggle button moved outside for clarity, assuming it’s already there */}
+  {announcementsOpen && (
+    <div className={styles.announcementDropdown}>
+      <button onClick={toggleAnnouncements} className={styles.closeAnnouncementButton}>
+        <FaTimes />
+      </button>
+      {(isWriter || isArtist || isSuperuser) && (
+        <button
+          onClick={() => handleNavigation("/announcements")}
+          className={styles.createAnnouncementButton}
+        >
+          <FaBullhorn className={styles.heroIcon} /> Create Announcement
+        </button>
+      )}
+      {error && <div className={styles.errorAlert}>{error}</div>}
+      {announcements.length > 0 ? (
+        <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
+          {announcements.map((announcement) => (
+            <div key={announcement.id} className={styles.announcementSlide}>
+              <div className={styles.announcementCard}>
+                <div className={styles.announcementGlow}></div>
+                <h3 className={styles.announcementTitle}>{announcement.title}</h3>
+                <p className={styles.announcementMessage}>{announcement.message}</p>
+                <div className={styles.announcementDetails}>
+                  <Link
+                    href={`/writers-profile/${announcement.user_id}`}
+                    onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
+                    className={styles.announcementAuthor}
+                  >
+                    <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
+                  </Link>
+                  {announcement.novels.id ? (
+                    <Link
+                      href={`/novel/${announcement.novels.id}`}
+                      onClick={() => handleNovelNavigation(announcement.novels.id)}
+                      className={styles.announcementLink}
+                    >
+                      {announcement.novels.title}
+                    </Link>
+                  ) : (
+                    <span className={styles.announcementLink}>{announcement.novels.title}</span>
+                  )}
+                  <span className={styles.announcementDate}>
+                    {new Date(announcement.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </Slider>
+      ) : (
+        <p className={styles.noAnnouncements}>No recent announcements.</p>
+      )}
+    </div>
+  )}
+</div>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
@@ -740,65 +797,12 @@ export default function Home() {
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>
-          <div className={styles.announcementToggleWrapper}>
-            <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
+        <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
               <FaBullhorn className={styles.announcementIcon} />
               {announcements.length > 0 && (
                 <span className={styles.announcementBadge}>{announcements.length}</span>
               )}
             </button>
-            {announcementsOpen && (
-              <div className={styles.announcementDropdown}>
-                {(isWriter || isArtist || isSuperuser) && (
-                  <button
-                    onClick={() => handleNavigation("/announcements")}
-                    className={styles.createAnnouncementButton}
-                  >
-                    <FaBullhorn className={styles.heroIcon} /> Create Announcement
-                  </button>
-                )}
-                {error && <div className={styles.errorAlert}>{error}</div>}
-                {announcements.length > 0 ? (
-                  <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
-                    {announcements.map((announcement) => (
-                      <div key={announcement.id} className={styles.announcementSlide}>
-                        <div className={styles.announcementCard}>
-                          <div className={styles.announcementGlow}></div>
-                          <h3 className={styles.announcementTitle}>{announcement.title}</h3>
-                          <p className={styles.announcementMessage}>{announcement.message}</p>
-                          <div className={styles.announcementDetails}>
-                            <Link
-                              href={`/writers-profile/${announcement.user_id}`}
-                              onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
-                              className={styles.announcementAuthor}
-                            >
-                              <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
-                            </Link>
-                            {announcement.novels.id ? (
-                              <Link
-                                href={`/novel/${announcement.novels.id}`}
-                                onClick={() => handleNovelNavigation(announcement.novels.id)}
-                                className={styles.announcementLink}
-                              >
-                                {announcement.novels.title}
-                              </Link>
-                            ) : (
-                              <span className={styles.announcementLink}>{announcement.novels.title}</span>
-                            )}
-                            <span className={styles.announcementDate}>
-                              {new Date(announcement.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </Slider>
-                ) : (
-                  <p className={styles.noAnnouncements}>No recent announcements.</p>
-                )}
-              </div>
-            )}
-          </div>
           <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
           <p className={styles.heroSubtitle}>Explore Novels & Manga, Earn Tokens, Unleash Your Imagination</p>
           <div className={styles.heroButtons}>

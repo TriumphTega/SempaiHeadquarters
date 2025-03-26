@@ -9,7 +9,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000; /* Higher than navLinksOpen (assumed to be around 1000 or less) */
+  z-index: 3000; /* Higher than navLinksOpen (assumed to be around 1000 or less) */
   animation: fadeIn 0.3s ease-in-out;
 }
 
@@ -496,9 +496,63 @@
 
 /* Announcement Styles */
 .announcementToggleWrapper {
-  position: absolute;
+  position: fixed; /* Assuming you adopted the fixed positioning from earlier */
   top: 0.75rem;
-  right: 0.75rem;
+  right: 0.25rem; /* From your latest shift request */
+  z-index: 2500;
+}
+
+.announcementDropdown {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 10px;
+  padding: 0.75rem;
+  width: 90%;
+  max-width: 350px;
+  max-height: 50vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 16px rgba(243, 99, 22, 0.4);
+  z-index: 2500;
+  position: relative; /* Ensure the close button is positioned relative to this */
+}
+
+.closeAnnouncementButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: transform 0.3s ease; /* Optional: add a hover effect */
+}
+
+.closeAnnouncementButton:hover {
+  transform: scale(1.1); /* Optional: slight scale on hover for feedback */
+}
+
+/* Ensure other content adjusts for the close button */
+.createAnnouncementButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #ff6f61;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-bottom: 10px;
+  margin-top: 1.5rem; /* Add space from the top to avoid overlap with close button */
+}
+
+.createAnnouncementButton:hover {
+  background-color: #e65b50;
 }
 
 .announcementToggle {
@@ -546,11 +600,12 @@
   max-height: 50vh;
   overflow-y: auto;
   box-shadow: 0 8px 16px rgba(243, 99, 22, 0.4);
-  z-index: 2000;
+  z-index: 2000; /* Kept at 2000, below creatorChoiceOverlay */
 }
-
 .announcementCarousel {
   margin: 0;
+  z-index: 2000;
+
 }
 
 .announcementSlide {
