@@ -154,7 +154,8 @@ export default function ChatPage() {
   const [file, setFile] = useState(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // Search results
+  const [recentChats, setRecentChats] = useState([]); // Recent chat contacts
   const [activeChat, setActiveChat] = useState("group");
   const [privateMessages, setPrivateMessages] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
@@ -174,7 +175,7 @@ export default function ChatPage() {
     const messageId = searchParams.get("messageId");
     const recipient = searchParams.get("recipient");
     if (recipient) {
-      setActiveChat(recipient);
+      setActiveChat(recipient); // Always use wallet_address
     }
     if (messageId) {
       setTimeout(() => {
@@ -184,6 +185,55 @@ export default function ChatPage() {
     }
   }, [embeddedWallet?.publicKey, searchParams]);
 
+  // Fetch recent chat contacts
+  const fetchRecentChats = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      const { data, error } = await supabase
+        .from("private_messages")
+        .select("sender_wallet, recipient_wallet, created_at")
+        .or(`sender_wallet.eq.${walletAddress},recipient_wallet.eq.${walletAddress}`)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const uniqueContacts = new Set();
+      const contacts = [];
+      for (const msg of data) {
+        const contactWallet =
+          msg.sender_wallet === walletAddress ? msg.recipient_wallet : msg.sender_wallet;
+        if (!uniqueContacts.has(contactWallet)) {
+          uniqueContacts.add(contactWallet);
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("id, name, wallet_address, image, isWriter")
+            .eq("wallet_address", contactWallet)
+            .single();
+          if (userError) {
+            console.error("Error fetching user data:", userError.message);
+            continue;
+          }
+          contacts.push({
+            id: userData.id,
+            name: userData.name || contactWallet,
+            wallet_address: userData.wallet_address,
+            image: userData.image
+              ? userData.image.startsWith("data:image/")
+                ? userData.image
+                : `data:image/jpeg;base64,${userData.image}`
+              : null,
+            isWriter: userData.isWriter || false,
+          });
+        }
+      }
+      setRecentChats(contacts.slice(0, 10)); // Limit to 10 recent chats
+    } catch (error) {
+      console.error("Error fetching recent chats:", error.message);
+      setError("Failed to load recent chats.");
+    }
+  }, [walletAddress]);
+
+  // Fetch users for search
   const fetchUsers = useCallback(async () => {
     if (!searchTerm.trim() || !walletAddress) {
       setUsers([]);
@@ -194,11 +244,23 @@ export default function ChatPage() {
       const { data, error } = await supabase
         .from("users")
         .select("id, name, wallet_address, image, isWriter")
-        .ilike("name", `%${searchTerm}%`)
+        .or(`name.ilike.%${searchTerm}%,wallet_address.ilike.%${searchTerm}%`)
         .neq("wallet_address", walletAddress)
         .limit(10);
       if (error) throw error;
-      setUsers(data || []);
+      setUsers(
+        data.map((user) => ({
+          id: user.id,
+          name: user.name || user.wallet_address, // Always show name if available
+          wallet_address: user.wallet_address,
+          image: user.image
+            ? user.image.startsWith("data:image/")
+              ? user.image
+              : `data:image/jpeg;base64,${user.image}`
+            : null,
+          isWriter: user.isWriter || false,
+        }))
+      );
     } catch (error) {
       console.error("Error fetching users:", error);
       setError("Failed to load users.");
@@ -208,9 +270,10 @@ export default function ChatPage() {
   }, [searchTerm, walletAddress]);
 
   useEffect(() => {
+    fetchRecentChats();
     const debounce = setTimeout(fetchUsers, 300);
     return () => clearTimeout(debounce);
-  }, [searchTerm, fetchUsers]);
+  }, [fetchRecentChats, fetchUsers, searchTerm]);
 
   const fetchGroupMessages = useCallback(async () => {
     if (!walletAddress) return;
@@ -357,6 +420,13 @@ export default function ChatPage() {
               ...prev,
               [chatKey]: [...(prev[chatKey] || []), newMessage],
             }));
+            setRecentChats((prev) => {
+              const exists = prev.find((chat) => chat.wallet_address === chatKey);
+              if (!exists) {
+                fetchRecentChats(); // Refresh recent chats
+              }
+              return prev;
+            });
             if (activeChat === chatKey && recipient_wallet === walletAddress) {
               await supabase
                 .from("private_messages")
@@ -394,7 +464,7 @@ export default function ChatPage() {
       privateChannel.unsubscribe();
       presenceChannel.unsubscribe();
     };
-  }, [walletAddress, activeChat]);
+  }, [walletAddress, activeChat, fetchRecentChats]);
 
   useEffect(() => {
     if (!walletAddress || activeChat === "group") {
@@ -546,7 +616,6 @@ export default function ChatPage() {
           ),
         }));
 
-        // Insert notification for private message
         const { data: recipientData, error: recipientError } = await supabase
           .from("users")
           .select("id")
@@ -565,7 +634,7 @@ export default function ChatPage() {
               recipient_wallet_address: activeChat,
               message: notificationMessage,
               type: "private_message",
-              chat_id: data.id, // Ensure this matches private_messages(id)
+              chat_id: data.id,
               is_read: false,
               created_at: new Date().toISOString(),
             });
@@ -575,6 +644,7 @@ export default function ChatPage() {
             setError("Failed to save notification: " + notificationError.message);
           }
         }
+        fetchRecentChats(); // Refresh recent chats after sending a message
       }
 
       setInput("");
@@ -584,7 +654,7 @@ export default function ChatPage() {
       setUploading(false);
       setSending(false);
     },
-    [input, file, walletAddress, uploading, replyingTo, activeChat]
+    [input, file, walletAddress, uploading, replyingTo, activeChat, fetchRecentChats]
   );
 
   const handleFileChange = (e) => setFile(e.target.files?.[0] || null);
@@ -610,7 +680,11 @@ export default function ChatPage() {
         </button>
         {activeChat === "group"
           ? "Live Group Chat"
-          : `Chat with ${users.find((u) => u.wallet_address === activeChat)?.name || activeChat}`}
+          : `Chat with ${
+              recentChats.find((u) => u.wallet_address === activeChat)?.name ||
+              users.find((u) => u.wallet_address === activeChat)?.name ||
+              activeChat
+            }`}
       </header>
 
       {error && <div className={styles.error}>{error}</div>}
@@ -634,33 +708,72 @@ export default function ChatPage() {
               >
                 <span>Group Chat</span>
               </div>
-              {users.map((user) => (
-                <div
-                  key={user.wallet_address}
-                  className={`${styles.chatItem} ${activeChat === user.wallet_address ? styles.activeChat : ""}`}
-                  onClick={() => switchChat(user.wallet_address)}
-                >
-                  <div className={styles.userInfo}>
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt="Profile"
-                        className={styles.sidebarProfileImage}
-                      />
-                    ) : (
-                      <div className={styles.sidebarProfilePlaceholder} />
-                    )}
-                    <span>{user.name}</span>
-                    <span
-                      className={
-                        onlineUsers.has(user.wallet_address)
-                          ? styles.onlineDot
-                          : styles.offlineDot
-                      }
-                    ></span>
-                  </div>
-                </div>
-              ))}
+              {/* Recent Chats Section */}
+              {recentChats.length > 0 && !searchTerm.trim() && (
+                <>
+                  <div className={styles.sectionHeader}>Recent Chats</div>
+                  {recentChats.map((chat) => (
+                    <div
+                      key={chat.wallet_address}
+                      className={`${styles.chatItem} ${activeChat === chat.wallet_address ? styles.activeChat : ""}`}
+                      onClick={() => switchChat(chat.wallet_address)}
+                    >
+                      <div className={styles.userInfo}>
+                        {chat.image ? (
+                          <img
+                            src={chat.image}
+                            alt="Profile"
+                            className={styles.sidebarProfileImage}
+                          />
+                        ) : (
+                          <div className={styles.sidebarProfilePlaceholder} />
+                        )}
+                        <span>{chat.name}</span>
+                        <span
+                          className={
+                            onlineUsers.has(chat.wallet_address)
+                              ? styles.onlineDot
+                              : styles.offlineDot
+                          }
+                        ></span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              {/* Search Results Section */}
+              {searchTerm.trim() && users.length > 0 && (
+                <>
+                  <div className={styles.sectionHeader}>Search Results</div>
+                  {users.map((user) => (
+                    <div
+                      key={user.wallet_address}
+                      className={`${styles.chatItem} ${activeChat === user.wallet_address ? styles.activeChat : ""}`}
+                      onClick={() => switchChat(user.wallet_address)}
+                    >
+                      <div className={styles.userInfo}>
+                        {user.image ? (
+                          <img
+                            src={user.image}
+                            alt="Profile"
+                            className={styles.sidebarProfileImage}
+                          />
+                        ) : (
+                          <div className={styles.sidebarProfilePlaceholder} />
+                        )}
+                        <span>{user.name}</span>
+                        <span
+                          className={
+                            onlineUsers.has(user.wallet_address)
+                              ? styles.onlineDot
+                              : styles.offlineDot
+                          }
+                        ></span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </aside>
