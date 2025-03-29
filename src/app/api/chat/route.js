@@ -80,7 +80,7 @@ export async function POST(request) {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(`Failed to insert message: ${error.message}`);
 
     const message = {
       id: data.id,
@@ -107,11 +107,11 @@ export async function POST(request) {
         .eq("id", parent_id)
         .single();
 
-      if (parentError) throw parentError;
+      if (parentError) throw new Error(`Failed to fetch parent message: ${parentError.message}`);
 
       if (parentMessage && parentMessage.wallet_address !== wallet_address) {
         const notificationMessage = `${data.users?.name || wallet_address} replied to your message: "${content || "Media"}"`;
-        await supabase.from("notifications").insert({
+        const { error: notificationError } = await supabase.from("notifications").insert({
           user_id: parentMessage.user_id,
           recipient_wallet_address: parentMessage.wallet_address,
           message: notificationMessage,
@@ -120,6 +120,11 @@ export async function POST(request) {
           is_read: false,
           created_at: new Date().toISOString(),
         });
+
+        if (notificationError) {
+          console.error("Failed to insert notification:", notificationError.message);
+          throw new Error(`Failed to insert notification: ${notificationError.message}`);
+        }
       }
     }
 

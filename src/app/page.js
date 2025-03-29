@@ -190,13 +190,14 @@ export default function Home() {
           .single();
         if (!user) throw new Error("User not found");
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("notifications")
           .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id, chat_id, recipient_wallet_address")
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
 
+        if (error) throw error;
         setNotifications(data || []);
       } catch (err) {
         if (retryCount < maxRetries) {
@@ -913,7 +914,7 @@ export default function Home() {
             <p className={styles.noContent}>No novels available yet.</p>
           )}
         </section>
-
+        
         <section className={styles.contentSection}>
           <h2 className={styles.sectionTitle}>Featured Manga</h2>
           {error && <div className={styles.errorAlert}>{error}</div>}

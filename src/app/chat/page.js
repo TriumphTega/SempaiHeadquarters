@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import styles from "./Chat.module.css";
@@ -143,6 +144,7 @@ function GifPicker({ onSelect, onClose }) {
 
 export default function ChatPage() {
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
@@ -168,7 +170,19 @@ export default function ChatPage() {
     setWalletAddress(wallet);
     if (embeddedWallet?.publicKey) localStorage.setItem("walletAddress", wallet);
     if (!wallet) setError("Please connect your wallet to chat.");
-  }, [embeddedWallet?.publicKey]);
+
+    const messageId = searchParams.get("messageId");
+    const recipient = searchParams.get("recipient");
+    if (recipient) {
+      setActiveChat(recipient);
+    }
+    if (messageId) {
+      setTimeout(() => {
+        const element = document.getElementById(`message-${messageId}`);
+        if (element) element.scrollIntoView({ behavior: "smooth" });
+      }, 1000); // Delay to ensure messages load
+    }
+  }, [embeddedWallet?.publicKey, searchParams]);
 
   const fetchUsers = useCallback(async () => {
     if (!searchTerm.trim() || !walletAddress) {
@@ -444,7 +458,7 @@ export default function ChatPage() {
           const { data } = supabase.storage.from("chat-media").getPublicUrl(fileName);
           mediaUrl = data.publicUrl;
         } else {
-          console.error("File upload failed:", error);
+          console.error("File upload failed:", error.message);
           setError("Failed to upload file.");
           setUploading(false);
           setSending(false);
@@ -452,14 +466,14 @@ export default function ChatPage() {
         }
       }
 
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, name")
         .eq("wallet_address", walletAddress)
         .single();
 
-      if (!userData) {
-        console.error("User not found");
+      if (userError || !userData) {
+        console.error("User fetch failed:", userError?.message);
         setError("User not found.");
         setUploading(false);
         setSending(false);
@@ -494,53 +508,71 @@ export default function ChatPage() {
           created_at: new Date().toISOString(),
           name: userData.name || walletAddress,
           user_id: userData.id,
-          profile_image: null, // Add if needed
-          is_writer: false, // Add if needed
+          profile_image: null,
+          is_writer: false,
         };
         setPrivateMessages((prev) => ({
           ...prev,
           [activeChat]: [...(prev[activeChat] || []), newMessage],
         }));
 
-        const { data, error } = await supabase.from("private_messages").insert({
-          sender_wallet: walletAddress,
-          recipient_wallet: activeChat,
-          content: input.trim() || null,
-          media_url: mediaUrl,
-          parent_id: replyingTo,
-          status: "sent",
-        }).select().single();
+        const { data, error } = await supabase
+          .from("private_messages")
+          .insert({
+            sender_wallet: walletAddress,
+            recipient_wallet: activeChat,
+            content: input.trim() || null,
+            media_url: mediaUrl,
+            parent_id: replyingTo,
+            status: "sent",
+          })
+          .select()
+          .single();
 
         if (error) {
-          console.error("Failed to send private message:", error);
-          setError("Failed to send private message.");
-        } else {
-          setPrivateMessages((prev) => ({
-            ...prev,
-            [activeChat]: prev[activeChat].map((msg) =>
-              msg.status === "sending" && msg.created_at === newMessage.created_at
-                ? { ...msg, id: data.id, status: "sent" }
-                : msg
-            ),
-          }));
+          console.error("Failed to send private message:", error.message);
+          setError("Failed to send private message: " + error.message);
+          setUploading(false);
+          setSending(false);
+          return;
+        }
 
-          // Insert notification for private message
-          const { data: recipientData } = await supabase
-            .from("users")
-            .select("id")
-            .eq("wallet_address", activeChat)
-            .single();
-          if (recipientData) {
-            const notificationMessage = `${userData.name || walletAddress} sent you a message: "${input.trim() || "Media"}"`;
-            await supabase.from("notifications").insert({
+        setPrivateMessages((prev) => ({
+          ...prev,
+          [activeChat]: prev[activeChat].map((msg) =>
+            msg.status === "sending" && msg.created_at === newMessage.created_at
+              ? { ...msg, id: data.id, status: "sent" }
+              : msg
+          ),
+        }));
+
+        // Insert notification for private message
+        const { data: recipientData, error: recipientError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("wallet_address", activeChat)
+          .single();
+
+        if (recipientError || !recipientData) {
+          console.error("Recipient fetch failed:", recipientError?.message);
+          setError("Recipient not found.");
+        } else {
+          const notificationMessage = `${userData.name || walletAddress} sent you a message: "${input.trim() || "Media"}"`;
+          const { error: notificationError } = await supabase
+            .from("notifications")
+            .insert({
               user_id: recipientData.id,
               recipient_wallet_address: activeChat,
               message: notificationMessage,
               type: "private_message",
-              chat_id: data.id,
+              chat_id: data.id, // Ensure this matches private_messages(id)
               is_read: false,
               created_at: new Date().toISOString(),
             });
+
+          if (notificationError) {
+            console.error("Failed to insert private message notification:", notificationError.message);
+            setError("Failed to save notification: " + notificationError.message);
           }
         }
       }
@@ -635,13 +667,14 @@ export default function ChatPage() {
 
         <main className={styles.messages}>
           {(activeChat === "group" ? messages : privateMessages[activeChat] || []).map((msg) => (
-            <Message
-              key={msg.id}
-              msg={msg}
-              walletAddress={walletAddress}
-              onReply={handleReply}
-              isPrivate={activeChat !== "group"}
-            />
+            <div key={msg.id} id={`message-${msg.id}`}>
+              <Message
+                msg={msg}
+                walletAddress={walletAddress}
+                onReply={handleReply}
+                isPrivate={activeChat !== "group"}
+              />
+            </div>
           ))}
           {activeChat !== "group" && typingUsers[activeChat] && (
             <div className={styles.typingIndicator}>Typing...</div>
