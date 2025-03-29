@@ -192,7 +192,7 @@ export default function Home() {
 
         const { data } = await supabase
           .from("notifications")
-          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id")
+          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id, chat_id, recipient_wallet_address")
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
@@ -417,7 +417,6 @@ export default function Home() {
       const response = await fetch(`/api/announcements${walletPublicKey ? `?publicKey=${walletPublicKey}` : ""}`);
       const { data } = await response.json();
 
-      // Filter announcements to show only those from the last 7 days
       const recentAnnouncements = data
         .filter((announcement) => {
           const createdAt = new Date(announcement.created_at);
@@ -426,28 +425,26 @@ export default function Home() {
         })
         .slice(0, 5);
 
-      // Fetch user names for announcements
       const userIds = recentAnnouncements
         .map((a) => a.users?.id)
         .filter((id) => id && id !== undefined);
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, name")
-        .in("id", userIds.length > 0 ? userIds : ["none"]); // Avoid empty IN clause
-  
+        .in("id", userIds.length > 0 ? userIds : ["none"]);
+
       if (usersError) throw usersError;
-  
+
       const userMap = usersData.reduce((acc, user) => {
         acc[user.id] = user.name || "Unknown";
         return acc;
       }, {});
-  
-      // Enrich announcements with user names and handle null novels
+
       const enrichedAnnouncements = recentAnnouncements.map((announcement) => ({
         ...announcement,
         name: userMap[announcement.users?.id] || "Unknown",
         user_id: announcement.users?.id,
-        novels: announcement.novels || { id: null, title: "General Announcement" }, // Default for non-novel announcements
+        novels: announcement.novels || { id: null, title: "General Announcement" },
       }));
 
       setAnnouncements(enrichedAnnouncements);
@@ -531,6 +528,18 @@ export default function Home() {
     setIsReferralOpen(false);
     setShowCreatorChoice(false);
     router.push(`/manga/${id}`);
+  };
+
+  const handleChatNavigation = (type, chatId, recipientWallet) => {
+    setPageLoading(true);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
+    setShowCreatorChoice(false);
+    const path = type === "chat_reply" ? `/chat?messageId=${chatId}` : `/chat?messageId=${chatId}&recipient=${recipientWallet}`;
+    router.push(path);
   };
 
   const fetchBalance = async () => {
@@ -649,63 +658,61 @@ export default function Home() {
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
       <div className={styles.announcementToggleWrapper}>
-
-  {announcementsOpen && (
-    <div className={styles.announcementDropdown}>
-      {/* Close button */}
-      <button onClick={toggleAnnouncements} className={styles.closeAnnouncementButton}>
-        <FaTimes className={styles.closeIcon} />
-      </button>
-      {(isWriter || isArtist || isSuperuser) && (
-        <button
-          onClick={() => handleNavigation("/announcements")}
-          className={styles.createAnnouncementButton}
-        >
-          <FaBullhorn className={styles.heroIcon} /> Create Announcement
-        </button>
-      )}
-      {error && <div className={styles.errorAlert}>{error}</div>}
-      {announcements.length > 0 ? (
-        <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
-          {announcements.map((announcement) => (
-            <div key={announcement.id} className={styles.announcementSlide}>
-              <div className={styles.announcementCard}>
-                <div className={styles.announcementGlow}></div>
-                <h3 className={styles.announcementTitle}>{announcement.title}</h3>
-                <p className={styles.announcementMessage}>{announcement.message}</p>
-                <div className={styles.announcementDetails}>
-                  <Link
-                    href={`/writers-profile/${announcement.user_id}`}
-                    onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
-                    className={styles.announcementAuthor}
-                  >
-                    <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
-                  </Link>
-                  {announcement.novels.id ? (
-                    <Link
-                      href={`/novel/${announcement.novels.id}`}
-                      onClick={() => handleNovelNavigation(announcement.novels.id)}
-                      className={styles.announcementLink}
-                    >
-                      {announcement.novels.title}
-                    </Link>
-                  ) : (
-                    <span className={styles.announcementLink}>{announcement.novels.title}</span>
-                  )}
-                  <span className={styles.announcementDate}>
-                    {new Date(announcement.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </Slider>
-      ) : (
-        <p className={styles.noAnnouncements}>No recent announcements.</p>
-      )}
-    </div>
-  )}
-</div>
+        {announcementsOpen && (
+          <div className={styles.announcementDropdown}>
+            <button onClick={toggleAnnouncements} className={styles.closeAnnouncementButton}>
+              <FaTimes className={styles.closeIcon} />
+            </button>
+            {(isWriter || isArtist || isSuperuser) && (
+              <button
+                onClick={() => handleNavigation("/announcements")}
+                className={styles.createAnnouncementButton}
+              >
+                <FaBullhorn className={styles.heroIcon} /> Create Announcement
+              </button>
+            )}
+            {error && <div className={styles.errorAlert}>{error}</div>}
+            {announcements.length > 0 ? (
+              <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
+                {announcements.map((announcement) => (
+                  <div key={announcement.id} className={styles.announcementSlide}>
+                    <div className={styles.announcementCard}>
+                      <div className={styles.announcementGlow}></div>
+                      <h3 className={styles.announcementTitle}>{announcement.title}</h3>
+                      <p className={styles.announcementMessage}>{announcement.message}</p>
+                      <div className={styles.announcementDetails}>
+                        <Link
+                          href={`/writers-profile/${announcement.user_id}`}
+                          onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
+                          className={styles.announcementAuthor}
+                        >
+                          <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
+                        </Link>
+                        {announcement.novels.id ? (
+                          <Link
+                            href={`/novel/${announcement.novels.id}`}
+                            onClick={() => handleNovelNavigation(announcement.novels.id)}
+                            className={styles.announcementLink}
+                          >
+                            {announcement.novels.title}
+                          </Link>
+                        ) : (
+                          <span className={styles.announcementLink}>{announcement.novels.title}</span>
+                        )}
+                        <span className={styles.announcementDate}>
+                          {new Date(announcement.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Slider>
+            ) : (
+              <p className={styles.noAnnouncements}>No recent announcements.</p>
+            )}
+          </div>
+        )}
+      </div>
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
@@ -767,6 +774,14 @@ export default function Home() {
                               <Link href="/profile" onClick={() => handleNavigation("/profile")}>
                                 🎉 Weekly reward received!
                               </Link>
+                            ) : notif.type === "chat_reply" ? (
+                              <Link href={`/chat?messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("chat_reply", notif.chat_id)}>
+                                💬 {notif.message}
+                              </Link>
+                            ) : notif.type === "private_message" ? (
+                              <Link href={`/chat?messageId=${notif.chat_id}&recipient=${notif.recipient_wallet_address}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
+                                💬 {notif.message}
+                              </Link>
                             ) : (
                               <span>{notif.message || "New notification"}</span>
                             )}
@@ -798,12 +813,12 @@ export default function Home() {
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>
-        <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
-              <FaBullhorn className={styles.announcementIcon} />
-              {announcements.length > 0 && (
-                <span className={styles.announcementBadge}>{announcements.length}</span>
-              )}
-            </button>
+          <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
+            <FaBullhorn className={styles.announcementIcon} />
+            {announcements.length > 0 && (
+              <span className={styles.announcementBadge}>{announcements.length}</span>
+            )}
+          </button>
           <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
           <p className={styles.heroSubtitle}>Explore Novels & Manga, Earn Tokens, Unleash Your Imagination</p>
           <div className={styles.heroButtons}>
@@ -940,6 +955,7 @@ export default function Home() {
             <p className={styles.noContent}>No manga available yet.</p>
           )}
         </section>
+
 
         <section className={styles.featuresSection}>
           <h2 className={styles.sectionTitle}>Explore More</h2>
