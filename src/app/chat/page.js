@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import styles from "./Chat.module.css";
@@ -144,7 +144,7 @@ function GifPicker({ onSelect, onClose }) {
 
 export default function ChatPage() {
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
-  const searchParams = useSearchParams();
+  const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
@@ -154,8 +154,8 @@ export default function ChatPage() {
   const [file, setFile] = useState(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState([]); // Search results
-  const [recentChats, setRecentChats] = useState([]); // Recent chat contacts
+  const [users, setUsers] = useState([]);
+  const [recentChats, setRecentChats] = useState([]);
   const [activeChat, setActiveChat] = useState("group");
   const [privateMessages, setPrivateMessages] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
@@ -172,20 +172,20 @@ export default function ChatPage() {
     if (embeddedWallet?.publicKey) localStorage.setItem("walletAddress", wallet);
     if (!wallet) setError("Please connect your wallet to chat.");
 
-    const messageId = searchParams.get("messageId");
-    const recipient = searchParams.get("recipient");
+    if (!router.isReady) return;
+
+    const { recipient, messageId } = router.query || {};
     if (recipient) {
-      setActiveChat(recipient); // Always use wallet_address
+      setActiveChat(recipient);
     }
     if (messageId) {
       setTimeout(() => {
         const element = document.getElementById(`message-${messageId}`);
         if (element) element.scrollIntoView({ behavior: "smooth" });
-      }, 1000); // Delay to ensure messages load
+      }, 1000);
     }
-  }, [embeddedWallet?.publicKey, searchParams]);
+  }, [embeddedWallet?.publicKey, router.isReady, router.query]);
 
-  // Fetch recent chat contacts
   const fetchRecentChats = useCallback(async () => {
     if (!walletAddress) return;
     try {
@@ -226,14 +226,13 @@ export default function ChatPage() {
           });
         }
       }
-      setRecentChats(contacts.slice(0, 10)); // Limit to 10 recent chats
+      setRecentChats(contacts.slice(0, 10));
     } catch (error) {
       console.error("Error fetching recent chats:", error.message);
       setError("Failed to load recent chats.");
     }
   }, [walletAddress]);
 
-  // Fetch users for search
   const fetchUsers = useCallback(async () => {
     if (!searchTerm.trim() || !walletAddress) {
       setUsers([]);
@@ -251,7 +250,7 @@ export default function ChatPage() {
       setUsers(
         data.map((user) => ({
           id: user.id,
-          name: user.name || user.wallet_address, // Always show name if available
+          name: user.name || user.wallet_address,
           wallet_address: user.wallet_address,
           image: user.image
             ? user.image.startsWith("data:image/")
@@ -282,6 +281,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", { method: "GET" });
       const data = await res.json();
       if (data.success) {
+        console.log("Group messages:", data.messages); // Debug
         setMessages(data.messages);
       } else {
         setError(data.message || "Failed to load group messages.");
@@ -328,6 +328,7 @@ export default function ChatPage() {
             };
           })
         );
+        console.log("Private messages for", recipientWallet, ":", enrichedMessages); // Debug
         setPrivateMessages((prev) => ({
           ...prev,
           [recipientWallet]: enrichedMessages,
@@ -380,6 +381,7 @@ export default function ChatPage() {
               is_writer: userData?.isWriter || false,
             };
             if (activeChat === "group") {
+              console.log("New group message:", newMessage); // Debug
               setMessages((prev) => [...prev, newMessage]);
             }
           } catch (error) {
@@ -416,6 +418,7 @@ export default function ChatPage() {
               is_writer: userData?.isWriter || false,
               status: "delivered",
             };
+            console.log("New private message:", newMessage); // Debug
             setPrivateMessages((prev) => ({
               ...prev,
               [chatKey]: [...(prev[chatKey] || []), newMessage],
@@ -423,7 +426,7 @@ export default function ChatPage() {
             setRecentChats((prev) => {
               const exists = prev.find((chat) => chat.wallet_address === chatKey);
               if (!exists) {
-                fetchRecentChats(); // Refresh recent chats
+                fetchRecentChats();
               }
               return prev;
             });
@@ -618,13 +621,16 @@ export default function ChatPage() {
 
         const { data: recipientData, error: recipientError } = await supabase
           .from("users")
-          .select("id")
+          .select("id, wallet_address")
           .eq("wallet_address", activeChat)
           .single();
 
         if (recipientError || !recipientData) {
           console.error("Recipient fetch failed:", recipientError?.message);
           setError("Recipient not found.");
+        } else if (recipientData.wallet_address === walletAddress) {
+          console.error("Attempted to send notification to self!");
+          setError("Cannot send notification to yourself.");
         } else {
           const notificationMessage = `${userData.name || walletAddress} sent you a message: "${input.trim() || "Media"}"`;
           const { error: notificationError } = await supabase
@@ -632,6 +638,7 @@ export default function ChatPage() {
             .insert({
               user_id: recipientData.id,
               recipient_wallet_address: activeChat,
+              sender_wallet_address: walletAddress,
               message: notificationMessage,
               type: "private_message",
               chat_id: data.id,
@@ -644,7 +651,7 @@ export default function ChatPage() {
             setError("Failed to save notification: " + notificationError.message);
           }
         }
-        fetchRecentChats(); // Refresh recent chats after sending a message
+        fetchRecentChats();
       }
 
       setInput("");
@@ -708,7 +715,6 @@ export default function ChatPage() {
               >
                 <span>Group Chat</span>
               </div>
-              {/* Recent Chats Section */}
               {recentChats.length > 0 && !searchTerm.trim() && (
                 <>
                   <div className={styles.sectionHeader}>Recent Chats</div>
@@ -741,7 +747,6 @@ export default function ChatPage() {
                   ))}
                 </>
               )}
-              {/* Search Results Section */}
               {searchTerm.trim() && users.length > 0 && (
                 <>
                   <div className={styles.sectionHeader}>Search Results</div>
@@ -779,8 +784,11 @@ export default function ChatPage() {
         </aside>
 
         <main className={styles.messages}>
-          {(activeChat === "group" ? messages : privateMessages[activeChat] || []).map((msg) => (
-            <div key={msg.id} id={`message-${msg.id}`}>
+          {(activeChat === "group" ? messages : privateMessages[activeChat] || []).map((msg, index) => (
+            <div
+              key={msg.id || `${msg.created_at}-${msg.sender_wallet || msg.wallet_address}-${index}`} // Fallback key
+              id={`message-${msg.id || index}`}
+            >
               <Message
                 msg={msg}
                 walletAddress={walletAddress}

@@ -445,3 +445,11 @@
     display: none;
   }
 }
+.sectionHeader {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #888;
+  border-bottom: 1px solid #333;
+  margin-top: 10px;
+}

@@ -193,6 +193,7 @@ export default function Home() {
         const { data, error } = await supabase
           .from("notifications")
           .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id, chat_id, recipient_wallet_address")
+         یا
           .eq("user_id", user.id)
           .eq("is_read", false)
           .order("created_at", { ascending: false });
@@ -780,7 +781,7 @@ export default function Home() {
                                 💬 {notif.message}
                               </Link>
                             ) : notif.type === "private_message" ? (
-                              <Link href={`/chat?messageId=${notif.chat_id}&recipient=${notif.recipient_wallet_address}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
+                              <Link href={`/chat?recipient=${notif.sender_wallet_address}&messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
                                 💬 {notif.message}
                               </Link>
                             ) : (
@@ -956,7 +957,6 @@ export default function Home() {
             <p className={styles.noContent}>No manga available yet.</p>
           )}
         </section>
-
 
         <section className={styles.featuresSection}>
           <h2 className={styles.sectionTitle}>Explore More</h2>
