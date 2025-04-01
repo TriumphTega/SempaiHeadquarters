@@ -9,7 +9,7 @@ const Navbar = ({ menuOpen, toggleMenu }) => (
   <BootstrapNavbar className={`${styles.navbar} ${styles.glow}`} sticky="top">
     <Container>
       <BootstrapNavbar.Brand as={Link} href="/" className={styles.logoLink}>
-        <Image src="/images/logo.jpeg" alt="Sempai HQ" width={40} height={40} className={styles.logo} />
+        <Image src="/images/logo.png" alt="Sempai HQ" width={40} height={40} className={styles.logo} />
         <span className={styles.logoText}>Sempai HQ</span>
       </BootstrapNavbar.Brand>
       <Button variant="link" className={styles.menuToggle} onClick={toggleMenu}>

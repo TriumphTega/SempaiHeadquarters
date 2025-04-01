@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
@@ -53,8 +52,34 @@ const NextArrow = (props) => {
   );
 };
 
+const LoadingSpinner = () => (
+  <div className={styles.loadingSpinner}>
+    <svg width="50" height="50" viewBox="0 0 50 50">
+      <circle
+        cx="25"
+        cy="25"
+        r="20"
+        stroke="#00ccff"
+        strokeWidth="4"
+        fill="none"
+        strokeDasharray="31.4"
+        strokeDashoffset="0"
+      >
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          from="0 25 25"
+          to="360 25 25"
+          dur="1s"
+          repeatCount="indefinite"
+        />
+      </circle>
+    </svg>
+  </div>
+);
+
 export default function Home() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, disconnect } = useWallet();
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
@@ -66,8 +91,9 @@ export default function Home() {
   const [manga, setManga] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pageLoading, setPageLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Initial full page load
+  const [pageLoading, setPageLoading] = useState(false); // Navigation load
+  const [contentLoading, setContentLoading] = useState(true); // Novels/Manga spinner
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("dark");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,6 +108,7 @@ export default function Home() {
 
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
+  const hasLoadedInitialData = useRef(false); // Prevent reload on wallet change
 
   const isWalletConnected = connected || embeddedWallet;
   const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey;
@@ -177,26 +204,32 @@ export default function Home() {
   };
 
   const fetchNotifications = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) return;
+    if (!isWalletConnected || !walletPublicKey) {
+      setNotifications([]); // Clear if no wallet
+      return;
+    }
     let retryCount = 0;
     const maxRetries = 3;
 
     const fetchWithRetry = async () => {
       try {
-        const { data: user } = await supabase
+        const { data: user, error: userError } = await supabase
           .from("users")
           .select("id")
           .eq("wallet_address", walletPublicKey)
           .single();
-        if (!user) throw new Error("User not found");
+        if (userError || !user) {
+          setNotifications([]);
+          return;
+        }
 
         const { data, error } = await supabase
           .from("notifications")
           .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id, chat_id, recipient_wallet_address")
-         یا
           .eq("user_id", user.id)
           .eq("is_read", false)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(10);
 
         if (error) throw error;
         setNotifications(data || []);
@@ -207,6 +240,7 @@ export default function Home() {
           return fetchWithRetry();
         }
         setError("Failed to load notifications.");
+        setNotifications([]);
       }
     };
 
@@ -240,7 +274,7 @@ export default function Home() {
     try {
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, isWriter, isArtist, isSuperuser, referral_code")
+        .select("id, isWriter, isArtist, isSuperuser, referral_code, weekly_points")
         .eq("wallet_address", walletPublicKey)
         .single();
 
@@ -252,21 +286,24 @@ export default function Home() {
         setIsSuperuser(user.isSuperuser || false);
         setUserId(user.id);
         setReferralCode(user.referral_code || "");
+        setAmount(user.weekly_points || 0);
       }
     } catch (err) {
       setError(`Failed to fetch user details: ${err.message}`);
     }
   }, [isWalletConnected, walletPublicKey]);
 
-  const checkCreatorLogin = useCallback(async () => {
+  const checkCreatorLogin = useCallback(() => {
     setIsCreatorLoggedIn(isWalletConnected);
   }, [isWalletConnected]);
 
   const fetchNovels = useCallback(async () => {
+    setContentLoading(true);
     try {
       const { data: novelsData, error } = await supabase
         .from("novels")
-        .select("id, title, image, summary, user_id, tags");
+        .select("id, title, image, summary, user_id, tags")
+        .limit(5);
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -325,24 +362,23 @@ export default function Home() {
         };
       });
 
-      const sortedNovels = enrichedNovels.sort((a, b) => {
-        if (b.viewers !== a.viewers) return b.viewers - a.viewers;
-        if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
-        return a.title.localeCompare(b.title);
-      });
-
-      setNovels(sortedNovels.slice(0, 5));
+      setNovels(enrichedNovels);
     } catch (err) {
       setError(err.message);
+      setNovels([]); // Clear on error
+    } finally {
+      setContentLoading(false);
     }
   }, []);
 
   const fetchManga = useCallback(async () => {
+    setContentLoading(true);
     try {
       const { data: mangaData, error } = await supabase
         .from("manga")
         .select("id, title, cover_image, summary, user_id, status, tags")
-        .in("status", ["ongoing", "completed"]);
+        .in("status", ["ongoing", "completed"])
+        .limit(5);
 
       if (error) throw new Error(`Failed to fetch manga: ${error.message}`);
       if (!mangaData || mangaData.length === 0) {
@@ -402,19 +438,16 @@ export default function Home() {
         };
       });
 
-      const sortedManga = enrichedManga.sort((a, b) => {
-        if (b.viewers !== a.viewers) return b.viewers - a.viewers;
-        if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
-        return a.title.localeCompare(b.title);
-      });
-
-      setManga(sortedManga.slice(0, 5));
+      setManga(enrichedManga);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setContentLoading(false);
     }
   }, []);
 
   const fetchAnnouncements = useCallback(async () => {
+    if (!isWalletConnected || !walletPublicKey) return;
     try {
       const response = await fetch(`/api/announcements${walletPublicKey ? `?publicKey=${walletPublicKey}` : ""}`);
       const { data } = await response.json();
@@ -425,7 +458,7 @@ export default function Home() {
           const now = new Date();
           return (now - createdAt) / (1000 * 60 * 60 * 24) <= 7;
         })
-        .slice(0, 5);
+        .slice(0, 3);
 
       const userIds = recentAnnouncements
         .map((a) => a.users?.id)
@@ -451,12 +484,9 @@ export default function Home() {
 
       setAnnouncements(enrichedAnnouncements);
     } catch (err) {
-      console.error("Error fetching announcements:", err);
-      setError("Failed to load announcements.");
-    } finally {
-      setLoading(false);
+      setError("");
     }
-  }, [walletPublicKey]);
+  }, [isWalletConnected, walletPublicKey]);
 
   const handleCreatorAccess = useCallback(async () => {
     if (!isWalletConnected || !walletPublicKey) {
@@ -489,7 +519,6 @@ export default function Home() {
       }
     } catch (err) {
       setError(err.message);
-      setPageLoading(false);
     }
   }, [isWalletConnected, walletPublicKey, router]);
 
@@ -544,14 +573,9 @@ export default function Home() {
     router.push(path);
   };
 
-  const fetchBalance = async () => {
-    if (!isWalletConnected || !walletPublicKey) return;
-    const { data } = await supabase
-      .from("users")
-      .select("weekly_points")
-      .eq("wallet_address", walletPublicKey)
-      .single();
-    if (data) setAmount(data.weekly_points);
+  const handleWalletImport = () => {
+    setPageLoading(true); // Add LoadingPage
+    router.push("/wallet-import");
   };
 
   const copyReferralLink = () => {
@@ -561,29 +585,44 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([
-        checkCreatorLogin(),
-        fetchUserDetails(),
-        fetchNovels(),
-        fetchManga(),
-        fetchNotifications(),
-        fetchAnnouncements(),
-        fetchBalance(),
-      ]);
-      setLoading(false);
+    if (hasLoadedInitialData.current) return; // Skip if already loaded
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        await checkCreatorLogin(); // Quick check first
+        setLoading(false); // Show UI with swirls
+        await Promise.all([fetchNovels(), fetchManga()]); // Load content after UI
+        hasLoadedInitialData.current = true;
+      } catch (err) {
+        setError("Failed to load initial data.");
+        setLoading(false);
+      }
     };
-    loadData();
-  }, [
-    checkCreatorLogin,
-    fetchUserDetails,
-    fetchNovels,
-    fetchManga,
-    fetchNotifications,
-    fetchAnnouncements,
-    isWalletConnected,
-    walletPublicKey,
-  ]);
+    loadInitialData();
+  }, [checkCreatorLogin, fetchNovels, fetchManga]);
+
+  useEffect(() => {
+    const handleWalletDisconnect = async () => {
+      if (!isWalletConnected) {
+        if (connected) await disconnect(); // Disconnect external wallet if present
+        // Reset wallet-dependent state without reloading
+        setNotifications([]);
+        setAnnouncements([]);
+        setIsWriter(false);
+        setIsArtist(false);
+        setIsSuperuser(false);
+        setUserId(null);
+        setReferralCode("");
+        setAmount(0);
+        setIsCreatorLoggedIn(false);
+      } else if (walletPublicKey) {
+        fetchUserDetails();
+        fetchNotifications();
+        fetchAnnouncements();
+      }
+    };
+    handleWalletDisconnect();
+  }, [isWalletConnected, walletPublicKey, fetchUserDetails, fetchNotifications, fetchAnnouncements, connected, disconnect]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -718,7 +757,7 @@ export default function Home() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.png" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
@@ -744,7 +783,7 @@ export default function Home() {
             <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
               <FaGamepad className={styles.navIcon} /> Kaito's Adventure
             </Link>
-            <Link href="/wallet-import" onClick={() => handleNavigation("/wallet-import")} className={styles.navLink}>
+            <Link href="/wallet-import" onClick={handleWalletImport} className={styles.navLink}>
               <FaWallet className={styles.navIcon} /> Import Wallet
             </Link>
             <button onClick={handleCreatorAccess} className={styles.actionButton}>
@@ -781,7 +820,7 @@ export default function Home() {
                                 💬 {notif.message}
                               </Link>
                             ) : notif.type === "private_message" ? (
-                              <Link href={`/chat?recipient=${notif.sender_wallet_address}&messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
+                              <Link href={`/chat?recipient=${notif.recipient_wallet_address}&messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
                                 💬 {notif.message}
                               </Link>
                             ) : (
@@ -877,7 +916,9 @@ export default function Home() {
         <section className={styles.contentSection}>
           <h2 className={styles.sectionTitle}>Featured Novels</h2>
           {error && <div className={styles.errorAlert}>{error}</div>}
-          {novels.length > 0 ? (
+          {contentLoading ? (
+            <LoadingSpinner />
+          ) : novels.length > 0 ? (
             <Slider {...carouselSettings(novels.length)} className={styles.carousel}>
               {novels.map((novel) => (
                 <div key={novel.id} className={styles.carouselItem}>
@@ -919,7 +960,9 @@ export default function Home() {
         <section className={styles.contentSection}>
           <h2 className={styles.sectionTitle}>Featured Manga</h2>
           {error && <div className={styles.errorAlert}>{error}</div>}
-          {manga.length > 0 ? (
+          {contentLoading ? (
+            <LoadingSpinner />
+          ) : manga.length > 0 ? (
             <Slider {...carouselSettings(manga.length)} className={styles.carousel}>
               {manga.map((mangaItem) => (
                 <div key={mangaItem.id} className={styles.carouselItem}>

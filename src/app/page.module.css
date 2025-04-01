@@ -1316,3 +1316,9 @@
 .createAnnouncementButton:hover {
   background-color: #e65b50;
 }
+.loadingSpinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}

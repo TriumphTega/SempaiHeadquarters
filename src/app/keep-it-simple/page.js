@@ -56,7 +56,7 @@ export default function Haven() {
       <header className={styles.header}>
         <nav className={styles.nav}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+            <img src="/images/logo.png" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           

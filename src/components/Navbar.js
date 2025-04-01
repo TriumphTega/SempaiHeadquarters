@@ -13,7 +13,7 @@ export default function Navbar({ connected, isWriter, notifications, markAsRead,
         {/* Brand Logo */}
         <Link href="/" className={`${styles.brand} navbar-brand`}>
           <img
-            src="/images/logo.jpeg"
+            src="/images/logo.png"
             alt="Sempai HQ"
             className={styles.logo}
           />

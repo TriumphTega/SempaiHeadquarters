@@ -200,7 +200,7 @@ export default function PollsPage() {
       <nav className={styles.pollsNavbar}>
         <div className={styles.navbarContent}>
           <Link href="/" className={styles.nexusLogo}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logoImage} />
+            <img src="/images/logo.png" alt="Sempai HQ" className={styles.logoImage} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuButton} onClick={toggleMenu}>
