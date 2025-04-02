@@ -19,7 +19,7 @@ export default function LoadingPage() {
     <div className={`${styles.loadingContainer} ${!loading ? styles.hidden : ""}`}>
       <div className={styles.energyField}>
         <div className={styles.logoWrapper}>
-          <img src="/images/logo.png" alt="Sempai HQ Logo" className={styles.logo} />
+          <img src="/images/logo.jpeg" alt="Sempai HQ Logo" className={styles.logo} />
           <div className={styles.logoGlow}></div>
         </div>
         <div className={styles.particleSwarm}>

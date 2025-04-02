@@ -721,7 +721,7 @@ export default function ChatPage() {
     <div className={styles.chatContainer}>
       <nav className={styles.navbar}>
         <Link href="/" className={styles.logoLink}>
-          <img src="/images/logo.png" alt="Logo" className={styles.logo} />
+          <img src="/images/logo.jpeg" alt="Logo" className={styles.logo} />
         </Link>
         <button
           className={styles.sidebarToggle}
