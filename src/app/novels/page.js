@@ -270,11 +270,11 @@ export default function NovelsPage() {
       {/* Rewards Belt */}
       <div className={styles.rewardsBelt}>
         <div className={styles.beltContent}>
-          <span className={styles.rewardItem}>
+          {/* <span className={styles.rewardItem}>
             🎉 Weekly Reward: Users will be rewarded <strong>2,000,000 SMP Tokens</strong> every week based on points! 🌟
-          </span>
+          </span> */}
           <span className={styles.rewardItem}>
-            👑 Top Reader: 100 Pts Daily 🏆
+            👑 Our First chapter contest is Live. 🏆
           </span>
         </div>
       </div>
