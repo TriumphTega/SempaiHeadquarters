@@ -303,7 +303,7 @@ export default function Home() {
       const { data: novelsData, error } = await supabase
         .from("novels")
         .select("id, title, image, summary, user_id, tags")
-        .limit(5);
+        .limit(6);
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
