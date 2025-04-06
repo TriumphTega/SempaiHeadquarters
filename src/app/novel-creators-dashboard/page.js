@@ -71,6 +71,8 @@ export default function NovelDashboard() {
   const [tags, setTags] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
+  const [showNovelDeleteConfirm, setShowNovelDeleteConfirm] = useState(false);
+  const [novelToDelete, setNovelToDelete] = useState(null);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -326,6 +328,42 @@ export default function NovelDashboard() {
     setChapterContents(novel.chaptercontents || []);
     setAdvanceChapters(novel.advance_chapters || []);
     setTags(novel.tags ? novel.tags.map(tag => ({ value: tag, label: tag })) : []);
+  };
+
+  const handleDeleteNovel = (novel) => {
+    if (novel.user_id !== currentUserId && !isSuperuser) {
+      alert("You can only delete your own novels unless you are a superuser.");
+      return;
+    }
+    setNovelToDelete(novel);
+    setShowNovelDeleteConfirm(true);
+  };
+
+  const confirmDeleteNovel = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("novels")
+        .delete()
+        .eq("id", novelToDelete.id);
+      if (error) throw new Error(error.message);
+
+      setNovelsList((prev) => prev.filter((novel) => novel.id !== novelToDelete.id));
+      if (selectedNovel && selectedNovel.id === novelToDelete.id) resetForm();
+      alert("Novel deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting novel:", err.message);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+      setShowNovelDeleteConfirm(false);
+      setNovelToDelete(null);
+    }
+  };
+
+  const cancelDeleteNovel = () => {
+    setShowNovelDeleteConfirm(false);
+    setNovelToDelete(null);
   };
 
   const handleNovelSubmit = async (e) => {
@@ -786,7 +824,10 @@ export default function NovelDashboard() {
                         <p className={styles.novelTags}>Tags: {novel.tags?.join(", ") || "None"}</p>
                         <p className={styles.novelViewers}>Viewers: {novel.viewers_count || 0}</p>
                         {(novel.user_id === currentUserId || isSuperuser) && (
-                          <button type="button" onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
+                          <div className={styles.novelActions}>
+                            <button type="button" onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>
+                            <button type="button" onClick={() => handleDeleteNovel(novel)} className={styles.deleteButton}><FaTrash /></button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -824,6 +865,19 @@ export default function NovelDashboard() {
             <div className={styles.deleteConfirmButtons}>
               <button type="button" onClick={confirmDeleteChapter} className={styles.confirmButton}>Yes, Delete</button>
               <button type="button" onClick={cancelDeleteChapter} className={styles.cancelButton}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNovelDeleteConfirm && (
+        <div className={styles.deleteConfirmOverlay}>
+          <div className={styles.deleteConfirmPopup}>
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete "<strong>{novelToDelete?.title}</strong>"? This action cannot be undone.</p>
+            <div className={styles.deleteConfirmButtons}>
+              <button type="button" onClick={confirmDeleteNovel} className={styles.confirmButton}>Yes, Delete</button>
+              <button type="button" onClick={cancelDeleteNovel} className={styles.cancelButton}>Cancel</button>
             </div>
           </div>
         </div>

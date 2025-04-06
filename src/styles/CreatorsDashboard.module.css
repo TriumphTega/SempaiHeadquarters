@@ -334,7 +334,7 @@
   gap: 0.5rem;
 }
 
-.editButton, .deleteButton {
+.editButton {
   background: none;
   border: none;
   color: #f39c12;
@@ -348,11 +348,39 @@
 }
 
 .deleteButton {
-  color: #e74c3c;
+  background: #e74c3c;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .deleteButton:hover {
-  color: #c0392b;
+  background: #c0392b;
+  transform: scale(1.05);
+}
+
+.deleteButton:active {
+  transform: scale(0.95);
+}
+
+.darkMode .deleteButton {
+  background: #e74c3c;
+}
+
+.lightMode .deleteButton {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.lightMode .deleteButton:hover {
+  background: #c0392b;
 }
 
 /* Novels Section */
@@ -384,6 +412,15 @@
   padding: 1rem;
 }
 
+.novelActions {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
 .novelTitle {
   margin: 0;
   font-size: 1.2rem;
@@ -391,6 +428,18 @@
 }
 
 .novelSummary {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.novelTags {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.novelViewers {
   margin: 0.5rem 0;
   font-size: 0.9rem;
   opacity: 0.8;
@@ -520,6 +569,7 @@
     margin-top: 0.5rem;
   }
 }
+
 /* Overlay for the popup */
 .deleteConfirmOverlay {
   position: fixed;
@@ -527,35 +577,35 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Semi-transparent black overlay */
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Ensure it’s above other content */
+  z-index: 1000;
 }
 
 /* Popup container */
 .deleteConfirmPopup {
-  background-color: #1a1a1a; /* Dark black shade */
+  background-color: #1a1a1a;
   padding: 20px;
   border-radius: 10px;
-  border: 2px solid #e67e22; /* Dark orange border */
+  border: 2px solid #e67e22;
   width: 400px;
   max-width: 90%;
   text-align: center;
-  color: #fff; /* White text for contrast */
+  color: #fff;
 }
 
 /* Popup heading */
 .deleteConfirmPopup h3 {
   margin: 0 0 10px;
-  color: #e67e22; /* Dark orange for the title */
+  color: #e67e22;
 }
 
 /* Popup paragraph */
 .deleteConfirmPopup p {
   margin: 0 0 20px;
-  color: #d3d3d3; /* Light gray for readability */
+  color: #d3d3d3;
 }
 
 /* Button container */
@@ -566,7 +616,7 @@
 
 /* Confirm button */
 .confirmButton {
-  background-color: #e67e22; /* Dark orange */
+  background-color: #e67e22;
   color: #fff;
   padding: 8px 16px;
   border: none;
@@ -576,12 +626,12 @@
 }
 
 .confirmButton:hover {
-  background-color: #d35400; /* Slightly darker orange on hover */
+  background-color: #d35400;
 }
 
 /* Cancel button */
 .cancelButton {
-  background-color: #333; /* Dark gray */
+  background-color: #333;
   color: #fff;
   padding: 8px 16px;
   border: none;
@@ -591,18 +641,19 @@
 }
 
 .cancelButton:hover {
-  background-color: #555; /* Lighter gray on hover */
+  background-color: #555;
 }
+
 /* Spinner for loading state */
 .spinner {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid #e67e22; /* Dark orange */
-  border-top: 3px solid #1a1a1a; /* Dark black */
+  border: 3px solid #e67e22;
+  border-top: 3px solid #1a1a1a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-right: 8px; /* Space between spinner and text (if any) */
+  margin-right: 8px;
 }
 
 @keyframes spin {
@@ -615,7 +666,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e67e22; /* Dark orange */
+  background-color: #e67e22;
   color: #fff;
   padding: 10px 20px;
   border: none;
@@ -625,11 +676,11 @@
 }
 
 .submitButton:hover:not(:disabled) {
-  background-color: #d35400; /* Darker orange on hover */
+  background-color: #d35400;
 }
 
 .submitButton:disabled {
-  background-color: #555; /* Gray when disabled */
+  background-color: #555;
   cursor: not-allowed;
 }
 
@@ -661,25 +712,25 @@
   margin-left: 10px;
   padding: 5px;
   border-radius: 5px;
-  background-color: #1a1a1a; /* Dark black */
-  border: 1px solid #e67e22; /* Dark orange */
-  color: #e67e22; /* Dark orange text */
+  background-color: #1a1a1a;
+  border: 1px solid #e67e22;
+  color: #e67e22;
   font-size: 14px;
   cursor: pointer;
-  appearance: none; /* Remove default arrow */
-  background-image: url('data:image/svg+xml;utf8,<svg fill="%23e67e22" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* Custom orange arrow */
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23e67e22" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
   background-repeat: no-repeat;
   background-position: right 5px center;
-  padding-right: 25px; /* Space for the arrow */
+  padding-right: 25px;
 }
 
 .moveSelect:hover {
-  background-color: #333; /* Slightly lighter black on hover */
+  background-color: #333;
 }
 
 .moveSelect:focus {
   outline: none;
-  border-color: #d35400; /* Darker orange on focus */
+  border-color: #d35400;
 }
 
 .darkMode .moveSelect {
@@ -688,6 +739,6 @@
 }
 
 .moveSelect option {
-  background-color: #1a1a1a; /* Dark black for dropdown options */
-  color: #e67e22; /* Dark orange text */
+  background-color: #1a1a1a;
+  color: #e67e22;
 }
