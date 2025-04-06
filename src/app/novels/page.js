@@ -341,7 +341,7 @@ export default function NovelsPage() {
             <span className={styles.walletSummary}>{balance} SMP | {weeklyPoints} Pts</span>
           </button>
           <div className={styles.walletCountdown}>
-            <FaClock /> <span>{timeLeft || "Loading..."}</span>
+            {/* <FaClock /> <span>{timeLeft || "Loading..."}</span> */}<FaClock /> <span>Countdown PAUSED</span>
           </div>
           <div className={styles.walletContent}>
             <div className={styles.walletInfo}>

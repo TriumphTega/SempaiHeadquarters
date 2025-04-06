@@ -93,11 +93,16 @@ export default function CountdownTimer() {
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
-      {loading ? (
+      {/* {loading ? (
         <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
       ) : (
         <span style={{ color: "#ffb347" }}>⏳ Next Reset: {timeLeft || "Unknown"}</span>
-      )}
+      )} */}
+      {loading ? (
+        <span style={{ color: "#feb47b" }}>⏳ Loading countdown...</span>
+      ) : (
+        <span style={{ color: "#ffb347" }}>Countdown PAUSED</span>
+      )} 
 
 <div
       style={{
