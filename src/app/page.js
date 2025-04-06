@@ -844,9 +844,9 @@ export default function Home() {
                 <FaShareAlt className={styles.referralIcon} />
               </button>
             )}
-            <button onClick={toggleTheme} className={styles.themeToggle}>
+            {/* <button onClick={toggleTheme} className={styles.themeToggle}>
               {theme === "dark" ? <FaSun /> : <FaMoon />}
-            </button>
+            </button> */}
             <ConnectButton className={styles.connectButton} />
           </div>
         </div>
