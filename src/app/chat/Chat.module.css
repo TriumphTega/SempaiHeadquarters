@@ -318,7 +318,7 @@
  .replyIcon {
   width: 18px;
   height: 18px;
-  fill: #ffffff80; /* Adjusted for sender message visibility */
+  fill: #ff220080; /* Adjusted for sender message visibility */
  }
  
  .cancelIcon {

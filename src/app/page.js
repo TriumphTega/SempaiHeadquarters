@@ -300,10 +300,10 @@ export default function Home() {
   const fetchNovels = useCallback(async () => {
     setContentLoading(true);
     try {
+      // Fetch all novels initially without limit to allow sorting
       const { data: novelsData, error } = await supabase
         .from("novels")
-        .select("id, title, image, summary, user_id, tags")
-        .limit(6);
+        .select("id, title, image, summary, user_id, tags");
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -357,12 +357,21 @@ export default function Home() {
           ...novel,
           writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
           viewers: uniqueViewers,
-          averageRating: averageRating.toFixed(1),
+          averageRating: averageRating,
           isAdult: novel.tags && novel.tags.includes("Adult(18+)"),
         };
       });
 
-      setNovels(enrichedNovels);
+      // Sort by a combined score of viewers and averageRating, then take top 6
+      const sortedNovels = enrichedNovels
+        .sort((a, b) => {
+          const scoreA = (a.viewers * 0.6) + (a.averageRating * 0.4); // Weight: 60% views, 40% rating
+          const scoreB = (b.viewers * 0.6) + (b.averageRating * 0.4);
+          return scoreB - scoreA; // Descending order
+        })
+        .slice(0, 6); // Limit to 6 novels
+
+      setNovels(sortedNovels);
     } catch (err) {
       setError(err.message);
       setNovels([]); // Clear on error
@@ -934,7 +943,9 @@ export default function Home() {
                             <FaEye /> {novel.viewers} Views
                           </span>
                           <span className={styles.rating}>
-                            <FaStar /> {novel.averageRating}
+                            <FaStar /> {novel.averageRating.toFixed(2)
+
+}
                           </span>
                         </div>
                       </div>
