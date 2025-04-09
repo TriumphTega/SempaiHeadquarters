@@ -1044,3 +1044,44 @@
   margin-top: 15px;
   text-align: center;
 }
+.readingOptions {
+  margin-bottom: 20px;
+  text-align: center;
+}
+.readWithSmpButton {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.readWithSmpButton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+.readingModeText {
+  margin-top: 10px;
+  font-style: italic;
+}
+.balanceFloat {
+  position: fixed;
+  top: 100px; /* Moved down to avoid navbar overlap */
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+}
+.balanceItem {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+.balanceIcon {
+  margin-right: 8px;
+  color: #ffd700; /* Gold color for icons */
+}

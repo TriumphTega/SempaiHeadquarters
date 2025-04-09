@@ -26,10 +26,9 @@ const connection = new Connection(RPC_URL, "confirmed");
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const router = useRouter();
-  const { connected, publicKey, sendTransaction } = useWallet(); // External wallet (e.g., Phantom)
-  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext); // Embedded wallet
+  const { connected, publicKey, sendTransaction } = useWallet();
+  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
 
-  // Determine active wallet (prioritize embedded wallet if available)
   const activePublicKey = embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
   const activeWalletAddress = activePublicKey?.toString();
   const isWalletConnected = !!activePublicKey;
@@ -48,11 +47,14 @@ export default function ChapterPage() {
   const [canUnlockNextThree, setCanUnlockNextThree] = useState(false);
   const [solPrice, setSolPrice] = useState(null);
   const [smpPrice, setSmpPrice] = useState(null);
-  const usdcPrice = 1; // USDC is pegged to $1
+  const usdcPrice = 1;
   const [userRating, setUserRating] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
+  const [readingMode, setReadingMode] = useState("free");
+  const [smpBalance, setSmpBalance] = useState(null); // New state for SMP balance
+  const [weeklyPoints, setWeeklyPoints] = useState(null); // New state for weekly points
 
   const fetchPrices = async () => {
     const fetchSolPrice = async () => {
@@ -78,7 +80,7 @@ export default function ChapterPage() {
     };
 
     const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
-    return { solPrice: sol || 100, smpPrice: smp }; // Default SOL to 100 if fetch fails
+    return { solPrice: sol || 100, smpPrice: smp };
   };
 
   useEffect(() => {
@@ -90,9 +92,41 @@ export default function ChapterPage() {
     getInitialPrices();
   }, []);
 
+  const fetchUserBalances = useCallback(async () => {
+    if (!activeWalletAddress) return;
+
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("weekly_points")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
+
+      if (userError) throw new Error(`Error fetching user points: ${userError.message}`);
+      setWeeklyPoints(userData?.weekly_points || 0);
+
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", activeWalletAddress)
+        .eq("currency", "SMP")
+        .single();
+
+      if (balanceError) throw new Error(`Error fetching SMP balance: ${balanceError.message}`);
+      setSmpBalance(balanceData?.amount || 0);
+    } catch (error) {
+      console.error("Error fetching balances:", error);
+      setError(error.message);
+    }
+  }, [activeWalletAddress]);
+
+  useEffect(() => {
+    if (isWalletConnected) fetchUserBalances();
+  }, [isWalletConnected, activeWalletAddress, fetchUserBalances]);
+
   const updateTokenBalance = useCallback(async () => {
-    if (!activeWalletAddress || !novel || !chapter || !id) {
-      console.warn("Missing required data for token update:", { activeWalletAddress, novel, chapter, id });
+    if (!activeWalletAddress || !novel || !chapter || !id || readingMode !== "paid") {
+      console.warn("Skipping token update:", { activeWalletAddress, novel, chapter, id, readingMode });
       return;
     }
 
@@ -132,6 +166,16 @@ export default function ChapterPage() {
           return;
         }
       }
+
+      const { data: walletBalance, error: balanceError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", activeWalletAddress)
+        .eq("currency", "SMP")
+        .single();
+
+      if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
+      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance");
 
       const { data: novelOwnerData, error: novelOwnerError } = await supabase
         .from("novels")
@@ -180,6 +224,13 @@ export default function ChapterPage() {
         setTimeout(() => setWarningMessage(""), 5000);
         return;
       }
+
+      const newSmpBalance = walletBalance.amount - 1000;
+      await supabase
+        .from("wallet_balances")
+        .update({ amount: newSmpBalance })
+        .eq("wallet_address", activeWalletAddress)
+        .eq("currency", "SMP");
 
       let readerReward = 100;
       const authorReward = 50;
@@ -287,6 +338,17 @@ export default function ChapterPage() {
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
         },
+        {
+          destination_user_id: user.id,
+          event_type: "withdrawal",
+          event_details: eventDetails,
+          source_chain: "SOL",
+          source_currency: "SMP",
+          amount_change: -1000,
+          wallet_address: activeWalletAddress,
+          source_user_id: user.id,
+          destination_chain: "SOL",
+        },
       ];
 
       const { error: eventInsertError } = await supabase
@@ -323,13 +385,24 @@ export default function ChapterPage() {
           });
       }
 
-      setSuccessMessage("Points credited successfully!");
+      setSuccessMessage("Points credited successfully! 1,000 SMP deducted.");
+      setSmpBalance(newSmpBalance); // Update state after deduction
+      setWeeklyPoints(newReaderBalance); // Update state after points credited
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
       setError(error.message);
       console.error("Unexpected error in updateTokenBalance:", error);
     }
-  }, [activeWalletAddress, novel, chapter, balance, id]);
+  }, [activeWalletAddress, novel, chapter, balance, id, readingMode]);
+
+  const handleReadWithSMP = async () => {
+    if (!isWalletConnected) {
+      setError("Please connect your wallet to read with SMP.");
+      return;
+    }
+    setReadingMode("paid");
+    await updateTokenBalance();
+  };
 
   useEffect(() => {
     async function initialize() {
@@ -613,7 +686,7 @@ export default function ChapterPage() {
       let signature;
 
       const balance = await connection.getBalance(activePublicKey);
-      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000; // Add 5000 lamports for fee
+      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000;
 
       if (balance < minBalanceRequired) {
         throw new Error(
@@ -635,7 +708,7 @@ export default function ChapterPage() {
 
         if (embeddedWallet) {
           console.log("Using embedded wallet for SOL transaction");
-          const password = prompt("Enter your wallet password to proceed:"); // Replace with secure input method
+          const password = prompt("Enter your wallet password to proceed:");
           if (!password) throw new Error("Password required for embedded wallet.");
           const secretKey = getSecretKey(password);
           if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
@@ -677,7 +750,7 @@ export default function ChapterPage() {
 
         if (embeddedWallet) {
           console.log("Using embedded wallet for token transaction");
-          const password = prompt("Enter your wallet password to proceed:"); // Replace with secure input method
+          const password = prompt("Enter your wallet password to proceed:");
           if (!password) throw new Error("Password required for embedded wallet.");
           const secretKey = getSecretKey(password);
           if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
@@ -779,10 +852,10 @@ export default function ChapterPage() {
   }, [fetchNovel]);
 
   useEffect(() => {
-    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 2) && !isLocked) {
+    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 2) && !isLocked && readingMode === "paid") {
       if (isWalletConnected) updateTokenBalance();
     }
-  }, [loading, novel, isWalletConnected, isLocked, chapter, updateTokenBalance]);
+  }, [loading, novel, isWalletConnected, isLocked, chapter, updateTokenBalance, readingMode]);
 
   const readText = (text) => {
     if ("speechSynthesis" in window) {
@@ -862,6 +935,19 @@ export default function ChapterPage() {
       <Head>
         <title>{`${novel.title} - ${chapterTitle}`}</title>
       </Head>
+
+      {isWalletConnected && (
+        <div className={styles.balanceFloat}>
+          <div className={styles.balanceItem}>
+            <FaWallet className={styles.balanceIcon} />
+            <span>SMP: {smpBalance !== null ? smpBalance.toLocaleString() : "Loading..."}</span>
+          </div>
+          <div className={styles.balanceItem}>
+            <FaStar className={styles.balanceIcon} />
+            <span>Points: {weeklyPoints !== null ? weeklyPoints.toLocaleString() : "Loading..."}</span>
+          </div>
+        </div>
+      )}
 
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
@@ -994,6 +1080,20 @@ export default function ChapterPage() {
           </div>
         ) : (
           <>
+            <div className={styles.readingOptions}>
+              {isWalletConnected && (
+                <button
+                  onClick={handleReadWithSMP}
+                  className={styles.readWithSmpButton}
+                  disabled={readingMode === "paid"}
+                >
+                  <FaGem className={styles.buttonIcon} /> Read with 1,000 SMP (Earn Points)
+                </button>
+              )}
+              <p className={styles.readingModeText}>
+                {readingMode === "free" ? "Reading for free (No points)" : "Reading with SMP (Points earned)"}
+              </p>
+            </div>
             <div className={styles.chapterContent}>
               <div dangerouslySetInnerHTML={{ __html: paragraphs }} className={styles.contentText}></div>
             </div>

@@ -99,14 +99,16 @@ export default function ConnectButton() {
             chain: "SOL",
             currency: "SMP",
             decimals: 6,
-            amount: 0,
+            amount: 100000,
           });
 
         if (balanceError) {
           console.error("Error creating wallet balance:", balanceError.message);
+          alert(`Danger: Failed to credit 100,000 SMP - ${balanceError.message}`); // Danger alert
           throw new Error(`Failed to create wallet balance: ${balanceError.message}`);
         }
         console.log("Wallet balance initialized successfully.");
+        alert("Success: 100,000 SMP credited to your wallet!"); // Success alert
       }
 
       if (referralCodeFromUrl && !existingUser?.has_updated_profile) {
