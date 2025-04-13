@@ -24,7 +24,8 @@ import {
   FaShareAlt,
   FaEye,
   FaStar,
-  FaWallet
+  FaWallet,
+  FaChartBar
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -778,6 +779,9 @@ export default function Home() {
             </Link>
             <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
               <FaExchangeAlt className={styles.navIcon} /> Swap
+            </Link>
+            <Link href="/stat-page" onClick={() => (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup())} className={styles.navLink}>
+              <FaChartBar className={styles.navIcon} /> Stats
             </Link>
             <Link
               href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
