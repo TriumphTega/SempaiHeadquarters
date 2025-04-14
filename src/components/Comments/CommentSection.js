@@ -72,6 +72,7 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
 };
 
 const formatUsername = (username) => {
+  if (!username) return "Anonymous";
   if (username.length > 15) return `${username.slice(0, 2)}**${username.slice(-2)}`;
   return username;
 };
@@ -82,8 +83,14 @@ export default function CommentSection({ novelId, chapter }) {
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
+  const [error, setError] = useState(null);
   const { balance } = UseAmethystBalance();
   const [currentUserId, setCurrentUserId] = useState(null);
+
+  const setTemporaryError = (message) => {
+    setError(message);
+    setTimeout(() => setError(null), 5000);
+  };
 
   useEffect(() => {
     if (!publicKey) return;
@@ -95,8 +102,9 @@ export default function CommentSection({ novelId, chapter }) {
         .eq("wallet_address", publicKey.toString())
         .single();
 
-      if (error || !user) {
-        console.error("Error fetching user ID:", error);
+      if (error) {
+        console.error("Error fetching user ID:", error.message);
+        setTemporaryError("Failed to load user data.");
         return;
       }
       setCurrentUserId(user.id);
@@ -113,35 +121,87 @@ export default function CommentSection({ novelId, chapter }) {
       .eq("user_id", currentUserId);
 
     if (error) {
-      console.error("Error deleting comment:", error);
+      console.error("Error deleting comment:", error.message);
+      setTemporaryError("Failed to delete comment.");
       return;
     }
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
   const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from("comments")
-      .select("*")
-      .eq("novel_id", novelId)
-      .eq("chapter", chapter)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("comments")
+        .select(`
+          id,
+          novel_id,
+          chapter,
+          user_id,
+          username,
+          content,
+          created_at,
+          parent_id,
+          users:users(id, name)
+        `)
+        .eq("novel_id", novelId)
+        .eq("chapter", chapter)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching comments:", error);
-      return;
+      if (error) throw error;
+
+      // Ensure username is populated
+      const enrichedComments = data.map((comment) => ({
+        ...comment,
+        username: comment.username || comment.users?.name || "Anonymous",
+        replies: comment.replies || [],
+      }));
+
+      setComments(enrichedComments);
+    } catch (error) {
+      console.error("Error fetching comments:", error.message);
+      setTemporaryError("Failed to load comments.");
     }
-    setComments(data);
   };
 
   useEffect(() => {
+    if (!publicKey) return;
+
     fetchComments();
-    const intervalId = setInterval(fetchComments, 5000);
-    return () => clearInterval(intervalId);
-  }, [novelId, chapter]);
+
+    const subscription = supabase
+      .channel(`comments-${novelId}-${chapter}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "comments",
+          filter: `novel_id=eq.${novelId},chapter=eq.${chapter}`,
+        },
+        fetchComments
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "comments",
+          filter: `novel_id=eq.${novelId},chapter=eq.${chapter}`,
+        },
+        fetchComments
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [novelId, chapter, publicKey]);
 
   const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim()) {
+      setTemporaryError("Comment cannot be empty.");
+      return;
+    }
 
     const { data: user, error: userError } = await supabase
       .from("users")
@@ -150,7 +210,8 @@ export default function CommentSection({ novelId, chapter }) {
       .single();
 
     if (userError || !user) {
-      console.error("Error fetching user:", userError);
+      console.error("Error fetching user:", userError?.message);
+      setTemporaryError("Failed to fetch user data.");
       return;
     }
 
@@ -166,7 +227,7 @@ export default function CommentSection({ novelId, chapter }) {
         .gte("created_at", oneMinuteAgo);
 
       if (recentComments.length > 0) {
-        alert("You can only post one comment per minute.");
+        setTemporaryError("You can only post one comment per minute.");
         return;
       }
 
@@ -179,9 +240,11 @@ export default function CommentSection({ novelId, chapter }) {
 
       const hasReachedDailyLimit = rewardedToday.length >= 10;
 
+      const username = user.name || user.wallet_address.slice(0, 6) + "..." + user.wallet_address.slice(-4);
+
       const { data: comment, error: commentError } = await supabase
         .from("comments")
-        .insert([{ novel_id: novelId, chapter, user_id: user.id, username: user.name, content: newComment, parent_id: replyingTo || null, is_rewarded: !hasReachedDailyLimit }])
+        .insert([{ novel_id: novelId, chapter, user_id: user.id, username, content: newComment, parent_id: replyingTo || null, is_rewarded: !hasReachedDailyLimit }])
         .select()
         .single();
 
@@ -211,7 +274,7 @@ export default function CommentSection({ novelId, chapter }) {
         const { data: parentComment } = await supabase.from("comments").select("user_id").eq("id", replyingTo).single();
         if (parentComment && parentComment.user_id !== user.id) {
           await supabase.from("notifications").insert([
-            { user_id: parentComment.user_id, novel_id: novelId, chapter, message: `${user.name} replied to your comment.`, type: "reply" },
+            { user_id: parentComment.user_id, novel_id: novelId, chapter, message: `${username} replied to your comment.`, type: "reply" },
           ]);
         }
       }
@@ -221,6 +284,7 @@ export default function CommentSection({ novelId, chapter }) {
       setComments((prev) => [comment, ...prev]);
     } catch (error) {
       console.error("Error submitting comment:", error.message);
+      setTemporaryError("Failed to post comment.");
     }
   };
 
@@ -255,6 +319,14 @@ export default function CommentSection({ novelId, chapter }) {
       <h4 className={styles.title}>
         <FaComment /> Comments
       </h4>
+      {error && (
+        <div className={styles.errorMessage}>
+          {error}
+          <button onClick={() => setError(null)} className={styles.clearErrorButton}>
+            <FaTimes />
+          </button>
+        </div>
+      )}
       <textarea
         className={styles.textarea}
         value={newComment}

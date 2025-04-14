@@ -17,8 +17,21 @@ export default function NovelPage() {
   const { connected, publicKey } = useWallet();
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
+
+  // Sanitize text to prevent XSS
+  const sanitizeText = (text) => {
+    if (!text) return "";
+    return text.replace(/[<>&"']/g, (char) => ({
+      "<": "&lt;",
+      ">": "&gt;",
+      "&": "&amp;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[char]));
+  };
 
   // Toggle mobile menu
   const toggleMenu = () => {
@@ -35,16 +48,17 @@ export default function NovelPage() {
         .eq("id", id)
         .single();
 
-      if (error) throw new Error("Error fetching novel");
+      if (error) throw new Error("Novel not found");
       setNovel(data);
     } catch (error) {
       console.error("Unexpected error:", error.message);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, supabase]);
 
-  // Fetch novel data on mount, regardless of wallet connection
+  // Fetch novel data on mount
   useEffect(() => {
     fetchNovel();
   }, [fetchNovel]);
@@ -52,7 +66,7 @@ export default function NovelPage() {
   // Handle navigation with wallet check for chapters beyond 1
   const handleNavigation = (path, chapterId) => {
     const chapterNum = parseInt(chapterId, 10);
-    if (!connected && chapterNum > 1) { // Require connection for chapters 2+ (index 2+)
+    if (isNaN(chapterNum) || (!connected || !publicKey) && chapterNum > 1) {
       setShowConnectPopup(true);
     } else {
       router.push(path);
@@ -61,10 +75,13 @@ export default function NovelPage() {
 
   if (loading) return <LoadingPage />;
 
-  if (!novel) {
+  if (!novel || error) {
     return (
       <div className={styles.errorContainer}>
-        <h2 className={styles.errorText}>Novel not found</h2>
+        <h2 className={styles.errorText}>{error || "Novel not found"}</h2>
+        <Link href="/" className={styles.backHomeLink}>
+          <FaHome /> Back to Home
+        </Link>
       </div>
     );
   }
@@ -80,7 +97,7 @@ export default function NovelPage() {
           <h3 className={styles.popupTitle}>Access Denied</h3>
           <p className={styles.popupMessage}>Connect your wallet to explore this chapter.</p>
           <WalletMultiButton className={styles.connectWalletButton} />
-          <Link href="/" onClick={() => router.push("/")} className={styles.backHomeLink}>
+          <Link href="/" className={styles.backHomeLink}>
             <FaHome /> Back to Home
           </Link>
         </div>
@@ -93,7 +110,7 @@ export default function NovelPage() {
       {/* Futuristic Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
-          <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
+          <Link href="/" className={styles.logoLink}>
             <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
@@ -101,10 +118,10 @@ export default function NovelPage() {
             <FaBars />
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => router.push("/")} className={styles.navLink}>
+            <Link href="/" className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link href={`/novel/${id}/summary`} onClick={() => router.push(`/novel/${id}/summary`)} className={styles.navLink}>
+            <Link href={`/novel/${id}/summary`} className={styles.navLink}>
               <FaBookOpen className={styles.navIcon} /> Summary
             </Link>
           </div>
@@ -114,35 +131,48 @@ export default function NovelPage() {
       {/* Main Content */}
       <div className={styles.novelContainer}>
         <div className={styles.novelHeader}>
-          <h1 className={styles.novelTitle}>{novel.title}</h1>
+          <h1 className={styles.novelTitle}>{sanitizeText(novel.title)}</h1>
           <div className={styles.novelImageWrapper}>
-            <img src={novel.image} alt={novel.title} className={styles.novelImage} />
+            <img
+              src={novel.image || "/images/default-novel.jpg"}
+              alt={sanitizeText(novel.title)}
+              className={styles.novelImage}
+            />
             <div className={styles.imageGlow}></div>
           </div>
           <p className={styles.novelIntro}>
-            Dive into the chapters of <span className={styles.highlight}>{novel.title}</span>:
+            Dive into the chapters of <span className={styles.highlight}>{sanitizeText(novel.title)}</span>:
           </p>
         </div>
 
         {/* Chapters Grid */}
         <div className={styles.chaptersGrid}>
-          {Object.entries(novel.chaptertitles || {}).map(([chapterId, title]) => (
-            <Link
-              href={`/novel/${id}/chapter/${chapterId}`}
-              onClick={() => handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId)}
-              key={chapterId}
-              className={styles.chapterCard}
-            >
-              <div className={styles.chapterContent}>
-                <h3 className={styles.chapterTitle}>{title}</h3>
-                <div className={styles.chapterHoverEffect}></div>
-              </div>
-            </Link>
-          ))}
+          {novel.chaptertitles && Object.keys(novel.chaptertitles).length > 0 ? (
+            Object.entries(novel.chaptertitles).map(([chapterId, title]) => (
+              <Link
+                href={`/novel/${id}/chapter/${chapterId}`}
+                key={chapterId}
+                className={styles.chapterCard}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId);
+                }}
+              >
+                <div className={styles.chapterContent}>
+                  <h3 className={styles.chapterTitle}>{sanitizeText(title)}</h3>
+                  <div className={styles.chapterHoverEffect}></div>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <p className={styles.noChapters}>No chapters available for this novel.</p>
+          )}
         </div>
 
         {/* Comments Section */}
-        <NovelCommentSection novelId={novel.id} novelTitle={novel.title} />
+        {novel.id && novel.title && (
+          <NovelCommentSection novelId={novel.id} novelTitle={sanitizeText(novel.title)} />
+        )}
       </div>
 
       {/* Footer */}

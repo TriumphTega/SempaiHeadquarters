@@ -233,8 +233,8 @@ export default function ChapterPage() {
         .eq("currency", "SMP");
 
       let readerReward = 100;
-      const authorReward = 50;
-      const teamReward = 50;
+      const authorReward = 700;
+      const teamReward = 300;
 
       const numericBalance = Number(balance) || 0;
       if (numericBalance >= 5000000) readerReward = 250;
@@ -283,7 +283,7 @@ export default function ChapterPage() {
         {
           user_id: novelOwner.id,
           chain: "SOL",
-          currency: "Token",
+          currency: "SMP",
           amount: newAuthorBalance,
           decimals: 0,
           wallet_address: novelOwner.wallet_address,
@@ -291,7 +291,7 @@ export default function ChapterPage() {
         {
           user_id: team.id,
           chain: "SOL",
-          currency: "Token",
+          currency: "SMP",
           amount: newTeamBalance,
           decimals: 0,
           wallet_address: "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc",

@@ -72,6 +72,7 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
 };
 
 const formatUsername = (username) => {
+  if (!username) return "Anonymous";
   if (username.length > 15) return `${username.slice(0, 2)}**${username.slice(-2)}`;
   return username;
 };
@@ -84,6 +85,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   const [areRepliesVisible, setAreRepliesVisible] = useState({});
   const [lastCommentTime, setLastCommentTime] = useState(0);
   const [rewardedCountToday, setRewardedCountToday] = useState(0);
+  const [error, setError] = useState(null);
   const COMMENT_COOLDOWN = 60 * 1000;
   const DAILY_REWARD_LIMIT = 10;
   const MIN_COMMENT_LENGTH = 2;
@@ -100,8 +102,9 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
         .eq("wallet_address", publicKey.toString())
         .single();
 
-      if (error || !user) {
-        console.error("Error fetching user ID:", error);
+      if (error) {
+        console.error("Error fetching user ID:", error.message);
+        setError("Failed to load user data.");
         return;
       }
       setCurrentUserId(user.id);
@@ -111,13 +114,35 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   }, [publicKey]);
 
   const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from("comments")
-      .select("*")
-      .eq("novel_id", novelId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("comments")
+        .select(`
+          id,
+          novel_id,
+          user_id,
+          username,
+          content,
+          created_at,
+          parent_id,
+          users:users(id, name)
+        `)
+        .eq("novel_id", novelId)
+        .order("created_at", { ascending: false });
 
-    if (!error) setComments(data);
+      if (error) throw error;
+
+      // Ensure username is populated
+      const enrichedComments = data.map((comment) => ({
+        ...comment,
+        username: comment.username || comment.users?.name || "Anonymous",
+      }));
+
+      setComments(enrichedComments);
+    } catch (error) {
+      console.error("Error fetching comments:", error.message);
+      setError("Failed to load comments.");
+    }
   };
 
   useEffect(() => {
@@ -127,7 +152,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
 
     const subscription = supabase
       .channel("comments")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, fetchComments)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: `novel_id=eq.${novelId}` }, fetchComments)
       .subscribe();
 
     return () => {
@@ -143,7 +168,8 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       .eq("user_id", currentUserId);
 
     if (error) {
-      console.error("Error deleting comment:", error);
+      console.error("Error deleting comment:", error.message);
+      setError("Failed to delete comment.");
       return;
     }
     setComments((prev) => prev.filter((c) => c.id !== commentId));
@@ -161,13 +187,13 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
 
   const handleCommentSubmit = async () => {
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
-      alert(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
+      setError(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
       return;
     }
 
     const now = Date.now();
     if (now - lastCommentTime < COMMENT_COOLDOWN) {
-      alert(`Please wait ${(COMMENT_COOLDOWN - (now - lastCommentTime)) / 1000} seconds before posting again.`);
+      setError(`Please wait ${(COMMENT_COOLDOWN - (now - lastCommentTime)) / 1000} seconds before posting again.`);
       return;
     }
 
@@ -178,7 +204,8 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       .single();
 
     if (userError || !user) {
-      console.error("Error fetching user:", userError);
+      console.error("Error fetching user:", userError?.message);
+      setError("Failed to fetch user data.");
       return;
     }
 
@@ -194,9 +221,11 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       const hasReachedDailyLimit = rewardedToday.length >= DAILY_REWARD_LIMIT;
       let rewardAmount = balance >= 5000000 ? 25 : balance >= 1000000 ? 20 : balance >= 500000 ? 17 : balance >= 250000 ? 15 : balance >= 100000 ? 12 : 10;
 
+      const username = user.name || user.wallet_address.slice(0, 6) + "..." + user.wallet_address.slice(-4);
+
       const { data: insertedComment, error: commentError } = await supabase
         .from("comments")
-        .insert([{ novel_id: novelId, user_id: user.id, username: user.name, content: newComment, parent_id: replyingTo || null, is_rewarded: !hasReachedDailyLimit }])
+        .insert([{ novel_id: novelId, user_id: user.id, username, content: newComment, parent_id: replyingTo || null, is_rewarded: !hasReachedDailyLimit }])
         .select()
         .single();
 
@@ -205,7 +234,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       if (replyingTo) {
         const { data: parentComment } = await supabase.from("comments").select("user_id").eq("id", replyingTo).single();
         if (parentComment?.user_id) {
-          await sendNotification(parentComment.user_id, `${user.name} replied to your comment on "${novelTitle}".`);
+          await sendNotification(parentComment.user_id, `${username} replied to your comment on "${novelTitle}".`);
         }
       }
 
@@ -235,6 +264,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       fetchComments();
     } catch (error) {
       console.error("Error submitting comment:", error.message);
+      setError("Failed to post comment.");
     }
   };
 
@@ -269,6 +299,14 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
       <h4 className={styles.title}>
         <FaComment /> Comments
       </h4>
+      {error && (
+        <div className={styles.errorMessage}>
+          {error}
+          <button onClick={() => setError(null)} className={styles.clearErrorButton}>
+            <FaTimes />
+          </button>
+        </div>
+      )}
       <textarea
         className={styles.textarea}
         value={newComment}
