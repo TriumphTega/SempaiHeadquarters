@@ -263,11 +263,11 @@ export default function StatsPage() {
           <p className={styles.bigNumber}>{totalUsers.toLocaleString()}</p>
         </div>
         <div className={styles.statCard}>
-          <h2>Mint Treasury SMP</h2>
+          <h2>SMP Rewards Bank</h2>
           <p className={styles.bigNumber}>{mintTreasuryBalance !== null ? mintTreasuryBalance.toLocaleString() : "Loading..."}</p>
         </div>
         <div className={styles.statCard}>
-          <h2>Total Rewards SMP</h2>
+          <h2>Total SMP Rewarded</h2>
           <p className={styles.bigNumber}>{rewardsWalletBalance !== null ? rewardsWalletBalance.toLocaleString() : "Loading..."}</p>
         </div>
         <div className={styles.statCard}>
@@ -283,7 +283,7 @@ export default function StatsPage() {
       </div>
       <div className={styles.statGrid}>
         <div className={styles.statCard}>
-          <h2>Total Novels Read</h2>
+          <h2>Total Novel Reads</h2>
           <p className={styles.bigNumber}>{totalNovelsRead.toLocaleString()}</p>
         </div>
         <div className={styles.statCard}>

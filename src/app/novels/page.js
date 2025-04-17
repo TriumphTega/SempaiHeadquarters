@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -20,13 +20,14 @@ import {
 import ConnectButton from "../../components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
 import LoadingPage from "../../components/LoadingPage";
-import { Transaction, Connection } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 import { RPC_URL } from "@/constants";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import styles from "../../styles/NovelsPage.module.css";
 
 const TAG_OPTIONS = [
   { value: "Action", label: "Action" },
-  { value: "Adult(18+)", label: "Adult(18+)" }, // Added Adult(18+) tag
+  { value: "Adult(18+)", label: "Adult(18+)" },
   { value: "Adventure", label: "Adventure" },
   { value: "Comedy", label: "Comedy" },
   { value: "Drama", label: "Drama" },
@@ -47,8 +48,13 @@ const TAG_OPTIONS = [
   { value: "Josei", label: "Josei" },
 ];
 
+const MIN_WITHDRAWAL = 2500;
+
 export default function NovelsPage() {
-  const { connected, publicKey, sendTransaction } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
+  const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
+  const isWalletConnected = connected || !!embeddedWallet;
   const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,7 +69,8 @@ export default function NovelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
   const [timeLeft, setTimeLeft] = useState(null);
-  const connection = new Connection(RPC_URL);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const connection = new Connection(RPC_URL, "confirmed");
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const toggleWalletPanel = () => setWalletPanelOpen((prev) => !prev);
@@ -71,12 +78,12 @@ export default function NovelsPage() {
   const handleNavigation = (path) => router.push(path);
 
   const checkBalance = async () => {
-    if (!publicKey) return;
+    if (!isWalletConnected || !activePublicKey) return;
     try {
       const { data: user, error } = await supabase
         .from("users")
         .select("id, weekly_points")
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activePublicKey.toString())
         .single();
 
       if (error || !user) throw new Error("User not found");
@@ -107,7 +114,96 @@ export default function NovelsPage() {
     }
   };
 
-  const handleWithdraw = async () => { /* Same as before, omitted for brevity */ };
+  const handleWithdraw = async () => {
+    if (!isWalletConnected || !activePublicKey) {
+      setErrorMessage("Please connect your wallet.");
+      return;
+    }
+
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
+      setErrorMessage(`Withdrawal amount must be at least ${MIN_WITHDRAWAL} SMP.`);
+      return;
+    }
+
+    try {
+      setIsWithdrawing(true);
+      setErrorMessage("");
+
+      // Fetch user data
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("wallet_address", activePublicKey.toString())
+        .single();
+
+      if (userError || !user) throw new Error("User not found");
+
+      // Check off-chain balance
+      const { data: walletBalance, error: balanceError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("currency", "SMP")
+        .eq("chain", "SOL")
+        .single();
+
+      if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
+      if (walletBalance.amount < amount) {
+        throw new Error(`Insufficient balance: ${walletBalance.amount.toLocaleString()} SMP available, need ${amount.toLocaleString()} SMP`);
+      }
+
+      // Call server-side withdrawal API
+      const response = await fetch("/api/withdraw-smp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          walletAddress: activePublicKey.toString(),
+          amount,
+        }),
+      });
+
+      // Log response for debugging
+      console.log("API response status:", response.status);
+      if (!response.ok) {
+        let errorText;
+        try {
+          errorText = await response.text();
+          console.log("API response body:", errorText);
+          errorText = errorText || `HTTP error ${response.status}`;
+        } catch (e) {
+          errorText = `HTTP error ${response.status} (no response body)`;
+        }
+        throw new Error(`Withdrawal failed: ${errorText}`);
+      }
+
+      // Parse JSON
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.error("Failed to parse JSON:", await response.text().catch(() => "No body"));
+        throw new Error("Invalid server response: Expected JSON");
+      }
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Update state
+      const newBalance = walletBalance.amount - amount;
+      setBalance(newBalance);
+      setWithdrawAmount("");
+      setErrorMessage(`Successfully withdrew ${amount.toLocaleString()} SMP! Signature: ${result.signature}`);
+      setTimeout(() => setErrorMessage(""), 5000);
+    } catch (error) {
+      console.error("Withdrawal error:", error);
+      setErrorMessage(error.message);
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
 
   const fetchNovels = async () => {
     try {
@@ -235,7 +331,7 @@ export default function NovelsPage() {
   }, [searchQuery, selectedTag, novels]);
 
   useEffect(() => {
-    if (connected && publicKey) {
+    if (isWalletConnected && activePublicKey) {
       setLoading(true);
       Promise.all([checkBalance(), fetchNovels()]).finally(() =>
         setLoading(false)
@@ -243,7 +339,7 @@ export default function NovelsPage() {
     } else {
       fetchNovels().finally(() => setLoading(false));
     }
-  }, [connected, publicKey]);
+  }, [isWalletConnected, activePublicKey]);
 
   if (loading) return <LoadingPage />;
 
@@ -266,18 +362,6 @@ export default function NovelsPage() {
           </div>
         </div>
       </nav>
-
-      {/* Rewards Belt */}
-      {/* <div className={styles.rewardsBelt}>
-        <div className={styles.beltContent}>
-          <span className={styles.rewardItem}>
-            🎉 Weekly Reward: Users will be rewarded <strong>2,000,000 SMP Tokens</strong> every week based on points! 🌟
-          </span>
-          <span className={styles.rewardItem}>
-            👑 Our First chapter contest is Live. 🏆
-          </span>
-        </div>
-      </div> */}
 
       {/* Header with Search */}
       <header className={styles.libraryHeader}>
@@ -318,8 +402,8 @@ export default function NovelsPage() {
                 </div>
               </Link>
               <div className={styles.bookMeta}>
-                <Link href={`/writers-profile/${novel.user_id}`} className={styles.authorLink}>
-                  <FaFeather /> {novel.users?.name || "Unknown"}
+              <Link href={`/writers-profile/${novel.user_id}`} className={styles.authorLink}>
+              <FaFeather /> {novel.users?.name || "Unknown"}
                 </Link>
                 <span><FaEye /> {novel.uniqueViewers}</span>
                 {novel.tags?.includes("Adult(18+)") && (
@@ -333,33 +417,47 @@ export default function NovelsPage() {
         )}
       </main>
 
-      {/* Wallet Panel */}
-      {connected && (
+      {/* Wallet Panel (Both External and Embedded Wallets) */}
+      {isWalletConnected && (
         <div className={`${styles.walletPanel} ${walletPanelOpen ? styles.walletPanelOpen : ""}`}>
           <button className={styles.walletToggle} onClick={toggleWalletPanel}>
             <FaWallet />
-            <span className={styles.walletSummary}>{balance} SMP | {weeklyPoints} Pts</span>
+            <span className={styles.walletSummary}>{balance.toLocaleString()} SMP | {weeklyPoints.toLocaleString()} Pts</span>
           </button>
           <div className={styles.walletCountdown}>
-            {/* <FaClock /> <span>{timeLeft || "Loading..."}</span> */}<FaClock /> <span>Countdown PAUSED</span>
+            <FaClock /> <span>Countdown PAUSED</span>
           </div>
           <div className={styles.walletContent}>
             <div className={styles.walletInfo}>
-              <p><span>Balance:</span> {balance} SMP</p>
-              <p><span>Points:</span> {weeklyPoints}</p>
-              {pendingWithdrawal > 0 && <p>Pending: {pendingWithdrawal} SMP</p>}
+              <p><span>Balance:</span> {balance.toLocaleString()} SMP</p>
+              <p><span>Points:</span> {weeklyPoints.toLocaleString()}</p>
+              {pendingWithdrawal > 0 && <p>Pending: {pendingWithdrawal.toLocaleString()} SMP</p>}
             </div>
             <div className={styles.withdrawSection}>
               <input
                 type="number"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder="Amount (Min: 2500)"
+                placeholder={`Amount (Min: ${MIN_WITHDRAWAL})`}
                 className={styles.withdrawInput}
+                min={MIN_WITHDRAWAL}
+                step="0.000001"
               />
               <div className={styles.withdrawActions}>
-                <button onClick={handleWithdraw} disabled={loading}>Withdraw</button>
-                <button onClick={checkBalance} disabled={loading}>Refresh</button>
+                <button
+                  onClick={handleWithdraw}
+                  disabled={isWithdrawing}
+                  className={styles.withdrawButton}
+                >
+                  {isWithdrawing ? (
+                    <span className={styles.spinner}></span>
+                  ) : (
+                    "Withdraw"
+                  )}
+                </button>
+                <button onClick={checkBalance} disabled={isWithdrawing}>
+                  Refresh
+                </button>
               </div>
               {errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
             </div>

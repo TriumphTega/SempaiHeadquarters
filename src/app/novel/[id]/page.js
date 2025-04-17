@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -10,19 +10,28 @@ import Link from "next/link";
 import LoadingPage from "../../../components/LoadingPage";
 import NovelCommentSection from "../../../components/Comments/NovelCommentSection";
 import styles from "../../../styles/NovelPage.module.css";
+import { EmbeddedWalletContext } from "../../../components/EmbeddedWalletProvider";
+import { PublicKey } from "@solana/web3.js";
 
 export default function NovelPage() {
   const { id } = useParams();
   const router = useRouter();
   const { connected, publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
 
-  // Sanitize text to prevent XSS
-  const sanitizeText = (text) => {
+  // Determine active wallet
+  const activePublicKey = embeddedWallet?.publicKey
+    ? new PublicKey(embeddedWallet.publicKey)
+    : publicKey;
+  const isWalletConnected = !!activePublicKey;
+
+   // Sanitize text to prevent XSS
+   const sanitizeText = (text) => {
     if (!text) return "";
     return text.replace(/[<>&"']/g, (char) => ({
       "<": "&lt;",
@@ -32,6 +41,7 @@ export default function NovelPage() {
       "'": "&#39;",
     }[char]));
   };
+
 
   // Toggle mobile menu
   const toggleMenu = () => {
@@ -56,7 +66,7 @@ export default function NovelPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, supabase]);
+  }, [id]);
 
   // Fetch novel data on mount
   useEffect(() => {
@@ -66,7 +76,7 @@ export default function NovelPage() {
   // Handle navigation with wallet check for chapters beyond 1
   const handleNavigation = (path, chapterId) => {
     const chapterNum = parseInt(chapterId, 10);
-    if (isNaN(chapterNum) || (!connected || !publicKey) && chapterNum > 1) {
+    if (isNaN(chapterNum) || !isWalletConnected && chapterNum > 1) {
       setShowConnectPopup(true);
     } else {
       router.push(path);
@@ -91,12 +101,20 @@ export default function NovelPage() {
     return (
       <div className={styles.connectPopupOverlay}>
         <div className={`${styles.connectPopup} ${styles.dark}`}>
-          <button onClick={() => setShowConnectPopup(false)} className={styles.closePopupButton}>
+          <button
+            onClick={() => setShowConnectPopup(false)}
+            className={styles.closePopupButton}
+          >
             <FaTimes />
           </button>
           <h3 className={styles.popupTitle}>Access Denied</h3>
-          <p className={styles.popupMessage}>Connect your wallet to explore this chapter.</p>
+          <p className={styles.popupMessage}>
+            Connect your wallet to explore this chapter.
+          </p>
           <WalletMultiButton className={styles.connectWalletButton} />
+          <p className={styles.popupNote}>
+            Using an embedded wallet? Ensure you're logged in or connect above.
+          </p>
           <Link href="/" className={styles.backHomeLink}>
             <FaHome /> Back to Home
           </Link>
@@ -111,17 +129,28 @@ export default function NovelPage() {
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+            <img
+              src="/images/logo.jpeg"
+              alt="Sempai HQ"
+              className={styles.logo}
+            />
             <span className={styles.logoText}>Sempai HQ</span>
           </Link>
           <button className={styles.menuToggle} onClick={toggleMenu}>
             <FaBars />
           </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
+          <div
+            className={`${styles.navLinks} ${
+              menuOpen ? styles.navLinksOpen : ""
+            }`}
+          >
             <Link href="/" className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link href={`/novel/${id}/summary`} className={styles.navLink}>
+            <Link
+              href={`/novel/${id}/summary`}
+              className={styles.navLink}
+            >
               <FaBookOpen className={styles.navIcon} /> Summary
             </Link>
           </div>
@@ -141,7 +170,11 @@ export default function NovelPage() {
             <div className={styles.imageGlow}></div>
           </div>
           <p className={styles.novelIntro}>
-            Dive into the chapters of <span className={styles.highlight}>{sanitizeText(novel.title)}</span>:
+            Dive into the chapters of{" "}
+            <span className={styles.highlight}>
+              {sanitizeText(novel.title)}
+            </span>
+            :
           </p>
         </div>
 
@@ -155,29 +188,41 @@ export default function NovelPage() {
                 className={styles.chapterCard}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId);
+                  handleNavigation(
+                    `/novel/${id}/chapter/${chapterId}`,
+                    chapterId
+                  );
                 }}
               >
                 <div className={styles.chapterContent}>
-                  <h3 className={styles.chapterTitle}>{sanitizeText(title)}</h3>
+                  <h3 className={styles.chapterTitle}>
+                    {sanitizeText(title)}
+                  </h3>
                   <div className={styles.chapterHoverEffect}></div>
                 </div>
               </Link>
             ))
           ) : (
-            <p className={styles.noChapters}>No chapters available for this novel.</p>
+            <p className={styles.noChapters}>
+              No chapters available for this novel.
+            </p>
           )}
         </div>
 
         {/* Comments Section */}
         {novel.id && novel.title && (
-          <NovelCommentSection novelId={novel.id} novelTitle={sanitizeText(novel.title)} />
+          <NovelCommentSection
+            novelId={novel.id}
+            novelTitle={sanitizeText(novel.title)}
+          />
         )}
       </div>
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
+        <p className={styles.footerText}>
+          © 2025 Sempai HQ. All rights reserved.
+        </p>
       </footer>
     </div>
   );

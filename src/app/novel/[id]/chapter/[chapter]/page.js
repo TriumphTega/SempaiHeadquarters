@@ -6,7 +6,7 @@ import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL, Keypair } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, createTransferInstruction, getOrCreateAssociatedTokenAccount, getAccount } from "@solana/spl-token";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
@@ -20,6 +20,7 @@ import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletP
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+const SMP_DECIMALS = 6; // Consistent with StatsPage
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 const connection = new Connection(RPC_URL, "confirmed");
 
@@ -53,8 +54,8 @@ export default function ChapterPage() {
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
   const [readingMode, setReadingMode] = useState("free");
-  const [smpBalance, setSmpBalance] = useState(null); // New state for SMP balance
-  const [weeklyPoints, setWeeklyPoints] = useState(null); // New state for weekly points
+  const [smpBalance, setSmpBalance] = useState(null);
+  const [weeklyPoints, setWeeklyPoints] = useState(null);
 
   const fetchPrices = async () => {
     const fetchSolPrice = async () => {
@@ -167,6 +168,7 @@ export default function ChapterPage() {
         }
       }
 
+      // Check off-chain SMP balance
       const { data: walletBalance, error: balanceError } = await supabase
         .from("wallet_balances")
         .select("amount")
@@ -175,8 +177,24 @@ export default function ChapterPage() {
         .single();
 
       if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
-      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance");
+      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance (off-chain)");
 
+      // Check on-chain SMP balance
+      const sourceATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        activePublicKey,
+        SMP_MINT_ADDRESS,
+        activePublicKey
+      );
+      const userAccountInfo = await connection.getAccountInfo(sourceATA.address);
+      const smpBalanceOnChain = userAccountInfo
+        ? Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS
+        : 0;
+      if (smpBalanceOnChain < 1000) {
+        throw new Error(`Insufficient SMP balance on-chain: ${smpBalanceOnChain.toLocaleString()} SMP available, need 1000 SMP`);
+      }
+
+      // Fetch novel owner
       const { data: novelOwnerData, error: novelOwnerError } = await supabase
         .from("novels")
         .select("user_id")
@@ -194,21 +212,14 @@ export default function ChapterPage() {
 
       if (novelOwnerBalanceError || !novelOwner) throw new Error("Novel owner balance not found");
 
-      const teamId = "33e4387d-5964-4418-98e2-225630a4fcef";
-      const { data: team, error: teamError } = await supabase
-        .from("users")
-        .select("id, wallet_address, balance")
-        .eq("id", teamId)
-        .single();
-
-      if (teamError || !team) throw new Error("Team not found");
-
+      // Generate event details for deduplication
       const eventDetails = `${activeWalletAddress}${novel.title || "Untitled"}${chapter}`
         .replace(/[^a-zA-Z0-9]/g, '')
         .substring(0, 255);
 
       if (!eventDetails) throw new Error("Failed to generate event details");
 
+      // Check for existing event to prevent duplicate transactions
       const { data: existingEvents, error: eventError } = await supabase
         .from("wallet_events")
         .select("id")
@@ -225,7 +236,63 @@ export default function ChapterPage() {
         return;
       }
 
-      const newSmpBalance = walletBalance.amount - 1000;
+      // On-chain SMP transfer
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const destATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        activePublicKey,
+        SMP_MINT_ADDRESS,
+        new PublicKey(TARGET_WALLET)
+      );
+
+      const transaction = new Transaction({
+        recentBlockhash: blockhash,
+        feePayer: activePublicKey,
+      }).add(
+        createTransferInstruction(
+          sourceATA.address,
+          destATA.address,
+          activePublicKey,
+          1000 * (10 ** SMP_DECIMALS), // 1000 SMP with 6 decimals
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      let signature;
+      try {
+        if (embeddedWallet) {
+          const password = prompt("Enter your wallet password to proceed:");
+          if (!password) throw new Error("Password required for embedded wallet.");
+          const secretKey = getSecretKey(password);
+          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+          const keypair = Keypair.fromSecretKey(secretKey);
+          transaction.sign(keypair);
+          signature = await connection.sendRawTransaction(transaction.serialize());
+        } else if (connected && sendTransaction) {
+          signature = await sendTransaction(transaction, connection, {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          });
+        } else {
+          throw new Error("No valid wallet available for signing the transaction.");
+        }
+
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          "confirmed"
+        );
+      } catch (error) {
+        if (error.name === "SendTransactionError") {
+          const logs = await error.getLogs?.(connection) || ["No logs available"];
+          console.error("Transaction logs:", logs);
+          throw new Error(`Transaction failed: ${error.message}. Logs: ${JSON.stringify(logs)}`);
+        }
+        throw error;
+      }
+
+      // Update off-chain balances
+      const newSmpBalance = walletBalance.amount - 0;
       await supabase
         .from("wallet_balances")
         .update({ amount: newSmpBalance })
@@ -233,9 +300,7 @@ export default function ChapterPage() {
         .eq("currency", "SMP");
 
       let readerReward = 100;
-      const authorReward = 700;
-      const teamReward = 300;
-
+      const authorReward = 500;
       const numericBalance = Number(balance) || 0;
       if (numericBalance >= 5000000) readerReward = 250;
       else if (numericBalance >= 1000000) readerReward = 200;
@@ -245,7 +310,6 @@ export default function ChapterPage() {
 
       const newReaderBalance = (user.weekly_points || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
-      const newTeamBalance = (team.balance || 0) + teamReward;
 
       const updates = [];
 
@@ -265,15 +329,6 @@ export default function ChapterPage() {
         );
       }
 
-      if (team.id !== user.id && team.id !== novelOwner.id) {
-        updates.push(
-          supabase
-            .from("users")
-            .update({ balance: newTeamBalance })
-            .eq("id", team.id)
-        );
-      }
-
       const results = await Promise.all(updates);
       for (const { error } of results) {
         if (error) throw new Error(`Error updating balance: ${error.message}`);
@@ -287,14 +342,6 @@ export default function ChapterPage() {
           amount: newAuthorBalance,
           decimals: 0,
           wallet_address: novelOwner.wallet_address,
-        },
-        {
-          user_id: team.id,
-          chain: "SOL",
-          currency: "SMP",
-          amount: newTeamBalance,
-          decimals: 0,
-          wallet_address: "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc",
         },
       ];
 
@@ -321,20 +368,9 @@ export default function ChapterPage() {
           event_type: "deposit",
           event_details: eventDetails,
           source_chain: "SOL",
-          source_currency: "Token",
+          source_currency: "SMP",
           amount_change: authorReward,
           wallet_address: novelOwner.wallet_address,
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-          destination_chain: "SOL",
-        },
-        {
-          destination_user_id: team.id,
-          event_type: "deposit",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "Token",
-          amount_change: teamReward,
-          wallet_address: "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc",
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
         },
@@ -385,12 +421,16 @@ export default function ChapterPage() {
           });
       }
 
-      setSuccessMessage("Points credited successfully! 1,000 SMP deducted.");
-      setSmpBalance(newSmpBalance); // Update state after deduction
-      setWeeklyPoints(newReaderBalance); // Update state after points credited
+      setSuccessMessage(`Payment successful! 1,000 SMP sent on-chain. Signature: ${signature}`);
+      setSmpBalance(newSmpBalance);
+      setWeeklyPoints(newReaderBalance);
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
-      setError(error.message);
+      setError(
+        error.message.includes("insufficient funds") || error.message.includes("Insufficient SMP balance")
+          ? "Not enough SMP tokens in your wallet. Please add more SMP and try again."
+          : error.message
+      );
       console.error("Unexpected error in updateTokenBalance:", error);
     }
   }, [activeWalletAddress, novel, chapter, balance, id, readingMode]);
@@ -650,7 +690,7 @@ export default function ChapterPage() {
         const price = currency === "USDC" ? usdcPrice : freshSmpPrice;
         if (!price) throw new Error(`${currency} price not available`);
         mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
-        decimals = currency === "USDC" ? 6 : 9;
+        decimals = currency === "USDC" ? 6 : SMP_DECIMALS;
         amount = Math.round((usdAmount / price) * (10 ** decimals));
         displayAmount = (amount / (10 ** decimals)).toFixed(2);
       }
