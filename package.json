@@ -47,7 +47,9 @@
     "react-slick": "^0.30.3",
     "react-toastify": "^11.0.5",
     "slick-carousel": "^1.8.1",
-    "vercel": "^39.3.0"
+    "vercel": "^39.3.0",
+    "chart.js": "^4.4.2",
+    "react-chartjs-2": "^5.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
