@@ -57,40 +57,85 @@ export default function ChapterPage() {
   const [smpBalance, setSmpBalance] = useState(null);
   const [weeklyPoints, setWeeklyPoints] = useState(null);
 
-  const fetchPrices = async () => {
-    const fetchSolPrice = async () => {
+  // Utility function for delayed retry
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const fetchSolPrice = async (retryCount = 3, retryDelay = 1000) => {
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
       try {
-        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          mode: "cors",
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        if (!data.solana?.usd) {
+          throw new Error("Invalid SOL price data");
+        }
         return data.solana.usd;
       } catch (error) {
-        console.error("Error fetching SOL price:", error);
-        return null;
+        console.error(`Attempt ${attempt} - Error fetching SOL price:`, error.message);
+        if (attempt === retryCount) {
+          console.error("Max retries reached for SOL price fetch");
+          return null;
+        }
+        await delay(retryDelay);
       }
-    };
+    }
+  };
 
-    const fetchSmpPrice = async () => {
+  const fetchSmpPrice = async (retryCount = 3, retryDelay = 1000) => {
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
       try {
-        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd");
+        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd", {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          mode: "cors",
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
         return data["smp-token-id"]?.usd || null;
       } catch (error) {
-        console.error("Error fetching SMP price:", error);
-        return null;
+        console.error(`Attempt ${attempt} - Error fetching SMP price:`, error.message);
+        if (attempt === retryCount) {
+          console.error("Max retries reached for SMP price fetch");
+          return null;
+        }
+        await delay(retryDelay);
       }
-    };
+    }
+  };
 
+  const fetchPrices = async () => {
     const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
-    return { solPrice: sol || 100, smpPrice: smp };
+    return {
+      solPrice: sol || 100, // Default to $100 if SOL price fetch fails
+      smpPrice: smp || null, // SMP price can be null as it's optional
+    };
   };
 
   useEffect(() => {
     const getInitialPrices = async () => {
-      const { solPrice: initialSol, smpPrice: initialSmp } = await fetchPrices();
-      setSolPrice(initialSol);
-      setSmpPrice(initialSmp);
+      try {
+        const { solPrice: initialSol, smpPrice: initialSmp } = await fetchPrices();
+        setSolPrice(initialSol);
+        setSmpPrice(initialSmp);
+      } catch (error) {
+        console.error("Error in getInitialPrices:", error);
+        setError("Failed to fetch price data. Using default values.");
+        setSolPrice(100); // Fallback SOL price
+        setSmpPrice(null); // Fallback SMP price
+        setTimeout(() => setError(null), 5000); // Clear error after 5 seconds
+      }
     };
-    getInitialPrices();
+    if (typeof window !== "undefined") {
+      getInitialPrices();
+    }
   }, []);
 
   const fetchUserBalances = useCallback(async () => {
@@ -447,7 +492,8 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      if (!isWalletConnected && chapterNum > 2) {
+      // Show connect popup for Chapter 3 and beyond (index 2 and higher) if wallet is not connected
+      if (!isWalletConnected && chapterNum >= 2) {
         setShowConnectPopup(true);
         setLoading(false);
         return;
@@ -506,6 +552,7 @@ export default function ChapterPage() {
         : { is_advance: false, free_release_date: null };
       setAdvanceInfo(chapterAdvanceInfo);
 
+      // Increment viewers_count if chapter is accessible
       if (!isLocked) {
         const { data: currentNovel, error: fetchError } = await supabase
           .from("novels")
@@ -520,7 +567,8 @@ export default function ChapterPage() {
         }
       }
 
-      if (chapterNum <= 2) {
+      // Allow free access to Chapter 1 and 2 (index 0 and 1) unless they are advance chapters
+      if (chapterNum <= 1) {
         if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
           setIsLocked(false);
           setCanUnlockNextThree(false);
@@ -528,6 +576,7 @@ export default function ChapterPage() {
         }
       }
 
+      // For Chapter 3 and beyond (index 2 and higher), check previous chapters and subscription status
       let allPreviousUnlocked = true;
       const advanceChapters = novelData.advance_chapters || [];
       for (let i = 0; i < chapterNum; i++) {
@@ -555,6 +604,7 @@ export default function ChapterPage() {
       }
       setCanUnlockNextThree(allPreviousUnlocked);
 
+      // Check current chapter access
       if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
         setIsLocked(false);
       } else if (userId) {
@@ -892,7 +942,7 @@ export default function ChapterPage() {
   }, [fetchNovel]);
 
   useEffect(() => {
-    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 2) && !isLocked && readingMode === "paid") {
+    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 1) && !isLocked && readingMode === "paid") {
       if (isWalletConnected) updateTokenBalance();
     }
   }, [loading, novel, isWalletConnected, isLocked, chapter, updateTokenBalance, readingMode]);
@@ -916,15 +966,15 @@ export default function ChapterPage() {
   if (loading) return <LoadingPage />;
 
   const chapterNum = parseInt(chapter, 10);
-  if (!isWalletConnected && chapterNum > 2) {
+  if (!isWalletConnected && chapterNum >= 2) {
     return (
       <div className={styles.connectPopupOverlay}>
         <div className={styles.connectPopup}>
-          <button onClick={() => setShowConnectPopup(false)} className={styles.closePopupButton}>
+          <button onClick={() => router.push(`/novel/${id}`)} className={styles.closePopupButton}>
             <FaTimes />
           </button>
-          <h3 className={styles.popupTitle}>Access Denied</h3>
-          <p className={styles.popupMessage}>Connect your wallet to read chapters beyond Chapter 2.</p>
+          <h3 className={styles.popupTitle}>Connect Wallet Required</h3>
+          <p className={styles.popupMessage}>Please connect your wallet to read Chapter 3 and beyond.</p>
           <WalletMultiButton className={styles.connectWalletButton} />
           <Link href="/" onClick={() => router.push("/")} className={styles.backHomeLink}>
             <FaHome /> Back to Home
@@ -963,8 +1013,8 @@ export default function ChapterPage() {
     .map((line) => `<p>${line.trim()}</p>`)
     .join("");
 
-  const threeChaptersSol = solPrice ? (3 / solPrice).toFixed(4) : "Loading...";
-  const fullChaptersSol = solPrice ? (15 / solPrice).toFixed(4) : "Loading...";
+  const threeChaptersSol = solPrice ? (3 / solPrice).toFixed(4) : "N/A";
+  const fullChaptersSol = solPrice ? (15 / solPrice).toFixed(4) : "N/A";
   const threeChaptersUsdc = (3 / usdcPrice).toFixed(2);
   const fullChaptersUsdc = (15 / usdcPrice).toFixed(2);
   const threeChaptersSmp = smpPrice ? (3 / smpPrice).toFixed(2) : "N/A";
@@ -1049,7 +1099,7 @@ export default function ChapterPage() {
               <FaLock className={styles.lockIcon} />
             </div>
             {advanceInfo?.is_advance ? (
-              <p className={styles.message}>{releaseDateMessage }</p>
+              <p className={styles.message}>{releaseDateMessage}</p>
             ) : (
               <p className={styles.message}>
                 <FaLock className={styles.messageIcon} /> This chapter is locked
@@ -1063,7 +1113,7 @@ export default function ChapterPage() {
                 onClick={() => initiatePayment("3CHAPTERS", "SOL")}
                 className={`${styles.unlockButton} ${styles.threeChapters}`}
                 disabled={!canUnlockNextThree || !solPrice}
-                title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
+                title={!canUnlockNextThree ? "Unlock previous chapters first" : !solPrice ? "Price unavailable" : ""}
               >
                 <FaRocket className={styles.buttonIcon} />
                 <span className={styles.buttonText}>3 Chapters (SOL)</span>
@@ -1073,6 +1123,7 @@ export default function ChapterPage() {
                 onClick={() => initiatePayment("FULL", "SOL")}
                 className={`${styles.unlockButton} ${styles.fullChapters}`}
                 disabled={!solPrice}
+                title={!solPrice ? "Price unavailable" : ""}
               >
                 <FaCrown className={styles.buttonIcon} />
                 <span className={styles.buttonText}>All Chapters (SOL)</span>
