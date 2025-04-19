@@ -304,7 +304,7 @@ export default function Home() {
       // Fetch all novels initially without limit to allow sorting
       const { data: novelsData, error } = await supabase
         .from("novels")
-        .select("id, title, image, summary, user_id, tags");
+        .select("id, title, image, summary, user_id, tags, viewers_count");
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -325,18 +325,6 @@ export default function Home() {
         return acc;
       }, {});
 
-      const { data: interactionsData, error: interactionsError } = await supabase
-        .from("novel_interactions")
-        .select("novel_id, user_id");
-
-      if (interactionsError) throw new Error(`Failed to fetch novel interactions: ${interactionsError.message}`);
-
-      const viewerCounts = interactionsData.reduce((acc, interaction) => {
-        if (!acc[interaction.novel_id]) acc[interaction.novel_id] = new Set();
-        acc[interaction.novel_id].add(interaction.user_id);
-        return acc;
-      }, {});
-
       const { data: ratingsData, error: ratingsError } = await supabase
         .from("chapter_ratings")
         .select("content_id, rating")
@@ -353,21 +341,20 @@ export default function Home() {
       const enrichedNovels = novelsData.map((novel) => {
         const ratings = ratingsMap[novel.id] || [];
         const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-        const uniqueViewers = viewerCounts[novel.id] ? viewerCounts[novel.id].size : 0;
         return {
           ...novel,
           writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
-          viewers: uniqueViewers,
+          viewers_count: novel.viewers_count || 0,
           averageRating: averageRating,
           isAdult: novel.tags && novel.tags.includes("Adult(18+)"),
         };
       });
 
-      // Sort by a combined score of viewers and averageRating, then take top 6
+      // Sort by a combined score of viewers_count and averageRating, then take top 6
       const sortedNovels = enrichedNovels
         .sort((a, b) => {
-          const scoreA = (a.viewers * 0.6) + (a.averageRating * 0.4); // Weight: 60% views, 40% rating
-          const scoreB = (b.viewers * 0.6) + (b.averageRating * 0.4);
+          const scoreA = (a.viewers_count * 0.6) + (a.averageRating * 0.4); // Weight: 60% views, 40% rating
+          const scoreB = (b.viewers_count * 0.6) + (b.averageRating * 0.4);
           return scoreB - scoreA; // Descending order
         })
         .slice(0, 6); // Limit to 6 novels
@@ -944,12 +931,10 @@ export default function Home() {
                         <p className={styles.contentSummary}>{novel.summary}</p>
                         <div className={styles.contentStats}>
                           <span className={styles.viewers}>
-                            <FaEye /> {novel.viewers} Views
+                            <FaEye /> {novel.viewers_count.toLocaleString()} Views
                           </span>
                           <span className={styles.rating}>
-                            <FaStar /> {novel.averageRating.toFixed(2)
-
-}
+                            <FaStar /> {novel.averageRating.toFixed(2)}
                           </span>
                         </div>
                       </div>

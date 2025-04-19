@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { FaComment, FaReply, FaTimes, FaTrash, FaEye, FaEyeSlash } from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
+import { PublicKey } from "@solana/web3.js";
 import styles from "./CommentSection.module.css";
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRepliesVisibility, areRepliesVisible, deleteComment, currentUserId }) => {
@@ -79,6 +81,7 @@ const formatUsername = (username) => {
 
 export default function NovelCommentSection({ novelId, novelTitle = "Unknown Novel" }) {
   const { publicKey } = useWallet();
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
@@ -92,14 +95,23 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   const { balance } = UseAmethystBalance();
   const [currentUserId, setCurrentUserId] = useState(null);
 
+  // Determine active wallet
+  const activePublicKey = embeddedWallet?.publicKey
+    ? new PublicKey(embeddedWallet.publicKey)
+    : publicKey;
+  const isWalletConnected = !!activePublicKey;
+
   useEffect(() => {
-    if (!publicKey) return;
+    if (!isWalletConnected || !activePublicKey) {
+      setCurrentUserId(null);
+      return;
+    }
 
     const fetchUserId = async () => {
       const { data: user, error } = await supabase
         .from("users")
         .select("id")
-        .eq("wallet_address", publicKey.toString())
+        .eq("wallet_address", activePublicKey.toString())
         .single();
 
       if (error) {
@@ -111,7 +123,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
     };
 
     fetchUserId();
-  }, [publicKey]);
+  }, [activePublicKey, isWalletConnected]);
 
   const fetchComments = async () => {
     try {
@@ -146,8 +158,6 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   };
 
   useEffect(() => {
-    if (!publicKey) return;
-
     fetchComments();
 
     const subscription = supabase
@@ -158,9 +168,14 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [novelId, publicKey]);
+  }, [novelId]);
 
   const deleteComment = async (commentId) => {
+    if (!currentUserId) {
+      setError("You must be logged in to delete comments.");
+      return;
+    }
+
     const { error } = await supabase
       .from("comments")
       .delete()
@@ -186,6 +201,11 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
   };
 
   const handleCommentSubmit = async () => {
+    if (!isWalletConnected || !activePublicKey) {
+      setError("You must connect a wallet to comment.");
+      return;
+    }
+
     if (!newComment || newComment.length < MIN_COMMENT_LENGTH) {
       setError(`Comment must be at least ${MIN_COMMENT_LENGTH} characters long.`);
       return;
@@ -200,7 +220,7 @@ export default function NovelCommentSection({ novelId, novelTitle = "Unknown Nov
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, name, weekly_points, wallet_address")
-      .eq("wallet_address", publicKey?.toString())
+      .eq("wallet_address", activePublicKey.toString())
       .single();
 
     if (userError || !user) {

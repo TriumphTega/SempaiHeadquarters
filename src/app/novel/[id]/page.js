@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaHome, FaBars, FaTimes, FaBookOpen } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaEye } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../../../components/LoadingPage";
 import NovelCommentSection from "../../../components/Comments/NovelCommentSection";
@@ -23,6 +23,7 @@ export default function NovelPage() {
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
+  const [viewCountError, setViewCountError] = useState(null);
 
   // Determine active wallet
   const activePublicKey = embeddedWallet?.publicKey
@@ -30,18 +31,17 @@ export default function NovelPage() {
     : publicKey;
   const isWalletConnected = !!activePublicKey;
 
-   // Sanitize text to prevent XSS
-   const sanitizeText = (text) => {
+  // Sanitize text to prevent XSS
+  const sanitizeText = (text) => {
     if (!text) return "";
     return text.replace(/[<>&"']/g, (char) => ({
-      "<": "&lt;",
-      ">": "&gt;",
-      "&": "&amp;",
-      '"': "&quot;",
-      "'": "&#39;",
+      "<": "<",
+      ">": ">",
+      "&": "&",
+      '"': "",
+      "'": "'",
     }[char]));
   };
-
 
   // Toggle mobile menu
   const toggleMenu = () => {
@@ -68,15 +68,65 @@ export default function NovelPage() {
     }
   }, [id]);
 
-  // Fetch novel data on mount
+  // Function to check and increment view count
+  const updateViewCount = useCallback(async () => {
+    if (!isWalletConnected || !activePublicKey) {
+      console.log("No wallet connected, skipping view count update");
+      return;
+    }
+
+    try {
+      // Fetch user_id from users table using wallet_address
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("wallet_address", activePublicKey.toString())
+        .single();
+
+      if (userError || !user) {
+        console.error("User not found for wallet:", activePublicKey.toString());
+        setViewCountError("Please register your wallet to track views.");
+        return;
+      }
+
+      const userId = user.id;
+
+      // Call RPC function to increment viewers_count and add interaction
+      const { error: rpcError } = await supabase.rpc("increment_novel_view", {
+        novel_id: id,
+        user_id: userId,
+      });
+
+      if (rpcError) {
+        console.error("Error in increment_novel_view:", rpcError.message);
+        setViewCountError("Failed to update view count. Please try again later.");
+      } else {
+        console.log("Viewers count incremented and interaction recorded for user:", userId);
+      }
+    } catch (error) {
+      console.error("Error in updateViewCount:", error.message);
+      setViewCountError("An unexpected error occurred while updating view count.");
+    }
+  }, [id, isWalletConnected, activePublicKey]);
+
+  // Clear view count error after 5 seconds
+  useEffect(() => {
+    if (viewCountError) {
+      const timer = setTimeout(() => setViewCountError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [viewCountError]);
+
+  // Fetch novel data and update view count on mount
   useEffect(() => {
     fetchNovel();
-  }, [fetchNovel]);
+    updateViewCount();
+  }, [fetchNovel, updateViewCount]);
 
   // Handle navigation with wallet check for chapters beyond 1
   const handleNavigation = (path, chapterId) => {
     const chapterNum = parseInt(chapterId, 10);
-    if (isNaN(chapterNum) || !isWalletConnected && chapterNum > 1) {
+    if (isNaN(chapterNum) || (!isWalletConnected && chapterNum > 1)) {
       setShowConnectPopup(true);
     } else {
       router.push(path);
@@ -125,6 +175,16 @@ export default function NovelPage() {
 
   return (
     <div className={`${styles.page} ${styles.dark}`}>
+      {/* Error Message for View Count */}
+      {viewCountError && (
+        <div className={styles.errorMessage}>
+          {viewCountError}
+          <button onClick={() => setViewCountError(null)} className={styles.clearErrorButton}>
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
       {/* Futuristic Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
@@ -147,10 +207,7 @@ export default function NovelPage() {
             <Link href="/" className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link
-              href={`/novel/${id}/summary`}
-              className={styles.navLink}
-            >
+            <Link href={`/novel/${id}/summary`} className={styles.navLink}>
               <FaBookOpen className={styles.navIcon} /> Summary
             </Link>
           </div>
@@ -169,6 +226,9 @@ export default function NovelPage() {
             />
             <div className={styles.imageGlow}></div>
           </div>
+          <p className={styles.novelViews}>
+            <FaEye className={styles.viewIcon} /> {novel.viewers_count || 0} Views
+          </p>
           <p className={styles.novelIntro}>
             Dive into the chapters of{" "}
             <span className={styles.highlight}>
@@ -188,16 +248,11 @@ export default function NovelPage() {
                 className={styles.chapterCard}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavigation(
-                    `/novel/${id}/chapter/${chapterId}`,
-                    chapterId
-                  );
+                  handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId);
                 }}
               >
                 <div className={styles.chapterContent}>
-                  <h3 className={styles.chapterTitle}>
-                    {sanitizeText(title)}
-                  </h3>
+                  <h3 className={styles.chapterTitle}>{sanitizeText(title)}</h3>
                   <div className={styles.chapterHoverEffect}></div>
                 </div>
               </Link>

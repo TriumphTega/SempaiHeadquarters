@@ -216,30 +216,14 @@ export default function NovelsPage() {
           summary,
           tags,
           user_id,
+          viewers_count,
           users:user_id (name)
         `);
 
       if (novelsError) throw new Error(`Failed to fetch novels: ${novelsError.message}`);
 
-      const { data: interactionsData, error: interactionsError } = await supabase
-        .from("novel_interactions")
-        .select("novel_id, user_id");
-
-      if (interactionsError) throw new Error(`Failed to fetch interactions: ${interactionsError.message}`);
-
-      const viewerCounts = interactionsData.reduce((acc, { novel_id, user_id }) => {
-        if (!acc[novel_id]) acc[novel_id] = new Set();
-        acc[novel_id].add(user_id);
-        return acc;
-      }, {});
-
-      const enrichedNovels = novelsData.map((novel) => ({
-        ...novel,
-        uniqueViewers: viewerCounts[novel.id] ? viewerCounts[novel.id].size : 0,
-      }));
-
-      setNovels(enrichedNovels);
-      setFilteredNovels(enrichedNovels);
+      setNovels(novelsData);
+      setFilteredNovels(novelsData);
     } catch (error) {
       console.error("Error fetching novels:", error);
       setErrorMessage(error.message);
@@ -402,10 +386,10 @@ export default function NovelsPage() {
                 </div>
               </Link>
               <div className={styles.bookMeta}>
-              <Link href={`/writers-profile/${novel.user_id}`} className={styles.authorLink}>
-              <FaFeather /> {novel.users?.name || "Unknown"}
+                <Link href={`/writers-profile/${novel.user_id}`} className={styles.authorLink}>
+                  <FaFeather /> {novel.users?.name || "Unknown"}
                 </Link>
-                <span><FaEye /> {novel.uniqueViewers}</span>
+                <span><FaEye /> {novel.viewers_count.toLocaleString()}</span>
                 {novel.tags?.includes("Adult(18+)") && (
                   <span className={styles.adultTag}>18+ Adult</span>
                 )}
