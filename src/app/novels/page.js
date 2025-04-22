@@ -1,9 +1,9 @@
+// src/app/novels/page.js
 "use client";
 
 import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import {
@@ -16,6 +16,7 @@ import {
   FaEye,
   FaSearch,
   FaClock,
+  FaSpinner,
 } from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
@@ -70,6 +71,9 @@ export default function NovelsPage() {
   const [selectedTag, setSelectedTag] = useState("");
   const [timeLeft, setTimeLeft] = useState(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [showProfileWarning, setShowProfileWarning] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false); // New state for success popup
+  const [successDetails, setSuccessDetails] = useState({ amount: 0, signature: "" }); // Store withdrawal details
   const connection = new Connection(RPC_URL, "confirmed");
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -82,7 +86,7 @@ export default function NovelsPage() {
     try {
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, weekly_points")
+        .select("id, weekly_points, name, email, x_account, x_verified_at")
         .eq("wallet_address", activePublicKey.toString())
         .single();
 
@@ -133,11 +137,18 @@ export default function NovelsPage() {
       // Fetch user data
       const { data: user, error: userError } = await supabase
         .from("users")
-        .select("id")
+        .select("id, name, email, x_account, x_verified_at")
         .eq("wallet_address", activePublicKey.toString())
         .single();
 
       if (userError || !user) throw new Error("User not found");
+
+      // Check if required fields are present
+      if (!user.name || !user.email || !user.x_account || !user.x_verified_at) {
+        setShowProfileWarning(true);
+        setIsWithdrawing(false);
+        return;
+      }
 
       // Check off-chain balance
       const { data: walletBalance, error: balanceError } = await supabase
@@ -164,8 +175,6 @@ export default function NovelsPage() {
         }),
       });
 
-      // Log response for debugging
-      console.log("API response status:", response.status);
       if (!response.ok) {
         let errorText;
         try {
@@ -178,7 +187,6 @@ export default function NovelsPage() {
         throw new Error(`Withdrawal failed: ${errorText}`);
       }
 
-      // Parse JSON
       let result;
       try {
         result = await response.json();
@@ -195,8 +203,8 @@ export default function NovelsPage() {
       const newBalance = walletBalance.amount - amount;
       setBalance(newBalance);
       setWithdrawAmount("");
-      setErrorMessage(`Successfully withdrew ${amount.toLocaleString()} SMP! Signature: ${result.signature}`);
-      setTimeout(() => setErrorMessage(""), 5000);
+      setSuccessDetails({ amount, signature: result.signature });
+      setShowSuccessPopup(true); // Show success popup
     } catch (error) {
       console.error("Withdrawal error:", error);
       setErrorMessage(error.message);
@@ -233,16 +241,14 @@ export default function NovelsPage() {
   const filterNovels = () => {
     let result = novels;
     if (searchQuery) {
-      result = result.filter(
-        (novel) =>
-          novel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          novel.users?.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      result = result.filter((novel) => {
+        const titleMatch = novel.title ? novel.title.toLowerCase().includes(searchQuery.toLowerCase()) : false;
+        const authorMatch = novel.users?.name ? novel.users.name.toLowerCase().includes(searchQuery.toLowerCase()) : false;
+        return titleMatch || authorMatch;
+      });
     }
     if (selectedTag) {
-      result = result.filter((novel) =>
-        novel.tags?.includes(selectedTag)
-      );
+      result = result.filter((novel) => novel.tags?.includes(selectedTag));
     }
     setFilteredNovels(result);
   };
@@ -329,7 +335,6 @@ export default function NovelsPage() {
 
   return (
     <div className={styles.libraryContainer}>
-      {/* Navbar */}
       <nav className={styles.libraryNavbar}>
         <div className={styles.navbarContent}>
           <Link href="/" className={styles.libraryLogo}>
@@ -347,7 +352,6 @@ export default function NovelsPage() {
         </div>
       </nav>
 
-      {/* Header with Search */}
       <header className={styles.libraryHeader}>
         <h1 className={styles.headerTitle}>SempaiHQ Library</h1>
         <p className={styles.headerTagline}>Unlock the Nexus of Imagination</p>
@@ -373,7 +377,6 @@ export default function NovelsPage() {
         </div>
       </header>
 
-      {/* Novels Grid */}
       <main className={styles.libraryGrid}>
         {filteredNovels.length > 0 ? (
           filteredNovels.map((novel) => (
@@ -401,52 +404,103 @@ export default function NovelsPage() {
         )}
       </main>
 
-      {/* Wallet Panel (Both External and Embedded Wallets) */}
       {isWalletConnected && (
-        <div className={`${styles.walletPanel} ${walletPanelOpen ? styles.walletPanelOpen : ""}`}>
-          <button className={styles.walletToggle} onClick={toggleWalletPanel}>
-            <FaWallet />
-            <span className={styles.walletSummary}>{balance.toLocaleString()} SMP | {weeklyPoints.toLocaleString()} Pts</span>
-          </button>
-          <div className={styles.walletCountdown}>
-            <FaClock /> <span>Countdown PAUSED</span>
-          </div>
-          <div className={styles.walletContent}>
-            <div className={styles.walletInfo}>
-              <p><span>Balance:</span> {balance.toLocaleString()} SMP</p>
-              <p><span>Points:</span> {weeklyPoints.toLocaleString()}</p>
-              {pendingWithdrawal > 0 && <p>Pending: {pendingWithdrawal.toLocaleString()} SMP</p>}
+        <>
+          <div className={`${styles.walletPanel} ${walletPanelOpen ? styles.walletPanelOpen : ""}`}>
+            <button className={styles.walletToggle} onClick={toggleWalletPanel}>
+              <FaWallet />
+              <span className={styles.walletSummary}>{balance.toLocaleString()} SMP | {weeklyPoints.toLocaleString()} Pts</span>
+            </button>
+            <div className={styles.walletCountdown}>
+              <FaClock /> <span>Countdown PAUSED</span>
             </div>
-            <div className={styles.withdrawSection}>
-              <input
-                type="number"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder={`Amount (Min: ${MIN_WITHDRAWAL})`}
-                className={styles.withdrawInput}
-                min={MIN_WITHDRAWAL}
-                step="0.000001"
-              />
-              <div className={styles.withdrawActions}>
-                <button
-                  onClick={handleWithdraw}
-                  disabled={isWithdrawing}
-                  className={styles.withdrawButton}
-                >
-                  {isWithdrawing ? (
-                    <span className={styles.spinner}></span>
-                  ) : (
-                    "Withdraw"
-                  )}
-                </button>
-                <button onClick={checkBalance} disabled={isWithdrawing}>
-                  Refresh
-                </button>
+            <div className={styles.walletContent}>
+              <div className={styles.walletInfo}>
+                <p><span>Balance:</span> {balance.toLocaleString()} SMP</p>
+                <p><span>Points:</span> {weeklyPoints.toLocaleString()}</p>
+                {pendingWithdrawal > 0 && <p>Pending: {pendingWithdrawal.toLocaleString()} SMP</p>}
               </div>
-              {errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
+              <div className={styles.withdrawSection}>
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder={`Amount (Min: ${MIN_WITHDRAWAL})`}
+                  className={styles.withdrawInput}
+                  min={MIN_WITHDRAWAL}
+                  step="0.000001"
+                />
+                <div className={styles.withdrawActions}>
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing}
+                    className={styles.withdrawButton}
+                  >
+                    {isWithdrawing ? (
+                      <FaSpinner className={styles.spinner} />
+                    ) : (
+                      "Withdraw"
+                    )}
+                  </button>
+                  <button onClick={checkBalance} disabled={isWithdrawing}>
+                    Refresh
+                  </button>
+                </div>
+                {errorMessage && (
+                  <p className={styles.errorText}>
+                    {typeof errorMessage === "string" ? errorMessage : errorMessage}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Profile Warning Modal */}
+          {showProfileWarning && (
+            <div className={styles.modalOverlay}>
+              <div className={styles.modal}>
+                <h2>Complete Your Profile</h2>
+                <p>
+                  Please complete your profile with a username, email, and a verified X account before withdrawing.
+                </p>
+                <div className={styles.modalActions}>
+                  <Link href="/editprofile" className={styles.modalButton}>
+                    Update Profile
+                  </Link>
+                  <button
+                    onClick={() => setShowProfileWarning(false)}
+                    className={styles.modalButton}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Popup */}
+          {showSuccessPopup && (
+            <div className={styles.successOverlay}>
+              <div className={styles.successModal}>
+                <h2>Withdrawal Successful!</h2>
+                <p>
+                  You have successfully withdrawn {successDetails.amount.toLocaleString()} SMP.
+                </p>
+                <p className={styles.signature}>
+                  Transaction Signature: <span>{successDetails.signature}</span>
+                </p>
+                <div className={styles.modalActions}>
+                  <button
+                    onClick={() => setShowSuccessPopup(false)}
+                    className={styles.modalButton}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
