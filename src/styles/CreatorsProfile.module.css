@@ -1,0 +1,339 @@
+/* src/styles/CreatorsProfile.module.css */
+.page {
+    min-height: 100vh;
+    background: linear-gradient(145deg, #000 0%, #1a1a1a 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 2px solid rgba(243, 99, 22, 0.8);
+    padding: 15px 20px;
+    z-index: 1000;
+  }
+  
+  .navContainer {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .logoLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(243, 99, 22, 1);
+  }
+  
+  .logoText {
+    margin-left: 15px;
+    font-size: 1rem;
+    color: rgba(243, 99, 22, 1);
+    font-weight: bold;
+  }
+  
+  .menuToggle {
+    background: none;
+    border: none;
+    color: rgba(243, 99, 22, 1);
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: none;
+  }
+  
+  .navLinks {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .navLink {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 25px;
+    background: rgba(243, 99, 22, 0.1);
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .navLink:hover {
+    color: rgba(243, 99, 22, 1);
+    background: rgba(243, 99, 22, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .main {
+    padding: 100px 20px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .title {
+    font-size: 3rem;
+    color: rgba(243, 99, 22, 1);
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .errorContainer {
+    text-align: center;
+    color: #ff3b3b;
+  }
+  
+  .error {
+    font-size: 1.2rem;
+  }
+  
+  .profileCard {
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid rgba(243, 99, 22, 0.3);
+    margin-bottom: 40px;
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+    color: rgba(243, 99, 22, 1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .profileIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(243, 99, 22, 1);
+  }
+  
+  .bio {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+  }
+  
+  .socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .socialLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    background: rgba(243, 99, 22, 0.1);
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .socialLink:hover {
+    color: rgba(243, 99, 22, 1);
+    background: rgba(243, 99, 22, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .walletInfo {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .novelsSection {
+    margin-top: 40px;
+  }
+  
+  .novelGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .novelCard {
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(243, 99, 22, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .novelCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 15px rgba(243, 99, 22, 0.5);
+  }
+  
+  .novelImage {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+  }
+  
+  .novelTitle {
+    font-size: 1.2rem;
+    color: rgba(243, 99, 22, 1);
+    padding: 10px;
+  }
+  
+  .novelSummary {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 10px 10px;
+  }
+  
+  .novelButton {
+    width: 100%;
+    background: rgba(243, 99, 22, 1);
+    color: #000;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.3s ease;
+  }
+  
+  .novelButton:hover {
+    background: rgba(243, 99, 22, 0.8);
+  }
+  
+  .placeholder {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.2rem;
+  }
+  
+  .profileActions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 40px;
+  }
+  
+  .navButton {
+    background: rgba(243, 99, 22, 1);
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .navButton:hover {
+    background: rgba(243, 99, 22, 0.8);
+    transform: scale(1.05);
+  }
+  
+  .creatorChoiceOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+  
+  .creatorChoicePopup {
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    border: 2px solid rgba(243, 99, 22, 0.5);
+    text-align: center;
+  }
+  
+  .closePopupButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: rgba(243, 99, 22, 1);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  
+  .popupTitle {
+    font-size: 2rem;
+    color: rgba(243, 99, 22, 1);
+    margin-bottom: 20px;
+  }
+  
+  .popupMessage {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+  }
+  
+  .choiceButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .choiceButton {
+    background: rgba(243, 99, 22, 1);
+    color: #000;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  
+  .choiceButton:hover {
+    background: rgba(243, 99, 22, 0.8);
+    transform: scale(1.05);
+  }
+  
+  @media (max-width: 768px) {
+    .menuToggle { display: block; }
+    .navLinks {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+    }
+    .navLinksOpen { display: flex; }
+    .novelGrid { grid-template-columns: 1fr; }
+    .profileActions { flex-direction: column; }
+  }

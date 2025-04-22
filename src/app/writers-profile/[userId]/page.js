@@ -1,23 +1,23 @@
+// src/app/writers-profile/[userId]/page.js
 "use client";
 
-import { useState, useEffect, useContext } from "react"; // Added useContext
+import { useState, useEffect, useContext } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
 import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import ConnectButton from "@/components/ConnectButton";
+import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import styles from "../CreatorsProfile.module.css";
 import Link from "next/link";
-import ConnectButton from "@/components/ConnectButton"; // Added ConnectButton
-import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
 
 export default function CreatorsProfilePage() {
   const { connected, publicKey } = useWallet();
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Access embedded wallet
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const { userId } = useParams();
-  const [userRole, setUserRole] = useState("writer"); // "writer", "artist", "both", "superuser"
+  const [userRole, setUserRole] = useState("writer");
   const [creatorData, setCreatorData] = useState(null);
   const [novels, setNovels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,11 +25,48 @@ export default function CreatorsProfilePage() {
   const [walletReady, setWalletReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isWriter, setIsWriter] = useState(false);
+  const [isArtist, setIsArtist] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [showCreatorChoice, setShowCreatorChoice] = useState(false);
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
+  // Normalize website URL
+  const normalizeWebsiteUrl = (url) => {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
+  // Determine dashboard button text and behavior
+  const getDashboardButtonProps = () => {
+    if (isSuperuser || (isWriter && isArtist)) {
+      return { text: "Creator Dashboard", action: () => setShowCreatorChoice(true) };
+    } else if (isWriter) {
+      return { text: "Writers Dashboard", action: () => handleNavigation("/novel-creators-dashboard") };
+    } else if (isArtist) {
+      return { text: "Artist Dashboard", action: () => handleNavigation("/manga-creators-dashboard") };
+    }
+    return { text: "Creator Dashboard", action: () => handleNavigation("/apply") }; // Fallback if no roles
+  };
+
+  const handleNavigation = (path) => {
+    setLoading(true);
+    setMenuOpen(false);
+    setShowCreatorChoice(false);
+    router.push(path);
+  };
+
+  const handleCreatorChoice = (path) => {
+    setShowCreatorChoice(false);
+    handleNavigation(path);
+  };
+
   useEffect(() => {
-    if (connected || embeddedWallet) setWalletReady(true); // Check both external and embedded wallets
+    if (connected || embeddedWallet) setWalletReady(true);
   }, [connected, publicKey, embeddedWallet]);
 
   useEffect(() => {
@@ -49,7 +86,12 @@ export default function CreatorsProfilePage() {
 
         if (userError || !user) throw new Error(`User not found: ${userError?.message || "No user data"}`);
 
-        // Determine user role
+        // Set user roles
+        setIsWriter(user.isWriter || false);
+        setIsArtist(user.isArtist || false);
+        setIsSuperuser(user.isSuperuser || false);
+
+        // Set user role for styling
         if (user.isSuperuser) setUserRole("superuser");
         else if (user.isWriter && user.isArtist) setUserRole("both");
         else if (user.isArtist) setUserRole("artist");
@@ -60,7 +102,7 @@ export default function CreatorsProfilePage() {
           return;
         }
 
-        // Check if this is the user's own profile using either external or embedded wallet
+        // Check if this is the user's own profile
         if (walletReady && (publicKey?.toString() === user.wallet_address || embeddedWallet?.publicKey === user.wallet_address)) {
           setIsOwnProfile(true);
         }
@@ -90,11 +132,23 @@ export default function CreatorsProfilePage() {
     };
 
     fetchProfileDetails();
-  }, [userId, walletReady, publicKey, embeddedWallet]); // Added embeddedWallet to dependencies
+  }, [userId, walletReady, publicKey, embeddedWallet]);
 
-  const handleNavigation = (path) => router.push(path);
+  useEffect(() => {
+    // Close creator choice popup on outside click
+    const handleOutsideClick = (e) => {
+      const choicePopup = document.querySelector(`.${styles.creatorChoicePopup}`);
+      if (showCreatorChoice && !choicePopup?.contains(e.target)) {
+        setShowCreatorChoice(false);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, [showCreatorChoice]);
 
   if (loading) return <LoadingPage />;
+
+  const dashboardButton = getDashboardButtonProps();
 
   return (
     <div className={`${styles.page} ${styles[userRole]} ${menuOpen ? styles.menuActive : ""}`}>
@@ -108,11 +162,18 @@ export default function CreatorsProfilePage() {
             {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
           <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
+            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
+              <FaHome /> Home
+            </Link>
+            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
+              <FaExchangeAlt /> Swap
+            </Link>
             {isOwnProfile && (
-              <Link href="/editprofile" className={styles.navLink}><FaExchangeAlt /> Edit Profile</Link>
+              <Link href="/editprofile" onClick={() => handleNavigation("/editprofile")} className={styles.navLink}>
+                <FaExchangeAlt /> Edit Profile
+              </Link>
             )}
-            <ConnectButton /> {/* Added ConnectButton for wallet status */}
+            <ConnectButton />
           </div>
         </div>
       </nav>
@@ -148,7 +209,12 @@ export default function CreatorsProfilePage() {
                     <span className={styles.socialLink}><FaDiscord /> {creatorData.discord}</span>
                   )}
                   {creatorData?.website && (
-                    <a href={creatorData.website} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                    <a
+                      href={normalizeWebsiteUrl(creatorData.website)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.socialLink}
+                    >
                       <FaGlobe /> Website
                     </a>
                   )}
@@ -180,9 +246,34 @@ export default function CreatorsProfilePage() {
                     <img src={creatorData?.image || "/images/default-profile.jpg"} alt="Profile" className={styles.profileIcon} />
                     Edit Profile
                   </button>
-                  <button onClick={() => handleNavigation("/creators-dashboard")} className={styles.navButton}>
-                    <FaRocket /> Creator Dashboard
+                  <button onClick={dashboardButton.action} className={styles.navButton}>
+                    <FaRocket /> {dashboardButton.text}
                   </button>
+                </div>
+              )}
+              {showCreatorChoice && (
+                <div className={styles.creatorChoiceOverlay}>
+                  <div className={styles.creatorChoicePopup}>
+                    <button onClick={() => setShowCreatorChoice(false)} className={styles.closePopupButton}>
+                      <FaTimes />
+                    </button>
+                    <h3 className={styles.popupTitle}>Choose Your Dashboard</h3>
+                    <p className={styles.popupMessage}>You have multiple creator roles. Which dashboard would you like to access?</p>
+                    <div className={styles.choiceButtons}>
+                      <button
+                        onClick={() => handleCreatorChoice("/novel-creators-dashboard")}
+                        className={styles.choiceButton}
+                      >
+                        Novel Creators Dashboard
+                      </button>
+                      <button
+                        onClick={() => handleCreatorChoice("/manga-creators-dashboard")}
+                        className={styles.choiceButton}
+                      >
+                        Manga Creators Dashboard
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </>
