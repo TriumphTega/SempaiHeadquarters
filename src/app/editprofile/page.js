@@ -1,4 +1,3 @@
-// src/app/editprofile/page.js
 "use client";
 
 import { useState, useEffect, useContext } from "react";
@@ -48,8 +47,8 @@ export default function EditProfile() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [referralMessage, setReferralMessage] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false); // New: Loading state for Verify
-  const [isSaving, setIsSaving] = useState(false); // New: Loading state for Save
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { balance } = UseAmethystBalance();
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -126,11 +125,11 @@ export default function EditProfile() {
   const validateTwitterUsername = async () => {
     setTwitterError("");
     setTwitterVerified(false);
-    setSuccess(""); // Clear success message
-    setIsVerifying(true); // Start loading
+    setSuccess("");
+    setIsVerifying(true);
 
     let username = twitterInput.trim();
-    const urlMatch = username.match(/twitter\.com\/([A-Za-z0-9_]+)/);
+    const urlMatch = username.match(/twitter\.com\/([A-Za-z0-9_]+)/) || username.match(/x\.com\/([A-Za-z0-9_]+)/);
     if (urlMatch) {
       username = urlMatch[1];
     } else {
@@ -139,7 +138,7 @@ export default function EditProfile() {
 
     if (!username.match(/^[A-Za-z0-9_]{1,15}$/)) {
       setTwitterError(
-        "Please enter a valid Twitter username (1-15 characters, letters, numbers, or underscores)."
+        "Please enter a valid X username (1-15 characters, letters, numbers, or underscores)."
       );
       setIsVerifying(false);
       return;
@@ -172,13 +171,17 @@ export default function EditProfile() {
       }
 
       // Verify username via API
-      console.log(`Sending request to /api/check-twitter?username=${username}`);
-      const response = await fetch(`/api/check-twitter?username=${encodeURIComponent(username)}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      console.log(`Sending request to /api/check-twitter?username=${username}&userId=${userId}`);
+      const response = await fetch(
+        `/api/check-twitter?username=${encodeURIComponent(username)}&userId=${encodeURIComponent(userId || "")}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        }
+      );
 
       console.log(
         `Response: status=${response.status}, ok=${response.ok}, headers=`,
@@ -187,10 +190,18 @@ export default function EditProfile() {
 
       if (!response.ok) {
         let errorMessage = `HTTP error ${response.status}`;
-        if (response.status === 404) {
-          errorMessage = "API endpoint not found. Please contact support.";
+        if (response.status === 400) {
+          errorMessage = "Username is required.";
         } else if (response.status === 429) {
           errorMessage = "Too many requests. Please try again later.";
+        } else if (response.status === 503) {
+          errorMessage = "Failed to load X profile. Please try again later.";
+        } else if (response.status === 403) {
+          errorMessage = "Access to X restricted, possibly due to anti-bot measures or CAPTCHA.";
+        } else if (response.status === 406) {
+          errorMessage = "Invalid request format. Please contact support.";
+        } else if (response.status === 500) {
+          errorMessage = "Internal server error. Please try again or contact support.";
         }
 
         const responseText = await response.text();
@@ -203,7 +214,7 @@ export default function EditProfile() {
         } catch (e) {
           console.error("Failed to parse error response:", e);
           if (responseText.includes("<html")) {
-            errorMessage = `Received HTML response (status ${response.status}). Please contact support.`;
+            errorMessage = "Server returned an unexpected response. Please try again or contact support.";
           }
         }
 
@@ -222,7 +233,7 @@ export default function EditProfile() {
       if (data.exists) {
         setTwitterVerified(true);
         setXAccount(username);
-        setSuccess(`Twitter username @${username} verified!`);
+        setSuccess(`X username @${username} verified!`);
       } else {
         setTwitterError(
           <>
@@ -234,7 +245,7 @@ export default function EditProfile() {
         );
       }
     } catch (err) {
-      console.error("Twitter validation error:", err.message);
+      console.error("X validation error:", err.message);
       setTwitterError(
         <>
           Error verifying username: {err.message}.{" "}
@@ -244,7 +255,7 @@ export default function EditProfile() {
         </>
       );
     } finally {
-      setIsVerifying(false); // Stop loading
+      setIsVerifying(false);
     }
   };
 
@@ -290,7 +301,7 @@ export default function EditProfile() {
     e.preventDefault();
     setError("");
     setSuccess("");
-    setIsSaving(true); // Start loading
+    setIsSaving(true);
 
     if (!userId) {
       setError("Please connect your wallet to update your profile.");
@@ -299,7 +310,7 @@ export default function EditProfile() {
     }
 
     if (!twitterVerified && !xAccount) {
-      setError("Please verify your Twitter username before saving.");
+      setError("Please verify your X username before saving.");
       setIsSaving(false);
       return;
     }
@@ -319,14 +330,28 @@ export default function EditProfile() {
         .update({
           name: name.trim(),
           email: email.trim(),
-          x_account: xAccount,
+          x_account: xAccount.toUpperCase(),
           x_verified_at: new Date().toISOString(),
           image: imageUrl,
           has_updated_profile: true,
         })
         .eq("wallet_address", walletAddress);
 
-      if (userError) throw new Error("Error updating user: " + userError.message);
+      if (userError) {
+        if (userError.message.includes("duplicate key value violates unique constraint")) {
+          const errorJSX = (
+            <>
+              X account already exists. If it really belongs to you,{" "}
+              <Link href="/support" className={styles.errorLink}>
+                contact support
+              </Link>
+              .
+            </>
+          );
+          throw { message: "Duplicate X account", jsx: errorJSX };
+        }
+        throw new Error("Error updating user: " + userError.message);
+      }
 
       if (isNewUser && !currentUserData.has_updated_profile && currentUserData.referred_by) {
         await supabase
@@ -363,7 +388,7 @@ export default function EditProfile() {
             {
               user_id: userId,
               bio: bio.trim(),
-              twitter: xAccount, // Save x_account to writer_profiles.twitter
+              twitter: xAccount,
               discord: discord.trim(),
               website: website.trim(),
             },
@@ -373,10 +398,14 @@ export default function EditProfile() {
         if (profileError) throw new Error("Error updating writer profile: " + profileError.message);
       }
     } catch (err) {
-      setError(err.message);
       console.error("Submit error:", err);
+      if (err.jsx) {
+        setError(err.jsx);
+      } else {
+        setError(err.message);
+      }
     } finally {
-      setIsSaving(false); // Stop loading
+      setIsSaving(false);
     }
   };
 
@@ -470,7 +499,7 @@ export default function EditProfile() {
 
             <div className={styles.inputGroup}>
               <label htmlFor="twitter" className={styles.inputLabel}>
-                <FaTwitter className={styles.inputIcon} /> Twitter Username
+                <FaTwitter className={styles.inputIcon} /> X Username
               </label>
               {xAccount && twitterVerified ? (
                 <p className={styles.verifiedText}>Verified X Account: @{xAccount}</p>
@@ -481,7 +510,7 @@ export default function EditProfile() {
                     type="text"
                     value={twitterInput}
                     onChange={(e) => setTwitterInput(e.target.value)}
-                    placeholder="e.g., @username or https://twitter.com/username"
+                    placeholder="e.g., @username or https://x.com/username"
                     className={styles.input}
                     disabled={(!connected && !embeddedWallet) || isVerifying || isSaving}
                   />
@@ -489,7 +518,7 @@ export default function EditProfile() {
                     type="button"
                     onClick={validateTwitterUsername}
                     className={styles.verifyButton}
-                    disabled={!twitterInput || (!connected && !embeddedWallet) || isVerifying || isSaving}
+                    disabled={(!connected && !embeddedWallet) || isVerifying || isSaving || !twitterInput}
                   >
                     {isVerifying ? <FaSpinner className={styles.spinner} /> : "Verify"}
                   </button>
@@ -498,7 +527,7 @@ export default function EditProfile() {
             </div>
             {twitterError && <div className={styles.alertError}>{twitterError}</div>}
             {twitterVerified && xAccount && (
-              <div className={styles.alertSuccess}>Twitter username @{xAccount} verified!</div>
+              <div className={styles.alertSuccess}>X username @{xAccount} verified!</div>
             )}
 
             <div className={styles.inputGroup}>
