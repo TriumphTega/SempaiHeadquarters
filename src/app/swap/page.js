@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react"; // Added useContext
+import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
+import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from "next/link";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
@@ -11,7 +11,7 @@ import { FaHome, FaBars, FaTimes, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt } fr
 import TreasuryBalance from "../../components/TreasuryBalance";
 import styles from "../../styles/SwapPage.module.css";
 import ConnectButton from "../../components/ConnectButton";
-import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 
 const connection = new Connection(RPC_URL);
 
@@ -25,15 +25,17 @@ const TOKEN_MINTS = {
 
 export default function SwapPage() {
   const { connected, publicKey, sendTransaction, signTransaction } = useWallet();
-  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext); // Access embedded wallet
-  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
-  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
+  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+  const isWalletConnected = connected || !!embeddedWallet;
   const [amount, setAmount] = useState("");
   const [coinFrom, setCoinFrom] = useState("AMETHYST");
   const [coinTo, setCoinTo] = useState("SMP");
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
 
   const checkBalance = async () => {
@@ -67,24 +69,26 @@ export default function SwapPage() {
 
   const handleSwap = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      setError("Please enter a valid amount.");
       return;
     }
     if (!isWalletConnected) {
-      alert("Please connect your wallet first.");
+      setError("Please connect your wallet first.");
       return;
     }
     if (coinFrom === coinTo) {
-      alert("Please select different tokens to swap.");
+      setError("Please select different tokens to swap.");
       return;
     }
 
     setLoading(true);
+    setError(null);
+    setSuccessMessage("");
 
     try {
       const inputMint = TOKEN_MINTS[coinFrom].toString();
       const outputMint = TOKEN_MINTS[coinTo].toString();
-      console.log("Swapping:", { inputMint, outputMint, amount });
+      console.log("Swapping:", { inputMint, outputMint, amount, activeWalletAddress });
 
       const response = await fetch("/api/swap", {
         method: "POST",
@@ -102,7 +106,7 @@ export default function SwapPage() {
       const { transaction, error, message } = response;
 
       if (error) {
-        alert(`${error}: ${message}`);
+        setError(`${error}: ${message}`);
         return;
       }
 
@@ -110,17 +114,29 @@ export default function SwapPage() {
       const swapTransaction = VersionedTransaction.deserialize(swapTransactionBuf);
 
       let signature;
-      if (embeddedWallet && signAndSendTransaction) {
-        // Embedded wallet swap
-        signature = await signAndSendTransaction(swapTransaction);
+      console.log("Wallet status:", { embeddedWallet, signTransaction, sendTransaction });
+
+      if (embeddedWallet) {
+        console.log("Using embedded wallet for signing");
+        const password = prompt("Enter your wallet password to proceed:");
+        if (!password) throw new Error("Password required for embedded wallet.");
+        const secretKey = getSecretKey(password);
+        if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+        const keypair = Keypair.fromSecretKey(secretKey);
+        swapTransaction.sign([keypair]);
+        signature = await connection.sendRawTransaction(swapTransaction.serialize(), {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
       } else if (signTransaction && sendTransaction) {
-        // External wallet swap
+        console.log("Using external wallet for signing");
         const signedTransaction = await signTransaction(swapTransaction);
         signature = await sendTransaction(signedTransaction, connection, {
           skipPreflight: false,
           maxRetries: 2,
         });
       } else {
+        console.error("No valid signing method available", { embeddedWallet });
         throw new Error("Wallet signing method not available.");
       }
 
@@ -131,11 +147,12 @@ export default function SwapPage() {
         signature,
       });
 
-      alert(`Swap successful! Signature: ${signature}`);
+      setSuccessMessage(`Swap successful! Signature: ${signature}`);
+      setTimeout(() => setSuccessMessage(""), 5000);
       checkBalance();
     } catch (error) {
       console.error("Error swapping coins:", error);
-      alert("Swap failed. Please try again.");
+      setError(`Swap failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -194,7 +211,16 @@ export default function SwapPage() {
                   <FaSyncAlt />
                 </button>
               </div>
-
+              {error && (
+                <div className={styles.errorMessage}>
+                  {error}
+                </div>
+              )}
+              {successMessage && (
+                <div className={styles.successMessage}>
+                  <FaGem /> {successMessage}
+                </div>
+              )}
               <div className={styles.inputGroup}>
                 <label className={styles.label}>Amount</label>
                 <input
@@ -207,7 +233,6 @@ export default function SwapPage() {
                   className={styles.input}
                 />
               </div>
-
               <div className={styles.inputGroup}>
                 <label className={styles.label}>From</label>
                 <select value={coinFrom} onChange={(e) => setCoinFrom(e.target.value)} className={styles.select}>
@@ -217,7 +242,6 @@ export default function SwapPage() {
                   <option value="SMP">SMP</option>
                 </select>
               </div>
-
               <div className={styles.inputGroup}>
                 <label className={styles.label}>To</label>
                 <select value={coinTo} onChange={(e) => setCoinTo(e.target.value)} className={styles.select}>
@@ -227,7 +251,6 @@ export default function SwapPage() {
                   <option value="SMP">SMP</option>
                 </select>
               </div>
-
               <button onClick={handleSwap} className={styles.swapButton} disabled={loading}>
                 {loading ? (
                   <span className={styles.swirlIcon}></span>

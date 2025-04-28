@@ -139,9 +139,10 @@ export default function ChapterPage() {
   }, []);
 
   const fetchUserBalances = useCallback(async () => {
-    if (!activeWalletAddress) return;
+    if (!activeWalletAddress || !activePublicKey) return;
 
     try {
+      // Fetch weekly points from Supabase
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("weekly_points")
@@ -151,20 +152,24 @@ export default function ChapterPage() {
       if (userError) throw new Error(`Error fetching user points: ${userError.message}`);
       setWeeklyPoints(userData?.weekly_points || 0);
 
-      const { data: balanceData, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("amount")
-        .eq("wallet_address", activeWalletAddress)
-        .eq("currency", "SMP")
-        .single();
-
-      if (balanceError) throw new Error(`Error fetching SMP balance: ${balanceError.message}`);
-      setSmpBalance(balanceData?.amount || 0);
+      // Fetch SMP balance on-chain
+      const sourceATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        activePublicKey,
+        SMP_MINT_ADDRESS,
+        activePublicKey
+      );
+      const userAccountInfo = await connection.getAccountInfo(sourceATA.address);
+      const smpBalanceOnChain = userAccountInfo
+        ? Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS
+        : 0;
+      setSmpBalance(smpBalanceOnChain);
     } catch (error) {
       console.error("Error fetching balances:", error);
       setError(error.message);
+      setSmpBalance(0); // Set to 0 in case of error
     }
-  }, [activeWalletAddress]);
+  }, [activeWalletAddress, activePublicKey]);
 
   useEffect(() => {
     if (isWalletConnected) fetchUserBalances();
