@@ -1,29 +1,101 @@
-/* Health Bar */
+/* Combat.module.css */
+
+/* Combat Layout */
+.gildedCard {
+  border-radius: 15px;
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  background: linear-gradient(to bottom, #fff8e1, #fdf5e6);
+  color: #3d2601;
+  padding: 1.5rem;
+}
+
+.combatBody {
+  position: relative;
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Canvas Arena */
+.canvasArena {
+  border: 2px solid #fff;
+  background: #2c2c2c;
+  width: 100%;
+  max-width: 800px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Health Bar (Canvas-based, styled in JS) */
 .healthBar {
   width: 100%;
   height: 20px;
   background: #ccc;
   border: 1px solid #000;
-}  @media
-(max-width: 768px) {
-  .gildedCard {
-    padding: 1rem !important;
-  }
-  .healthBar {
-    height: 1rem;
-  }
-}  /* Health Fill */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .healthFill {
   height: 100%;
   background: #f00;
-  transition: width 0.3s;
-}  /* Combat Animations */
-.attacking, .enemyHit {
-  animation: shake 0.5s;
-}  /* Combat Layout */
-.combatBody {
-  position: relative;
-}  .combatResult {
+  transition: width 0.3s ease;
+}
+
+/* Attack Buttons */
+.attackButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.glowButton {
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.glowButton:hover {
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.selected {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+}
+
+.iconPulse {
+  animation: pulse 1s infinite;
+}
+
+/* Joystick (Mobile) */
+.joystick {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 80px;
+  height: 80px;
+  z-index: 10;
+}
+
+/* Combat Log */
+.logEntry {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 8px;
+}
+
+/* Combat Result */
+.combatResult {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -32,224 +104,90 @@
   padding: 15px;
   font-weight: bold;
   border-radius: 10px;
-  border: 2px solid #FFD700;
+  border: 2px solid #ffd700;
   box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
   background: linear-gradient(to bottom, #fff4d1, #fbe2a5);
-  color: #4b2900; /* Darker text for readability */
-}  
-.gildedModal {
-  border-radius: 15px;
-  border: 3px solid #FFD700;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
-  background: linear-gradient(to bottom, rgba(255, 248, 225, 0.85), rgba(253, 245, 230, 0.9));
-  color: #3d2601;
-}  .gildedModal .modal-dialog {
-  max-height: 90vh;
-  overflow-y: auto;
-}  
-.gildedCard {
-  border-radius: 15px;
-  border: 2px solid #FFD700;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-  background: linear-gradient(to bottom, #FFF8E1, #FDF5E6);
-  color: #3d2601; 
-}  /* Light Backdrop */
-.lightBackdrop {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-}  /* Travel Modal */
-.travelModal .modal-dialog {
-  margin: 0;
+  color: #4b2900;
+  animation: popIn 0.5s ease;
+}
+
+/* Particle Container */
+.particleContainer {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  width: 300px;
-}  .travelBody {
-  padding: 10px;
-  background: none;
-  border: none;
-}  .travelContent {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #FFD700;
-  border-radius: 10px;
-  padding: 10px;
-  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s ease-in 4.5s forwards;
-  color: #3d2601; /* Ensures text contrast */
-  font-weight: bold;
-}  .travelChibi {
-  width: 50px;
-  height: 50px;
-  margin-right: 10px;
-  animation: bounce 1s infinite alternate;
-}  /* Animations */
-@keyframes
-slideIn {
-  0% { transform: translateX(100%); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
-}  @keyframes
-slideOut {
-  0% { transform: translateX(0); opacity: 1; }
-  100% { transform: translateX(100%); opacity: 0; }
-}  @keyframes
-bounce {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-10px); }
-}  
-.navbar {
-  padding: 10px 0;
-  position: sticky;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
-  background: transparent; 
-  border-bottom: 1px solid rgba(243, 99, 22, 0.8);
-  box-shadow: 0 2px 10px rgba(243, 99, 22, 0.2);
-  animation: slideIn 0.6s ease-out;
-}  @keyframes
-slideIn {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}  .navContainer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 0 15px;
-}  .logoLink {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}  .logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid rgba(243, 99, 22, 0.8);
-  transition: transform 0.5s ease, box-shadow 0.5s ease;
-}  .logo:hover {
-  transform: rotate(360deg) scale(1.1);
-  box-shadow: 0 0 15px rgba(243, 99, 22, 0.8);
-}  .logoText {
-  font-size: 1.4rem;
-  font-weight: bold;
-  margin-left: 10px;
-  color: #ff6200;
-  text-shadow: 0 2px 4px rgba(243, 99, 22, 0.5);
-}  .menuToggle {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  color: #ff6200;
-  display: none;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}  .menuToggle:hover {
-  transform: scale(1.2);
-}  .navLinks {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-}  .navLink {
-  font-size: 0.9rem;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  color: rgba(243, 99, 22, 0.8); /* Your edited color */
-  transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
-}  .navLink:hover, .navLink.active {
-  transform: translateY(-2px);
-  background: rgba(243, 99, 22, 0.4);
-  color: #ff6200;
-}  .navIcon {
-  font-size: 0.9rem;
-  transition: transform 0.3s ease;
-}  .navLink:hover .navIcon, .navLink.active .navIcon {
-  transform: scale(1.2) rotate(10deg);
-}  /* Blur effect when menu is active */
-.blurBackdrop {
-  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  z-index: 998;
-  display: none;
-}  :global(.menuActive) .blurBackdrop {
-  display: block; /* Show blur backdrop when menu is open */
-}  /* Mobile Styles */
-@media
-(max-width: 768px) {
-  .navbar {
-    padding: 10px 0;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  80% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .gildedCard {
+    padding: 1rem;
   }
 
-.navContainer {
-padding: 10px 15px;
-position: relative;
-flex-wrap: nowrap;
-}
-
-.menuToggle {
-display: block;
-}
-
-.navLinks {
-display: none;
-flex-direction: column;
-width: 100%;
-position: absolute;
-top: 100%;
-left: 0;
-padding: 15px;
-background: transparent; /* Keep transparent for blur effect */
-box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-z-index: 999;
-}
-
-.navLinksOpen {
-display: flex;
-animation: slideDownMenu 0.3s ease-out;
-}
-
-@keyframes slideDownMenu {
-from { opacity: 0; transform: translateY(-10px); }
-to { opacity: 1; transform: translateY(0); }
-}
-
-.navLink {
-width: 100%;
-justify-content: center;
-padding: 10px 0;
-}
-
-}  @media
-(max-width: 480px) {
-  .logo {
-    width: 35px;
-    height: 35px;
+  .healthBar {
+    height: 16px;
   }
 
-.logoText {
-font-size: 1.2rem;
+  .attackButtons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .glowButton {
+    width: 100%;
+    max-width: 200px;
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .joystick {
+    width: 60px;
+    height: 60px;
+    bottom: 10px;
+    left: 10px;
+  }
+
+  .canvasArena {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
-.navLink {
-font-size: 0.8rem;
-padding: 8px 0;
-}
+@media (max-width: 576px) {
+  .combatBody {
+    padding: 10px;
+  }
 
-.navIcon {
-font-size: 1rem;
-}
+  .healthBar {
+    height: 12px;
+  }
 
+  .logEntry {
+    font-size: 0.75rem;
+  }
 
+  .combatResult {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
 
+  .glowButton {
+    max-width: 180px;
+  }
 }

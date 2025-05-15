@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useContext } from "react"; // Add useContext
+import { useState, useEffect, useRef, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Add this import
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -18,7 +18,7 @@ import imageCompression from "browser-image-compression";
 // Predefined tag options for production
 const TAG_OPTIONS = [
   { value: "Action", label: "Action" },
-  { value: "Adult(18+)", label: "Action(18+)" },
+  { value: "Adult(18+)", label: "Adult(18+)" },
   { value: "Adventure", label: "Adventure" },
   { value: "Comedy", label: "Comedy" },
   { value: "Drama", label: "Drama" },
@@ -41,7 +41,7 @@ const TAG_OPTIONS = [
 
 export default function MangaDashboard() {
   const { connected, publicKey } = useWallet();
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Add embedded wallet context
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const [title, setTitle] = useState("");
   const [coverImage, setCoverImage] = useState(null);
   const [coverPreview, setCoverPreview] = useState("");
@@ -49,6 +49,7 @@ export default function MangaDashboard() {
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterPages, setChapterPages] = useState([]);
   const [isPremium, setIsPremium] = useState(false);
+  const [chapterPrice, setChapterPrice] = useState("2.5"); // New state for chapter price
   const [mangaCollection, setMangaCollection] = useState([]);
   const [activeManga, setActiveManga] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -80,7 +81,7 @@ export default function MangaDashboard() {
 
     setIsLoading(true);
     try {
-      const wallet = activePublicKey.toString(); // Use active wallet address
+      const wallet = activePublicKey.toString();
       const { data, error } = await supabase
         .from("users")
         .select("id, isArtist, isSuperuser")
@@ -145,7 +146,7 @@ export default function MangaDashboard() {
 
   useEffect(() => {
     verifyUserAccess();
-  }, [connected, publicKey, embeddedWallet]); // Add embeddedWallet to dependencies
+  }, [connected, publicKey, embeddedWallet]);
 
   useEffect(() => {
     if (userId && (isArtist || isAdmin)) {
@@ -191,8 +192,17 @@ export default function MangaDashboard() {
       alert("Chapter title and at least one page are required.");
       return;
     }
+    if (isPremium && (!chapterPrice || parseFloat(chapterPrice) <= 0)) {
+      alert("Please set a valid price for the premium chapter.");
+      return;
+    }
 
-    const chapterData = { title: chapterTitle, pages: chapterPages, isPremium };
+    const chapterData = {
+      title: chapterTitle,
+      pages: chapterPages,
+      isPremium,
+      price: isPremium ? parseFloat(chapterPrice) : null,
+    };
     if (editingChapterIdx !== null) {
       setChapters((prev) => prev.map((ch, idx) => (idx === editingChapterIdx ? chapterData : ch)));
       setEditingChapterIdx(null);
@@ -208,6 +218,7 @@ export default function MangaDashboard() {
     setChapterTitle(chapter.title || "");
     setChapterPages(chapter.pages || []);
     setIsPremium(chapter.isPremium || false);
+    setChapterPrice(chapter.price ? chapter.price.toString() : "2.5");
     setEditingChapterIdx(idx);
     chapterInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     chapterInputRef.current?.focus();
@@ -231,7 +242,7 @@ export default function MangaDashboard() {
     try {
       const { data: chapterData, error } = await supabase
         .from("manga_chapters")
-        .select("id, title, is_premium")
+        .select("id, title, is_premium, price")
         .eq("manga_id", mangaId)
         .order("chapter_number", { ascending: true });
       if (error) throw new Error("Chapter fetch error");
@@ -244,7 +255,11 @@ export default function MangaDashboard() {
             .eq("chapter_id", chapter.id)
             .order("page_number", { ascending: true });
           if (pageError) throw new Error("Page fetch error");
-          return { ...chapter, pages: pages.map((p) => ({ url: p.image_url })) };
+          return {
+            ...chapter,
+            pages: pages.map((p) => ({ url: p.image_url })),
+            price: chapter.price,
+          };
         })
       );
       setChapters(chaptersWithPages);
@@ -298,12 +313,29 @@ export default function MangaDashboard() {
 
         const existing = activeManga ? (await supabase.from("manga_chapters").select("id").eq("manga_id", mangaId).eq("chapter_number", i + 1).single()).data : null;
         if (existing) {
-          const { error } = await supabase.from("manga_chapters").update({ title: chapter.title, is_premium: chapter.isPremium }).eq("id", existing.id);
+          const { error } = await supabase
+            .from("manga_chapters")
+            .update({
+              title: chapter.title,
+              is_premium: chapter.isPremium,
+              price: chapter.isPremium ? chapter.price : null,
+            })
+            .eq("id", existing.id);
           if (error) throw new Error("Chapter update failed");
           chapterId = existing.id;
           await supabase.from("manga_pages").delete().eq("chapter_id", chapterId);
         } else {
-          const { data, error } = await supabase.from("manga_chapters").insert([{ manga_id: mangaId, chapter_number: i + 1, title: chapter.title, is_premium: chapter.isPremium }]).select("id").single();
+          const { data, error } = await supabase
+            .from("manga_chapters")
+            .insert([{
+              manga_id: mangaId,
+              chapter_number: i + 1,
+              title: chapter.title,
+              is_premium: chapter.isPremium,
+              price: chapter.isPremium ? chapter.price : null,
+            }])
+            .select("id")
+            .single();
           if (error) throw new Error("Chapter creation failed");
           chapterId = data.id;
         }
@@ -398,6 +430,7 @@ export default function MangaDashboard() {
     setChapterTitle("");
     setChapterPages([]);
     setIsPremium(false);
+    setChapterPrice("2.5");
     setEditingChapterIdx(null);
   };
 
@@ -471,7 +504,7 @@ export default function MangaDashboard() {
       </nav>
 
       <main className={styles.main}>
-        {!isWalletConnected ? ( // Updated condition
+        {!isWalletConnected ? (
           <div className={styles.unauthorized}>
             <FaGem />
             <p>Connect your wallet to access the Artist’s Studio.</p>
@@ -547,6 +580,19 @@ export default function MangaDashboard() {
                     <input type="checkbox" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
                     Premium Chapter
                   </label>
+                  {isPremium && (
+                    <div className={styles.field}>
+                      <label>Chapter Price (USDC)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={chapterPrice}
+                        onChange={(e) => setChapterPrice(e.target.value)}
+                        placeholder="Enter price (e.g., 2.5)"
+                      />
+                    </div>
+                  )}
                   <button type="button" onClick={manageChapter} className={styles.addButton}>
                     <FaPlus /> {editingChapterIdx !== null ? "Update" : "Add"}
                   </button>
@@ -555,7 +601,10 @@ export default function MangaDashboard() {
                   <ul className={styles.chapterList}>
                     {chapters.map((chapter, idx) => (
                       <li key={idx} className={styles.chapterItem}>
-                        <span>{chapter.title} ({chapter.pages.length} pages) {chapter.isPremium && "[Premium]"}</span>
+                        <span>
+                          {chapter.title} ({chapter.pages.length} pages) 
+                          {chapter.isPremium && ` [Premium: $${chapter.price}]`}
+                        </span>
                         <div>
                           <FaEdit className={styles.icon} onClick={(e) => editChapter(e, idx)} />
                           <FaTrash className={styles.icon} onClick={() => deleteChapter(idx)} />

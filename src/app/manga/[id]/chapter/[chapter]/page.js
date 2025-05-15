@@ -80,7 +80,7 @@ export default function MangaChapter() {
   const fetchChapter = async () => {
     const { data: chapterData } = await supabase
       .from("manga_chapters")
-      .select("id, title, is_premium, manga_pages (image_url, page_number), manga (user_id)")
+      .select("id, title, is_premium, price, manga_pages (image_url, page_number), manga (user_id)")
       .eq("id", chapterId)
       .eq("manga_id", mangaId)
       .single();
@@ -183,7 +183,8 @@ export default function MangaChapter() {
       return;
     }
 
-    const usdAmount = 2.5;
+    // Use chapter price, fallback to 2.5 if null or invalid
+    const usdAmount = chapter?.price && chapter.price > 0 ? chapter.price : 2.5;
     let amount, decimals, mint, displayAmount;
 
     try {
@@ -210,6 +211,7 @@ export default function MangaChapter() {
         displayAmount,
         decimals,
         mint,
+        usdAmount, // Store USD amount for popup
       });
       setShowTransactionPopup(true);
     } catch (error) {
@@ -225,7 +227,7 @@ export default function MangaChapter() {
       return;
     }
 
-    const { currency, amount, decimals, mint } = transactionDetails;
+    const { currency, amount, decimals, mint, usdAmount } = transactionDetails;
 
     try {
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
@@ -272,7 +274,7 @@ export default function MangaChapter() {
           "confirmed"
         );
         setTransactionSignature(signature);
-        await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency);
+        await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency, usdAmount);
       } else if (currency === "USDC") {
         const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
         const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
@@ -312,7 +314,7 @@ export default function MangaChapter() {
           "confirmed"
         );
         setTransactionSignature(signature);
-        await processUnlock(signature, amount / 10 ** decimals, currency);
+        await processUnlock(signature, amount / 10 ** decimals, currency, usdAmount);
       }
     } catch (error) {
       console.error(`${currency} Payment Error:`, error);
@@ -324,14 +326,14 @@ export default function MangaChapter() {
     }
   };
 
-  const processUnlock = async (signature, amount, currency) => {
+  const processUnlock = async (signature, amount, currency, usdAmount) => {
     try {
       const payload = {
         user_wallet: activeWalletAddress,
         manga_id: mangaId,
         chapter_id: chapterId,
         signature,
-        amount,
+        amount: usdAmount, // Use USD amount for consistency in unlock records
         currency,
       };
       const response = await fetch("/api/unlock-manga-chapter", {
@@ -647,8 +649,9 @@ export default function MangaChapter() {
   if (loading) return <LoadingPage />;
   if (!chapter) return <div className={styles.page}>Chapter not found.</div>;
 
-  const solAmount = solPrice ? (2.5 / solPrice).toFixed(5) : "Loading...";
-  const usdcAmount = (2.5 / usdcPrice).toFixed(2);
+  const chapterPrice = chapter?.price && chapter.price > 0 ? chapter.price : 2.5;
+  const solAmount = solPrice ? (chapterPrice / solPrice).toFixed(5) : "Loading...";
+  const usdcAmount = (chapterPrice / usdcPrice).toFixed(2);
   const canDownload = isWalletConnected && (isFirstChapter || (chapter.is_premium && paymentConfirmed));
 
   return (
@@ -684,7 +687,7 @@ export default function MangaChapter() {
         ) : paymentRequired && !paymentConfirmed ? (
           <div className={styles.paymentSection}>
             <FaLock className={styles.lockIcon} />
-            <p>Unlock this chapter for $2.5</p>
+            <p>Unlock this chapter for ${chapterPrice.toFixed(2)}</p>
             <div className={styles.paymentButtons}>
               <button onClick={() => initiatePayment("SOL")} disabled={!solPrice}>
                 Pay {solAmount} SOL
@@ -761,8 +764,12 @@ export default function MangaChapter() {
               </div>
             )}
             {isWalletConnected && (isFirstChapter || paymentConfirmed) && (
-              <MangaCommentSection mangaId={mangaId} chapterId={chapterId} isWalletConnected={isWalletConnected}
-              activePublicKey={activePublicKey}/>
+              <MangaCommentSection
+                mangaId={mangaId}
+                chapterId={chapterId}
+                isWalletConnected={isWalletConnected}
+                activePublicKey={activePublicKey}
+              />
             )}
           </div>
         )}
@@ -789,7 +796,7 @@ export default function MangaChapter() {
                 <strong>Amount:</strong> {transactionDetails.displayAmount} {transactionDetails.currency}
               </p>
               <p>
-                <strong>USD Value:</strong> $2.5
+                <strong>USD Value:</strong> ${transactionDetails.usdAmount.toFixed(2)}
               </p>
               <p>
                 <strong>Wallet:</strong> {activeWalletAddress?.slice(0, 6)}...{activeWalletAddress?.slice(-4)}

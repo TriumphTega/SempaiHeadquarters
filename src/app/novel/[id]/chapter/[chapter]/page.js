@@ -1,28 +1,68 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useContext } from "react";
+import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Connection, SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL, Keypair } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, createTransferInstruction, getOrCreateAssociatedTokenAccount, getAccount } from "@solana/spl-token";
+import {
+  Connection,
+  SystemProgram,
+  Transaction,
+  PublicKey,
+  LAMPORTS_PER_SOL,
+  Keypair,
+} from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  createTransferInstruction,
+  getOrCreateAssociatedTokenAccount,
+  getAccount,
+  getAssociatedTokenAddressSync,
+  unpackAccount,
+} from "@solana/spl-token";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaChevronLeft, FaChevronRight, FaGem, FaLock, FaRocket, FaCrown, FaStar, FaWallet } from "react-icons/fa";
+import {
+  FaHome,
+  FaBars,
+  FaTimes,
+  FaBookOpen,
+  FaVolumeUp,
+  FaPause,
+  FaPlay,
+  FaStop,
+  FaChevronLeft,
+  FaChevronRight,
+  FaGem,
+  FaLock,
+  FaRocket,
+  FaCrown,
+  FaStar,
+  FaWallet,
+} from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
-import { RPC_URL, SMP_MINT_ADDRESS } from "../../../../../constants";
-import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
+import {
+  RPC_URL,
+  SMP_MINT_ADDRESS,
+  AMETHYST_MINT_ADDRESS,
+  TREASURY_PUBLIC_KEY,
+} from "../../../../../constants";
+import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 
-const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-const SMP_DECIMALS = 6; // Consistent with StatsPage
+const SMP_DECIMALS = 6;
+const TARGET_WALLET = TREASURY_PUBLIC_KEY;
+
+const connection = new Connection(RPC_URL, {
+  commitment: "confirmed",
+  httpHeaders: { "x-api-key": RPC_URL.split("=")[1] },
+});
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
-const connection = new Connection(RPC_URL, "confirmed");
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();
@@ -30,16 +70,19 @@ export default function ChapterPage() {
   const { connected, publicKey, sendTransaction } = useWallet();
   const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
 
-  const activePublicKey = embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
+  const activePublicKey = useMemo(() => {
+    return embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
+  }, [embeddedWallet?.publicKey, publicKey]);
+
   const activeWalletAddress = activePublicKey?.toString();
   const isWalletConnected = !!activePublicKey;
+  const { balance: amethystBalance } = UseAmethystBalance();
 
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
-  const { balance } = UseAmethystBalance();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const [isLocked, setIsLocked] = useState(true);
@@ -48,7 +91,6 @@ export default function ChapterPage() {
   const [canUnlockNextThree, setCanUnlockNextThree] = useState(false);
   const [solPrice, setSolPrice] = useState(null);
   const [smpPrice, setSmpPrice] = useState(null);
-  const usdcPrice = 1;
   const [userRating, setUserRating] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
@@ -56,33 +98,25 @@ export default function ChapterPage() {
   const [readingMode, setReadingMode] = useState("free");
   const [smpBalance, setSmpBalance] = useState(null);
   const [weeklyPoints, setWeeklyPoints] = useState(null);
+  const usdcPrice = 1;
 
-  // Utility function for delayed retry
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const fetchSolPrice = async (retryCount = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= retryCount; attempt++) {
       try {
-        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", {
-          method: "GET",
-          headers: { "Accept": "application/json" },
-          mode: "cors",
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        }
+        const response = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+          { method: "GET", headers: { Accept: "application/json" }, mode: "cors" }
+        );
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();
-        if (!data.solana?.usd) {
-          throw new Error("Invalid SOL price data");
-        }
+        if (!data.solana?.usd) throw new Error("Invalid SOL price data");
         return data.solana.usd;
       } catch (error) {
-        console.error(`Attempt ${attempt} - Error fetching SOL price:`, error.message);
-        if (attempt === retryCount) {
-          console.error("Max retries reached for SOL price fetch");
-          return null;
-        }
-        await delay(retryDelay);
+        console.error(`Attempt ${attempt} - Error fetching SOL price:`, error);
+        if (attempt === retryCount) return null;
+        await delay(retryDelay * attempt);
       }
     }
   };
@@ -90,114 +124,146 @@ export default function ChapterPage() {
   const fetchSmpPrice = async (retryCount = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= retryCount; attempt++) {
       try {
-        const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd", {
-          method: "GET",
-          headers: { "Accept": "application/json" },
-          mode: "cors",
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        }
+        const response = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd",
+          { method: "GET", headers: { Accept: "application/json" }, mode: "cors" }
+        );
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();
         return data["smp-token-id"]?.usd || null;
       } catch (error) {
-        console.error(`Attempt ${attempt} - Error fetching SMP price:`, error.message);
-        if (attempt === retryCount) {
-          console.error("Max retries reached for SMP price fetch");
-          return null;
-        }
-        await delay(retryDelay);
+        console.error(`Attempt ${attempt} - Error fetching SMP price:`, error);
+        if (attempt === retryCount) return null;
+        await delay(retryDelay * attempt);
       }
     }
   };
 
-  const fetchPrices = async () => {
-    const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
-    return {
-      solPrice: sol || 100, // Default to $100 if SOL price fetch fails
-      smpPrice: smp || null, // SMP price can be null as it's optional
-    };
-  };
-
-  useEffect(() => {
-    const getInitialPrices = async () => {
-      try {
-        const { solPrice: initialSol, smpPrice: initialSmp } = await fetchPrices();
-        setSolPrice(initialSol);
-        setSmpPrice(initialSmp);
-      } catch (error) {
-        console.error("Error in getInitialPrices:", error);
-        setError("Failed to fetch price data. Using default values.");
-        setSolPrice(100); // Fallback SOL price
-        setSmpPrice(null); // Fallback SMP price
-        setTimeout(() => setError(null), 5000); // Clear error after 5 seconds
-      }
-    };
-    if (typeof window !== "undefined") {
-      getInitialPrices();
+  const fetchPrices = useCallback(async () => {
+    try {
+      const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
+      setSolPrice(sol || 100);
+      setSmpPrice(smp || null);
+    } catch (error) {
+      console.error("Error fetching prices:", error);
+      setError("Failed to fetch price data. Using default values.");
+      setSolPrice(100);
+      setSmpPrice(null);
+      setTimeout(() => setError(null), 5000);
     }
   }, []);
 
-  const fetchUserBalances = useCallback(async () => {
-    if (!activeWalletAddress || !activePublicKey) return;
-
-    try {
-      // Fetch weekly points from Supabase
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("weekly_points")
-        .eq("wallet_address", activeWalletAddress)
-        .single();
-
-      if (userError) throw new Error(`Error fetching user points: ${userError.message}`);
-      setWeeklyPoints(userData?.weekly_points || 0);
-
-      // Fetch SMP balance on-chain
-      const sourceATA = await getOrCreateAssociatedTokenAccount(
-        connection,
-        activePublicKey,
-        SMP_MINT_ADDRESS,
-        activePublicKey
-      );
-      const userAccountInfo = await connection.getAccountInfo(sourceATA.address);
-      const smpBalanceOnChain = userAccountInfo
-        ? Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS
-        : 0;
-      setSmpBalance(smpBalanceOnChain);
-    } catch (error) {
-      console.error("Error fetching balances:", error);
-      setError(error.message);
-      setSmpBalance(0); // Set to 0 in case of error
+  const fetchSmpBalanceOnChain = useCallback(async (retryCount = 3, retryDelay = 1000) => {
+    if (!activeWalletAddress || !activePublicKey) return 0;
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
+      try {
+        const ataAddress = getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, activePublicKey);
+        console.log("Fetching SMP balance for ATA:", ataAddress.toString());
+        const ataInfo = await connection.getAccountInfo(ataAddress);
+        if (!ataInfo) {
+          console.log("No ATA found for SMP, returning 0 balance");
+          return 0;
+        }
+        const ata = unpackAccount(ataAddress, ataInfo);
+        const balance = Number(ata.amount) / 10 ** SMP_DECIMALS;
+        console.log("On-chain SMP balance:", balance);
+        return balance;
+      } catch (error) {
+        console.error(`Attempt ${attempt} - Error fetching on-chain SMP balance:`, error);
+        if (attempt === retryCount || error.message.includes("403")) {
+          setError("Unable to fetch SMP balance due to network restrictions.");
+          setTimeout(() => setError(null), 5000);
+          return 0;
+        }
+        await delay(retryDelay * attempt);
+      }
     }
   }, [activeWalletAddress, activePublicKey]);
 
-  useEffect(() => {
-    if (isWalletConnected) fetchUserBalances();
-  }, [isWalletConnected, activeWalletAddress, fetchUserBalances]);
-
-  const updateTokenBalance = useCallback(async () => {
-    if (!activeWalletAddress || !novel || !chapter || !id || readingMode !== "paid") {
-      console.warn("Skipping token update:", { activeWalletAddress, novel, chapter, id, readingMode });
-      return;
-    }
-
+  const fetchUserBalances = useCallback(async () => {
+    if (!activeWalletAddress) return;
     try {
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("id, wallet_address, weekly_points")
+        .select("id, weekly_points")
         .eq("wallet_address", activeWalletAddress)
         .single();
+      if (userError) throw new Error(`Error fetching user data: ${userError.message}`);
+      setUserId(userData.id);
+      setWeeklyPoints(userData.weekly_points || 0);
 
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("wallet_address", activeWalletAddress)
+        .eq("currency", "SMP")
+        .single();
+      if (balanceError) {
+        console.error("Supabase balance error:", balanceError);
+        const smpBalanceOnChain = await fetchSmpBalanceOnChain();
+        setSmpBalance(smpBalanceOnChain || 0);
+        // Update Supabase with on-chain balance
+        await supabase
+          .from("wallet_balances")
+          .upsert({
+            wallet_address: activeWalletAddress,
+            currency: "SMP",
+            amount: smpBalanceOnChain,
+            chain: "SOL",
+            decimals: SMP_DECIMALS,
+            user_id: userData.id,
+          });
+      } else {
+        console.log("Supabase SMP balance:", balanceData.amount);
+        setSmpBalance(balanceData.amount);
+        // Verify on-chain balance and warn if out of sync
+        const smpBalanceOnChain = await fetchSmpBalanceOnChain();
+        if (Math.abs(balanceData.amount - smpBalanceOnChain) > 0.01) {
+          console.warn(
+            `Balance mismatch! Supabase: ${balanceData.amount} SMP, On-chain: ${smpBalanceOnChain} SMP`
+          );
+          setWarningMessage(
+            `Your wallet balance is out of sync (Supabase: ${balanceData.amount.toLocaleString()} SMP, On-chain: ${smpBalanceOnChain.toLocaleString()} SMP). Contact support to resolve.`
+          );
+          setTimeout(() => setWarningMessage(""), 10000);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user balances:", error);
+      setError("Unable to load wallet balances.");
+      setSmpBalance(0);
+      setTimeout(() => setError(null), 5000);
+    }
+  }, [activeWalletAddress, fetchSmpBalanceOnChain]);
+
+  useEffect(() => {
+    if (isWalletConnected) fetchUserBalances();
+  }, [isWalletConnected, fetchUserBalances]);
+
+  const updateTokenBalance = useCallback(async () => {
+    if (!activeWalletAddress || !novel || !chapter || !id || readingMode !== "paid") {
+      return;
+    }
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id, weekly_points")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
       if (userError || !userData) throw new Error("User not found");
       const user = userData;
 
       const chapterNum = parseInt(chapter, 10);
+      const chapterAdvanceInfo =
+        novel.advance_chapters?.find((c) => c.index === chapterNum) || {
+          is_advance: false,
+          free_release_date: null,
+        };
 
-      const chapterAdvanceInfo = novel.advance_chapters
-        ? novel.advance_chapters.find((c) => c.index === chapterNum) || { is_advance: false, free_release_date: null }
-        : { is_advance: false, free_release_date: null };
-
-      let hasValidAccess = !chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date());
+      let hasValidAccess =
+        !chapterAdvanceInfo.is_advance ||
+        (chapterAdvanceInfo.free_release_date &&
+          new Date(chapterAdvanceInfo.free_release_date) <= new Date());
       if (chapterAdvanceInfo.is_advance && !hasValidAccess) {
         const { data: unlock, error: unlockError } = await supabase
           .from("unlocked_story_chapters")
@@ -205,52 +271,47 @@ export default function ChapterPage() {
           .eq("user_id", user.id)
           .eq("story_id", id)
           .single();
-
         if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
 
-        hasValidAccess = unlock &&
+        hasValidAccess =
+          unlock &&
           (!unlock.expires_at || new Date(unlock.expires_at) > new Date()) &&
           (unlock.chapter_unlocked_till === -1 || unlock.chapter_unlocked_till >= chapterNum);
-
-        if (!hasValidAccess) {
-          console.log("User has no valid subscription for this advance chapter; skipping token update.");
-          return;
-        }
+        if (!hasValidAccess) return;
       }
 
-      // Check off-chain SMP balance
+      // Check Supabase balance first (source of truth)
       const { data: walletBalance, error: balanceError } = await supabase
         .from("wallet_balances")
         .select("amount")
         .eq("wallet_address", activeWalletAddress)
         .eq("currency", "SMP")
         .single();
-
       if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
-      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance (off-chain)");
+      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance: " + walletBalance.amount.toLocaleString() + " SMP");
 
-      // Check on-chain SMP balance
+      // Verify on-chain balance
       const sourceATA = await getOrCreateAssociatedTokenAccount(
         connection,
         activePublicKey,
         SMP_MINT_ADDRESS,
         activePublicKey
       );
-      const userAccountInfo = await connection.getAccountInfo(sourceATA.address);
-      const smpBalanceOnChain = userAccountInfo
-        ? Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS
-        : 0;
+      const smpBalanceOnChain = Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS;
       if (smpBalanceOnChain < 1000) {
-        throw new Error(`Insufficient SMP balance on-chain: ${smpBalanceOnChain.toLocaleString()} SMP available, need 1000 SMP`);
+        // Warn user but proceed if Supabase balance is sufficient
+        setWarningMessage(
+          `On-chain balance too low (${smpBalanceOnChain.toLocaleString()} SMP). Please sync your wallet with ${1000 - smpBalanceOnChain} SMP to proceed.`
+        );
+        setTimeout(() => setWarningMessage(""), 10000);
+        throw new Error(`Insufficient SMP balance on-chain: ${smpBalanceOnChain.toLocaleString()} SMP`);
       }
 
-      // Fetch novel owner
       const { data: novelOwnerData, error: novelOwnerError } = await supabase
         .from("novels")
         .select("user_id")
         .eq("id", novel.id)
         .single();
-
       if (novelOwnerError || !novelOwnerData) throw new Error("Novel owner not found");
       const novelOwnerId = novelOwnerData.user_id;
 
@@ -259,34 +320,26 @@ export default function ChapterPage() {
         .select("id, wallet_address, balance")
         .eq("id", novelOwnerId)
         .single();
-
       if (novelOwnerBalanceError || !novelOwner) throw new Error("Novel owner balance not found");
 
-      // Generate event details for deduplication
       const eventDetails = `${activeWalletAddress}${novel.title || "Untitled"}${chapter}`
-        .replace(/[^a-zA-Z0-9]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, "")
         .substring(0, 255);
-
       if (!eventDetails) throw new Error("Failed to generate event details");
 
-      // Check for existing event to prevent duplicate transactions
       const { data: existingEvents, error: eventError } = await supabase
         .from("wallet_events")
         .select("id")
         .eq("event_details", eventDetails)
         .eq("wallet_address", activeWalletAddress)
         .limit(1);
-
       if (eventError) throw new Error(`Error checking wallet events: ${eventError.message}`);
-
-      const existingEvent = existingEvents && existingEvents.length > 0 ? existingEvents[0] : null;
-      if (existingEvent) {
+      if (existingEvents?.length > 0) {
         setWarningMessage("⚠️ You've been credited for this chapter before.");
         setTimeout(() => setWarningMessage(""), 5000);
         return;
       }
 
-      // On-chain SMP transfer
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
       const destATA = await getOrCreateAssociatedTokenAccount(
         connection,
@@ -294,7 +347,6 @@ export default function ChapterPage() {
         SMP_MINT_ADDRESS,
         new PublicKey(TARGET_WALLET)
       );
-
       const transaction = new Transaction({
         recentBlockhash: blockhash,
         feePayer: activePublicKey,
@@ -303,55 +355,47 @@ export default function ChapterPage() {
           sourceATA.address,
           destATA.address,
           activePublicKey,
-          1000 * (10 ** SMP_DECIMALS), // 1000 SMP with 6 decimals
+          1000 * 10 ** SMP_DECIMALS,
           [],
           TOKEN_PROGRAM_ID
         )
       );
 
       let signature;
-      try {
-        if (embeddedWallet) {
-          const password = prompt("Enter your wallet password to proceed:");
-          if (!password) throw new Error("Password required for embedded wallet.");
-          const secretKey = getSecretKey(password);
-          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-          const keypair = Keypair.fromSecretKey(secretKey);
-          transaction.sign(keypair);
-          signature = await connection.sendRawTransaction(transaction.serialize());
-        } else if (connected && sendTransaction) {
-          signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-          });
-        } else {
-          throw new Error("No valid wallet available for signing the transaction.");
-        }
-
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          "confirmed"
-        );
-      } catch (error) {
-        if (error.name === "SendTransactionError") {
-          const logs = await error.getLogs?.(connection) || ["No logs available"];
-          console.error("Transaction logs:", logs);
-          throw new Error(`Transaction failed: ${error.message}. Logs: ${JSON.stringify(logs)}`);
-        }
-        throw error;
+      if (embeddedWallet) {
+        const password = prompt("Enter your wallet password to proceed:");
+        if (!password) throw new Error("Password required for embedded wallet.");
+        const secretKey = getSecretKey(password);
+        if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
+        const keypair = Keypair.fromSecretKey(secretKey);
+        transaction.sign(keypair);
+        signature = await connection.sendRawTransaction(transaction.serialize());
+      } else if (connected && sendTransaction) {
+        signature = await sendTransaction(transaction, connection, {
+          skipPreflight: false,
+          preflightCommitment: "confirmed",
+        });
+      } else {
+        throw new Error("No valid wallet available for signing the transaction.");
       }
 
-      // Update off-chain balances
-      const newSmpBalance = walletBalance.amount - 0;
-      await supabase
+      await connection.confirmTransaction(
+        { signature, blockhash, lastValidBlockHeight },
+        "confirmed"
+      );
+
+      // Update Supabase balance after successful transaction
+      const newSmpBalance = walletBalance.amount - 1000;
+      const { error: updateError } = await supabase
         .from("wallet_balances")
         .update({ amount: newSmpBalance })
         .eq("wallet_address", activeWalletAddress)
         .eq("currency", "SMP");
+      if (updateError) throw new Error(`Error updating Supabase balance: ${updateError.message}`);
 
       let readerReward = 100;
       const authorReward = 500;
-      const numericBalance = Number(balance) || 0;
+      const numericBalance = Number(amethystBalance) || 0;
       if (numericBalance >= 5000000) readerReward = 250;
       else if (numericBalance >= 1000000) readerReward = 200;
       else if (numericBalance >= 500000) readerReward = 170;
@@ -361,15 +405,12 @@ export default function ChapterPage() {
       const newReaderBalance = (user.weekly_points || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
 
-      const updates = [];
-
-      updates.push(
+      const updates = [
         supabase
           .from("users")
           .update({ weekly_points: newReaderBalance })
-          .eq("id", user.id)
-      );
-
+          .eq("id", user.id),
+      ];
       if (novelOwner.id !== user.id) {
         updates.push(
           supabase
@@ -378,7 +419,6 @@ export default function ChapterPage() {
             .eq("id", novelOwner.id)
         );
       }
-
       const results = await Promise.all(updates);
       for (const { error } of results) {
         if (error) throw new Error(`Error updating balance: ${error.message}`);
@@ -394,11 +434,9 @@ export default function ChapterPage() {
           wallet_address: novelOwner.wallet_address,
         },
       ];
-
       const { error: walletError } = await supabase
         .from("wallet_balances")
         .upsert(walletBalancesData);
-
       if (walletError) throw new Error(`Error updating wallet balances: ${walletError.message}`);
 
       const walletEventsData = [
@@ -436,11 +474,9 @@ export default function ChapterPage() {
           destination_chain: "SOL",
         },
       ];
-
       const { error: eventInsertError } = await supabase
         .from("wallet_events")
         .insert(walletEventsData);
-
       if (eventInsertError) throw new Error(`Error inserting wallet events: ${eventInsertError.message}`);
 
       const { data: interaction, error: interactionError } = await supabase
@@ -449,7 +485,6 @@ export default function ChapterPage() {
         .eq("user_id", user.id)
         .eq("novel_id", id)
         .single();
-
       if (interactionError && interactionError.code !== "PGRST116") throw interactionError;
 
       if (interaction) {
@@ -471,19 +506,28 @@ export default function ChapterPage() {
           });
       }
 
-      setSuccessMessage(`Payment successful! 1,000 SMP sent on-chain. Signature: ${signature}`);
+      setSuccessMessage(`Payment successful! 1,000 SMP sent on-chain. You earned ${readerReward} points.`);
       setSmpBalance(newSmpBalance);
       setWeeklyPoints(newReaderBalance);
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
       setError(
         error.message.includes("insufficient funds") || error.message.includes("Insufficient SMP balance")
-          ? "Not enough SMP tokens in your wallet. Please add more SMP and try again."
-          : error.message
+          ? `Not enough SMP tokens in your wallet: ${error.message}`
+          : `Payment failed: ${error.message}`
       );
-      console.error("Unexpected error in updateTokenBalance:", error);
+      console.error("Error in updateTokenBalance:", error);
+      setTimeout(() => setError(null), 5000);
     }
-  }, [activeWalletAddress, novel, chapter, balance, id, readingMode]);
+  }, [
+    activeWalletAddress,
+    novel,
+    chapter,
+    id,
+    readingMode,
+    activePublicKey,
+    amethystBalance,
+  ]);
 
   const handleReadWithSMP = async () => {
     if (!isWalletConnected) {
@@ -497,7 +541,6 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      // Show connect popup for Chapter 3 and beyond (index 2 and higher) if wallet is not connected
       if (!isWalletConnected && chapterNum >= 2) {
         setShowConnectPopup(true);
         setLoading(false);
@@ -518,7 +561,6 @@ export default function ChapterPage() {
           .insert([{ wallet_address: activeWalletAddress }])
           .select("id")
           .single();
-
         if (insertError) {
           console.error("Error creating user:", insertError);
           setError("Failed to initialize user.");
@@ -546,18 +588,18 @@ export default function ChapterPage() {
         .select("*")
         .eq("id", id)
         .single();
-
       if (novelError || !novelData) throw new Error(novelError?.message || "Novel not found");
       setNovel(novelData);
 
       const chapterNum = parseInt(chapter, 10);
       const totalChapters = Object.keys(novelData.chaptercontents || {}).length;
-      const chapterAdvanceInfo = novelData.advance_chapters
-        ? novelData.advance_chapters.find((c) => c.index === chapterNum) || { is_advance: false, free_release_date: null }
-        : { is_advance: false, free_release_date: null };
+      const chapterAdvanceInfo =
+        novelData.advance_chapters?.find((c) => c.index === chapterNum) || {
+          is_advance: false,
+          free_release_date: null,
+        };
       setAdvanceInfo(chapterAdvanceInfo);
 
-      // Increment viewers_count if chapter is accessible
       if (!isLocked) {
         const { data: currentNovel, error: fetchError } = await supabase
           .from("novels")
@@ -572,21 +614,31 @@ export default function ChapterPage() {
         }
       }
 
-      // Allow free access to Chapter 1 and 2 (index 0 and 1) unless they are advance chapters
       if (chapterNum <= 1) {
-        if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
+        if (
+          !chapterAdvanceInfo.is_advance ||
+          (chapterAdvanceInfo.free_release_date &&
+            new Date(chapterAdvanceInfo.free_release_date) <= new Date())
+        ) {
           setIsLocked(false);
           setCanUnlockNextThree(false);
           return;
         }
       }
 
-      // For Chapter 3 and beyond (index 2 and higher), check previous chapters and subscription status
       let allPreviousUnlocked = true;
       const advanceChapters = novelData.advance_chapters || [];
       for (let i = 0; i < chapterNum; i++) {
-        const prevAdvanceInfo = advanceChapters.find((c) => c.index === i) || { is_advance: false, free_release_date: null };
-        if (prevAdvanceInfo.is_advance && (!prevAdvanceInfo.free_release_date || new Date(prevAdvanceInfo.free_release_date) > new Date())) {
+        const prevAdvanceInfo =
+          advanceChapters.find((c) => c.index === i) || {
+            is_advance: false,
+            free_release_date: null,
+          };
+        if (
+          prevAdvanceInfo.is_advance &&
+          (!prevAdvanceInfo.free_release_date ||
+            new Date(prevAdvanceInfo.free_release_date) > new Date())
+        ) {
           if (!userId) {
             allPreviousUnlocked = false;
             break;
@@ -597,10 +649,12 @@ export default function ChapterPage() {
             .eq("user_id", userId)
             .eq("story_id", id)
             .single();
-
           if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
 
-          const hasUnlock = unlock && (!unlock.expires_at || new Date(unlock.expires_at) > new Date()) && unlock.chapter_unlocked_till >= i;
+          const hasUnlock =
+            unlock &&
+            (!unlock.expires_at || new Date(unlock.expires_at) > new Date()) &&
+            unlock.chapter_unlocked_till >= i;
           if (!hasUnlock) {
             allPreviousUnlocked = false;
             break;
@@ -609,8 +663,11 @@ export default function ChapterPage() {
       }
       setCanUnlockNextThree(allPreviousUnlocked);
 
-      // Check current chapter access
-      if (!chapterAdvanceInfo.is_advance || (chapterAdvanceInfo.free_release_date && new Date(chapterAdvanceInfo.free_release_date) <= new Date())) {
+      if (
+        !chapterAdvanceInfo.is_advance ||
+        (chapterAdvanceInfo.free_release_date &&
+          new Date(chapterAdvanceInfo.free_release_date) <= new Date())
+      ) {
         setIsLocked(false);
       } else if (userId) {
         const { data: unlock, error: unlockError } = await supabase
@@ -619,13 +676,15 @@ export default function ChapterPage() {
           .eq("user_id", userId)
           .eq("story_id", id)
           .single();
-
         if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
 
         if (unlock) {
           const expired = unlock.expires_at && new Date(unlock.expires_at) < new Date();
           if (!expired) {
-            if (unlock.chapter_unlocked_till === -1 || (unlock.chapter_unlocked_till >= chapterNum && chapterNum < totalChapters)) {
+            if (
+              unlock.chapter_unlocked_till === -1 ||
+              (unlock.chapter_unlocked_till >= chapterNum && chapterNum < totalChapters)
+            ) {
               setIsLocked(false);
               return;
             }
@@ -692,15 +751,18 @@ export default function ChapterPage() {
 
     const { data, error } = await supabase
       .from("chapter_ratings")
-      .upsert({
-        user_id: userId,
-        content_type: "novel",
-        content_id: id,
-        chapter_number: chapterNum,
-        rating
-      }, {
-        onConflict: ["user_id", "content_type", "content_id", "chapter_number"]
-      });
+      .upsert(
+        {
+          user_id: userId,
+          content_type: "novel",
+          content_id: id,
+          chapter_number: chapterNum,
+          rating,
+        },
+        {
+          onConflict: ["user_id", "content_type", "content_id", "chapter_number"],
+        }
+      );
 
     if (error) {
       console.error("Error saving rating:", error);
@@ -713,11 +775,7 @@ export default function ChapterPage() {
 
   const getAssociatedTokenAddress = async (owner, mint) => {
     return await PublicKey.findProgramAddress(
-      [
-        owner.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        mint.toBuffer(),
-      ],
+      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
       new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
     );
   };
@@ -732,22 +790,19 @@ export default function ChapterPage() {
     let amount, decimals, mint, displayAmount;
 
     try {
-      const { solPrice: freshSolPrice, smpPrice: freshSmpPrice } = await fetchPrices();
-      setSolPrice(freshSolPrice);
-      setSmpPrice(freshSmpPrice);
-
+      await fetchPrices();
       if (currency === "SOL") {
-        if (!freshSolPrice) throw new Error("SOL price not available");
-        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
+        if (!solPrice) throw new Error("SOL price not available");
+        amount = Math.round((usdAmount / solPrice) * LAMPORTS_PER_SOL);
         decimals = 9;
         displayAmount = (amount / LAMPORTS_PER_SOL).toFixed(4);
       } else {
-        const price = currency === "USDC" ? usdcPrice : freshSmpPrice;
+        const price = currency === "USDC" ? usdcPrice : smpPrice;
         if (!price) throw new Error(`${currency} price not available`);
         mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
         decimals = currency === "USDC" ? 6 : SMP_DECIMALS;
-        amount = Math.round((usdAmount / price) * (10 ** decimals));
-        displayAmount = (amount / (10 ** decimals)).toFixed(2);
+        amount = Math.round((usdAmount / price) * 10 ** decimals);
+        displayAmount = (amount / 10 ** decimals).toFixed(2);
       }
 
       setTransactionDetails({
@@ -762,6 +817,7 @@ export default function ChapterPage() {
     } catch (error) {
       console.error("Error initiating payment:", error);
       setError(`Failed to initiate payment: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -785,7 +841,7 @@ export default function ChapterPage() {
 
       if (balance < minBalanceRequired) {
         throw new Error(
-          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available, need at least ${(minBalanceRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL`
+          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available`
         );
       }
 
@@ -802,7 +858,6 @@ export default function ChapterPage() {
         );
 
         if (embeddedWallet) {
-          console.log("Using embedded wallet for SOL transaction");
           const password = prompt("Enter your wallet password to proceed:");
           if (!password) throw new Error("Password required for embedded wallet.");
           const secretKey = getSecretKey(password);
@@ -811,7 +866,6 @@ export default function ChapterPage() {
           transaction.sign(keypair);
           signature = await connection.sendRawTransaction(transaction.serialize());
         } else if (connected && sendTransaction) {
-          console.log("Using external wallet for SOL transaction");
           signature = await sendTransaction(transaction, connection, {
             skipPreflight: false,
             preflightCommitment: "confirmed",
@@ -844,7 +898,6 @@ export default function ChapterPage() {
         );
 
         if (embeddedWallet) {
-          console.log("Using embedded wallet for token transaction");
           const password = prompt("Enter your wallet password to proceed:");
           if (!password) throw new Error("Password required for embedded wallet.");
           const secretKey = getSecretKey(password);
@@ -853,7 +906,6 @@ export default function ChapterPage() {
           transaction.sign(keypair);
           signature = await connection.sendRawTransaction(transaction.serialize());
         } else if (connected && sendTransaction) {
-          console.log("Using external wallet for token transaction");
           signature = await sendTransaction(transaction, connection, {
             skipPreflight: false,
             preflightCommitment: "confirmed",
@@ -866,11 +918,12 @@ export default function ChapterPage() {
           { signature, blockhash, lastValidBlockHeight },
           "confirmed"
         );
-        await processUnlock(subscriptionType, signature, amount / (10 ** decimals), currency);
+        await processUnlock(subscriptionType, signature, amount / 10 ** decimals, currency);
       }
     } catch (error) {
       console.error(`${currency} Payment Error:`, error);
       setError(`Payment failed: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
     } finally {
       setShowTransactionPopup(false);
       setTransactionDetails(null);
@@ -878,45 +931,41 @@ export default function ChapterPage() {
   };
 
   const processUnlock = async (subscriptionType, signature, amount, currency) => {
-    console.log("Sending to /api/unlock-chapter:", {
-      user_id: userId,
-      story_id: id,
-      subscription_type: subscriptionType,
-      signature,
-      userPublicKey: activeWalletAddress,
-      current_chapter: parseInt(chapter, 10),
-      amount,
-      currency,
-      solPrice,
-      smpPrice,
-    });
+    try {
+      const response = await fetch("/api/unlock-chapter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          story_id: id,
+          subscription_type: subscriptionType,
+          signature,
+          userPublicKey: activeWalletAddress,
+          current_chapter: parseInt(chapter, 10),
+          amount,
+          currency,
+          solPrice,
+          smpPrice,
+        }),
+      });
 
-    const response = await fetch("/api/unlock-chapter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: userId,
-        story_id: id,
-        subscription_type: subscriptionType,
-        signature,
-        userPublicKey: activeWalletAddress,
-        current_chapter: parseInt(chapter, 10),
-        amount,
-        currency,
-        solPrice,
-        smpPrice,
-      }),
-    });
-
-    const result = await response.json();
-    if (response.ok) {
-      setIsLocked(false);
-      setSuccessMessage(`Payment successful! ${subscriptionType === "FULL" ? "All chapters" : `Up to Chapter ${result.chapter_unlocked_till + 1} unlocked as released`}`);
-      setTimeout(() => setSuccessMessage(""), 5000);
-      await checkAccess(userId);
-    } else {
-      setError(result.error);
-      console.error("Unlock API error:", result.error);
+      const result = await response.json();
+      if (response.ok) {
+        setIsLocked(false);
+        setSuccessMessage(
+          subscriptionType === "FULL"
+            ? "All chapters unlocked!"
+            : `Up to Chapter ${result.chapter_unlocked_till + 1} unlocked as released`
+        );
+        setTimeout(() => setSuccessMessage(""), 5000);
+        await checkAccess(userId);
+      } else {
+        throw new Error(result.error || "Failed to unlock chapters.");
+      }
+    } catch (error) {
+      console.error("Unlock API error:", error);
+      setError(`Failed to unlock chapters: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -944,7 +993,10 @@ export default function ChapterPage() {
 
   useEffect(() => {
     fetchNovel();
-  }, [fetchNovel]);
+    if (typeof window !== "undefined") {
+      fetchPrices();
+    }
+  }, [fetchNovel, fetchPrices]);
 
   useEffect(() => {
     if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 1) && !isLocked && readingMode === "paid") {
@@ -961,6 +1013,7 @@ export default function ChapterPage() {
       window.speechSynthesis.speak(utterance);
     } else {
       setError("Your browser does not support text-to-speech.");
+      setTimeout(() => setError(null), 5000);
     }
   };
 

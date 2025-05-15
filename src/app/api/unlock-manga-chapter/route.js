@@ -43,7 +43,25 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
     }
 
-    const usdAmount = 2.5;
+    // Fetch chapter details to get the price
+    const { data: chapter, error: chapterError } = await supabase
+      .from("manga_chapters")
+      .select("id, is_premium, price")
+      .eq("id", chapter_id)
+      .eq("manga_id", manga_id)
+      .single();
+    if (chapterError || !chapter) {
+      console.error("Chapter fetch error:", chapterError);
+      return NextResponse.json({ error: "Manga chapter not found" }, { status: 404 });
+    }
+    if (!chapter.is_premium) {
+      return NextResponse.json({ error: "Chapter is not premium" }, { status: 400 });
+    }
+
+    // Use chapter price, fallback to 2.5 if null or invalid
+    const usdAmount = chapter.price && chapter.price > 0 ? chapter.price : 2.5;
+    console.log("Chapter USD Amount:", usdAmount);
+
     let expectedAmount, decimals, mint;
 
     if (currency === "SOL") {
@@ -57,7 +75,7 @@ export async function POST(req) {
       mint = USDC_MINT_ADDRESS;
     }
 
-    const tolerance = 0.02;
+    const tolerance = 0.02; // 2% tolerance
     const minAmount = expectedAmount * (1 - tolerance);
     const maxAmount = expectedAmount * (1 + tolerance);
 
@@ -154,19 +172,6 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid recipient" }, { status: 400 });
     }
 
-    const { data: chapter, error: chapterError } = await supabase
-      .from("manga_chapters")
-      .select("id, is_premium")
-      .eq("id", chapter_id)
-      .eq("manga_id", manga_id)
-      .single();
-    if (chapterError || !chapter) {
-      return NextResponse.json({ error: "Manga chapter not found" }, { status: 404 });
-    }
-    if (!chapter.is_premium) {
-      return NextResponse.json({ error: "Chapter is not premium" }, { status: 400 });
-    }
-
     const { data: existingPayment } = await supabase
       .from("user_payments")
       .select("id")
@@ -184,7 +189,7 @@ export async function POST(req) {
       manga_id,
       chapter_id,
       transaction_id: signature,
-      payment_amount: amountTransferred,
+      payment_amount: usdAmount, // Store USD amount for consistency
       payment_currency: currency,
       paid_at: new Date().toISOString(),
     };

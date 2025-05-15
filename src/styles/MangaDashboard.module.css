@@ -5,10 +5,10 @@
     color: #fff;
     display: flex;
     flex-direction: column;
-  }
-  
-  /* Navigation */
-  .navbar {
+}
+
+/* Navigation */
+.navbar {
     background: rgba(243, 99, 22, 0.9);
     padding: 1rem;
     display: flex;
@@ -17,145 +17,155 @@
     position: sticky;
     top: 0;
     z-index: 10;
-  }
-  
-  .logo {
+}
+
+.logo {
     font-size: 1.5rem;
     font-weight: bold;
     color: #fff;
     text-decoration: none;
-  }
-  
-  .navToggle {
+}
+
+.navToggle {
     background: none;
     border: none;
     color: #fff;
     font-size: 1.5rem;
     cursor: pointer;
     display: none;
-  }
-  
-  .navLinks {
+}
+
+.navLinks {
     display: flex;
     gap: 1rem;
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-  
-  .navLink {
+}
+
+.navLink {
     color: #fff;
     text-decoration: none;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-  
-  .navLink:hover {
+}
+
+.navLink:hover {
     color: #ddd;
-  }
-  
-  .themeToggle {
+}
+
+.themeToggle {
     background: none;
     border: none;
     color: #fff;
     font-size: 1.5rem;
     cursor: pointer;
-  }
-  
-  /* Main content */
-  .main {
+}
+
+/* Main content */
+.main {
     flex: 1;
     padding: 2rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
-  }
-  
-  .editor, .gallery, .artists {
+}
+
+.editor, .gallery, .artists {
     background: rgba(255, 255, 255, 0.05);
     padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  }
-  
-  .title {
+}
+
+.title {
     color: rgba(243, 99, 22, 1);
     margin-bottom: 1rem;
     font-size: 2rem;
-  }
-  
-  /* Form styles */
-  .form {
+}
+
+/* Form styles */
+.form {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-  }
-  
-  .field {
+}
+
+.field {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-  
-  .field label {
+}
+
+.field label {
     font-size: 1.1rem;
     color: rgba(243, 99, 22, 1);
-  }
-  
-  .field input, .field textarea {
+}
+
+.field input, .field textarea {
     padding: 0.75rem;
     border: 1px solid rgba(243, 99, 22, 0.5);
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     font-size: 1rem;
-  }
-  
-  .field textarea {
+}
+
+.field input[type="number"] {
+    -moz-appearance: textfield; /* Remove spinners in Firefox */
+}
+
+.field input::-webkit-outer-spin-button,
+.field input::-webkit-inner-spin-button {
+    -webkit-appearance: none; /* Remove spinners in Chrome/Safari */
+    margin: 0;
+}
+
+.field textarea {
     resize: vertical;
     min-height: 100px;
-  }
-  
-  .camera {
+}
+
+.camera {
     font-size: 2rem;
     color: rgba(243, 99, 22, 1);
     cursor: pointer;
     transition: transform 0.3s ease;
-  }
-  
-  .camera:hover {
+}
+
+.camera:hover {
     transform: scale(1.1);
-  }
-  
-  .coverPreview {
+}
+
+.coverPreview {
     max-width: 200px;
     border-radius: 4px;
     margin-top: 0.5rem;
-  }
-  
-  .imageGrid {
+}
+
+.imageGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 0.5rem;
     margin-top: 0.5rem;
-  }
-  
-  .imageGrid img {
+}
+
+.imageGrid img {
     width: 100%;
     height: 100px;
     object-fit: cover;
     border-radius: 4px;
-  }
-  
-  .checkbox {
+}
+
+.checkbox {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: rgba(243, 99, 22, 1);
-  }
-  
-  .addButton, .saveButton {
+}
+
+.addButton, .saveButton {
     background: rgba(243, 99, 22, 1);
     color: #fff;
     padding: 0.75rem 1.5rem;
@@ -166,30 +176,30 @@
     align-items: center;
     gap: 0.5rem;
     transition: background 0.3s ease;
-  }
-  
-  .addButton:hover, .saveButton:hover {
+}
+
+.addButton:hover, .saveButton:hover {
     background: rgba(243, 99, 22, 0.8);
-  }
-  
-  .hiddenInput {
+}
+
+.hiddenInput {
     display: none;
-  }
-  
-  .chapterEditor {
+}
+
+.chapterEditor {
     margin-top: 1rem;
     padding: 1rem;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 4px;
-  }
-  
-  .chapterList {
+}
+
+.chapterList {
     list-style: none;
     padding: 0;
     margin: 1rem 0;
-  }
-  
-  .chapterItem {
+}
+
+.chapterItem {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -197,72 +207,72 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
     margin-bottom: 0.5rem;
-  }
-  
-  .icon {
+}
+
+.icon {
     cursor: pointer;
     color: rgba(243, 99, 22, 1);
     font-size: 1.2rem;
     transition: color 0.3s ease;
     margin-left: 0.5rem;
-  }
-  
-  .icon:hover {
+}
+
+.icon:hover {
     color: rgba(243, 99, 22, 0.8);
-  }
-  
-  /* Gallery */
-  .mangaGrid {
+}
+
+/* Gallery */
+.mangaGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
-  }
-  
-  .mangaCard {
+}
+
+.mangaCard {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     overflow: hidden;
     transition: transform 0.3s ease;
-  }
-  
-  .mangaCard:hover {
+}
+
+.mangaCard:hover {
     transform: scale(1.05);
-  }
-  
-  .mangaCard img {
+}
+
+.mangaCard img {
     width: 100%;
     height: 250px;
     object-fit: cover;
-  }
-  
-  .cardInfo {
+}
+
+.cardInfo {
     padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-  
-  .cardInfo h3 {
+}
+
+.cardInfo h3 {
     margin: 0;
     color: rgba(243, 99, 22, 1);
-  }
-  
-  .empty {
+}
+
+.empty {
     text-align: center;
     color: rgba(255, 255, 255, 0.7);
-  }
-  
-  /* Artists section */
-  .artists {
+}
+
+/* Artists section */
+.artists {
     margin-top: 2rem;
-  }
-  
-  .artistList {
+}
+
+.artistList {
     list-style: none;
     padding: 0;
-  }
-  
-  .artistItem {
+}
+
+.artistItem {
     padding: 0.75rem;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
@@ -270,15 +280,15 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-  
-  /* Announcement section */
-  .announcementSection {
+}
+
+/* Announcement section */
+.announcementSection {
     margin-top: 2rem;
-  }
-  
-  /* DatePicker styling */
-  .datePicker {
+}
+
+/* DatePicker styling */
+.datePicker {
     padding: 0.75rem;
     border: 1px solid rgba(243, 99, 22, 0.5);
     border-radius: 4px;
@@ -286,17 +296,17 @@
     color: #fff;
     font-size: 1rem;
     width: 100%;
-  }
-  
-  /* Footer */
-  .footer {
+}
+
+/* Footer */
+.footer {
     background: rgba(243, 99, 22, 0.9);
     padding: 1rem;
     text-align: center;
-  }
-  
-  /* Unauthorized */
-  .unauthorized {
+}
+
+/* Unauthorized */
+.unauthorized {
     text-align: center;
     padding: 2rem;
     background: rgba(255, 255, 255, 0.05);
@@ -305,50 +315,52 @@
     flex-direction: column;
     gap: 1rem;
     align-items: center;
-  }
-  
-  /* Mobile responsiveness */
-  @media (max-width: 768px) {
-    .navToggle {
-      display: block;
-    }
-  
-    .navLinks {
-      display: none;
-      flex-direction: column;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: rgba(243, 99, 22, 0.9);
-      padding: 1rem;
-    }
-  
-    .navLinksOpen {
-      display: flex;
-    }
-  
-    .main {
-      padding: 1rem;
-    }
-  
-    .editor, .gallery, .artists {
-      padding: 1rem;
-    }
-  
-    .title {
-      font-size: 1.5rem;
-    }
-  
-    .mangaGrid {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-  
-    .mangaCard img {
-      height: 200px;
-    }
-  }
-  .tagSelect {
+}
+
+/* Tag Select */
+.tagSelect {
     width: 100%;
     margin-top: 5px;
-  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .navToggle {
+        display: block;
+    }
+
+    .navLinks {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(243, 99, 22, 0.9);
+        padding: 1rem;
+    }
+
+    .navLinksOpen {
+        display: flex;
+    }
+
+    .main {
+        padding: 1rem;
+    }
+
+    .editor, .gallery, .artists {
+        padding: 1rem;
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .mangaGrid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .mangaCard img {
+        height: 200px;
+    }
+}

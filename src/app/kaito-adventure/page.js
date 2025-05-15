@@ -1,7 +1,7 @@
-// Import the KaitoAdventure component
-import KaitoAdventure from '@/components/KaitoAdventure/KaitoAdventure';
+"use client";
 
-// Export it as the default page component
-export default function Page() {
+import KaitoAdventure from "../../components/KaitoAdventure/KaitoAdventure";
+
+export default function KaitoAdventurePage() {
   return <KaitoAdventure />;
 }

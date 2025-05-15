@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useContext } from "react"; // Added useContext
+import { useState, useCallback, useEffect, useMemo, useContext } from "react";
 import Head from "next/head";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -17,7 +17,7 @@ import ModalWrapper from "./ModalWrapper";
 import CraftModal from "./modals/CraftModal";
 import HealingModal from "./modals/HealingModal";
 import GatherModal from "./modals/GatherModal";
-import CombatModal from "./modals/CombatModal";
+import dynamic from "next/dynamic"; // Added for dynamic import
 import MarketModal from "./modals/MarketModal";
 import NpcModal from "./modals/NpcModal";
 import QuestsModal from "./modals/QuestsModal";
@@ -33,7 +33,10 @@ import GuideModal from "./modals/GuideModal";
 import LeaderboardModal from "./modals/LeaderboardModal";
 import { FaStar } from "react-icons/fa";
 import { Card, ProgressBar } from "react-bootstrap";
-import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Added EmbeddedWalletContext
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
+
+// Dynamically import CombatModal with SSR disabled
+const CombatModal = dynamic(() => import("./modals/CombatModal"), { ssr: false });
 
 // ---- Constants Section ----
 const defaultPlayer = {
@@ -152,9 +155,9 @@ const skillTrees = {
 // ---- KaitoAdventure Component ----
 const KaitoAdventure = () => {
   const { publicKey, connected } = useWallet();
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext); // Access embedded wallet
-  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey; // Use either wallet
-  const isWalletConnected = connected || !!embeddedWallet; // Check both wallet types
+  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
+  const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+  const isWalletConnected = connected || !!embeddedWallet;
 
   const defaultPlayerMemo = useMemo(() => ({
     ...defaultPlayer,
@@ -205,6 +208,7 @@ const KaitoAdventure = () => {
 
   // ---- Persistence and Supabase Sync ----
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     if (!isWalletConnected || !activeWalletAddress) {
       setPlayer(defaultPlayerMemo);
       setModals(prev => ({ ...prev, guide: true }));
@@ -260,6 +264,7 @@ const KaitoAdventure = () => {
     loadPlayer();
   }, [isWalletConnected, activeWalletAddress, defaultPlayerMemo]);
 
+  // ---- Save to Local Storage ----
   const saveToLocalStorage = useCallback(
     debounce(() => {
       if (typeof window !== "undefined") {
@@ -272,6 +277,7 @@ const KaitoAdventure = () => {
     [currentTown, lastGatherTimes, lastQueuedGatherTime, townLevels]
   );
 
+  // ---- Sync to Supabase ----
   const syncPlayerToSupabase = useCallback(
     debounce(async () => {
       if (!isWalletConnected || !activeWalletAddress || !player.wallet_address || typeof window === "undefined") {
@@ -316,6 +322,7 @@ const KaitoAdventure = () => {
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     if (isWalletConnected && activeWalletAddress && player.wallet_address) {
       syncPlayerToSupabase();
       saveToLocalStorage();
@@ -328,20 +335,20 @@ const KaitoAdventure = () => {
 
   // ---- Weather System ----
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     const changeWeather = () => {
       const newWeather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
       setWeather(newWeather);
       setGameMessage(`The weather changes to ${newWeather.type}!`);
     };
-    if (typeof window !== "undefined") {
-      changeWeather();
-      const interval = setInterval(changeWeather, 300000);
-      return () => clearInterval(interval);
-    }
+    changeWeather();
+    const interval = setInterval(changeWeather, 300000);
+    return () => clearInterval(interval);
   }, []);
 
   // ---- Dynamic Events ----
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     const triggerEvent = () => {
       if (Math.random() < 0.3) {
         const events = [
@@ -356,14 +363,13 @@ const KaitoAdventure = () => {
         setEventTimer(Date.now() + event.duration);
       }
     };
-    if (typeof window !== "undefined") {
-      triggerEvent();
-      const interval = setInterval(triggerEvent, 300000);
-      return () => clearInterval(interval);
-    }
+    triggerEvent();
+    const interval = setInterval(triggerEvent, 300000);
+    return () => clearInterval(interval);
   }, [currentTown]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     if (eventTimer && Date.now() >= eventTimer) {
       setCurrentEvent(null);
       setEventTimer(null);
@@ -394,10 +400,13 @@ const KaitoAdventure = () => {
 
   // ---- Quests ----
   const addQuest = useCallback((quest) => {
-    setPlayer(prev => ({
-      ...prev,
-      quests: prev.quests.length < 3 ? [...prev.quests, quest] : prev.quests,
-    }));
+    setPlayer(prev => {
+      if (prev.quests.length >= 3) {
+        setGameMessage("You can only have 3 active quests!");
+        return prev;
+      }
+      return { ...prev, quests: [...prev.quests, quest] };
+    });
   }, []);
 
   const completeQuest = useCallback((questId) => {
@@ -692,6 +701,11 @@ const KaitoAdventure = () => {
               ? p.daily_tasks.map(t => t.id === "defeatEnemies" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
               : p.daily_tasks;
             if (enemyTask && enemyTask.progress + 1 >= enemyTask.target) completeDailyTask("defeatEnemies");
+            const banditQuest = p.quests.find(q => q.id === "banditQuest" && prev.enemy.name === "Bandit");
+            const updatedQuests = banditQuest
+              ? p.quests.map(q => q.id === "banditQuest" ? { ...q, progress: Math.min(q.progress + 1, q.target) } : q)
+              : p.quests;
+            if (banditQuest && banditQuest.progress + 1 >= banditQuest.target) completeQuest("banditQuest");
             return {
               ...p,
               gold: p.gold + prev.enemy.gold,
@@ -699,6 +713,7 @@ const KaitoAdventure = () => {
               rare_items: newrare_items,
               stats: { ...p.stats, enemiesDefeated: p.stats.enemiesDefeated + 1 },
               daily_tasks: updatedTasks,
+              quests: updatedQuests,
             };
           });
           updateXP(xpGain);
@@ -727,7 +742,7 @@ const KaitoAdventure = () => {
         return { ...prev, playerHealth: newPlayerHealth, enemyHealth: newEnemyHealth, log: newLog, isAttacking: false };
       });
     }, 1000);
-  }, [combatState, player.equipment, player.recipes, player.trait, player.skills, player.inventory, player.max_health, updateXP, updateSkillLevel, completeDailyTask]);
+  }, [combatState, player.equipment, player.recipes, player.trait, player.skills, player.inventory, player.max_health, updateXP, updateSkillLevel, completeDailyTask, completeQuest]);
 
   const craftPotionInCombat = useCallback((potionName) => {
     if (!combatState || combatState.isAttacking) return;
@@ -770,6 +785,7 @@ const KaitoAdventure = () => {
   }, [combatState, player.recipes, player.skills, player.inventory, player.max_health, getAvailableIngredients]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     const checkBuffExpiration = () => {
       if (gatherBuff && Date.now() >= gatherBuff.expires) {
         setGatherBuff(null);
@@ -804,6 +820,7 @@ const KaitoAdventure = () => {
   }, [isWalletConnected, activeWalletAddress, player.wallet_address]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return; // Skip on server
     if (isWalletConnected && activeWalletAddress && modals.leaderboard) {
       fetchLeaderboardData();
     }
@@ -912,7 +929,7 @@ const KaitoAdventure = () => {
       return { ...prev, gold: prev.gold - 50, inventory_slots: prev.inventory_slots + 5 };
     });
     setGameMessage("Inventory upgraded! +5 slots.");
-  }, [player.gold]);
+  }, []);
 
   // ---- Guild ----
   const joinGuild = useCallback((guildName) => {
@@ -1058,7 +1075,7 @@ const KaitoAdventure = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return; // Skip on server
     const updateCountdowns = () => {
       const now = Date.now();
       const lastNormalTime = lastGatherTimes[currentTown];
@@ -1310,7 +1327,7 @@ const KaitoAdventure = () => {
       </ModalWrapper>
       <ModalWrapper show={modals.leaderboard} onHide={() => toggleModal("leaderboard")} title="Leaderboard">
         <LeaderboardModal 
-          connected={isWalletConnected} // Updated to use isWalletConnected
+          connected={isWalletConnected}
           leaderboardData={leaderboardData} 
           toggleModal={toggleModal} 
         />
