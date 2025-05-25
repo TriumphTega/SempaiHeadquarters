@@ -22,7 +22,7 @@
   width: 90%;
   max-width: 400px;
   position: relative;
-  z-index: 2010; /* Ensure it’s above the overlay */
+  z-index: 2010; /* Ensure it's above the overlay */
   animation: slideIn 0.3s ease-in-out;
 }
 
@@ -91,7 +91,7 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Ensure navLinksOpen doesn’t obscure popups */
+/* Ensure navLinksOpen doesn't obscure popups */
 .navLinksOpen {
   z-index: 1000; /* Default z-index for mobile menu, lower than popup */
 }
@@ -619,13 +619,9 @@
   }
 }
 
-
-
-
 .announcementCarousel {
   margin: 0;
   z-index: 2000;
-
 }
 
 .announcementSlide {
@@ -930,14 +926,69 @@
 
 /* Footer */
 .footer {
-  text-align: center;
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.9);
-  color: #aaa;
-  position: relative;
-  bottom: 0;
   width: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 2rem 0;
+  margin-top: auto;
+}
+
+.footerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.footerTop {
+  margin-bottom: 1rem;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.footerLinks a {
+  color: #00ccff;
+  text-decoration: none;
   font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.footerLinks a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.divider {
+  color: #666;
+}
+
+.footerDisclaimer {
+  color: #888;
+  font-size: 0.8rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .footerLinks {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .divider {
+    display: none;
+  }
+  
+  .footerContent {
+    padding: 0 1.5rem;
+  }
 }
 
 /* Responsive Design */
