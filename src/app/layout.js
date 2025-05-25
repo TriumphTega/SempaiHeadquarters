@@ -15,6 +15,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="google-site-verification" content="TU_L9Rf27DAAug6RPt6ccIBDPm8BISIz-0Ab0nUpBY0" />
         <title>{metadata.title}</title>
         <meta name="description" content={metadata.description} />
         {/* Add additional head elements like favicon or fonts here */}
