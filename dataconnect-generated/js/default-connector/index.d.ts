@@ -1,4 +1,4 @@
-import { ConnectorConfig, DataConnect } from 'firebase/data-connect';
+import { ConnectorConfig } from 'firebase/data-connect';
 
 export const connectorConfig: ConnectorConfig;
 
