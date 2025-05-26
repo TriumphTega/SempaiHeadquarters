@@ -128,3 +128,98 @@ Generated sources: esm\package.json [17B] index.cjs.js [210B] package.json [634B
  {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0305 01:18:42.410175   12056 load.go:115] Finished reloading\n"}}
 [debug] [2025-03-05T00:18:42.451Z] I0305 01:18:42.445266   12056 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
  {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0305 01:18:42.445266   12056 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[debug] [2025-05-25T11:16:28.887Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-05-25T11:16:43.396Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-05-25T11:16:43.400Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-05-25T11:16:43.401Z] > authorizing via signed-in user (beautifulshameless@gmail.com)
+[debug] [2025-05-25T11:16:43.407Z] Checked if tokens are valid: true, expires at: 1748175309704
+[debug] [2025-05-25T11:16:43.408Z] Checked if tokens are valid: true, expires at: 1748175309704
+[debug] [2025-05-25T11:16:43.409Z] [Firebase Plugin] User found:  beautifulshameless@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-05-25T11:16:43.412Z] Checked if tokens are valid: true, expires at: 1748175309704
+[debug] [2025-05-25T11:16:43.414Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.6.1) on port 50001
+[info] i  dataconnect: downloading dataconnect-emulator-2.6.1.exe... {"metadata":{"emulator":{"name":"dataconnect"},"message":"downloading dataconnect-emulator-2.6.1.exe..."}}
+[debug] [2025-05-25T11:16:44.931Z] >>> [apiv2][query] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.6.1 
+[debug] [2025-05-25T11:16:45.880Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-05-25T11:16:45.882Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-05-25T11:16:46.408Z] <<< [apiv2][status] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.6.1 200
+[debug] [2025-05-25T11:16:46.409Z] <<< [apiv2][body] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.6.1 [stream]
+[info] i  dataconnect: Removing outdated emulator files: dataconnect-emulator-1.8.3.exe {"metadata":{"emulator":{"name":"dataconnect"},"message":"Removing outdated emulator files: dataconnect-emulator-1.8.3.exe"}}
+[debug] [2025-05-25T11:17:23.574Z] I0525 12:17:23.533026  424164 control.go:73] [/emulator/Sempaithon 7e1e] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\queries.gql [1938B] connector\mutations.gql [1213B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.533026  424164 control.go:73] [/emulator/Sempaithon 7e1e] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\queries.gql [1938B] connector\\mutations.gql [1213B] \n"}}
+[debug] [2025-05-25T11:17:23.576Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-05-25T11:17:23.576Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-05-25T11:17:23.577Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\USER\\.cache\\firebase\\emulators\\dataconnect-emulator-2.6.1.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=c:\\Users\\USER\\Sempaithon-2\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\USER\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.6.1.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-05-25T11:17:23.692Z] I0525 12:17:23.690072   10436 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.690072   10436 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-05-25T11:17:23.760Z] I0525 12:17:23.760094   10436 control.go:73] [/emulator/Sempaithon 5e46] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\mutations.gql [1213B] connector\queries.gql [1938B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.760094   10436 control.go:73] [/emulator/Sempaithon 5e46] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\mutations.gql [1213B] connector\\queries.gql [1938B] \n"}}
+[debug] [2025-05-25T11:17:23.828Z] I0525 12:17:23.827093   10436 codegen.go:82] [connector "default" javascriptSdk] Generating sources into "c:\\Users\\USER\\Sempaithon-2\\dataconnect-generated\\js\\default-connector"
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.827093   10436 codegen.go:82] [connector \"default\" javascriptSdk] Generating sources into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect-generated\\\\js\\\\default-connector\"\n"}}
+[debug] [2025-05-25T11:17:23.852Z] I0525 12:17:23.850096   10436 collector.go:107] schema extensions wrote into "c:\\Users\\USER\\Sempaithon-2\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71531B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.850096   10436 collector.go:107] schema extensions wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71531B] \n"}}
+[debug] [2025-05-25T11:17:23.867Z] I0525 12:17:23.866095   10436 collector.go:107] connector "default" javascriptSdk wrote into "c:\\Users\\USER\\Sempaithon-2\\dataconnect-generated\\js\\default-connector"
+Generated sources: index.d.ts [246B] esm\index.esm.js [113B] esm\package.json [17B] index.cjs.js [148B] package.json [634B] README.md [2774B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.866095   10436 collector.go:107] connector \"default\" javascriptSdk wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect-generated\\\\js\\\\default-connector\"\nGenerated sources: index.d.ts [246B] esm\\index.esm.js [113B] esm\\package.json [17B] index.cjs.js [148B] package.json [634B] README.md [2774B] \n"}}
+[debug] [2025-05-25T11:17:23.923Z] I0525 12:17:23.923093   10436 installsdk.go:80] Running command: C:\nvm4w\nodejs\npm.cmd install file:dataconnect-generated\js\default-connector
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:17:23.923093   10436 installsdk.go:80] Running command: C:\\nvm4w\\nodejs\\npm.cmd install file:dataconnect-generated\\js\\default-connector\n"}}
+[debug] [2025-05-25T11:18:21.439Z] E0525 12:18:21.436320   10436 installsdk.go:82] Failed to install package: exit status 1
+I0525 12:18:21.436320   10436 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0525 12:18:21.436320   10436 installsdk.go:82] Failed to install package: exit status 1\nI0525 12:18:21.436320   10436 load.go:115] Finished reloading\n"}}
+[debug] [2025-05-25T11:18:21.544Z] I0525 12:18:21.544847   10436 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 12:18:21.544847   10436 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[debug] [2025-05-25T12:19:22.061Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Unable to check firebase-tools installation: TypeError: fetch failed
+[debug] [2025-05-25T12:19:22.400Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-05-25T12:19:22.406Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-05-25T12:19:22.408Z] > authorizing via signed-in user (beautifulshameless@gmail.com)
+[debug] [2025-05-25T12:19:22.414Z] Checked if tokens are valid: false, expires at: 1748175309704
+[debug] [2025-05-25T12:19:22.415Z] Checked if tokens are valid: false, expires at: 1748175309704
+[debug] [2025-05-25T12:19:22.416Z] > refreshing access token with scopes: []
+[debug] [2025-05-25T12:19:22.422Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-05-25T12:19:22.422Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-05-25T12:19:22.801Z] *** [apiv2] error from fetch(https://www.googleapis.com/oauth2/v3/token, {"headers":{},"method":"POST","body":{"_overheadLength":545,"_valueLength":212,"_valuesToMeasure":[],"writable":false,"readable":true,"dataSize":0,"maxDataSize":2097152,"pauseStreams":true,"_released":true,"_streams":[],"_currentStream":null,"_insideLoop":false,"_pendingNext":false,"_boundary":"--------------------------712540923537869860162372","_events":{},"_eventsCount":1}}): FetchError: request to https://www.googleapis.com/oauth2/v3/token failed, reason: getaddrinfo ENOTFOUND www.googleapis.com
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[error] [Firebase Plugin] requireAuth error: Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.6.1) on port 50001
+[debug] [2025-05-25T12:19:35.728Z] I0525 13:19:35.390685   91064 control.go:73] [/emulator/Sempaithon fa83] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\mutations.gql [1213B] connector\queries.gql [1938B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:35.390685   91064 control.go:73] [/emulator/Sempaithon fa83] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\mutations.gql [1213B] connector\\queries.gql [1938B] \n"}}
+[debug] [2025-05-25T12:19:36.825Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-05-25T12:19:36.826Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-05-25T12:19:36.827Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\USER\\.cache\\firebase\\emulators\\dataconnect-emulator-2.6.1.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=c:\\Users\\USER\\Sempaithon-2\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\USER\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.6.1.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-05-25T12:19:46.309Z] I0525 13:19:46.116895   86656 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:46.116895   86656 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-05-25T12:19:49.462Z] I0525 13:19:49.461470   86656 control.go:73] [/emulator/Sempaithon d583] UpdateResources(): done
+Schema: sources: schema\schema.gql [1429B] 
+Connector "default": sources: connector\mutations.gql [1213B] connector\queries.gql [1938B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:49.461470   86656 control.go:73] [/emulator/Sempaithon d583] UpdateResources(): done\nSchema: sources: schema\\schema.gql [1429B] \nConnector \"default\": sources: connector\\mutations.gql [1213B] connector\\queries.gql [1938B] \n"}}
+[debug] [2025-05-25T12:19:50.942Z] I0525 13:19:50.943419   86656 codegen.go:82] [connector "default" javascriptSdk] Generating sources into "c:\\Users\\USER\\Sempaithon-2\\dataconnect-generated\\js\\default-connector"
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:50.943419   86656 codegen.go:82] [connector \"default\" javascriptSdk] Generating sources into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect-generated\\\\js\\\\default-connector\"\n"}}
+[debug] [2025-05-25T12:19:51.643Z] I0525 13:19:51.605247   86656 collector.go:107] schema extensions wrote into "c:\\Users\\USER\\Sempaithon-2\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71531B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:51.605247   86656 collector.go:107] schema extensions wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71531B] \n"}}
+[debug] [2025-05-25T12:19:51.680Z] I0525 13:19:51.672411   86656 collector.go:107] connector "default" javascriptSdk wrote into "c:\\Users\\USER\\Sempaithon-2\\dataconnect-generated\\js\\default-connector"
+Generated sources: index.d.ts [246B] esm\index.esm.js [113B] esm\package.json [17B] index.cjs.js [148B] package.json [634B] README.md [2774B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:51.672411   86656 collector.go:107] connector \"default\" javascriptSdk wrote into \"c:\\\\Users\\\\USER\\\\Sempaithon-2\\\\dataconnect-generated\\\\js\\\\default-connector\"\nGenerated sources: index.d.ts [246B] esm\\index.esm.js [113B] esm\\package.json [17B] index.cjs.js [148B] package.json [634B] README.md [2774B] \n"}}
+[debug] [2025-05-25T12:19:52.372Z] I0525 13:19:52.320505   86656 installsdk.go:80] Running command: C:\nvm4w\nodejs\npm.cmd install file:dataconnect-generated\js\default-connector
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:19:52.320505   86656 installsdk.go:80] Running command: C:\\nvm4w\\nodejs\\npm.cmd install file:dataconnect-generated\\js\\default-connector\n"}}
+[debug] [2025-05-25T12:20:29.914Z] E0525 13:20:29.914766   86656 installsdk.go:82] Failed to install package: exit status 0xc000013a
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0525 13:20:29.914766   86656 installsdk.go:82] Failed to install package: exit status 0xc000013a\n"}}
+[debug] [2025-05-25T12:20:29.947Z] I0525 13:20:29.914913   86656 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:20:29.914913   86656 load.go:115] Finished reloading\n"}}
+[debug] [2025-05-25T12:20:30.303Z] I0525 13:20:30.281337   86656 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0525 13:20:30.281337   86656 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
