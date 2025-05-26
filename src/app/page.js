@@ -1059,16 +1059,12 @@ export default function Home() {
             <p>© 2025 Sempai HQ. All rights reserved.</p>
           </div>
           <div className={styles.footerLinks}>
-            <Link href="https://termify.io/privacy-policy/iol0Ft1jXG" target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </Link>
+            <Link href="/privacy-policy">Privacy Policy</Link>
             <span className={styles.divider}>|</span>
-            <Link href="https://termify.io/terms-and-conditions/4aEKButxod" target="_blank" rel="noopener noreferrer">
-              Terms & Conditions
-            </Link>
+            <Link href="/terms">Terms & Conditions</Link>
           </div>
           <div className={styles.footerDisclaimer}>
-            You accept our Terms and Conditions of use and our Privacy Policy.
+            By continuing, you accept our Terms and Conditions of use and our Privacy Policy.
           </div>
         </div>
       </footer>

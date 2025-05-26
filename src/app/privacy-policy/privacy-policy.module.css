@@ -1,0 +1,85 @@
+.container {
+  min-height: 100vh;
+  background: #000000;
+  color: #ffffff;
+  padding: 2rem;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: #00ccff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-bottom: 2rem;
+  transition: color 0.3s ease;
+}
+
+.backButton:hover {
+  color: #ffffff;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.content h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #00ccff;
+}
+
+.lastUpdated {
+  color: #888;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+
+.policyContent {
+  line-height: 1.6;
+}
+
+.policyContent h2 {
+  color: #00ccff;
+  margin: 2rem 0 1rem;
+  font-size: 1.5rem;
+}
+
+.policyContent p {
+  margin-bottom: 1rem;
+}
+
+.policyContent ul {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.policyContent li {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .content {
+    padding: 1.5rem;
+  }
+
+  .content h1 {
+    font-size: 1.75rem;
+  }
+
+  .policyContent h2 {
+    font-size: 1.25rem;
+  }
+} 
