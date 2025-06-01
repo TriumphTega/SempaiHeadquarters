@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "@solana/spl-token": "npm:@solana/spl-token@0.4",
+    "@solana/web3.js": "npm:@solana/web3.js@1",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+    "@/shared/": "../_shared/"
+  }
+}
