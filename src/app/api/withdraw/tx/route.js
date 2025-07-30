@@ -25,7 +25,7 @@ if (!BACKEND_KEYPAIR) {
   throw new Error(
     "Treasury keypair is not configured, check BACKEND_WALLET_KEYPAIR in .env"
   );
-}
+};
 
 const connection = new Connection(RPC_URL);
 
