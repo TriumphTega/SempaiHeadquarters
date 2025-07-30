@@ -12,16 +12,20 @@ import {
   createTransferInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL, TREASURY_KEYPAIR } from "@/constants";
 import { supabase } from "@/services/supabase/supabaseClient";
 
 const TREASURY_WALLET = new PublicKey(
   "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58"
 );
 
-const BACKEND_KEYPAIR = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(process.env.BACKEND_WALLET_KEYPAIR ?? "[]"))
-);
+const BACKEND_KEYPAIR = TREASURY_KEYPAIR;
+
+if (!BACKEND_KEYPAIR) {
+  throw new Error(
+    "Treasury keypair is not configured, check BACKEND_WALLET_KEYPAIR in .env"
+  );
+}
 
 const connection = new Connection(RPC_URL);
 

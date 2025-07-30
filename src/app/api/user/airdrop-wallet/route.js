@@ -13,11 +13,15 @@ import {
 } from "@solana/spl-token";
 import bs58 from "bs58";
 import { supabaseAdmin } from "@/app/api/supabaseAdmin";
-import { SMP_MINT_ADDRESS, RPC_URL } from "@/constants";
+import { SMP_MINT_ADDRESS, RPC_URL, TREASURY_KEYPAIR } from "@/constants";
 
-const AIRDROP_KEYPAIR = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(process.env.AIRDROP_WALLET_KEYPAIR ?? "[]")),
-);
+const AIRDROP_KEYPAIR = TREASURY_KEYPAIR;
+
+if (!AIRDROP_KEYPAIR) {
+  throw new Error(
+    "Treasury keypair is not configured, check BACKEND_WALLET_KEYPAIR in .env"
+  );
+}
 
 const AIRDROP_SMP_AMOUNT = 500_000 * 1e6;
 
