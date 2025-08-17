@@ -12,20 +12,26 @@ import {
   createTransferInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL, TREASURY_KEYPAIR } from "@/constants";
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL, TREASURY_PRIVATE_KEY } from "@/constants";
+import bs58 from "bs58";
 import { supabase } from "@/services/supabase/supabaseClient";
 
 const TREASURY_WALLET = new PublicKey(
   "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58"
 );
 
-const BACKEND_KEYPAIR = TREASURY_KEYPAIR;
-
-if (!BACKEND_KEYPAIR) {
-  throw new Error(
-    "Treasury keypair is not configured, check BACKEND_WALLET_KEYPAIR in .env"
-  );
-};
+function getBackendKeypair() {
+  if (!TREASURY_PRIVATE_KEY) {
+    throw new Error("Treasury private key is not configured");
+  }
+  try {
+    const secret = Uint8Array.from(bs58.decode(TREASURY_PRIVATE_KEY.trim()));
+    if (secret.length !== 64) throw new Error(`Invalid secret key length: ${secret.length}`);
+    return Keypair.fromSecretKey(secret);
+  } catch (e) {
+    throw new Error(`Failed to parse BACKEND private key: ${e?.message || e}`);
+  }
+}
 
 const connection = new Connection(RPC_URL);
 
@@ -188,7 +194,7 @@ export async function POST(req) {
 
 async function createWithdrawalTransaction({ user, idempotenceKey, rawSmpAmount }) {
   const smpAta = {
-    treasury: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, BACKEND_KEYPAIR.publicKey),
+    treasury: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, getBackendKeypair().publicKey),
     user: getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, user),
   };
 
@@ -214,7 +220,7 @@ async function createWithdrawalTransaction({ user, idempotenceKey, rawSmpAmount 
     createTransferInstruction(
       smpAta.treasury,
       smpAta.user,
-      BACKEND_KEYPAIR.publicKey,
+      getBackendKeypair().publicKey,
       rawSmpAmount
     ),
     createNoopInstruction(idempotenceKey)
@@ -223,7 +229,7 @@ async function createWithdrawalTransaction({ user, idempotenceKey, rawSmpAmount 
   const blockhashInfo = await connection.getLatestBlockhash("finalized");
   transaction.feePayer = user;
   transaction.recentBlockhash = blockhashInfo.blockhash;
-  transaction.partialSign(BACKEND_KEYPAIR);
+  transaction.partialSign(getBackendKeypair());
 
   return { transaction, blockhashInfo };
 }
