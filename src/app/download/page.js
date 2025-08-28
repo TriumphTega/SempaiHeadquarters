@@ -54,6 +54,11 @@ export default function DownloadPage() {
     fetchDownloadInfo();
   }, []);
 
+  // Hide deprecated version 1.0.1 from rendering
+  const visibleDownloadInfo = Array.isArray(downloadInfo)
+    ? downloadInfo.filter((apk) => apk?.version !== '1.0.1')
+    : [];
+
   return (
     <div className="bg-light min-vh-100 px-3 px-md-4 py-5">
       <div className="container">
@@ -78,9 +83,9 @@ export default function DownloadPage() {
           <p className="fw-medium text-center text-danger">{error}</p>
         )}
 
-        {downloadInfo.length > 0 && (
+        {visibleDownloadInfo.length > 0 && (
           <div className="g-4 row">
-            {downloadInfo.map((apk) => (
+            {visibleDownloadInfo.map((apk) => (
               <div key={apk.version} className="col-12">
                 <div className="border-0 card h-100 shadow-sm">
                   <div className="align-items-md-center card-body d-flex flex-column flex-md-row gap-3 justify-content-md-between">
@@ -114,7 +119,7 @@ export default function DownloadPage() {
           </div>
         )}
 
-        {downloadInfo.length === 0 && !loading && !error && (
+        {visibleDownloadInfo.length === 0 && !loading && !error && (
           <p className="fw-medium text-center text-muted">
             No APK versions available.
           </p>
