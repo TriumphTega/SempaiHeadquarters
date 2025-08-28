@@ -15,9 +15,14 @@ export default function DownloadPage() {
         if (!res.ok) throw new Error('Failed to fetch download info');
         const data = await res.json();
         const normalized = Array.isArray(data) ? data : [];
-        // If API returns empty, fall back to local files for 1.0.3 and 1.0.2
+        // If API returns empty, fall back to local files for 1.0.8, 1.0.3 and 1.0.2
         if (normalized.length === 0) {
           setDownloadInfo([
+            {
+              version: '1.0.8',
+              download_url: '/apk/sempai-1.0.8.apk',
+              created_at: '2005-08-30T00:00:00.000Z',
+            },
             {
               version: '1.0.3',
               download_url: '/apk/sempai-1.0.3.apk',
@@ -35,6 +40,11 @@ export default function DownloadPage() {
       } catch (err) {
         // On error, still provide local fallback
         setDownloadInfo([
+          {
+            version: '1.0.8',
+            download_url: '/apk/sempai-1.0.8.apk',
+            created_at: '2005-08-30T00:00:00.000Z',
+          },
           {
             version: '1.0.3',
             download_url: '/apk/sempai-1.0.3.apk',
@@ -54,9 +64,9 @@ export default function DownloadPage() {
     fetchDownloadInfo();
   }, []);
 
-  // Hide deprecated version 1.0.1 from rendering
+  // Hide deprecated versions 1.0.1 and 1.0.7 from rendering
   const visibleDownloadInfo = Array.isArray(downloadInfo)
-    ? downloadInfo.filter((apk) => apk?.version !== '1.0.1')
+    ? downloadInfo.filter((apk) => apk?.version !== '1.0.1' && apk?.version !== '1.0.7')
     : [];
 
   return (
