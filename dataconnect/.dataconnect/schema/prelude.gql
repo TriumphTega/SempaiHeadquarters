@@ -1,5 +1,5 @@
 "AccessLevel specifies coarse access policies for common situations."
-enum AccessLevel {
+enum AccessLevel @fdc_forbiddenAsVariableType @fdc_forbiddenAsFieldType {
   """
   This operation is accessible to anyone, with or without authentication.
   Equivalent to: `@auth(expr: "true")`
@@ -527,7 +527,7 @@ scalar SchemaCoordinate
   @fdc_forbiddenAsVariableType
 
 "(Internal) The purpose of a generated type or field."
-enum GeneratedPurpose {
+enum GeneratedPurpose @fdc_forbiddenAsVariableType @fdc_forbiddenAsFieldType {
   # Implicit fields added to the table types as columns.
   IMPLICIT_KEY_FIELD
   IMPLICIT_REF_FIELD
@@ -545,6 +545,9 @@ enum GeneratedPurpose {
   QUERY_AVG
   QUERY_MIN
   QUERY_MAX
+
+  # Generated field for full text search
+  QUERY_MULTIPLE_BY_FULL_TEXT_SEARCH
 
   # Top-level Query fields.
   QUERY_SINGLE
@@ -608,20 +611,6 @@ type _Doc {
   markdown: String!
 }
 
-"(Internal) Added to things that may be removed from FDC and will soon be no longer usable in schema or operations."
-directive @fdc_deprecated(reason: String = "No longer supported") on
-  | SCHEMA
-  | SCALAR
-  | OBJECT
-  | FIELD_DEFINITION
-  | ARGUMENT_DEFINITION
-  | INTERFACE
-  | UNION
-  | ENUM
-  | ENUM_VALUE
-  | INPUT_OBJECT
-  | INPUT_FIELD_DEFINITION
-
 "(Internal) Added to scalars representing quoted CEL expressions."
 directive @fdc_celExpression(
   "The expected CEL type that the expression should evaluate to."
@@ -655,6 +644,15 @@ directive @fdc_oneOf(
   "If true, exactly one field / argument in the group must be specified."
   required: Boolean! = false
 ) repeatable on FIELD_DEFINITION | ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+
+"""
+The `_Metadata` type is used to return metadata about a field in a response.
+"""
+type _Metadata {
+  # During vector similarity search, the distance between the query vector and
+  # this row's vector. In other cases, this field is not set.
+  distance: Float
+}
 
 type Mutation {
   """
@@ -776,7 +774,7 @@ scalar Any @specifiedBy(url: "https://www.json.org/json-en.html")
 The `Void` scalar type represents the absence of any value. It is typically used
 in operations where no value is expected in return.
 """
-scalar Void
+scalar Void @fdc_forbiddenAsVariableType @fdc_forbiddenAsFieldType
 
 """
 The `True` scalar type only accepts the boolean value `true`.
@@ -1415,7 +1413,7 @@ directive @ref(
 ) on FIELD_DEFINITION
 
 "Defines the orderBy direction in a query."
-enum OrderDirection {
+enum OrderDirection @fdc_forbiddenAsFieldType {
 "Results are ordered in ascending order."
   ASC
 "Results are ordered in descending order."
@@ -1516,7 +1514,7 @@ directive @index(
 ) repeatable on FIELD_DEFINITION | OBJECT
 
 "Specifies the sorting order for database indexes."
-enum IndexFieldOrder {
+enum IndexFieldOrder @fdc_forbiddenAsVariableType @fdc_forbiddenAsFieldType {
   "Sorts the field in ascending order (from lowest to highest)."
   ASC
   "Sorts the field in descending order (from highest to lowest)."
@@ -1524,7 +1522,7 @@ enum IndexFieldOrder {
 }
 
 "Defines the type of index to be used in the database."
-enum IndexType {
+enum IndexType @fdc_forbiddenAsVariableType @fdc_forbiddenAsFieldType {
   "A general-purpose index type commonly used for sorting and searching."
   BTREE
   "Generalized Inverted Index, optimized for indexing composite values such as arrays."
@@ -2027,7 +2025,7 @@ Defaults to `INNER_PRODUCT`.
 
 View [all vector functions](https://github.com/pgvector/pgvector?tab=readme-ov-file#vector-functions).
 """
-enum VectorSimilarityMethod {
+enum VectorSimilarityMethod @fdc_forbiddenAsFieldType {
   "Measures the Euclidean (L2) distance between two vectors."
   L2
   "Measures the cosine similarity between two vectors."
@@ -2129,12 +2127,71 @@ scalar Vector_Embed_Model
   @fdc_example(value: "textembedding-gecko@001", description: "An older version of the textembedding-gecko model")
   @fdc_example(value: "text-embedding-004", description: "Another text embedding model")
 
+# Intentionally left blank.
+
 """
-The `_Metadata` type is used to return metadata about a field in a response.
+Mark a string field as searchable.
+When this directive is added, the field will be indexed for full-text search,
+and a <type>_search field will be generated at the query root.
+This directive accepts a `language` argument that defaults to `"english"` in
+case no value is specified.
+See:
+- go/fdc-full-text-search
 """
-type _Metadata {
-  # During vector similarity search, the distance between the query vector and
-  # this row's vector. In other cases, this field is not set.
-  distance: Float
+directive @searchable(
+  """
+   Language of the fields that you are searching over can be specified here
+   (e.g. "french", "spanish", etc.).
+   Defaults to "english" if not specified.
+  """
+  language: String = "english") on FIELD_DEFINITION
+
+extend type _Metadata {
+  # During full text search, the relevance of the query term to this row.
+  # In other cases, this field is not set.
+  relevance: Float
+}
+
+
+enum Search_QueryFormat @fdc_forbiddenAsFieldType {
+  """
+  Allows search engine style semantics (e.g. quoted strings, AND and OR).
+  """
+  QUERY,
+  """
+  Splits the query into words and does ANDs between them.
+  """
+  PLAIN,
+  """
+  Matches an exact phrase. Requires the words to be in the same order (i.e. "brown
+  dog" will not match "brown and red dog").
+  """
+  PHRASE,
+  """
+  Create complex queries using the full set of tsquery operators.
+  """
+  ADVANCED,
+}
+
+input String_Pattern {
+  """
+  Match using LIKE semantics (https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-LIKE)
+  """
+  like: String @fdc_oneOf
+  """
+  Match against a POSIX regular expression.
+  """
+  regex: String @fdc_oneOf
+  """
+  If true, match patterns case-insensitively.
+  """
+  ignoreCase: Boolean
+}
+
+extend input String_Filter {
+  """
+  Match based on the provided pattern.
+  """
+  pattern: String_Pattern
 }
 

@@ -14,9 +14,39 @@ export default function DownloadPage() {
         const res = await fetch('/api/android-download');
         if (!res.ok) throw new Error('Failed to fetch download info');
         const data = await res.json();
-        setDownloadInfo(data);
+        const normalized = Array.isArray(data) ? data : [];
+        // If API returns empty, fall back to local files for 1.0.3 and 1.0.2
+        if (normalized.length === 0) {
+          setDownloadInfo([
+            {
+              version: '1.0.3',
+              download_url: '/apk/sempai-1.0.3.apk',
+              created_at: '2005-08-16T00:00:00.000Z',
+            },
+            {
+              version: '1.0.2',
+              download_url: '/apk/sempai-1.0.2.apk',
+              created_at: '2005-08-16T00:00:00.000Z',
+            },
+          ]);
+        } else {
+          setDownloadInfo(normalized);
+        }
       } catch (err) {
-        setError('Could not load download info.');
+        // On error, still provide local fallback
+        setDownloadInfo([
+          {
+            version: '1.0.3',
+            download_url: '/apk/sempai-1.0.3.apk',
+            created_at: '2005-08-16T00:00:00.000Z',
+          },
+          {
+            version: '1.0.2',
+            download_url: '/apk/sempai-1.0.2.apk',
+            created_at: '2005-08-16T00:00:00.000Z',
+          },
+        ]);
+        setError('Could not load download info. Showing local downloads.');
       } finally {
         setLoading(false);
       }
