@@ -55,9 +55,9 @@ export default function DownloadPage() {
   }, []);
 
   return (
-    <div className="bg-light min-vh-100 py-5 px-3 px-md-4">
+    <div className="bg-light min-vh-100 px-3 px-md-4 py-5">
       <div className="container">
-        <h1 className="display-5 fw-bold text-center mb-5 text-dark">
+        <h1 className="display-5 fw-bold mb-5 text-center text-dark">
           Download Android App
         </h1>
 
@@ -75,28 +75,28 @@ export default function DownloadPage() {
         )}
 
         {error && (
-          <p className="text-center text-danger fw-medium">{error}</p>
+          <p className="fw-medium text-center text-danger">{error}</p>
         )}
 
         {downloadInfo.length > 0 && (
-          <div className="row g-4">
+          <div className="g-4 row">
             {downloadInfo.map((apk) => (
               <div key={apk.version} className="col-12">
-                <div className="card border-0 shadow-sm h-100">
-                  <div className="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
+                <div className="border-0 card h-100 shadow-sm">
+                  <div className="align-items-md-center card-body d-flex flex-column flex-md-row gap-3 justify-content-md-between">
                     <div>
-                      <h5 className="card-title mb-1 fw-semibold">
+                      <h5 className="card-title fw-semibold mb-1">
                         Version {apk.version}
                       </h5>
                       {apk.created_at && (
-                        <p className="card-text text-muted small mb-0">
+                        <p className="card-text mb-0 small text-muted">
                           Released: {new Date(apk.created_at).toLocaleDateString()}
                         </p>
                       )}
                     </div>
                     <a
                       href={apk.download_url}
-                      className="btn btn-warning text-white fw-medium px-4"
+                      className="btn btn-warning fw-medium px-4 text-white"
                       style={{ backgroundColor: '#ff6600', borderColor: '#ff6600' }}
                       download
                       target="_blank"
@@ -108,14 +108,14 @@ export default function DownloadPage() {
                 </div>
               </div>
             ))}
-            <p className="text-center text-muted small mt-4">
+            <p className="mt-4 small text-center text-muted">
               If you have issues installing, make sure "Install from Unknown Sources" is enabled on your device.
             </p>
           </div>
         )}
 
         {downloadInfo.length === 0 && !loading && !error && (
-          <p className="text-center text-muted fw-medium">
+          <p className="fw-medium text-center text-muted">
             No APK versions available.
           </p>
         )}
