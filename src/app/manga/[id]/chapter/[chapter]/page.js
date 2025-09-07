@@ -25,10 +25,10 @@ import MangaCommentSection from "../../../../../components/MangaCommentSection";
 import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
 import ConnectButton from "@/components/ConnectButton";
 
-const MERCHANT_WALLET = new PublicKey("3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5");
+const MERCHANT_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const connection = new Connection(RPC_URL, "confirmed");
-const TEAM_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
+const TEAM_WALLET = new PublicKey("9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc");
 
 export default function MangaChapter() {
   const { id: mangaId, chapter: chapterId } = useParams();
