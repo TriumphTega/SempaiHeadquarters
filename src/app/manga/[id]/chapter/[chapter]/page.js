@@ -28,7 +28,7 @@ import ConnectButton from "@/components/ConnectButton";
 const MERCHANT_WALLET = new PublicKey("3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const connection = new Connection(RPC_URL, "confirmed");
-const TEAM_WALLET = "9JA3f2Nwx9wpgh2wAg8KQv2bSQGRvYwvyQbgTyPmB8nc";
+const TEAM_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
 
 export default function MangaChapter() {
   const { id: mangaId, chapter: chapterId } = useParams();
@@ -248,7 +248,7 @@ export default function MangaChapter() {
         }).add(
           SystemProgram.transfer({
             fromPubkey: activePublicKey,
-            toPubkey: MERCHANT_WALLET,
+                        toPubkey: TEAM_WALLET,
             lamports: amount,
           })
         );
@@ -277,7 +277,7 @@ export default function MangaChapter() {
         await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency, usdAmount);
       } else if (currency === "USDC") {
         const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
-        const destATA = (await getAssociatedTokenAddress(MERCHANT_WALLET, mint))[0];
+                const destATA = (await getAssociatedTokenAddress(TEAM_WALLET, mint))[0];
 
         const transaction = new Transaction({
           recentBlockhash: blockhash,
