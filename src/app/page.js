@@ -107,6 +107,7 @@ export default function Home() {
   const [isReferralOpen, setIsReferralOpen] = useState(false);
   const [referralPosition, setReferralPosition] = useState({ x: 50, y: 50 });
   const [showCreatorChoice, setShowCreatorChoice] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -124,6 +125,7 @@ export default function Home() {
     setAnnouncementsOpen(false);
     setIsReferralOpen(false);
     setShowCreatorChoice(false);
+    setMoreOpen(false);
   };
 
   const toggleNotifications = (e) => {
@@ -154,6 +156,7 @@ export default function Home() {
     setShowConnectPopup(false);
     setIsReferralOpen(false);
     setShowCreatorChoice(false);
+    setMoreOpen(false);
   };
 
   const toggleReferral = () => {
@@ -162,6 +165,18 @@ export default function Home() {
     setNotificationsOpen(false);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
+    setShowCreatorChoice(false);
+    setMoreOpen(false);
+  };
+
+  const toggleMore = (e) => {
+    e?.stopPropagation?.();
+    setMoreOpen((prev) => !prev);
+    setMenuOpen(false);
+    setNotificationsOpen(false);
+    setShowConnectPopup(false);
+    setAnnouncementsOpen(false);
+    setIsReferralOpen(false);
     setShowCreatorChoice(false);
   };
 
@@ -630,6 +645,7 @@ export default function Home() {
       const notificationDropdown = document.querySelector(`.${styles.notificationDropdown}`);
       const referralButton = document.querySelector(`.${styles.referralToggle}`);
       const referralDropdown = document.querySelector(`.${styles.referralDropdown}`);
+      const moreWrapper = document.querySelector(`.${styles.moreWrapper}`);
       const choicePopup = document.querySelector(`.${styles.creatorChoicePopup}`);
       if (
         notificationsOpen &&
@@ -651,10 +667,13 @@ export default function Home() {
       ) {
         setShowCreatorChoice(false);
       }
+      if (moreOpen && !moreWrapper?.contains(e.target)) {
+        setMoreOpen(false);
+      }
     };
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
-  }, [notificationsOpen, isReferralOpen, showCreatorChoice]);
+  }, [notificationsOpen, isReferralOpen, showCreatorChoice, moreOpen]);
 
   const carouselSettings = (itemCount) => ({
     dots: itemCount > 1,
@@ -773,30 +792,42 @@ export default function Home() {
             <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
               <FaHome className={styles.navIcon} /> Home
             </Link>
-            <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
-              <FaExchangeAlt className={styles.navIcon} /> Swap
+            <Link href="/novels" onClick={() => handleNavigation("/novels")} className={styles.navLink}>
+              <FaBookOpen className={styles.navIcon} /> Library
             </Link>
-            <Link href="/download" onClick={() => handleNavigation("/download")} className={styles.navLink}>
-              <FaDownload className={styles.navIcon} /> Download App
+            <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
+              <FaComments className={styles.navIcon} /> Chat
             </Link>
-            <Link href="/stat-page" onClick={() => (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup())} className={styles.navLink}>
-              <FaChartBar className={styles.navIcon} /> Stats
-            </Link>
+            <div className={styles.moreWrapper}>
+              <button className={styles.moreToggle} onClick={toggleMore} aria-expanded={moreOpen} aria-haspopup="menu">
+                <FaBars className={styles.navIcon} /> More
+              </button>
+              {moreOpen && (
+                <div className={styles.moreMenu} role="menu">
+                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())}>
+                    <FaExchangeAlt className={styles.navIcon} /> Swap
+                  </button>
+                  <button className={styles.moreItem} onClick={() => handleNavigation("/download")}>
+                    <FaDownload className={styles.navIcon} /> Download App
+                  </button>
+                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup())}>
+                    <FaChartBar className={styles.navIcon} /> Stats
+                  </button>
+                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())}>
+                    <FaGamepad className={styles.navIcon} /> Kaito's Adventure
+                  </button>
+                  <button className={styles.moreItem} onClick={handleWalletImport}>
+                    <FaWallet className={styles.navIcon} /> Import Wallet
+                  </button>
+                </div>
+              )}
+            </div>
             <Link
               href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
               onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
               className={styles.navLink}
             >
               <FaUser className={styles.navIcon} /> Profile
-            </Link>
-            <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
-              <FaComments className={styles.navIcon} /> Chat
-            </Link>
-            <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
-              <FaGamepad className={styles.navIcon} /> Kaito's Adventure
-            </Link>
-            <Link href="/wallet-import" onClick={handleWalletImport} className={styles.navLink}>
-              <FaWallet className={styles.navIcon} /> Import Wallet
             </Link>
             <button onClick={handleCreatorAccess} className={styles.actionButton}>
               {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
