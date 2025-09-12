@@ -13,6 +13,19 @@
   animation: fadeIn 0.3s ease-in-out;
 }
 
+/* Mobile tweaks for hero pattern and sakura */
+@media (max-width: 768px) {
+  .hero::before { opacity: 0.4; }
+  .sakura span { opacity: 0.75; }
+}
+@media (max-width: 480px) {
+  .hero::before { opacity: 0.3; }
+  .sakura span { opacity: 0.6; }
+}
+@media (max-width: 360px) {
+  .sakura { display: none; }
+}
+
 /* Popup styling with mobile adjustments */
 .creatorChoicePopup {
   background: #2c2c2c;
@@ -1067,6 +1080,9 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  /* Hide arrows on mobile to declutter */
+  .carouselArrow { display: none; }
+
   .menuToggle {
     display: block;
   }
@@ -1080,7 +1096,7 @@
     align-items: center;
     width: 100%;
     background: rgba(0, 0, 0, 0.95);
-    padding: 0.75rem;
+    padding: 0.5rem;
     z-index: 999;
   }
 
@@ -1090,16 +1106,17 @@
     border: none;
     box-shadow: none;
     background: transparent;
-    padding: 0;
+    padding: 0.25rem 0;
     gap: 0.35rem;
   }
+  .moreItem { padding: 0.6rem 0.8rem; }
 
   .navLinksOpen {
     display: flex;
   }
 
   .navLink {
-    padding: 0.5rem 0;
+    padding: 0.4rem 0;
     font-size: 1rem;
     width: 100%;
     justify-content: center;
@@ -1183,7 +1200,7 @@
   }
 
   .contentImage {
-    height: 180px;
+    height: 170px;
   }
 
   .contentOverlay {
@@ -1312,7 +1329,7 @@
   }
 
   .contentImage {
-    height: 150px;
+    height: 140px;
   }
 
   .footer {

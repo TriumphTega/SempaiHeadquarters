@@ -108,6 +108,7 @@ export default function Home() {
   const [referralPosition, setReferralPosition] = useState({ x: 50, y: 50 });
   const [showCreatorChoice, setShowCreatorChoice] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [petalsCount, setPetalsCount] = useState(30);
 
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -117,6 +118,21 @@ export default function Home() {
   const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey;
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+
+  // Adjust sakura density based on viewport width for better mobile performance
+  useEffect(() => {
+    const calcPetals = () => {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      if (w < 380) return 8;
+      if (w < 768) return 14;
+      if (w < 1024) return 24;
+      return 40;
+    };
+    const apply = () => setPetalsCount(calcPetals());
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, []);
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -172,7 +188,6 @@ export default function Home() {
   const toggleMore = (e) => {
     e?.stopPropagation?.();
     setMoreOpen((prev) => !prev);
-    setMenuOpen(false);
     setNotificationsOpen(false);
     setShowConnectPopup(false);
     setAnnouncementsOpen(false);
@@ -719,7 +734,7 @@ export default function Home() {
       <div className={styles.backgroundAnimation}></div>
       {/* Sakura petals overlay */}
       <div className={styles.sakura} aria-hidden>
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: petalsCount }).map((_, i) => (
           <span key={i}></span>
         ))}
       </div>
@@ -804,19 +819,19 @@ export default function Home() {
               </button>
               {moreOpen && (
                 <div className={styles.moreMenu} role="menu">
-                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())}>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup()); }}>
                     <FaExchangeAlt className={styles.navIcon} /> Swap
                   </button>
-                  <button className={styles.moreItem} onClick={() => handleNavigation("/download")}>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); handleNavigation("/download"); }}>
                     <FaDownload className={styles.navIcon} /> Download App
                   </button>
-                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup())}>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup()); }}>
                     <FaChartBar className={styles.navIcon} /> Stats
                   </button>
-                  <button className={styles.moreItem} onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())}>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup()); }}>
                     <FaGamepad className={styles.navIcon} /> Kaito's Adventure
                   </button>
-                  <button className={styles.moreItem} onClick={handleWalletImport}>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); handleWalletImport(); }}>
                     <FaWallet className={styles.navIcon} /> Import Wallet
                   </button>
                 </div>
