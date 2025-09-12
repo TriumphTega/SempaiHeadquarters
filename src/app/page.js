@@ -305,7 +305,8 @@ export default function Home() {
       // Fetch all novels initially without limit to allow sorting
       const { data: novelsData, error } = await supabase
         .from("novels")
-        .select("id, title, image, summary, user_id, tags, viewers_count");
+        .select("id, title, image, summary, user_id, tags, viewers_count")
+        .eq("is_visible", true);
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -358,7 +359,7 @@ export default function Home() {
           const scoreB = (b.viewers_count * 0.6) + (b.averageRating * 0.4);
           return scoreB - scoreA; // Descending order
         })
-        .slice(0, 6); // Limit to 6 novels
+        .slice(0, 5); // Limit to 5 novels
 
       setNovels(sortedNovels);
     } catch (err) {
@@ -375,6 +376,7 @@ export default function Home() {
       const { data: mangaData, error } = await supabase
         .from("manga")
         .select("id, title, cover_image, summary, user_id, status, tags")
+        .eq("is_visible", true)
         .in("status", ["ongoing", "completed"])
         .limit(5);
 
@@ -696,6 +698,12 @@ export default function Home() {
   return (
     <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
       <div className={styles.backgroundAnimation}></div>
+      {/* Sakura petals overlay */}
+      <div className={styles.sakura} aria-hidden>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <span key={i}></span>
+        ))}
+      </div>
       <div className={styles.announcementToggleWrapper}>
         {announcementsOpen && (
           <div className={styles.announcementDropdown}>

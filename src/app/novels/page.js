@@ -226,7 +226,8 @@ export default function NovelsPage() {
           user_id,
           viewers_count,
           users:user_id (name)
-        `);
+        `)
+        .eq("is_visible", true);
 
       if (novelsError) throw new Error(`Failed to fetch novels: ${novelsError.message}`);
 
