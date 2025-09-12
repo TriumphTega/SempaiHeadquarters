@@ -31,9 +31,7 @@ import {
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
+import ZenCarousel from "../components/ZenCarousel/ZenCarousel";
 import styles from "./page.module.css";
 
 const PrevArrow = (props) => {
@@ -977,9 +975,9 @@ export default function Home() {
           {contentLoading ? (
             <LoadingSpinner />
           ) : novels.length > 0 ? (
-            <Slider {...carouselSettings(novels.length)} className={styles.carousel}>
+            <ZenCarousel>
               {novels.map((novel) => (
-                <div key={novel.id} className={styles.carouselItem}>
+                <div key={novel.id}>
                   <div className={styles.contentCard}>
                     <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNovelNavigation(novel.id); }}>
                       <img src={novel.image} alt={novel.title} className={styles.contentImage} />
@@ -1009,21 +1007,21 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </Slider>
+            </ZenCarousel>
           ) : (
             <p className={styles.noContent}>No novels available yet.</p>
           )}
         </section>
-        
+
         <section className={styles.contentSection}>
           <h2 className={styles.sectionTitle}>Featured Manga</h2>
           {error && <div className={styles.errorAlert}>{error}</div>}
           {contentLoading ? (
             <LoadingSpinner />
           ) : manga.length > 0 ? (
-            <Slider {...carouselSettings(manga.length)} className={styles.carousel}>
+            <ZenCarousel>
               {manga.map((mangaItem) => (
-                <div key={mangaItem.id} className={styles.carouselItem}>
+                <div key={mangaItem.id}>
                   <div className={styles.contentCard}>
                     <Link href={`/manga/${mangaItem.id}`} onClick={(e) => { e.preventDefault(); handleMangaNavigation(mangaItem.id); }}>
                       <img src={mangaItem.image} alt={mangaItem.title} className={styles.contentImage} />
@@ -1053,7 +1051,7 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </Slider>
+            </ZenCarousel>
           ) : (
             <p className={styles.noContent}>No manga available yet.</p>
           )}
