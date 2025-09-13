@@ -334,7 +334,8 @@ export default function Home() {
       const { data: novelsData, error } = await supabase
         .from("novels")
         .select("id, title, image, summary, user_id, tags, viewers_count")
-        .eq("is_visible", true);
+        .eq("is_visible", true)
+        .eq("show_in_home", true);
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -405,6 +406,7 @@ export default function Home() {
         .from("manga")
         .select("id, title, cover_image, summary, user_id, status, tags")
         .eq("is_visible", true)
+        .eq("show_in_home", true)
         .in("status", ["ongoing", "completed"])
         .limit(5);
 
