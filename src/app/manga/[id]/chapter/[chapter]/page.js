@@ -13,14 +13,14 @@ import {
   LAMPORTS_PER_SOL,
   Keypair,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import styles from "../../../../../styles/MangaChapter.module.css";
-import { RPC_URL } from "@/constants";
+import { RPC_URL, SMP_MINT_ADDRESS } from "@/constants";
 import MangaCommentSection from "../../../../../components/MangaCommentSection";
 import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
 import ConnectButton from "@/components/ConnectButton";
@@ -57,6 +57,15 @@ export default function MangaChapter() {
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
   const [password, setPassword] = useState("");
+  // Wallet panel state (replicated from RN MangaPageScreen)
+  const [walletPanelOpen, setWalletPanelOpen] = useState(false);
+  const [offChainSmp, setOffChainSmp] = useState(0);
+  const [onChainSmp, setOnChainSmp] = useState(0);
+  const [weeklyPoints, setWeeklyPoints] = useState(0);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [walletError, setWalletError] = useState("");
+  const SMP_DECIMALS = 6;
 
   const fetchPrices = async () => {
     try {
@@ -66,6 +75,115 @@ export default function MangaChapter() {
     } catch (error) {
       console.error("Error fetching SOL price:", error);
       return 150;
+    }
+  };
+
+  // Fetch on-chain SMP balance (ATA) for active wallet
+  const fetchOnChainSmp = useCallback(async () => {
+    try {
+      if (!activePublicKey) {
+        setOnChainSmp(0);
+        return;
+      }
+      const ata = getAssociatedTokenAddressSync(new PublicKey(SMP_MINT_ADDRESS), activePublicKey);
+      const info = await connection.getAccountInfo(ata);
+      if (!info) {
+        setOnChainSmp(0);
+        return;
+      }
+      const account = unpackAccount(ata, info);
+      const amount = Number(account.amount) / 10 ** SMP_DECIMALS;
+      setOnChainSmp(amount);
+    } catch (e) {
+      console.error("[fetchOnChainSmp]", e);
+      setOnChainSmp(0);
+    }
+  }, [activePublicKey]);
+
+  // Fetch off-chain SMP, points, and pending withdrawals
+  const fetchOffChainSummary = useCallback(async () => {
+    try {
+      if (!activeWalletAddress) return;
+      const { data: user, error: userErr } = await supabase
+        .from("users")
+        .select("id, weekly_points")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
+      if (userErr || !user) throw new Error(userErr?.message || "User not found");
+      setUserId(user.id);
+      setWeeklyPoints(user.weekly_points || 0);
+
+      const { data: balanceRow } = await supabase
+        .from("wallet_balances")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("currency", "SMP")
+        .eq("chain", "SOL")
+        .maybeSingle();
+      setOffChainSmp(balanceRow?.amount || 0);
+
+      const { data: pendingRows } = await supabase
+        .from("pending_withdrawals")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("status", "pending");
+      const totalPending = pendingRows?.reduce((s, r) => s + (r.amount || 0), 0) || 0;
+      setPendingWithdrawal(totalPending);
+    } catch (e) {
+      console.error("[fetchOffChainSummary]", e);
+      setWalletError(e.message || "Failed to load wallet summary");
+      setTimeout(() => setWalletError(""), 5000);
+    }
+  }, [activeWalletAddress]);
+
+  useEffect(() => {
+    if (isWalletConnected) {
+      fetchOffChainSummary();
+    }
+  }, [isWalletConnected, fetchOffChainSummary]);
+
+  useEffect(() => {
+    if (walletPanelOpen && isWalletConnected) {
+      fetchOnChainSmp();
+    }
+  }, [walletPanelOpen, isWalletConnected, fetchOnChainSmp]);
+
+  const MIN_WITHDRAWAL = 2500;
+  const API_BASE_URL = "https://sempaihq.xyz";
+  const handleWithdraw = async () => {
+    try {
+      if (!isWalletConnected || !activeWalletAddress) throw new Error("Please connect your wallet.");
+      const amount = parseFloat(withdrawAmount);
+      if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
+        throw new Error(`Withdrawal amount must be at least ${MIN_WITHDRAWAL} SMP.`);
+      }
+      const { data: user } = await supabase
+        .from("users")
+        .select("id")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
+      if (!user) throw new Error("User not found");
+      // Check off-chain balance
+      if (offChainSmp < amount) {
+        throw new Error(`Insufficient off-chain balance: ${offChainSmp.toLocaleString()} SMP available, need ${amount.toLocaleString()} SMP.`);
+      }
+      const resp = await fetch(`${API_BASE_URL}/api/withdraw-smp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, walletAddress: activeWalletAddress, amount }),
+      });
+      const text = await resp.text();
+      let json;
+      try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text }; }
+      if (!resp.ok || json?.error) throw new Error(json?.error || `Withdrawal failed: HTTP ${resp.status}`);
+      setOffChainSmp((v) => v - amount);
+      setWithdrawAmount("");
+      setSuccessMessage(`Successfully withdrew ${amount.toLocaleString()} SMP to your wallet! Transaction signature: ${json.signature || "N/A"}`);
+      setTimeout(() => setSuccessMessage(""), 8000);
+      await fetchOffChainSummary();
+    } catch (e) {
+      setWalletError(e.message);
+      setTimeout(() => setWalletError(""), 8000);
     }
   };
 
@@ -95,8 +213,9 @@ export default function MangaChapter() {
     setChapters(chaptersData || []);
     if (chapterData) {
       const firstChapterId = chaptersData?.[0]?.id;
-      setIsFirstChapter(chapterData.id === firstChapterId);
-      if (chapterData.is_premium && !isFirstChapter) setPaymentRequired(true);
+      const isFirst = chapterData.id === firstChapterId;
+      setIsFirstChapter(isFirst);
+      setPaymentRequired(!!chapterData.is_premium && !isFirst);
     }
     setLoading(false);
   };
@@ -248,7 +367,7 @@ export default function MangaChapter() {
         }).add(
           SystemProgram.transfer({
             fromPubkey: activePublicKey,
-                        toPubkey: TEAM_WALLET,
+            toPubkey: TEAM_WALLET,
             lamports: amount,
           })
         );
@@ -277,7 +396,7 @@ export default function MangaChapter() {
         await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency, usdAmount);
       } else if (currency === "USDC") {
         const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
-                const destATA = (await getAssociatedTokenAddress(TEAM_WALLET, mint))[0];
+        const destATA = (await getAssociatedTokenAddress(TEAM_WALLET, mint))[0];
 
         const transaction = new Transaction({
           recentBlockhash: blockhash,
@@ -364,14 +483,18 @@ export default function MangaChapter() {
 
   const checkExistingPayment = async () => {
     if (!activeWalletAddress || !chapter?.is_premium || isFirstChapter) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_payments")
       .select("id")
       .eq("user_wallet", activeWalletAddress)
       .eq("chapter_id", chapterId)
       .eq("manga_id", mangaId)
-      .maybeSingle();
-    if (data) {
+      .limit(1);
+    if (error) {
+      console.warn("[checkExistingPayment]", error.message);
+      return;
+    }
+    if (Array.isArray(data) && data.length > 0) {
       setPaymentConfirmed(true);
       setPaymentRequired(false);
     }
@@ -666,6 +789,56 @@ export default function MangaChapter() {
         </Link>
         <ConnectButton className={styles.walletButton} />
       </nav>
+
+      {isWalletConnected && (
+        <div className={styles.walletPanel}>
+          <button
+            className={styles.navButton}
+            onClick={() => setWalletPanelOpen((p) => !p)}
+            style={{ margin: "10px 0" }}
+          >
+            {walletPanelOpen ? "Hide Wallet" : "Show Wallet"}
+          </button>
+          {walletPanelOpen && (
+            <div className={styles.paymentSection}>
+              <p>
+                <strong>Wallet:</strong> {activeWalletAddress?.slice(0, 6)}...{activeWalletAddress?.slice(-4)}
+              </p>
+              <p>
+                <strong>SMP (Off-chain):</strong> {offChainSmp.toLocaleString()}
+              </p>
+              <p>
+                <strong>SMP (On-chain):</strong> {onChainSmp.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+              </p>
+              <p>
+                <strong>Points:</strong> {weeklyPoints.toLocaleString()}
+              </p>
+              {pendingWithdrawal > 0 && (
+                <p>
+                  <strong>Pending:</strong> {pendingWithdrawal.toLocaleString()} SMP
+                </p>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input
+                  type="number"
+                  placeholder={`Amount (Min: ${MIN_WITHDRAWAL})`}
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className={styles.chapterSelect}
+                  style={{ maxWidth: 220 }}
+                />
+                <button onClick={handleWithdraw} className={styles.navButton}>
+                  Withdraw
+                </button>
+                <button onClick={fetchOffChainSummary} className={styles.navButton}>
+                  Refresh
+                </button>
+              </div>
+              {walletError && <div className={styles.error}>{walletError}</div>}
+            </div>
+          )}
+        </div>
+      )}
 
       <main className={styles.content}>
         <h1 className={styles.title}>{chapter.title}</h1>

@@ -1,34 +1,32 @@
 /* styles/ConnectButton.module.css */
 .connectButtonWrapper {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #1a1a1a;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(243, 99, 22, 0.2);
+  gap: 6px;
+  padding: 0;
+  background: transparent;
 }
 
 .singleButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(45deg, #1a1a1a, rgba(243, 99, 22, 0.8));
+  background: radial-gradient(120% 120% at 10% 10%, rgba(243, 99, 22, 0.9), #1a1a1a 60%);
   color: #fff;
-  padding: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 32px;
+  border-radius: 999px;
   border: 1px solid rgba(243, 99, 22, 1);
   cursor: pointer;
   transition: all 0.3s ease;
+  min-width: 32px;
 }
 
 .singleButton:hover {
-  background: linear-gradient(45deg, rgba(243, 99, 22, 1), #1a1a1a);
-  transform: scale(1.1);
-  box-shadow: 0 0 10px rgba(243, 99, 22, 0.6);
+  background: radial-gradient(120% 120% at 10% 10%, rgba(243, 99, 22, 1), #1a1a1a 60%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(243, 99, 22, 0.25);
 }
 
 .buttonIcon {
@@ -174,10 +172,28 @@
   align-items: center;
   gap: 8px;
   color: #fff;
-  background: #333;
-  padding: 6px 12px;
+  background: rgba(51, 51, 51, 0.7);
+  padding: 4px;
   border-radius: 8px;
   font-size: 12px;
+}
+
+/* Button variant used when showing the address; keep compact and truncate text */
+.addressButton {
+  max-width: 200px;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(243, 99, 22, 0.3);
+  background: #1a1a1a;
+  color: #fff;
 }
 
 .disconnectButton {
@@ -318,6 +334,122 @@
   gap: 12px;
 }
 
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 220px;
+  background: rgba(15, 15, 20, 0.8);
+  border: 1px solid rgba(243, 99, 22, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(243, 99, 22, 0.18);
+  backdrop-filter: blur(12px) saturate(120%);
+  padding: 10px;
+  z-index: 1001;
+  animation: menuReveal 160ms ease-out;
+  overflow: hidden;
+  font-family: inherit;
+  color: #f5f5f7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hard reset any buttons inside dropdown to avoid global overrides */
+.dropdownMenu :where(button) {
+  all: unset;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  color: #f5f5f5;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none !important;
+  letter-spacing: 0.1px;
+}
+.dropdownMenu :where(button):hover {
+  background: linear-gradient(90deg, rgba(243, 99, 22, 0.18), rgba(243, 99, 22, 0.07));
+  color: #ffffff;
+}
+.dropdownMenu :where(button):focus-visible {
+  outline: 2px solid rgba(243, 99, 22, 0.5);
+  outline-offset: 2px;
+}
+.dropdownMenu :where(button) svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+.menuItem {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  color: #f5f5f5;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.1px;
+  transition: background 0.18s ease, transform 0.08s ease;
+}
+
+.menuItem svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+.menuItem:hover {
+  background: linear-gradient(90deg, rgba(243, 99, 22, 0.18), rgba(243, 99, 22, 0.07));
+  color: #ffffff;
+}
+
+.menuItem:focus-visible {
+  outline: 2px solid rgba(243, 99, 22, 0.5);
+  outline-offset: 2px;
+}
+
+.menuHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px 6px;
+  color: #f0f0f0;
+}
+
+.menuHeaderTitle {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  text-transform: none;
+}
+
+.menuHeaderSub {
+  font-size: 12px;
+  color: #e8e8e8;
+  opacity: 0.9;
+}
+
+.tooltip {
+  margin: 6px 12px 4px;
+  font-size: 11px;
+  color: #a0ffa0;
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .connectButtonWrapper {
@@ -325,9 +457,8 @@
   }
 
   .singleButton {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
+    min-width: 32px;
+    padding: 8px 10px;
   }
 
   .buttonIcon {

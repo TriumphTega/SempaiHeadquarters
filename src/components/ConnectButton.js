@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useContext } from "react";
+import { useEffect, useState, useCallback, useContext, useRef } from "react";
 import { supabase } from "../services/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
@@ -22,6 +22,9 @@ export default function ConnectButton() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [privateKey, setPrivateKey] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const wrapperRef = useRef(null);
 
   const createUserAndBalance = useCallback(async (walletAddress) => {
     if (!walletAddress) return;
@@ -144,6 +147,18 @@ export default function ConnectButton() {
     }
   };
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!wrapperRef?.current) return;
+      if (!wrapperRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [showMenu, wrapperRef]);
+
   const handleRetrieveEmbeddedWallet = async (e) => {
     e.preventDefault();
     if (password.length < 8) {
@@ -178,6 +193,37 @@ export default function ConnectButton() {
     setPrivateKey(null);
   };
 
+  const clearEmbeddedFromLocal = () => {
+    try {
+      localStorage.removeItem("embeddedWalletPublicKey");
+      localStorage.removeItem("embeddedWalletSecretEncrypted");
+    } catch {}
+  };
+
+  const handleCopyAddress = () => {
+    if (embeddedWallet?.publicKey) {
+      navigator.clipboard.writeText(embeddedWallet.publicKey);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  const handleDisconnectOnly = () => {
+    clearEmbeddedFromLocal();
+    setShowMenu(false);
+    window.location.reload();
+  };
+
+  const handleSignOutAll = async () => {
+    try {
+      await signOut(); // sign out Supabase/Google
+    } catch {}
+    clearEmbeddedFromLocal();
+    setShowMenu(false);
+    // On next Google sign-in, app can re-link the wallet via existing server association
+    window.location.reload();
+  };
+
   if (isLoading || embeddedLoading || authLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -199,27 +245,45 @@ export default function ConnectButton() {
   }
 
   return (
-    <div className={styles.connectButtonWrapper}>
+    <div className={styles.connectButtonWrapper} ref={wrapperRef}>
       {embeddedWallet ? (
         <div className={styles.walletInfo}>
-          <span>
-            <FaWallet /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
-          </span>
-          <button className={styles.disconnectButton} onClick={() => {
-            localStorage.removeItem("embeddedWalletPublicKey");
-            localStorage.removeItem("embeddedWalletSecretEncrypted");
-            window.location.reload();
-          }}>
-            <FaTimes />
+          <button className={`${styles.singleButton} ${styles.addressButton}`} onClick={() => setShowMenu((m) => !m)} aria-haspopup="menu" aria-expanded={showMenu}>
+            <FaWallet className={styles.buttonIcon} /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
           </button>
+          {showMenu && (
+            <div className={styles.dropdownMenu}>
+              <div className={styles.menuHeader}>
+                <div className={styles.menuHeaderTitle}>Wallet</div>
+                <div className={styles.menuHeaderSub}>{embeddedWallet.publicKey.slice(0, 6)}...{embeddedWallet.publicKey.slice(-6)}</div>
+              </div>
+              <div className={styles.menuDivider} />
+              <button className={styles.menuItem} onClick={handleCopyAddress}>
+                <FaCopy /> Copy Address
+              </button>
+              {copied && <div className={styles.tooltip}>Copied!</div>}
+              <div className={styles.menuDivider} />
+              <button className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={handleSignOutAll}>
+                <FaGoogle /> Sign out
+              </button>
+              <button className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={handleDisconnectOnly}>
+                <FaTimes /> Disconnect
+              </button>
+            </div>
+          )}
         </div>
       ) : (
-        <button
-          className={styles.singleButton}
-          onClick={() => setShowPopup(true)}
-        >
-          <FaWallet className={styles.buttonIcon} />
-        </button>
+        <>
+          {!user ? (
+            <button className={styles.singleButton} onClick={signInWithGoogle}>
+              <FaGoogle className={styles.buttonIcon} />
+            </button>
+          ) : (
+            <button className={styles.singleButton} onClick={() => setShowPopup(true)}>
+              <FaWallet className={styles.buttonIcon} />
+            </button>
+          )}
+        </>
       )}
       {embeddedWallet && <span className={styles.connectedStatus}></span>}
       {userCreated && (
