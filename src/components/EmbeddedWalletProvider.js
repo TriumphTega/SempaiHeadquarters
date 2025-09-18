@@ -1,10 +1,43 @@
 "use client";
 
 import { createContext, useState, useEffect } from "react";
-import { Connection, Keypair, VersionedTransaction } from "@solana/web3.js";
+import { Connection, Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import CryptoJS from "crypto-js";
 import { RPC_URL } from "@/constants"; // Ensure RPC_URL is defined in your constants
+import { supabase } from "@/services/supabase/supabaseClient";
+import { useAuth } from "./AuthProvider";
+
+// Fast proxy fetch with timeout and 1 retry (improves perceived latency)
+const callProxy = async (payload) => {
+  const attempt = async (signal) => {
+    const resp = await fetch("/api/wallet-encryption", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(json?.error || `Proxy error (${resp.status})`);
+    if (!json?.result) throw new Error("Proxy did not return 'result'");
+    return json.result;
+  };
+
+  const runWithTimeout = (ms) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort("timeout"), ms);
+    return attempt(ctrl.signal)
+      .finally(() => clearTimeout(timer));
+  };
+
+  try {
+    return await runWithTimeout(7000);
+  } catch (e1) {
+    // brief backoff and retry once
+    await new Promise((r) => setTimeout(r, 300));
+    return await runWithTimeout(7000);
+  }
+};
 
 export const EmbeddedWalletContext = createContext();
 
@@ -16,42 +49,146 @@ export const EmbeddedWalletProvider = ({ children }) => {
   const [password, setPassword] = useState("");
   const [transactionToSign, setTransactionToSign] = useState(null);
   const [resolveSignPromise, setResolveSignPromise] = useState(null);
+  const { user, loading: authLoading } = useAuth();
 
   const connection = new Connection(RPC_URL);
+  const WALLET_FUNCTION = process.env.NEXT_PUBLIC_WALLET_FUNCTION || "wallet-encryption";
+  // Session-scoped cache to avoid repeated decrypts
+  const [cachedPrivateKeyBase58, setCachedPrivateKeyBase58] = useState(null);
 
-  // Create or import an embedded wallet
-  const createEmbeddedWallet = (password, importedSecretKey = null) => {
+  const getAuthHeaders = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data?.session?.access_token;
+      return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+    } catch {
+      return {};
+    }
+  };
+
+  // Mobile parity: body { action, data }, response { result }
+  const edgeEncrypt = async (privateKeyBase58) => {
+    try {
+      return await callProxy({ action: "encrypt", data: privateKeyBase58 });
+    } catch (e) {
+      console.error("[EmbeddedWallet] Edge encrypt failed:", e?.message || e);
+      throw new Error("Encryption service unavailable. Please try again in a moment.");
+    }
+  };
+
+  const edgeDecrypt = async (encryptedSecret) => {
+    try {
+      return await callProxy({ action: "decrypt", data: encryptedSecret });
+    } catch (e) {
+      console.error("[EmbeddedWallet] Edge decrypt failed:", e?.message || e);
+      throw new Error("Decryption service unavailable. Please try again in a moment.");
+    }
+  };
+
+  // Create an embedded wallet for the authenticated user
+  const createEmbeddedWallet = async (userPassword) => {
+    if (!user && !authLoading) {
+      throw new Error("Please sign in to create a wallet");
+    }
+    const password = String(userPassword || "");
+    if (password.length < 8) throw new Error("Password must be at least 8 characters long");
     try {
       setIsLoading(true);
       setError(null);
-      let keypair;
-      if (importedSecretKey) {
-        keypair = Keypair.fromSecretKey(importedSecretKey);
-      } else {
-        keypair = Keypair.generate();
-      }
 
-      const walletData = {
-        publicKey: keypair.publicKey.toBase58(),
-        secretKey: keypair.secretKey,
-      };
+      const keypair = Keypair.generate();
+      const publicKeyStr = keypair.publicKey.toBase58();
+      const secretKey = keypair.secretKey;
+      const privateKeyBase58 = bs58.encode(secretKey);
 
-      const encryptedSecret = CryptoJS.AES.encrypt(
-        JSON.stringify(Array.from(walletData.secretKey)),
-        password
-      ).toString();
+      // Encrypt via Edge Function (fallback to local if needed)
+      const encryptedSecret = await edgeEncrypt(privateKeyBase58);
+      // Cache private key for session speed
+      setCachedPrivateKeyBase58(privateKeyBase58);
 
-      localStorage.setItem("embeddedWalletPublicKey", walletData.publicKey);
+      // Persist locally for quick access
+      localStorage.setItem("embeddedWalletPublicKey", publicKeyStr);
       localStorage.setItem("embeddedWalletSecretEncrypted", encryptedSecret);
 
-      setWallet({ publicKey: walletData.publicKey, encryptedSecret });
-      return {
-        publicKey: walletData.publicKey,
-        privateKey: bs58.encode(walletData.secretKey),
-      };
+      // Upsert user and wallet in Supabase
+      if (user) {
+        const email = user.email;
+        const name = user.user_metadata?.full_name || email?.split("@")[0] || null;
+        const image = user.user_metadata?.avatar_url || null;
+
+        const { data: upserted, error: upsertErr } = await supabase
+          .from("users")
+          .upsert(
+            { id: user.id, email, name, image, wallet_address: publicKeyStr, has_updated_profile: false },
+            { onConflict: "id" }
+          )
+          .select("id")
+          .single();
+        if (upsertErr) throw upsertErr;
+
+        const { error: walletErr } = await supabase
+          .from("user_wallets")
+          .insert({ user_id: upserted.id, address: publicKeyStr, private_key: encryptedSecret });
+        if (walletErr) throw walletErr;
+      }
+
+      setWallet({ publicKey: publicKeyStr, encryptedSecret });
+      return { publicKey: publicKeyStr, privateKey: privateKeyBase58 };
     } catch (err) {
-      setError("Failed to create wallet. Please try again.");
       console.error(err);
+      setError(err.message || "Failed to create wallet");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Retrieve wallet from Supabase for the authenticated user
+  const retrieveEmbeddedWallet = async (userPassword) => {
+    if (!user && !authLoading) {
+      throw new Error("Please sign in to retrieve your wallet");
+    }
+    const password = String(userPassword || "");
+    if (password.length < 8) throw new Error("Password must be at least 8 characters long");
+    try {
+      setIsLoading(true);
+      setError(null);
+      const { data: userRow, error: userErr } = await supabase
+        .from("users")
+        .select("id, wallet_address")
+        .eq("id", user.id)
+        .single();
+      if (userErr) throw userErr;
+      if (!userRow?.wallet_address) throw new Error("No wallet associated with this account");
+
+      const { data: walletRow, error: walletErr } = await supabase
+        .from("user_wallets")
+        .select("address, private_key")
+        .eq("user_id", userRow.id)
+        .eq("address", userRow.wallet_address)
+        .single();
+      if (walletErr) throw walletErr;
+
+      // Decrypt via Edge Function (fallback to local if needed)
+      const decryptedPrivateKey = await edgeDecrypt(walletRow.private_key);
+      if (!decryptedPrivateKey) throw new Error("Invalid password or corrupted key");
+      // Cache private key for session speed
+      setCachedPrivateKeyBase58(decryptedPrivateKey);
+
+      // Validate matches address
+      const keypair = Keypair.fromSecretKey(bs58.decode(decryptedPrivateKey));
+      const publicKeyStr = keypair.publicKey.toBase58();
+      if (publicKeyStr !== walletRow.address) throw new Error("Public key mismatch");
+
+      // Re-encrypt (using edge for consistency) and store locally for use
+      const encryptedSecret = await edgeEncrypt(decryptedPrivateKey);
+      localStorage.setItem("embeddedWalletPublicKey", publicKeyStr);
+      localStorage.setItem("embeddedWalletSecretEncrypted", encryptedSecret);
+      setWallet({ publicKey: publicKeyStr, encryptedSecret });
+      return { publicKey: publicKeyStr, privateKey: decryptedPrivateKey };
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to retrieve wallet");
       return null;
     } finally {
       setIsLoading(false);
@@ -67,16 +204,37 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   }, []);
 
-  // Decrypt secret key with password
-  const getSecretKey = (password) => {
+  // Pre-warm decryption cache in background to reduce first-time latency
+  useEffect(() => {
+    const prewarm = async () => {
+      try {
+        if (wallet?.encryptedSecret && !cachedPrivateKeyBase58) {
+          const pk = await edgeDecrypt(wallet.encryptedSecret);
+          if (pk) setCachedPrivateKeyBase58(pk);
+        }
+      } catch {
+        // Silent: if prewarm fails, normal flow will handle errors later
+      }
+    };
+    prewarm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.encryptedSecret]);
+
+  // Decrypt secret key using Edge Function (ignores local password, aligns with mobile)
+  const getSecretKey = async () => {
     try {
-      const encryptedSecret = localStorage.getItem("embeddedWalletSecretEncrypted");
-      if (!encryptedSecret) throw new Error("No embedded wallet found.");
-      const bytes = CryptoJS.AES.decrypt(encryptedSecret, password);
-      const secretKeyArray = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-      return Uint8Array.from(secretKeyArray);
+      // Prefer cached private key for speed
+      let privateKeyBase58 = cachedPrivateKeyBase58;
+      if (!privateKeyBase58) {
+        const encryptedSecret = localStorage.getItem("embeddedWalletSecretEncrypted");
+        if (!encryptedSecret) throw new Error("No embedded wallet found.");
+        privateKeyBase58 = await edgeDecrypt(encryptedSecret);
+        setCachedPrivateKeyBase58(privateKeyBase58);
+      }
+      if (!privateKeyBase58) throw new Error("Corrupted wallet data.");
+      return bs58.decode(privateKeyBase58);
     } catch (err) {
-      setError("Invalid password or corrupted wallet data.");
+      setError("Failed to decrypt wallet data.");
       console.error(err);
       return null;
     }
@@ -109,9 +267,9 @@ export const EmbeddedWalletProvider = ({ children }) => {
     if (!resolveSignPromise || !transactionToSign) return;
 
     try {
-      const secretKey = getSecretKey(password);
+      const secretKey = await getSecretKey();
       if (!secretKey) {
-        resolveSignPromise.reject(new Error("Invalid password"));
+        resolveSignPromise.reject(new Error("Failed to decrypt wallet"));
         return;
       }
 
@@ -147,7 +305,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
 
   return (
     <EmbeddedWalletContext.Provider
-      value={{ wallet, createEmbeddedWallet, getSecretKey, signAndSendTransaction, isLoading, error }}
+      value={{ wallet, createEmbeddedWallet, retrieveEmbeddedWallet, getSecretKey, signAndSendTransaction, isLoading, error }}
     >
       {passwordPrompt && (
         <div

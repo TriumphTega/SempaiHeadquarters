@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useContext } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
@@ -79,7 +78,6 @@ const LoadingSpinner = () => (
 );
 
 export default function Home() {
-  const { connected, publicKey, disconnect } = useWallet();
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const router = useRouter();
   const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
@@ -112,8 +110,8 @@ export default function Home() {
   const dragStartPos = useRef({ x: 0, y: 0 });
   const hasLoadedInitialData = useRef(false); // Prevent reload on wallet change
 
-  const isWalletConnected = connected || embeddedWallet;
-  const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey;
+  const isWalletConnected = !!embeddedWallet;
+  const walletPublicKey = embeddedWallet?.publicKey || null;
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
@@ -632,9 +630,8 @@ export default function Home() {
   }, [checkCreatorLogin, fetchNovels, fetchManga]);
 
   useEffect(() => {
-    const handleWalletDisconnect = async () => {
+    const handleWalletState = async () => {
       if (!isWalletConnected) {
-        if (connected) await disconnect(); // Disconnect external wallet if present
         // Reset wallet-dependent state without reloading
         setNotifications([]);
         setAnnouncements([]);
@@ -651,8 +648,8 @@ export default function Home() {
         fetchAnnouncements();
       }
     };
-    handleWalletDisconnect();
-  }, [isWalletConnected, walletPublicKey, fetchUserDetails, fetchNotifications, fetchAnnouncements, connected, disconnect]);
+    handleWalletState();
+  }, [isWalletConnected, walletPublicKey, fetchUserDetails, fetchNotifications, fetchAnnouncements]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {

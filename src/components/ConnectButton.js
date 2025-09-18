@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useState, useCallback, useContext } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { supabase } from "../services/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
+import { useAuth } from "./AuthProvider";
 import styles from "../styles/ConnectButton.module.css";
-import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes } from "react-icons/fa";
+import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes, FaGoogle } from "react-icons/fa";
 
 export default function ConnectButton() {
-  const { connected, publicKey } = useWallet();
-  const { wallet: embeddedWallet, createEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
+  const { wallet: embeddedWallet, createEmbeddedWallet, retrieveEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
+  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userCreated, setUserCreated] = useState(false);
   const [showReferralPrompt, setShowReferralPrompt] = useState(false);
   const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
+  const [showRetrieveForm, setShowRetrieveForm] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [privateKey, setPrivateKey] = useState(null);
@@ -144,12 +144,23 @@ export default function ConnectButton() {
     }
   };
 
-  useEffect(() => {
-    if (connected && publicKey) {
-      createUserAndBalance(publicKey.toString());
+  const handleRetrieveEmbeddedWallet = async (e) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long!");
+      return;
+    }
+    const result = await retrieveEmbeddedWallet(password);
+    if (result) {
+      const { publicKey } = result;
+      await createUserAndBalance(publicKey);
+      setShowRetrieveForm(false);
+      setPassword("");
       setShowPopup(false);
     }
-  }, [connected, publicKey, createUserAndBalance]);
+  };
+
+  // No external wallet; nothing to do here
 
   const handlePromptClose = () => {
     setShowReferralPrompt(false);
@@ -167,7 +178,7 @@ export default function ConnectButton() {
     setPrivateKey(null);
   };
 
-  if (isLoading || embeddedLoading) {
+  if (isLoading || embeddedLoading || authLoading) {
     return (
       <div className={styles.loadingContainer}>
         <FaSpinner className={styles.spinner} />
@@ -189,25 +200,19 @@ export default function ConnectButton() {
 
   return (
     <div className={styles.connectButtonWrapper}>
-      {connected || embeddedWallet ? (
-        embeddedWallet ? (
-          <div className={styles.walletInfo}>
-            <span>
-              <FaWallet /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
-            </span>
-            <button className={styles.disconnectButton} onClick={() => {
-              localStorage.removeItem("embeddedWalletPublicKey");
-              localStorage.removeItem("embeddedWalletSecretEncrypted");
-              window.location.reload();
-            }}>
-              <FaTimes />
-            </button>
-          </div>
-        ) : (
-          <WalletMultiButton className={styles.walletButton}>
-            <FaWallet className={styles.buttonIcon} />
-          </WalletMultiButton>
-        )
+      {embeddedWallet ? (
+        <div className={styles.walletInfo}>
+          <span>
+            <FaWallet /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
+          </span>
+          <button className={styles.disconnectButton} onClick={() => {
+            localStorage.removeItem("embeddedWalletPublicKey");
+            localStorage.removeItem("embeddedWalletSecretEncrypted");
+            window.location.reload();
+          }}>
+            <FaTimes />
+          </button>
+        </div>
       ) : (
         <button
           className={styles.singleButton}
@@ -216,33 +221,47 @@ export default function ConnectButton() {
           <FaWallet className={styles.buttonIcon} />
         </button>
       )}
-      {(connected || embeddedWallet) && <span className={styles.connectedStatus}></span>}
+      {embeddedWallet && <span className={styles.connectedStatus}></span>}
       {userCreated && (
         <p className={styles.successMessage}>
           <FaCheckCircle /> Welcome!
         </p>
       )}
 
-      {showPopup && !connected && !embeddedWallet && (
+      {showPopup && !embeddedWallet && (
         <div className={styles.popupOverlay}>
           <div className={styles.popup}>
             <button className={styles.closeButton} onClick={() => setShowPopup(false)}>
               <FaTimes />
             </button>
-            <h3>Choose Path</h3>
+            <h3>Get Started</h3>
             <div className={styles.popupOptions}>
-              <WalletMultiButton className={styles.popupWalletButton}>
-                 Connect Wallet <FaWallet className={styles.buttonIcon} />
-              </WalletMultiButton>
-              <button
-                className={styles.popupEmbeddedButton}
-                onClick={() => {
-                  setShowEmbeddedForm(true);
-                  setShowPopup(false);
-                }}
-              >
-                <FaRocket className={styles.buttonIcon} /> In-App Wallet
-              </button>
+              {!user ? (
+                <button className={styles.popupEmbeddedButton} onClick={signInWithGoogle}>
+                  <FaGoogle className={styles.buttonIcon} /> Sign in with Google
+                </button>
+              ) : (
+                <>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={() => {
+                      setShowEmbeddedForm(true);
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
+                  </button>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={() => {
+                      setShowRetrieveForm(true);
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
+                  </button>
+                </>
+              )}
               <button
                 className={styles.cancelButton}
                 onClick={() => setShowPopup(false)}
@@ -254,7 +273,7 @@ export default function ConnectButton() {
         </div>
       )}
 
-      {showEmbeddedForm && !connected && !embeddedWallet && (
+      {showEmbeddedForm && !embeddedWallet && (
         <div className={styles.embeddedFormOverlay}>
           <div className={styles.embeddedForm}>
             <h3><FaKey /> Forge Key</h3>
@@ -283,6 +302,36 @@ export default function ConnectButton() {
                 type="button"
                 className={styles.cancelButton}
                 onClick={() => setShowEmbeddedForm(false)}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showRetrieveForm && !embeddedWallet && (
+        <div className={styles.embeddedFormOverlay}>
+          <div className={styles.embeddedForm}>
+            <h3><FaKey /> Unlock Wallet</h3>
+            <p className={styles.securityNote}>
+              Enter your wallet password to restore it.
+            </p>
+            <form onSubmit={handleRetrieveEmbeddedWallet}>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={styles.input}
+              />
+              <button type="submit" className={styles.submitButton}>
+                <FaKey /> Retrieve
+              </button>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setShowRetrieveForm(false)}
               >
                 Cancel
               </button>

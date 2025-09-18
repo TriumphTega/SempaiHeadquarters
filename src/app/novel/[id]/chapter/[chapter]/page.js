@@ -3,15 +3,12 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
   Connection,
   SystemProgram,
   Transaction,
   PublicKey,
   LAMPORTS_PER_SOL,
-  Keypair,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -58,24 +55,31 @@ const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwy
 const SMP_DECIMALS = 6;
 const TARGET_WALLET = TREASURY_PUBLIC_KEY;
 
+const MIN_ATA_SOL = 0.00103928;
+const MIN_USER_SOL = 0.001;
+const poolAddress = "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33";
+const meteoraApiUrl = `https://amm-v2.meteora.ag/pools?address=${poolAddress}`;
+const USDC_AMOUNT = 0.025; // $0.025 per chapter
+
 const connection = new Connection(RPC_URL, {
   commitment: "confirmed",
   httpHeaders: { "x-api-key": RPC_URL.split("=")[1] },
 });
+
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();
   const router = useRouter();
-  const { connected, publicKey, sendTransaction } = useWallet();
-  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
+  const { wallet: embeddedWallet, signAndSendTransaction } = useContext(EmbeddedWalletContext);
 
   const activePublicKey = useMemo(() => {
-    return embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : publicKey;
-  }, [embeddedWallet?.publicKey, publicKey]);
+    return embeddedWallet?.publicKey ? new PublicKey(embeddedWallet.publicKey) : null;
+  }, [embeddedWallet?.publicKey]);
 
   const activeWalletAddress = activePublicKey?.toString();
   const isWalletConnected = !!activePublicKey;
+
   const { balance: amethystBalance } = UseAmethystBalance();
 
   const [novel, setNovel] = useState(null);
@@ -89,8 +93,8 @@ export default function ChapterPage() {
   const [userId, setUserId] = useState(null);
   const [advanceInfo, setAdvanceInfo] = useState(null);
   const [canUnlockNextThree, setCanUnlockNextThree] = useState(false);
-  const [solPrice, setSolPrice] = useState(null);
-  const [smpPrice, setSmpPrice] = useState(null);
+  const [solPrice, setSolPrice] = useState(100);
+  const [smpPrice, setSmpPrice] = useState(0.01);
   const [userRating, setUserRating] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
@@ -99,59 +103,80 @@ export default function ChapterPage() {
   const [smpBalance, setSmpBalance] = useState(null);
   const [weeklyPoints, setWeeklyPoints] = useState(null);
   const usdcPrice = 1;
+  const [localUnlocked, setLocalUnlocked] = useState(false);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const fetchSolPrice = async (retryCount = 3, retryDelay = 1000) => {
-    for (let attempt = 1; attempt <= retryCount; attempt++) {
-      try {
-        const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
-          { method: "GET", headers: { Accept: "application/json" }, mode: "cors" }
-        );
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const data = await response.json();
-        if (!data.solana?.usd) throw new Error("Invalid SOL price data");
-        return data.solana.usd;
-      } catch (error) {
-        console.error(`Attempt ${attempt} - Error fetching SOL price:`, error);
-        if (attempt === retryCount) return null;
-        await delay(retryDelay * attempt);
-      }
-    }
-  };
+  // Meteora helpers (mobile parity)
+  const fetchPoolData = useCallback(async () => {
+    const resp = await fetch(meteoraApiUrl);
+    if (!resp.ok) throw new Error(`Meteora HTTP ${resp.status}`);
+    const arr = await resp.json();
+    return arr?.[0];
+  }, []);
 
-  const fetchSmpPrice = async (retryCount = 3, retryDelay = 1000) => {
-    for (let attempt = 1; attempt <= retryCount; attempt++) {
-      try {
-        const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd",
-          { method: "GET", headers: { Accept: "application/json" }, mode: "cors" }
-        );
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const data = await response.json();
-        return data["smp-token-id"]?.usd || null;
-      } catch (error) {
-        console.error(`Attempt ${attempt} - Error fetching SMP price:`, error);
-        if (attempt === retryCount) return null;
-        await delay(retryDelay * attempt);
-      }
-    }
-  };
+  const calculateSolPriceInUsd = useCallback((pool) => {
+    const solAmount = parseFloat(pool.pool_token_amounts[1]);
+    const solUsd = parseFloat(pool.pool_token_usd_amounts[1]);
+    if (solAmount <= 0 || solUsd <= 0) throw new Error("Invalid pool amounts for SOL");
+    return solUsd / solAmount;
+  }, []);
+
+  const calculateSmpPerSol = useCallback((pool) => {
+    const smpAmount = parseFloat(pool.pool_token_amounts[0]);
+    const solAmount = parseFloat(pool.pool_token_amounts[1]);
+    if (smpAmount <= 0 || solAmount <= 0) throw new Error("Invalid pool amounts for SMP/SOL");
+    return smpAmount / solAmount;
+  }, []);
+
+  const convertUsdcToSmp = useCallback(async (usdcAmount) => {
+    const pool = await fetchPoolData();
+    const solUsd = calculateSolPriceInUsd(pool);
+    const smpPerSol = calculateSmpPerSol(pool);
+    const solAmount = usdcAmount / solUsd;
+    return solAmount * smpPerSol;
+  }, [fetchPoolData, calculateSolPriceInUsd, calculateSmpPerSol]);
 
   const fetchPrices = useCallback(async () => {
     try {
-      const [sol, smp] = await Promise.all([fetchSolPrice(), fetchSmpPrice()]);
-      setSolPrice(sol || 100);
-      setSmpPrice(smp || null);
+      const cacheKey = "priceCacheWeb";
+      const cacheExpiry = 5 * 60 * 1000;
+      const cached = typeof window !== "undefined" ? localStorage.getItem(cacheKey) : null;
+      if (cached) {
+        try {
+          const { timestamp, solPrice: cSol, smpPrice: cSmp } = JSON.parse(cached);
+          if (Date.now() - timestamp < cacheExpiry && cSol > 0 && cSmp > 0) {
+            setSolPrice(cSol);
+            setSmpPrice(cSmp);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      let sol = 100;
+      let smp = 0.01;
+      const smpAmount = await convertUsdcToSmp(USDC_AMOUNT);
+      if (smpAmount && smpAmount > 0) {
+        smp = USDC_AMOUNT / smpAmount;
+        const pool = await fetchPoolData();
+        sol = calculateSolPriceInUsd(pool);
+      }
+      setSolPrice(sol);
+      setSmpPrice(smp);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "priceCacheWeb",
+          JSON.stringify({ timestamp: Date.now(), solPrice: sol, smpPrice: smp })
+        );
+      }
     } catch (error) {
-      console.error("Error fetching prices:", error);
-      setError("Failed to fetch price data. Using default values.");
+      console.error("[fetchPrices] Error:", error);
       setSolPrice(100);
-      setSmpPrice(null);
-      setTimeout(() => setError(null), 5000);
+      setSmpPrice(0.01);
     }
-  }, []);
+  }, [convertUsdcToSmp, fetchPoolData, calculateSolPriceInUsd]);
 
   const fetchSmpBalanceOnChain = useCallback(async (retryCount = 3, retryDelay = 1000) => {
     if (!activeWalletAddress || !activePublicKey) return 0;
@@ -180,6 +205,12 @@ export default function ChapterPage() {
     }
   }, [activeWalletAddress, activePublicKey]);
 
+  // $0.025 worth of SMP in base units
+  const SMP_READ_COST = useMemo(() => {
+    if (!smpPrice || smpPrice <= 0) return 25_000_000; // fallback base units (0.025 / 0.001 = 25)
+    return Math.ceil((USDC_AMOUNT / smpPrice) * 10 ** SMP_DECIMALS);
+  }, [smpPrice]);
+
   const fetchUserBalances = useCallback(async () => {
     if (!activeWalletAddress) return;
     try {
@@ -192,42 +223,9 @@ export default function ChapterPage() {
       setUserId(userData.id);
       setWeeklyPoints(userData.weekly_points || 0);
 
-      const { data: balanceData, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("amount")
-        .eq("wallet_address", activeWalletAddress)
-        .eq("currency", "SMP")
-        .single();
-      if (balanceError) {
-        console.error("Supabase balance error:", balanceError);
-        const smpBalanceOnChain = await fetchSmpBalanceOnChain();
-        setSmpBalance(smpBalanceOnChain || 0);
-        // Update Supabase with on-chain balance
-        await supabase
-          .from("wallet_balances")
-          .upsert({
-            wallet_address: activeWalletAddress,
-            currency: "SMP",
-            amount: smpBalanceOnChain,
-            chain: "SOL",
-            decimals: SMP_DECIMALS,
-            user_id: userData.id,
-          });
-      } else {
-        console.log("Supabase SMP balance:", balanceData.amount);
-        setSmpBalance(balanceData.amount);
-        // Verify on-chain balance and warn if out of sync
-        const smpBalanceOnChain = await fetchSmpBalanceOnChain();
-        if (Math.abs(balanceData.amount - smpBalanceOnChain) > 0.01) {
-          console.warn(
-            `Balance mismatch! Supabase: ${balanceData.amount} SMP, On-chain: ${smpBalanceOnChain} SMP`
-          );
-          setWarningMessage(
-            `Your wallet balance is out of sync (Supabase: ${balanceData.amount.toLocaleString()} SMP, On-chain: ${smpBalanceOnChain.toLocaleString()} SMP). Contact support to resolve.`
-          );
-          setTimeout(() => setWarningMessage(""), 10000);
-        }
-      }
+      // Display on-chain balance in UI
+      const onChain = await fetchSmpBalanceOnChain();
+      setSmpBalance(onChain ?? 0);
     } catch (error) {
       console.error("Error fetching user balances:", error);
       setError("Unable to load wallet balances.");
@@ -288,24 +286,11 @@ export default function ChapterPage() {
         .eq("currency", "SMP")
         .single();
       if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
-      if (walletBalance.amount < 1000) throw new Error("Insufficient SMP balance: " + walletBalance.amount.toLocaleString() + " SMP");
+      const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
+      if (walletBalance.amount < requiredSmp)
+        throw new Error("Insufficient SMP balance: " + walletBalance.amount.toLocaleString() + " SMP");
 
-      // Verify on-chain balance
-      const sourceATA = await getOrCreateAssociatedTokenAccount(
-        connection,
-        activePublicKey,
-        SMP_MINT_ADDRESS,
-        activePublicKey
-      );
-      const smpBalanceOnChain = Number((await getAccount(connection, sourceATA.address)).amount) / 10 ** SMP_DECIMALS;
-      if (smpBalanceOnChain < 1000) {
-        // Warn user but proceed if Supabase balance is sufficient
-        setWarningMessage(
-          `On-chain balance too low (${smpBalanceOnChain.toLocaleString()} SMP). Please sync your wallet with ${1000 - smpBalanceOnChain} SMP to proceed.`
-        );
-        setTimeout(() => setWarningMessage(""), 10000);
-        throw new Error(`Insufficient SMP balance on-chain: ${smpBalanceOnChain.toLocaleString()} SMP`);
-      }
+      // Removed on-chain balance verification and sync messaging by request
 
       const { data: novelOwnerData, error: novelOwnerError } = await supabase
         .from("novels")
@@ -355,7 +340,7 @@ export default function ChapterPage() {
           sourceATA.address,
           destATA.address,
           activePublicKey,
-          1000 * 10 ** SMP_DECIMALS,
+          SMP_READ_COST,
           [],
           TOKEN_PROGRAM_ID
         )
@@ -385,7 +370,7 @@ export default function ChapterPage() {
       );
 
       // Update Supabase balance after successful transaction
-      const newSmpBalance = walletBalance.amount - 1000;
+      const newSmpBalance = walletBalance.amount - requiredSmp;
       const { error: updateError } = await supabase
         .from("wallet_balances")
         .update({ amount: newSmpBalance })
@@ -468,7 +453,7 @@ export default function ChapterPage() {
           event_details: eventDetails,
           source_chain: "SOL",
           source_currency: "SMP",
-          amount_change: -1000,
+          amount_change: -requiredSmp,
           wallet_address: activeWalletAddress,
           source_user_id: user.id,
           destination_chain: "SOL",
@@ -506,7 +491,9 @@ export default function ChapterPage() {
           });
       }
 
-      setSuccessMessage(`Payment successful! 1,000 SMP sent on-chain. You earned ${readerReward} points.`);
+      setSuccessMessage(
+        `Payment successful! ${(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP sent on-chain. You earned ${readerReward} points.`
+      );
       setSmpBalance(newSmpBalance);
       setWeeklyPoints(newReaderBalance);
       setTimeout(() => setSuccessMessage(""), 5000);
@@ -535,13 +522,13 @@ export default function ChapterPage() {
       return;
     }
     setReadingMode("paid");
-    await updateTokenBalance();
+    await processChapterPayment("SINGLE", "SMP");
   };
 
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      if (!isWalletConnected && chapterNum >= 2) {
+      if (!isWalletConnected && chapterNum > 0) {
         setShowConnectPopup(true);
         setLoading(false);
         return;
@@ -583,6 +570,11 @@ export default function ChapterPage() {
 
   const checkAccess = async (userId) => {
     try {
+      // If we've just unlocked via this session, trust the local flag to avoid race conditions
+      if (localUnlocked) {
+        setIsLocked(false);
+        return;
+      }
       const { data: novelData, error: novelError } = await supabase
         .from("novels")
         .select("*")
@@ -663,13 +655,29 @@ export default function ChapterPage() {
       }
       setCanUnlockNextThree(allPreviousUnlocked);
 
-      if (
-        !chapterAdvanceInfo.is_advance ||
-        (chapterAdvanceInfo.free_release_date &&
-          new Date(chapterAdvanceInfo.free_release_date) <= new Date())
-      ) {
+      // Enforce paywall: only chapter 1 (index 0) is free. Others require payment/subscription.
+      if (chapterNum === 0) {
         setIsLocked(false);
-      } else if (userId) {
+        return;
+      }
+
+      // If user is authenticated, check per-chapter payment first (chapter_number is 1-based in DB)
+      if (userId) {
+        const { data: paid } = await supabase
+          .from("chapter_payments")
+          .select("id")
+          .eq("wallet_address", activeWalletAddress)
+          .eq("novel_id", id)
+          .eq("chapter_number", chapterNum + 1)
+          .maybeSingle();
+        if (paid) {
+          setIsLocked(false);
+          return;
+        }
+      }
+
+      // For advance chapters, allow subscription unlocks
+      if (chapterAdvanceInfo.is_advance && userId) {
         const { data: unlock, error: unlockError } = await supabase
           .from("unlocked_story_chapters")
           .select("chapter_unlocked_till, expires_at, subscription_type")
@@ -690,10 +698,8 @@ export default function ChapterPage() {
             }
           }
         }
-        setIsLocked(true);
-      } else {
-        setIsLocked(true);
       }
+      setIsLocked(true);
     } catch (err) {
       console.error("Error checking access:", err);
       setError("Failed to load chapter access.");
@@ -703,6 +709,11 @@ export default function ChapterPage() {
       setLoading(false);
     }
   };
+
+  // Reset local unlocked flag when navigating to a different chapter
+  useEffect(() => {
+    setLocalUnlocked(false);
+  }, [chapter, id]);
 
   const fetchRatings = async () => {
     if (!userId) return;
@@ -773,157 +784,52 @@ export default function ChapterPage() {
     await fetchRatings();
   };
 
-  const getAssociatedTokenAddress = async (owner, mint) => {
-    return await PublicKey.findProgramAddress(
-      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-      new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
-    );
-  };
+  // removed corrupted helper; not needed after switching to proxy flow
 
-  const initiatePayment = async (subscriptionType, currency) => {
-    if (!activeWalletAddress || !activePublicKey) {
-      setError("Please connect your wallet");
-      return;
-    }
-
-    const usdAmount = subscriptionType === "3CHAPTERS" ? 3 : 15;
-    let amount, decimals, mint, displayAmount;
-
+  const processChapterPayment = async (subscriptionType, currency) => {
     try {
-      await fetchPrices();
-      if (currency === "SOL") {
-        if (!solPrice) throw new Error("SOL price not available");
-        amount = Math.round((usdAmount / solPrice) * LAMPORTS_PER_SOL);
-        decimals = 9;
-        displayAmount = (amount / LAMPORTS_PER_SOL).toFixed(4);
-      } else {
-        const price = currency === "USDC" ? usdcPrice : smpPrice;
-        if (!price) throw new Error(`${currency} price not available`);
-        mint = currency === "USDC" ? USDC_MINT_ADDRESS : SMP_MINT_ADDRESS;
-        decimals = currency === "USDC" ? 6 : SMP_DECIMALS;
-        amount = Math.round((usdAmount / price) * 10 ** decimals);
-        displayAmount = (amount / 10 ** decimals).toFixed(2);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        setError("You must be signed in to unlock chapters.");
+        setTimeout(() => setError(null), 5000);
+        return;
       }
-
-      setTransactionDetails({
-        subscriptionType,
-        currency,
-        amount,
-        displayAmount,
-        decimals,
-        mint,
+      const resp = await fetch("/api/unlock-chapter-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          novelId: id,
+          chapterId: parseInt(chapter, 10) + 1,
+          paymentType: subscriptionType,
+          currency,
+        }),
       });
-      setShowTransactionPopup(true);
-    } catch (error) {
-      console.error("Error initiating payment:", error);
-      setError(`Failed to initiate payment: ${error.message}`);
+      const result = await resp.json();
+      if (!resp.ok || !result?.success) {
+        throw new Error(result?.error || "Unlock failed");
+      }
+      setIsLocked(false);
+      setLocalUnlocked(true);
+      setSuccessMessage("Chapter unlocked successfully.");
+      setTimeout(() => setSuccessMessage(""), 5000);
+      return true;
+    } catch (e) {
+      console.error("processChapterPayment error:", e);
+      setError(e.message || "Failed to process payment.");
       setTimeout(() => setError(null), 5000);
+      return false;
     }
   };
 
   const confirmPayment = async () => {
     if (!transactionDetails) return;
-
-    const { subscriptionType, currency, amount, decimals, mint } = transactionDetails;
-
-    if (!activePublicKey) {
-      setError("No wallet selected. Please connect a wallet and try again.");
-      setShowTransactionPopup(false);
-      return;
-    }
-
+    const { subscriptionType, currency } = transactionDetails;
     try {
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      let signature;
-
-      const balance = await connection.getBalance(activePublicKey);
-      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000;
-
-      if (balance < minBalanceRequired) {
-        throw new Error(
-          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available`
-        );
-      }
-
-      if (currency === "SOL") {
-        const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          feePayer: activePublicKey,
-        }).add(
-          SystemProgram.transfer({
-            fromPubkey: activePublicKey,
-            toPubkey: new PublicKey(TARGET_WALLET),
-            lamports: amount,
-          })
-        );
-
-        if (embeddedWallet) {
-          const password = prompt("Enter your wallet password to proceed:");
-          if (!password) throw new Error("Password required for embedded wallet.");
-          const secretKey = getSecretKey(password);
-          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-          const keypair = Keypair.fromSecretKey(secretKey);
-          transaction.sign(keypair);
-          signature = await connection.sendRawTransaction(transaction.serialize());
-        } else if (connected && sendTransaction) {
-          signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-          });
-        } else {
-          throw new Error("No valid wallet available for signing the transaction.");
-        }
-
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          "confirmed"
-        );
-        await processUnlock(subscriptionType, signature, amount / LAMPORTS_PER_SOL, currency);
-      } else {
-        const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
-        const destATA = (await getAssociatedTokenAddress(new PublicKey(TARGET_WALLET), mint))[0];
-
-        const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          feePayer: activePublicKey,
-        }).add(
-          createTransferInstruction(
-            sourceATA,
-            destATA,
-            activePublicKey,
-            amount,
-            [],
-            TOKEN_PROGRAM_ID
-          )
-        );
-
-        if (embeddedWallet) {
-          const password = prompt("Enter your wallet password to proceed:");
-          if (!password) throw new Error("Password required for embedded wallet.");
-          const secretKey = getSecretKey(password);
-          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-          const keypair = Keypair.fromSecretKey(secretKey);
-          transaction.sign(keypair);
-          signature = await connection.sendRawTransaction(transaction.serialize());
-        } else if (connected && sendTransaction) {
-          signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-          });
-        } else {
-          throw new Error("No valid wallet available for signing the transaction.");
-        }
-
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          "confirmed"
-        );
-        await processUnlock(subscriptionType, signature, amount / 10 ** decimals, currency);
-      }
-    } catch (error) {
-      console.error(`${currency} Payment Error:`, error);
-      setError(`Payment failed: ${error.message}`);
-      setTimeout(() => setError(null), 5000);
+      await processChapterPayment(subscriptionType, currency);
     } finally {
       setShowTransactionPopup(false);
       setTransactionDetails(null);
@@ -1020,27 +926,6 @@ export default function ChapterPage() {
   const pauseText = () => window.speechSynthesis.pause();
   const resumeText = () => window.speechSynthesis.resume();
   const stopText = () => window.speechSynthesis.cancel();
-
-  if (loading) return <LoadingPage />;
-
-  const chapterNum = parseInt(chapter, 10);
-  if (!isWalletConnected && chapterNum >= 2) {
-    return (
-      <div className={styles.connectPopupOverlay}>
-        <div className={styles.connectPopup}>
-          <button onClick={() => router.push(`/novel/${id}`)} className={styles.closePopupButton}>
-            <FaTimes />
-          </button>
-          <h3 className={styles.popupTitle}>Connect Wallet Required</h3>
-          <p className={styles.popupMessage}>Please connect your wallet to read Chapter 3 and beyond.</p>
-          <WalletMultiButton className={styles.connectWalletButton} />
-          <Link href="/" onClick={() => router.push("/")} className={styles.backHomeLink}>
-            <FaHome /> Back to Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const chapterData = novel?.chaptercontents?.[chapter];
   const chapterTitle = novel?.chaptertitles?.[chapter];
@@ -1156,93 +1041,85 @@ export default function ChapterPage() {
             <div className={styles.lockIconWrapper}>
               <FaLock className={styles.lockIcon} />
             </div>
-            {advanceInfo?.is_advance ? (
-              <p className={styles.message}>{releaseDateMessage}</p>
+            {!advanceInfo?.is_advance ? (
+              <div className={styles.centerAction}>
+                <button
+                  onClick={() => processChapterPayment("SINGLE", "SMP")}
+                  className={styles.readWithSmpButton}
+                >
+                  <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
+                </button>
+              </div>
             ) : (
-              <p className={styles.message}>
-                <FaLock className={styles.messageIcon} /> This chapter is locked
-              </p>
+              <>
+                <p className={styles.subMessage}>
+                  <FaGem className={styles.gemIcon} /> Unlock with a subscription
+                </p>
+                <div className={styles.paymentOptions}>
+                  <button
+                    onClick={() => initiatePayment("3CHAPTERS", "SOL")}
+                    className={`${styles.unlockButton} ${styles.threeChapters}`}
+                    disabled={!canUnlockNextThree || !solPrice}
+                    title={!canUnlockNextThree ? "Unlock previous chapters first" : !solPrice ? "Price unavailable" : ""}
+                  >
+                    <FaRocket className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>3 Chapters (SOL)</span>
+                    <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
+                  </button>
+                  <button
+                    onClick={() => initiatePayment("FULL", "SOL")}
+                    className={`${styles.unlockButton} ${styles.fullChapters}`}
+                    disabled={!solPrice}
+                    title={!solPrice ? "Price unavailable" : ""}
+                  >
+                    <FaCrown className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>All Chapters (SOL)</span>
+                    <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
+                  </button>
+                  <button
+                    onClick={() => initiatePayment("3CHAPTERS", "USDC")}
+                    className={`${styles.unlockButton} ${styles.threeChapters}`}
+                    disabled={!canUnlockNextThree}
+                    title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
+                  >
+                    <FaRocket className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>3 Chapters (USDC)</span>
+                    <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
+                  </button>
+                  <button
+                    onClick={() => initiatePayment("FULL", "USDC")}
+                    className={`${styles.unlockButton} ${styles.fullChapters}`}
+                  >
+                    <FaCrown className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>All Chapters (USDC)</span>
+                    <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
+                  </button>
+                  <button
+                    onClick={() => initiatePayment("3CHAPTERS", "SMP")}
+                    className={`${styles.unlockButton} ${styles.threeChapters}`}
+                    disabled={!canUnlockNextThree || !smpPrice}
+                    title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
+                  >
+                    <FaRocket className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>3 Chapters (SMP)</span>
+                    <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
+                  </button>
+                  <button
+                    onClick={() => initiatePayment("FULL", "SMP")}
+                    className={`${styles.unlockButton} ${styles.fullChapters}`}
+                    disabled={!smpPrice}
+                    title={!smpPrice ? "SMP price unavailable" : ""}
+                  >
+                    <FaCrown className={styles.buttonIcon} />
+                    <span className={styles.buttonText}>All Chapters (SMP)</span>
+                    <span className={styles.price}>$15 / {fullChaptersSmp} SMP</span>
+                  </button>
+                </div>
+              </>
             )}
-            <p className={styles.subMessage}>
-              <FaGem className={styles.gemIcon} /> Unlock with a subscription
-            </p>
-            <div className={styles.paymentOptions}>
-              <button
-                onClick={() => initiatePayment("3CHAPTERS", "SOL")}
-                className={`${styles.unlockButton} ${styles.threeChapters}`}
-                disabled={!canUnlockNextThree || !solPrice}
-                title={!canUnlockNextThree ? "Unlock previous chapters first" : !solPrice ? "Price unavailable" : ""}
-              >
-                <FaRocket className={styles.buttonIcon} />
-                <span className={styles.buttonText}>3 Chapters (SOL)</span>
-                <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
-              </button>
-              <button
-                onClick={() => initiatePayment("FULL", "SOL")}
-                className={`${styles.unlockButton} ${styles.fullChapters}`}
-                disabled={!solPrice}
-                title={!solPrice ? "Price unavailable" : ""}
-              >
-                <FaCrown className={styles.buttonIcon} />
-                <span className={styles.buttonText}>All Chapters (SOL)</span>
-                <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
-              </button>
-              <button
-                onClick={() => initiatePayment("3CHAPTERS", "USDC")}
-                className={`${styles.unlockButton} ${styles.threeChapters}`}
-                disabled={!canUnlockNextThree}
-                title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
-              >
-                <FaRocket className={styles.buttonIcon} />
-                <span className={styles.buttonText}>3 Chapters (USDC)</span>
-                <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
-              </button>
-              <button
-                onClick={() => initiatePayment("FULL", "USDC")}
-                className={`${styles.unlockButton} ${styles.fullChapters}`}
-              >
-                <FaCrown className={styles.buttonIcon} />
-                <span className={styles.buttonText}>All Chapters (USDC)</span>
-                <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
-              </button>
-              <button
-                onClick={() => initiatePayment("3CHAPTERS", "SMP")}
-                className={`${styles.unlockButton} ${styles.threeChapters}`}
-                disabled={!canUnlockNextThree || !smpPrice}
-                title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
-              >
-                <FaRocket className={styles.buttonIcon} />
-                <span className={styles.buttonText}>3 Chapters (SMP)</span>
-                <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
-              </button>
-              <button
-                onClick={() => initiatePayment("FULL", "SMP")}
-                className={`${styles.unlockButton} ${styles.fullChapters}`}
-                disabled={!smpPrice}
-                title={!smpPrice ? "SMP price unavailable" : ""}
-              >
-                <FaCrown className={styles.buttonIcon} />
-                <span className={styles.buttonText}>All Chapters (SMP)</span>
-                <span className={styles.price}>$15 / {fullChaptersSmp} SMP</span>
-              </button>
-            </div>
           </div>
         ) : (
           <>
-            <div className={styles.readingOptions}>
-              {isWalletConnected && (
-                <button
-                  onClick={handleReadWithSMP}
-                  className={styles.readWithSmpButton}
-                  disabled={readingMode === "paid"}
-                >
-                  <FaGem className={styles.buttonIcon} /> Read with 1,000 SMP (Earn Points)
-                </button>
-              )}
-              <p className={styles.readingModeText}>
-                {readingMode === "free" ? "Reading for free (No points)" : "Reading with SMP (Points earned)"}
-              </p>
-            </div>
             <div className={styles.chapterContent}>
               <div dangerouslySetInnerHTML={{ __html: paragraphs }} className={styles.contentText}></div>
             </div>

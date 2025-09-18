@@ -1,8 +1,9 @@
 // app/layout.js
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
-import WalletProvider from "../components/WalletProvider"; // Existing external wallet provider
-import { EmbeddedWalletProvider } from "../components/EmbeddedWalletProvider"; // New embedded wallet provider
+import { EmbeddedWalletProvider } from "../components/EmbeddedWalletProvider"; // Embedded wallet provider
+import { AuthProvider } from "../components/AuthProvider"; // Supabase auth provider
+import WalletProvider from "../components/WalletProvider"; // Retained to avoid runtime errors in pages still using useWallet
 
 export const metadata = {
   title: "Sempai HQ",
@@ -21,9 +22,11 @@ export default function RootLayout({ children }) {
         {/* Add additional head elements like favicon or fonts here */}
       </head>
       <body>
-        <WalletProvider>
-          <EmbeddedWalletProvider>{children}</EmbeddedWalletProvider>
-        </WalletProvider>
+        <AuthProvider>
+          <WalletProvider>
+            <EmbeddedWalletProvider>{children}</EmbeddedWalletProvider>
+          </WalletProvider>
+        </AuthProvider>
       </body>
     </html>
   );
