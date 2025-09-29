@@ -56,6 +56,10 @@ export const EmbeddedWalletProvider = ({ children }) => {
   // Session-scoped cache to avoid repeated decrypts
   const [cachedPrivateKeyBase58, setCachedPrivateKeyBase58] = useState(null);
 
+  // localStorage key helpers (per-user scoping)
+  const pubKeyName = (uid) => `embeddedWalletPublicKey:${uid || "nouser"}`;
+  const encKeyName = (uid) => `embeddedWalletSecretEncrypted:${uid || "nouser"}`;
+
   const getAuthHeaders = async () => {
     try {
       const { data } = await supabase.auth.getSession();
@@ -106,9 +110,15 @@ export const EmbeddedWalletProvider = ({ children }) => {
       // Cache private key for session speed
       setCachedPrivateKeyBase58(privateKeyBase58);
 
-      // Persist locally for quick access
-      localStorage.setItem("embeddedWalletPublicKey", publicKeyStr);
-      localStorage.setItem("embeddedWalletSecretEncrypted", encryptedSecret);
+      // Persist locally for quick access (scoped to user)
+      // Clear legacy generic keys to avoid cross-account bleed
+      try {
+        localStorage.removeItem("embeddedWalletPublicKey");
+        localStorage.removeItem("embeddedWalletSecretEncrypted");
+      } catch {}
+      const uid = user?.id || "nouser";
+      localStorage.setItem(pubKeyName(uid), publicKeyStr);
+      localStorage.setItem(encKeyName(uid), encryptedSecret);
 
       // Upsert user and wallet in Supabase
       if (user) {
@@ -182,8 +192,14 @@ export const EmbeddedWalletProvider = ({ children }) => {
 
       // Re-encrypt (using edge for consistency) and store locally for use
       const encryptedSecret = await edgeEncrypt(decryptedPrivateKey);
-      localStorage.setItem("embeddedWalletPublicKey", publicKeyStr);
-      localStorage.setItem("embeddedWalletSecretEncrypted", encryptedSecret);
+      // Persist locally (scoped to user) and clear legacy keys
+      try {
+        localStorage.removeItem("embeddedWalletPublicKey");
+        localStorage.removeItem("embeddedWalletSecretEncrypted");
+      } catch {}
+      const uid = user?.id || "nouser";
+      localStorage.setItem(pubKeyName(uid), publicKeyStr);
+      localStorage.setItem(encKeyName(uid), encryptedSecret);
       setWallet({ publicKey: publicKeyStr, encryptedSecret });
       return { publicKey: publicKeyStr, privateKey: decryptedPrivateKey };
     } catch (err) {
@@ -195,14 +211,23 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   };
 
-  // Load wallet from localStorage on mount
+  // Load wallet from localStorage when auth is ready
   useEffect(() => {
-    const publicKey = localStorage.getItem("embeddedWalletPublicKey");
-    const encryptedSecret = localStorage.getItem("embeddedWalletSecretEncrypted");
+    if (authLoading) return;
+    const uid = user?.id;
+    if (!uid) {
+      // No signed-in user: do not auto-load any wallet
+      setWallet(null);
+      return;
+    }
+    const publicKey = localStorage.getItem(pubKeyName(uid));
+    const encryptedSecret = localStorage.getItem(encKeyName(uid));
     if (publicKey && encryptedSecret) {
       setWallet({ publicKey, encryptedSecret });
+    } else {
+      setWallet(null);
     }
-  }, []);
+  }, [authLoading, user?.id]);
 
   // Pre-warm decryption cache in background to reduce first-time latency
   useEffect(() => {
@@ -226,7 +251,8 @@ export const EmbeddedWalletProvider = ({ children }) => {
       // Prefer cached private key for speed
       let privateKeyBase58 = cachedPrivateKeyBase58;
       if (!privateKeyBase58) {
-        const encryptedSecret = localStorage.getItem("embeddedWalletSecretEncrypted");
+        const uid = user?.id || "nouser";
+        const encryptedSecret = localStorage.getItem(encKeyName(uid));
         if (!encryptedSecret) throw new Error("No embedded wallet found.");
         privateKeyBase58 = await edgeDecrypt(encryptedSecret);
         setCachedPrivateKeyBase58(privateKeyBase58);

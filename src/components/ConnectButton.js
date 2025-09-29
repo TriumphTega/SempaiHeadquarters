@@ -25,6 +25,7 @@ export default function ConnectButton() {
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const wrapperRef = useRef(null);
+  const [hasWallet, setHasWallet] = useState(null); // null = unknown, true/false known
 
   const createUserAndBalance = useCallback(async (walletAddress) => {
     if (!walletAddress) return;
@@ -159,6 +160,27 @@ export default function ConnectButton() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [showMenu, wrapperRef]);
 
+  // When popup opens and user is signed in, detect if wallet exists on server
+  useEffect(() => {
+    const checkWallet = async () => {
+      if (!showPopup || !user) return;
+      try {
+        setHasWallet(null);
+        const { data, error } = await supabase
+          .from("users")
+          .select("wallet_address")
+          .eq("id", user.id)
+          .single();
+        if (error) throw error;
+        setHasWallet(!!data?.wallet_address);
+      } catch (e) {
+        console.warn("[ConnectButton] wallet check failed", e?.message || e);
+        setHasWallet(false);
+      }
+    };
+    checkWallet();
+  }, [showPopup, user]);
+
   const handleRetrieveEmbeddedWallet = async (e) => {
     e.preventDefault();
     if (password.length < 8) {
@@ -195,8 +217,25 @@ export default function ConnectButton() {
 
   const clearEmbeddedFromLocal = () => {
     try {
+      // Legacy keys
       localStorage.removeItem("embeddedWalletPublicKey");
       localStorage.removeItem("embeddedWalletSecretEncrypted");
+      // Per-user scoped keys
+      const uid = user?.id || "";
+      if (uid) {
+        localStorage.removeItem(`embeddedWalletPublicKey:${uid}`);
+        localStorage.removeItem(`embeddedWalletSecretEncrypted:${uid}`);
+      }
+      // Defensive: remove any key matching prefixes
+      const toDelete = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("embeddedWalletPublicKey:") || k.startsWith("embeddedWalletSecretEncrypted:")) {
+          toDelete.push(k);
+        }
+      }
+      toDelete.forEach((k) => localStorage.removeItem(k));
     } catch {}
   };
 
@@ -304,27 +343,31 @@ export default function ConnectButton() {
                 <button className={styles.popupEmbeddedButton} onClick={signInWithGoogle}>
                   <FaGoogle className={styles.buttonIcon} /> Sign in with Google
                 </button>
+              ) : hasWallet === null ? (
+                <div className={styles.loadingContainer}>
+                  <FaSpinner className={styles.spinner} />
+                  <span>Checking wallet...</span>
+                </div>
+              ) : hasWallet ? (
+                <button
+                  className={styles.popupEmbeddedButton}
+                  onClick={() => {
+                    setShowRetrieveForm(true);
+                    setShowPopup(false);
+                  }}
+                >
+                  <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
+                </button>
               ) : (
-                <>
-                  <button
-                    className={styles.popupEmbeddedButton}
-                    onClick={() => {
-                      setShowEmbeddedForm(true);
-                      setShowPopup(false);
-                    }}
-                  >
-                    <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
-                  </button>
-                  <button
-                    className={styles.popupEmbeddedButton}
-                    onClick={() => {
-                      setShowRetrieveForm(true);
-                      setShowPopup(false);
-                    }}
-                  >
-                    <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
-                  </button>
-                </>
+                <button
+                  className={styles.popupEmbeddedButton}
+                  onClick={() => {
+                    setShowEmbeddedForm(true);
+                    setShowPopup(false);
+                  }}
+                >
+                  <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
+                </button>
               )}
               <button
                 className={styles.cancelButton}

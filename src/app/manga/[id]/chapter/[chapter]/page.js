@@ -5,15 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
-import {
-  Connection,
-  PublicKey,
-  Transaction,
-  SystemProgram,
-  LAMPORTS_PER_SOL,
-  Keypair,
-} from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
@@ -215,7 +207,8 @@ export default function MangaChapter() {
       const firstChapterId = chaptersData?.[0]?.id;
       const isFirst = chapterData.id === firstChapterId;
       setIsFirstChapter(isFirst);
-      setPaymentRequired(!!chapterData.is_premium && !isFirst);
+      // No free-bypass: premium chapters always require payment/unlock. Non-premium still require wallet connection.
+      setPaymentRequired(!!chapterData.is_premium);
     }
     setLoading(false);
   };
@@ -289,214 +282,92 @@ export default function MangaChapter() {
     await fetchRatings();
   };
 
-  const getAssociatedTokenAddress = async (owner, mint) => {
-    return await PublicKey.findProgramAddress(
-      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-      new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
-    );
-  };
-
   const initiatePayment = async (currency) => {
-    if (!activeWalletAddress || !activePublicKey) {
-      setError("Please connect your wallet first.");
-      return;
-    }
-
-    // Use chapter price, fallback to 2.5 if null or invalid
-    const usdAmount = chapter?.price && chapter.price > 0 ? chapter.price : 2.5;
-    let amount, decimals, mint, displayAmount;
-
-    try {
-      const freshSolPrice = await fetchPrices();
-      setSolPrice(freshSolPrice);
-
-      if (currency === "SOL") {
-        if (!freshSolPrice) throw new Error("SOL price not available");
-        amount = Math.round((usdAmount / freshSolPrice) * LAMPORTS_PER_SOL);
-        decimals = 9;
-        displayAmount = (amount / LAMPORTS_PER_SOL).toFixed(5);
-      } else if (currency === "USDC") {
-        mint = USDC_MINT;
-        decimals = 6;
-        amount = Math.round((usdAmount / usdcPrice) * 10 ** decimals);
-        displayAmount = (amount / 10 ** decimals).toFixed(2);
-      } else {
-        throw new Error("Unsupported currency");
-      }
-
-      setTransactionDetails({
-        currency,
-        amount,
-        displayAmount,
-        decimals,
-        mint,
-        usdAmount, // Store USD amount for popup
-      });
-      setShowTransactionPopup(true);
-    } catch (error) {
-      console.error("Error initiating payment:", error);
-      setError(`Failed to initiate payment: ${error.message}`);
-    }
+    // Redirect payments to Edge Function via proxy (no client signing)
+    await handleEdgeUnlock(currency);
   };
 
-  const confirmPayment = async () => {
-    if (!transactionDetails || !activePublicKey) {
-      setError("No wallet selected or transaction details missing.");
-      setShowTransactionPopup(false);
-      return;
-    }
-
-    const { currency, amount, decimals, mint, usdAmount } = transactionDetails;
-
+  const handleEdgeUnlock = async (currency) => {
     try {
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      let signature;
-
-      const balance = await connection.getBalance(activePublicKey);
-      const minBalanceRequired = currency === "SOL" ? amount + 5000 : 5000;
-      if (balance < minBalanceRequired) {
-        throw new Error(
-          `Insufficient SOL balance: ${balance / LAMPORTS_PER_SOL} SOL available, need at least ${(minBalanceRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL`
-        );
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        setError("You must be signed in to unlock chapters.");
+        setTimeout(() => setError(null), 5000);
+        return;
       }
-
-      if (currency === "SOL") {
-        const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          feePayer: activePublicKey,
-        }).add(
-          SystemProgram.transfer({
-            fromPubkey: activePublicKey,
-            toPubkey: TEAM_WALLET,
-            lamports: amount,
-          })
-        );
-
-        if (embeddedWallet) {
-          if (!password) throw new Error("Password required for embedded wallet.");
-          const secretKey = getSecretKey(password);
-          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-          const keypair = Keypair.fromSecretKey(secretKey);
-          transaction.sign(keypair);
-          signature = await connection.sendRawTransaction(transaction.serialize());
-        } else if (connected && sendTransaction) {
-          signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-          });
-        } else {
-          throw new Error("No valid wallet available for signing the transaction.");
-        }
-
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          "confirmed"
-        );
-        setTransactionSignature(signature);
-        await processUnlock(signature, amount / LAMPORTS_PER_SOL, currency, usdAmount);
-      } else if (currency === "USDC") {
-        const sourceATA = (await getAssociatedTokenAddress(activePublicKey, mint))[0];
-        const destATA = (await getAssociatedTokenAddress(TEAM_WALLET, mint))[0];
-
-        const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          feePayer: activePublicKey,
-        }).add(
-          createTransferInstruction(
-            sourceATA,
-            destATA,
-            activePublicKey,
-            amount,
-            [],
-            TOKEN_PROGRAM_ID
-          )
-        );
-
-        if (embeddedWallet) {
-          if (!password) throw new Error("Password required for embedded wallet.");
-          const secretKey = getSecretKey(password);
-          if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-          const keypair = Keypair.fromSecretKey(secretKey);
-          transaction.sign(keypair);
-          signature = await connection.sendRawTransaction(transaction.serialize());
-        } else if (connected && sendTransaction) {
-          signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-          });
-        } else {
-          throw new Error("No valid wallet available for signing the transaction.");
-        }
-
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          "confirmed"
-        );
-        setTransactionSignature(signature);
-        await processUnlock(signature, amount / 10 ** decimals, currency, usdAmount);
-      }
-    } catch (error) {
-      console.error(`${currency} Payment Error:`, error);
-      setError(`Payment failed: ${error.message}`);
-    } finally {
-      setShowTransactionPopup(false);
-      setTransactionDetails(null);
-      setPassword("");
-    }
-  };
-
-  const processUnlock = async (signature, amount, currency, usdAmount) => {
-    try {
-      const payload = {
-        user_wallet: activeWalletAddress,
-        manga_id: mangaId,
-        chapter_id: chapterId,
-        signature,
-        amount: usdAmount, // Use USD amount for consistency in unlock records
-        currency,
-      };
-      const response = await fetch("/api/unlock-manga-chapter", {
+      const resp = await fetch("/api/unlock-manga-proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ mangaId, chapterId, currency }),
       });
-      const result = await response.json();
-      if (response.ok) {
-        setPaymentConfirmed(true);
-        setPaymentRequired(false);
-        setSuccessMessage("Payment successful! Chapter unlocked.");
-        setTimeout(() => setSuccessMessage(""), 5000);
-        await supabase.from("user_payments").insert({
-          user_wallet: activeWalletAddress,
-          chapter_id: chapterId,
-          manga_id: mangaId,
-          paid_at: new Date().toISOString(),
-          payment_method: currency,
-        });
-      } else {
-        setError(result.error || "Failed to unlock chapter.");
+      const result = await resp.json();
+      if (!resp.ok || !result?.success) {
+        throw new Error(result?.error || "Unlock failed");
       }
-    } catch (error) {
-      setError("Failed to process unlock: " + error.message);
+      setPaymentConfirmed(true);
+      setPaymentRequired(false);
+      setSuccessMessage("Chapter unlocked successfully.");
+      setTimeout(() => setSuccessMessage(""), 5000);
+      // Re-check DB access to be safe
+      await checkExistingPayment();
+    } catch (e) {
+      console.error("handleEdgeUnlock error:", e);
+      setError(e.message || "Failed to process payment.");
+      setTimeout(() => setError(null), 5000);
     }
   };
 
   const checkExistingPayment = async () => {
-    if (!activeWalletAddress || !chapter?.is_premium || isFirstChapter) return;
-    const { data, error } = await supabase
+    if (!activeWalletAddress || !chapter) return;
+    // Non-premium chapters don't need payment but still require wallet connection (handled in UI)
+    if (!chapter.is_premium) {
+      setPaymentConfirmed(true);
+      setPaymentRequired(false);
+      return;
+    }
+    // user_payments check by wallet
+    const { data: paid, error: payErr } = await supabase
       .from("user_payments")
       .select("id")
       .eq("user_wallet", activeWalletAddress)
       .eq("chapter_id", chapterId)
       .eq("manga_id", mangaId)
       .limit(1);
-    if (error) {
-      console.warn("[checkExistingPayment]", error.message);
-      return;
-    }
-    if (Array.isArray(data) && data.length > 0) {
+    if (!payErr && Array.isArray(paid) && paid.length > 0) {
       setPaymentConfirmed(true);
       setPaymentRequired(false);
+      return;
+    }
+    // unlocked_manga_chapters check by user_id
+    try {
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("id")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
+      const uid = userRow?.id;
+      if (!uid) return;
+      const { data: unlocked, error: unlockErr } = await supabase
+        .from("unlocked_manga_chapters")
+        .select("id, expires_at")
+        .eq("user_id", uid)
+        .eq("manga_id", mangaId)
+        .eq("chapter_id", chapterId)
+        .limit(1);
+      if (!unlockErr && Array.isArray(unlocked) && unlocked.length > 0) {
+        const exp = unlocked[0].expires_at ? new Date(unlocked[0].expires_at) : null;
+        if (!exp || exp > new Date()) {
+          setPaymentConfirmed(true);
+          setPaymentRequired(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("[checkExistingPayment unlocked]", e?.message || e);
     }
   };
 
@@ -530,6 +401,11 @@ export default function MangaChapter() {
 
   useEffect(() => {
     async function initialize() {
+      // Require wallet connection for ALL chapters
+      if (!isWalletConnected || !activeWalletAddress) {
+        setLoading(false);
+        return;
+      }
       if (isWalletConnected && activeWalletAddress) {
         let { data: user, error: userError } = await supabase
           .from("users")
@@ -562,8 +438,8 @@ export default function MangaChapter() {
   }, [isWalletConnected, activeWalletAddress, chapterId, mangaId]);
 
   useEffect(() => {
-    if (chapter?.is_premium && isWalletConnected && !isFirstChapter) checkExistingPayment();
-  }, [isWalletConnected, activeWalletAddress, chapter, isFirstChapter]);
+    if (isWalletConnected && chapter) checkExistingPayment();
+  }, [isWalletConnected, activeWalletAddress, chapter]);
 
   const updateTokenBalance = useCallback(async () => {
     if (!activeWalletAddress || !chapter || !mangaId || !chapterId) return;
@@ -775,7 +651,7 @@ export default function MangaChapter() {
   const chapterPrice = chapter?.price && chapter.price > 0 ? chapter.price : 2.5;
   const solAmount = solPrice ? (chapterPrice / solPrice).toFixed(5) : "Loading...";
   const usdcAmount = (chapterPrice / usdcPrice).toFixed(2);
-  const canDownload = isWalletConnected && (isFirstChapter || (chapter.is_premium && paymentConfirmed));
+  const canDownload = isWalletConnected && (!chapter.is_premium || paymentConfirmed);
 
   return (
     <div className={styles.page}>
@@ -851,7 +727,7 @@ export default function MangaChapter() {
         {warningMessage && <div className={styles.warning}>{warningMessage}</div>}
         {error && <div className={styles.error}>{error}</div>}
 
-        {!isWalletConnected && !isFirstChapter ? (
+        {!isWalletConnected ? (
           <div className={styles.paymentSection}>
             <FaLock className={styles.lockIcon} />
             <p>Please connect your wallet to read this chapter.</p>

@@ -907,6 +907,10 @@ export default function Home() {
         </div>
       </nav>
 
+      <div className={styles.banner}>
+        <p className={styles.bannerText}>we will keep building, if you keep writing</p>
+      </div>
+
       <header className={styles.hero}>
         <div className={styles.heroContent}>
           <button onClick={toggleAnnouncements} className={styles.announcementToggle}>

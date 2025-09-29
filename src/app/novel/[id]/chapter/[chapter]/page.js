@@ -528,7 +528,8 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      if (!isWalletConnected && chapterNum > 0) {
+      // Require wallet connection for ALL chapters
+      if (!isWalletConnected) {
         setShowConnectPopup(true);
         setLoading(false);
         return;
@@ -606,17 +607,7 @@ export default function ChapterPage() {
         }
       }
 
-      if (chapterNum <= 1) {
-        if (
-          !chapterAdvanceInfo.is_advance ||
-          (chapterAdvanceInfo.free_release_date &&
-            new Date(chapterAdvanceInfo.free_release_date) <= new Date())
-        ) {
-          setIsLocked(false);
-          setCanUnlockNextThree(false);
-          return;
-        }
-      }
+      // No free-bypass: even earliest chapters require unlock
 
       let allPreviousUnlocked = true;
       const advanceChapters = novelData.advance_chapters || [];
@@ -655,29 +646,25 @@ export default function ChapterPage() {
       }
       setCanUnlockNextThree(allPreviousUnlocked);
 
-      // Enforce paywall: only chapter 1 (index 0) is free. Others require payment/subscription.
-      if (chapterNum === 0) {
-        setIsLocked(false);
-        return;
-      }
+      // Enforce paywall: ALL chapters require payment/subscription unlock
 
       // If user is authenticated, check per-chapter payment first (chapter_number is 1-based in DB)
       if (userId) {
-        const { data: paid } = await supabase
+        const { data: payments, error: payErr } = await supabase
           .from("chapter_payments")
           .select("id")
           .eq("wallet_address", activeWalletAddress)
           .eq("novel_id", id)
           .eq("chapter_number", chapterNum + 1)
-          .maybeSingle();
-        if (paid) {
+          .limit(1);
+        if (!payErr && Array.isArray(payments) && payments.length > 0) {
           setIsLocked(false);
           return;
         }
       }
 
       // For advance chapters, allow subscription unlocks
-      if (chapterAdvanceInfo.is_advance && userId) {
+      if (userId) {
         const { data: unlock, error: unlockError } = await supabase
           .from("unlocked_story_chapters")
           .select("chapter_unlocked_till, expires_at, subscription_type")
@@ -691,7 +678,7 @@ export default function ChapterPage() {
           if (!expired) {
             if (
               unlock.chapter_unlocked_till === -1 ||
-              (unlock.chapter_unlocked_till >= chapterNum && chapterNum < totalChapters)
+              unlock.chapter_unlocked_till >= chapterNum
             ) {
               setIsLocked(false);
               return;
@@ -904,11 +891,8 @@ export default function ChapterPage() {
     }
   }, [fetchNovel, fetchPrices]);
 
-  useEffect(() => {
-    if (!loading && novel && (isWalletConnected || parseInt(chapter, 10) <= 1) && !isLocked && readingMode === "paid") {
-      if (isWalletConnected) updateTokenBalance();
-    }
-  }, [loading, novel, isWalletConnected, isLocked, chapter, updateTokenBalance, readingMode]);
+  // Do not run any client-side on-chain transfer after unlock.
+  // The unlock is processed by the edge function and reflected in DB; we only re-check access via DB.
 
   const readText = (text) => {
     if ("speechSynthesis" in window) {
