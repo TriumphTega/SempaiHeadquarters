@@ -69,10 +69,12 @@ export default function NovelDashboard() {
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
   const [tags, setTags] = useState([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
-  const [showNovelDeleteConfirm, setShowNovelDeleteConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [novelToDelete, setNovelToDelete] = useState(null);
+  const [showNovelDeleteConfirm, setShowNovelDeleteConfirm] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [showInHome, setShowInHome] = useState(true);
   const chapterTitleRef = useRef(null);
   const router = useRouter();
 
@@ -328,6 +330,8 @@ export default function NovelDashboard() {
     setChapterContents(novel.chaptercontents || []);
     setAdvanceChapters(novel.advance_chapters || []);
     setTags(novel.tags ? novel.tags.map(tag => ({ value: tag, label: tag })) : []);
+    setIsVisible(novel.is_visible !== false);
+    setShowInHome(novel.show_in_home !== false);
   };
 
   const handleDeleteNovel = (novel) => {
@@ -395,7 +399,9 @@ export default function NovelDashboard() {
         chaptercontents: chapterContents,
         advance_chapters: advanceChapters,
         tags: tags.map(tag => tag.value),
-        viewers_count: selectedNovel ? selectedNovel.viewers_count : 0
+        viewers_count: selectedNovel ? selectedNovel.viewers_count : 0,
+        is_visible: isVisible,
+        show_in_home: showInHome
       };
 
       let novelId, chapterNumber, message;
@@ -522,6 +528,8 @@ export default function NovelDashboard() {
     setSelectedNovel(null);
     setEditChapterIndex(null);
     setTags([]);
+    setIsVisible(true);
+    setShowInHome(true);
   };
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -655,6 +663,28 @@ export default function NovelDashboard() {
                     className={styles.tagSelect}
                   />
                 </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>
+                    <input
+                      type="checkbox"
+                      checked={isVisible}
+                      onChange={(e) => setIsVisible(e.target.checked)}
+                    />
+                    {' '}Make novel visible to readers
+                  </label>
+                </div>
+                {isSuperuser && (
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>
+                      <input
+                        type="checkbox"
+                        checked={showInHome}
+                        onChange={(e) => setShowInHome(e.target.checked)}
+                      />
+                      {' '}Show in home carousel (Superuser)
+                    </label>
+                  </div>
+                )}
                 <div className={styles.chapterSection}>
                   <h3 className={styles.chapterTitle}><FaPlus /> Chapters</h3>
                   <div className={styles.inputGroup}>
@@ -823,6 +853,10 @@ export default function NovelDashboard() {
                         <p className={styles.novelSummary}>{novel.summary.slice(0, 50)}...</p>
                         <p className={styles.novelTags}>Tags: {novel.tags?.join(", ") || "None"}</p>
                         <p className={styles.novelViewers}>Viewers: {novel.viewers_count || 0}</p>
+                        <p className={styles.novelStatus}>
+                          {novel.is_visible ? "✓ Visible" : "✗ Hidden"}
+                          {isSuperuser && (novel.show_in_home ? " | ✓ In Carousel" : " | ✗ Not in Carousel")}
+                        </p>
                         {(novel.user_id === currentUserId || isSuperuser) && (
                           <div className={styles.novelActions}>
                             <button type="button" onClick={() => handleEditNovel(novel)} className={styles.editNovelButton}><FaEdit /> Edit</button>

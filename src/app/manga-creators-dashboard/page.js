@@ -65,6 +65,8 @@ export default function MangaDashboard() {
   const [noticeText, setNoticeText] = useState("");
   const [noticeDate, setNoticeDate] = useState(null);
   const [tags, setTags] = useState([]);
+  const [isVisible, setIsVisible] = useState(true);
+  const [showInHome, setShowInHome] = useState(true);
   const chapterInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const router = useRouter();
@@ -235,6 +237,8 @@ export default function MangaDashboard() {
     setCoverPreview(manga.cover_image || "");
     setSummary(manga.summary || "");
     setTags(manga.tags ? manga.tags.map(tag => ({ value: tag, label: tag })) : []);
+    setIsVisible(manga.is_visible !== false);
+    setShowInHome(manga.show_in_home !== false);
     await fetchChapters(manga.id);
   };
 
@@ -293,7 +297,9 @@ export default function MangaDashboard() {
         author: (await supabase.from("users").select("name").eq("id", userId).single()).data?.name || "Unknown",
         status: "ongoing",
         tags: tags.map(tag => tag.value),
-        viewers_count: activeManga ? activeManga.viewers_count : 0
+        viewers_count: activeManga ? activeManga.viewers_count : 0,
+        is_visible: isVisible,
+        show_in_home: showInHome
       };
 
       let mangaId;
@@ -424,6 +430,8 @@ export default function MangaDashboard() {
     setChapters([]);
     setActiveManga(null);
     setTags([]);
+    setIsVisible(true);
+    setShowInHome(true);
   };
 
   const clearChapterForm = () => {
@@ -555,6 +563,28 @@ export default function MangaDashboard() {
                     }}
                   />
                 </div>
+                <div className={styles.field}>
+                  <label className={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={isVisible}
+                      onChange={(e) => setIsVisible(e.target.checked)}
+                    />
+                    {' '}Make manga visible to readers
+                  </label>
+                </div>
+                {isAdmin && (
+                  <div className={styles.field}>
+                    <label className={styles.checkbox}>
+                      <input
+                        type="checkbox"
+                        checked={showInHome}
+                        onChange={(e) => setShowInHome(e.target.checked)}
+                      />
+                      {' '}Show in home carousel (Admin)
+                    </label>
+                  </div>
+                )}
                 <div className={styles.chapterEditor}>
                   <h2><FaPlus /> Chapters</h2>
                   <div className={styles.field}>
