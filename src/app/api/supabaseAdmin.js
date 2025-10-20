@@ -1,14 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
-import { supabase } from "@/services/supabase/supabaseClient";
 
-const adminKey = process.env.SUPABASE_APP_ADMIN_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xqeimsncmnqsiowftdmz.supabase.co';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServiceRoleKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
+}
 
 export const supabaseAdmin = createClient(
-  supabase.supabaseUrl,
-  supabase.supabaseKey,
+  supabaseUrl,
+  supabaseServiceRoleKey || '',
   {
-    accessToken() {
-      return adminKey;
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
-  },
+  }
 );

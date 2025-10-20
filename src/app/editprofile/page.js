@@ -21,6 +21,7 @@ import {
   FaGlobe,
   FaPen,
   FaSpinner,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import styles from "./EditProfile.module.css";
@@ -49,6 +50,12 @@ export default function EditProfile() {
   const [referralMessage, setReferralMessage] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showMigrateModal, setShowMigrateModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrateError, setMigrateError] = useState("");
+  const [migrateSuccess, setMigrateSuccess] = useState("");
   const { balance } = UseAmethystBalance();
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -409,6 +416,79 @@ export default function EditProfile() {
     }
   };
 
+  const handleEmailMigration = async (e) => {
+    e.preventDefault();
+    setMigrateError("");
+    setMigrateSuccess("");
+    setIsMigrating(true);
+
+    // Validate inputs
+    if (!newEmail || !confirmEmail) {
+      setMigrateError("Please fill in both email fields");
+      setIsMigrating(false);
+      return;
+    }
+
+    if (newEmail !== confirmEmail) {
+      setMigrateError("Emails do not match");
+      setIsMigrating(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      setMigrateError("Please enter a valid email address");
+      setIsMigrating(false);
+      return;
+    }
+
+    if (newEmail === email) {
+      setMigrateError("New email must be different from current email");
+      setIsMigrating(false);
+      return;
+    }
+
+    try {
+      const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+      
+      const response = await fetch("/api/migrate-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          oldEmail: email,
+          newEmail,
+          walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to migrate email");
+      }
+
+      // Use the message from the API which includes verification info
+      setMigrateSuccess(data.message);
+      setEmail(newEmail);
+      setNewEmail("");
+      setConfirmEmail("");
+      
+      // Close modal after 6 seconds (longer to let user read verification instructions)
+      setTimeout(() => {
+        setShowMigrateModal(false);
+        setMigrateSuccess("");
+      }, 6000);
+    } catch (err) {
+      console.error("Email migration error:", err);
+      setMigrateError(err.message || "Failed to migrate email. Please try again.");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const formatUsername = (address) =>
     address && address.length > 15 ? `${address.slice(0, 2)}**${address.slice(-2)}` : address || "";
 
@@ -495,6 +575,16 @@ export default function EditProfile() {
                 required
                 disabled={(!connected && !embeddedWallet) || isSaving}
               />
+              {email && (connected || embeddedWallet) && (
+                <button
+                  type="button"
+                  onClick={() => setShowMigrateModal(true)}
+                  className={styles.migrateButton}
+                  disabled={isSaving}
+                >
+                  <FaExchangeAlt /> Migrate to New Email
+                </button>
+              )}
             </div>
 
             <div className={styles.inputGroup}>
@@ -614,6 +704,105 @@ export default function EditProfile() {
           </form>
         </section>
       </main>
+
+      {/* Email Migration Modal */}
+      {showMigrateModal && (
+        <div className={styles.modalOverlay} onClick={() => !isMigrating && setShowMigrateModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                <FaExchangeAlt /> Migrate Email Address
+              </h2>
+              <button
+                className={styles.modalClose}
+                onClick={() => setShowMigrateModal(false)}
+                disabled={isMigrating}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.warningBox}>
+                <FaExclamationTriangle className={styles.warningIcon} />
+                <p>
+                  <strong>Important:</strong> After migration, your old email ({email}) will no longer
+                  be associated with this account. All your data will be transferred to the new email.
+                </p>
+              </div>
+
+              <form onSubmit={handleEmailMigration} className={styles.modalForm}>
+                <div className={styles.inputGroup}>
+                  <label htmlFor="currentEmail" className={styles.inputLabel}>
+                    Current Email
+                  </label>
+                  <input
+                    id="currentEmail"
+                    type="email"
+                    value={email}
+                    className={styles.input}
+                    disabled
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label htmlFor="newEmail" className={styles.inputLabel}>
+                    New Email Address
+                  </label>
+                  <input
+                    id="newEmail"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Enter new email address"
+                    className={styles.input}
+                    required
+                    disabled={isMigrating}
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label htmlFor="confirmEmail" className={styles.inputLabel}>
+                    Confirm New Email
+                  </label>
+                  <input
+                    id="confirmEmail"
+                    type="email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    placeholder="Confirm new email address"
+                    className={styles.input}
+                    required
+                    disabled={isMigrating}
+                  />
+                </div>
+
+                {migrateError && <div className={styles.alertError}>{migrateError}</div>}
+                {migrateSuccess && <div className={styles.alertSuccess}>{migrateSuccess}</div>}
+
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMigrateModal(false)}
+                    className={styles.cancelButton}
+                    disabled={isMigrating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.confirmButton}
+                    disabled={isMigrating}
+                  >
+                    {isMigrating ? <FaSpinner className={styles.spinner} /> : <FaExchangeAlt />} 
+                    {isMigrating ? " Migrating..." : " Migrate Email"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

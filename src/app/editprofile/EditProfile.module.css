@@ -957,3 +957,251 @@
     text-shadow: 0 0 20px currentColor;
   }
 }
+
+/* Email Migration Button */
+.migrateButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(29, 161, 242, 0.8);
+}
+.migrateButton:hover:not(:disabled) {
+  background: rgba(29, 161, 242, 1);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(29, 161, 242, 0.6);
+}
+.migrateButton:disabled {
+  background: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+  background: rgba(20, 20, 20, 0.95);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 550px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 0.4s ease-out;
+}
+.page:not(.creator):not(.artist):not(.both):not(.superuser) .modalContent {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+}
+.creator .modalContent {
+  border: 2px solid rgba(243, 99, 22, 0.6);
+  box-shadow: 0 0 40px rgba(243, 99, 22, 0.4);
+}
+.artist .modalContent {
+  border: 2px solid rgba(147, 51, 234, 0.6);
+  box-shadow: 0 0 40px rgba(147, 51, 234, 0.4);
+}
+.both .modalContent,
+.superuser .modalContent {
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalTitle {
+  font-size: 1.8rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.page:not(.creator):not(.artist):not(.both):not(.superuser) .modalTitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+.creator .modalTitle {
+  color: rgba(243, 99, 22, 0.9);
+}
+.artist .modalTitle {
+  color: rgba(147, 51, 234, 0.9);
+}
+.both .modalTitle,
+.superuser .modalTitle {
+  color: rgba(255, 215, 0, 0.9);
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.3s ease, transform 0.3s ease;
+  padding: 5px;
+}
+.modalClose:hover:not(:disabled) {
+  color: #ff4444;
+  transform: scale(1.2);
+}
+.modalClose:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modalBody {
+  padding: 30px;
+}
+
+.warningBox {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 25px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.warningIcon {
+  color: #ffc107;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warningBox p {
+  color: #fff;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.cancelButton,
+.confirmButton {
+  flex: 1;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 30px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancelButton {
+  background: rgba(108, 117, 125, 0.8);
+}
+.cancelButton:hover:not(:disabled) {
+  background: rgba(108, 117, 125, 1);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(108, 117, 125, 0.6);
+}
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmButton {
+  background: rgba(29, 161, 242, 0.8);
+}
+.confirmButton:hover:not(:disabled) {
+  background: rgba(29, 161, 242, 1);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(29, 161, 242, 0.6);
+}
+.confirmButton:disabled {
+  background: #555;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 768px) {
+  .modalContent {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .modalHeader {
+    padding: 20px;
+  }
+
+  .modalTitle {
+    font-size: 1.5rem;
+  }
+
+  .modalBody {
+    padding: 20px;
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .cancelButton,
+  .confirmButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalTitle {
+    font-size: 1.3rem;
+  }
+
+  .warningBox {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  .warningIcon {
+    font-size: 1.3rem;
+  }
+}
