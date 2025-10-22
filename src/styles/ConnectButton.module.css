@@ -96,6 +96,34 @@
   transform: rotate(90deg);
 }
 
+.walletOnlyNote {
+  color: #bbb;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(243, 99, 22, 0.3);
+}
+
+.divider span {
+  padding: 0 12px;
+  color: #888;
+  font-size: 0.85rem;
+}
+
 .popupOptions {
   display: flex;
   flex-direction: column;

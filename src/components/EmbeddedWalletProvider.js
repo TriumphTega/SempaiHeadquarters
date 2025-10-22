@@ -89,20 +89,28 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   };
 
-  // Create an embedded wallet for the authenticated user
-  const createEmbeddedWallet = async (userPassword) => {
-    if (!user && !authLoading) {
-      throw new Error("Please sign in to create a wallet");
-    }
+  // Create an embedded wallet for authenticated user OR wallet-only user
+  // Can optionally accept existingSecretKey for importing wallets
+  const createEmbeddedWallet = async (userPassword, existingSecretKey = null) => {
+    // Allow wallet creation without authentication (wallet-only mode)
     const password = String(userPassword || "");
     if (password.length < 8) throw new Error("Password must be at least 8 characters long");
     try {
       setIsLoading(true);
       setError(null);
 
-      const keypair = Keypair.generate();
+      // Use existing key if provided (for imports), otherwise generate new one
+      let keypair;
+      let secretKey;
+      if (existingSecretKey) {
+        keypair = Keypair.fromSecretKey(existingSecretKey);
+        secretKey = existingSecretKey;
+      } else {
+        keypair = Keypair.generate();
+        secretKey = keypair.secretKey;
+      }
+      
       const publicKeyStr = keypair.publicKey.toBase58();
-      const secretKey = keypair.secretKey;
       const privateKeyBase58 = bs58.encode(secretKey);
 
       // Encrypt via Edge Function (fallback to local if needed)
@@ -153,31 +161,50 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   };
 
-  // Retrieve wallet from Supabase for the authenticated user
-  const retrieveEmbeddedWallet = async (userPassword) => {
-    if (!user && !authLoading) {
-      throw new Error("Please sign in to retrieve your wallet");
-    }
+  // Retrieve wallet from Supabase for authenticated user OR wallet-only user
+  const retrieveEmbeddedWallet = async (userPassword, walletAddress) => {
     const password = String(userPassword || "");
     if (password.length < 8) throw new Error("Password must be at least 8 characters long");
     try {
       setIsLoading(true);
       setError(null);
-      const { data: userRow, error: userErr } = await supabase
-        .from("users")
-        .select("id, wallet_address")
-        .eq("id", user.id)
-        .single();
-      if (userErr) throw userErr;
-      if (!userRow?.wallet_address) throw new Error("No wallet associated with this account");
+      
+      let walletRow;
+      let userRow;
 
-      const { data: walletRow, error: walletErr } = await supabase
-        .from("user_wallets")
-        .select("address, private_key")
-        .eq("user_id", userRow.id)
-        .eq("address", userRow.wallet_address)
-        .single();
-      if (walletErr) throw walletErr;
+      // If user is authenticated, retrieve by user ID
+      if (user) {
+        const { data: userData, error: userErr } = await supabase
+          .from("users")
+          .select("id, wallet_address")
+          .eq("id", user.id)
+          .single();
+        if (userErr) throw userErr;
+        if (!userData?.wallet_address) throw new Error("No wallet associated with this account");
+        userRow = userData;
+
+        const { data: wallet, error: walletErr } = await supabase
+          .from("user_wallets")
+          .select("address, private_key")
+          .eq("user_id", userRow.id)
+          .eq("address", userRow.wallet_address)
+          .single();
+        if (walletErr) throw walletErr;
+        walletRow = wallet;
+      } 
+      // If NOT authenticated but has wallet address, retrieve by wallet address (wallet-only mode)
+      else if (walletAddress) {
+        const { data: wallet, error: walletErr } = await supabase
+          .from("user_wallets")
+          .select("address, private_key")
+          .eq("address", walletAddress)
+          .single();
+        if (walletErr) throw walletErr;
+        walletRow = wallet;
+      } 
+      else {
+        throw new Error("Please sign in or connect wallet to retrieve your wallet");
+      }
 
       // Decrypt via Edge Function (fallback to local if needed)
       const decryptedPrivateKey = await edgeDecrypt(walletRow.private_key);

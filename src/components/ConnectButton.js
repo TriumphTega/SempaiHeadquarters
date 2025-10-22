@@ -136,6 +136,8 @@ export default function ConnectButton() {
       setError("Password must be at least 8 characters long!");
       return;
     }
+    
+    // Allow wallet creation without sign-in (wallet-only mode)
     const result = await createEmbeddedWallet(password);
     if (result) {
       const { publicKey, privateKey: newPrivateKey } = result;
@@ -145,6 +147,8 @@ export default function ConnectButton() {
       setPassword("");
       setConfirmPassword("");
       setShowPopup(false);
+      
+      // Show the LinkEmailBanner after wallet creation (handled by AppWrapper)
     }
   };
 
@@ -312,17 +316,9 @@ export default function ConnectButton() {
           )}
         </div>
       ) : (
-        <>
-          {!user ? (
-            <button className={styles.singleButton} onClick={signInWithGoogle}>
-              <FaGoogle className={styles.buttonIcon} />
-            </button>
-          ) : (
-            <button className={styles.singleButton} onClick={() => setShowPopup(true)}>
-              <FaWallet className={styles.buttonIcon} />
-            </button>
-          )}
-        </>
+        <button className={styles.singleButton} onClick={() => setShowPopup(true)}>
+          <FaWallet className={styles.buttonIcon} />
+        </button>
       )}
       {embeddedWallet && <span className={styles.connectedStatus}></span>}
       {userCreated && (
@@ -339,16 +335,12 @@ export default function ConnectButton() {
             </button>
             <h3>Get Started</h3>
             <div className={styles.popupOptions}>
-              {!user ? (
-                <button className={styles.popupEmbeddedButton} onClick={signInWithGoogle}>
-                  <FaGoogle className={styles.buttonIcon} /> Sign in with Google
-                </button>
-              ) : hasWallet === null ? (
+              {user && hasWallet === null ? (
                 <div className={styles.loadingContainer}>
                   <FaSpinner className={styles.spinner} />
                   <span>Checking wallet...</span>
                 </div>
-              ) : hasWallet ? (
+              ) : user && hasWallet ? (
                 <button
                   className={styles.popupEmbeddedButton}
                   onClick={() => {
@@ -358,7 +350,7 @@ export default function ConnectButton() {
                 >
                   <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
                 </button>
-              ) : (
+              ) : user && !hasWallet ? (
                 <button
                   className={styles.popupEmbeddedButton}
                   onClick={() => {
@@ -368,6 +360,30 @@ export default function ConnectButton() {
                 >
                   <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
                 </button>
+              ) : (
+                <>
+                  <p className={styles.walletOnlyNote}>
+                    Create a wallet to get started. Sign in is optional for account recovery.
+                  </p>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={signInWithGoogle}
+                  >
+                    <FaGoogle className={styles.buttonIcon} /> Sign in with Google (Optional)
+                  </button>
+                  <div className={styles.divider}>
+                    <span>or continue without sign-in</span>
+                  </div>
+                  <button
+                    className={styles.popupWalletButton}
+                    onClick={() => {
+                      setShowEmbeddedForm(true);
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaRocket className={styles.buttonIcon} /> Create Wallet
+                  </button>
+                </>
               )}
               <button
                 className={styles.cancelButton}

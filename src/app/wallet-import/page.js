@@ -5,10 +5,10 @@ import { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
-import CryptoJS from "crypto-js";
 import * as bip39 from "bip39";
 import { derivePath } from "ed25519-hd-key"; // Import for HD key derivation
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
+import { supabase } from "../../services/supabase/supabaseClient";
 import styles from "../../styles/WalletImport.module.css";
 
 export default function WalletImport() {
@@ -52,27 +52,67 @@ export default function WalletImport() {
         Keypair.fromSecretKey(secretKey); // This will throw if invalid
       }
 
-      // Encrypt the secret key with the user's password
-      const encryptedSecret = CryptoJS.AES.encrypt(
-        JSON.stringify(Array.from(secretKey)),
-        password
-      ).toString();
-
-      // Store in localStorage
+      // Log the address for verification
       const publicKey = Keypair.fromSecretKey(secretKey).publicKey.toBase58();
-      localStorage.setItem("embeddedWalletPublicKey", publicKey);
-      localStorage.setItem("embeddedWalletSecretEncrypted", encryptedSecret);
+      console.log("Importing wallet with address:", publicKey);
 
-      // Use the imported secret key instead of generating a new one
+      // Pass the secretKey to createEmbeddedWallet - it will handle encryption and storage
       const result = await createEmbeddedWallet(password, secretKey);
+      
       if (result) {
+        console.log("Wallet imported successfully:", result.publicKey);
+        
+        // Create user entry if it doesn't exist
+        const { data: existingUser, error: fetchError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("wallet_address", result.publicKey)
+          .single();
+
+        if (fetchError && fetchError.code === "PGRST116") {
+          // User doesn't exist, create one
+          const newReferralCode = `${result.publicKey.slice(0, 4)}${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`;
+          
+          const { data: newUser, error: insertError } = await supabase
+            .from("users")
+            .insert({
+              wallet_address: result.publicKey,
+              isWriter: false,
+              isSuperuser: false,
+              referral_code: newReferralCode,
+              has_updated_profile: false,
+            })
+            .select("id")
+            .single();
+
+          if (insertError) {
+            console.error("Error creating user:", insertError);
+          } else {
+            console.log("User created:", newUser.id);
+            
+            // Create initial balance
+            await supabase.from("wallet_balances").insert({
+              user_id: newUser.id,
+              wallet_address: result.publicKey,
+              chain: "SOL",
+              currency: "SMP",
+              decimals: 6,
+              amount: 50000,
+            });
+          }
+        }
+        
+        alert(`Wallet imported successfully! Address: ${result.publicKey}`);
         router.push("/");
       } else {
         throw new Error("Failed to initialize wallet context.");
       }
     } catch (err) {
       setError("Invalid private key or seed phrase. Please check your input.");
-      console.error(err);
+      console.error("Import error:", err);
     }
   };
 
