@@ -5,12 +5,15 @@ import { supabase } from "../services/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import { useAuth } from "./AuthProvider";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "../styles/ConnectButton.module.css";
-import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes, FaGoogle } from "react-icons/fa";
+import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes, FaGoogle, FaPlug } from "react-icons/fa";
 
 export default function ConnectButton() {
   const { wallet: embeddedWallet, createEmbeddedWallet, retrieveEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
+  const { publicKey: externalPublicKey, connected: externalConnected, disconnect: externalDisconnect } = useWallet();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,8 +29,10 @@ export default function ConnectButton() {
   const [copied, setCopied] = useState(false);
   const wrapperRef = useRef(null);
   const [hasWallet, setHasWallet] = useState(null); // null = unknown, true/false known
+  const [walletType, setWalletType] = useState(null); // 'embedded' or 'external'
+  const [showWalletChoice, setShowWalletChoice] = useState(false);
 
-  const createUserAndBalance = useCallback(async (walletAddress) => {
+  const createUserAndBalance = useCallback(async (walletAddress, isExternal = false) => {
     if (!walletAddress) return;
 
     setIsLoading(true);
@@ -38,6 +43,7 @@ export default function ConnectButton() {
     try {
       console.log("Wallet connected:", walletAddress);
       localStorage.setItem("walletAddress", walletAddress);
+      localStorage.setItem("walletType", isExternal ? "external" : "embedded");
 
       const { data: existingUser, error: fetchError } = await supabase
         .from("users")
@@ -141,12 +147,13 @@ export default function ConnectButton() {
     const result = await createEmbeddedWallet(password);
     if (result) {
       const { publicKey, privateKey: newPrivateKey } = result;
-      await createUserAndBalance(publicKey);
+      await createUserAndBalance(publicKey, false);
       setPrivateKey(newPrivateKey);
       setShowEmbeddedForm(false);
       setPassword("");
       setConfirmPassword("");
       setShowPopup(false);
+      setWalletType('embedded');
       
       // Show the LinkEmailBanner after wallet creation (handled by AppWrapper)
     }
@@ -194,14 +201,27 @@ export default function ConnectButton() {
     const result = await retrieveEmbeddedWallet(password);
     if (result) {
       const { publicKey } = result;
-      await createUserAndBalance(publicKey);
+      await createUserAndBalance(publicKey, false);
       setShowRetrieveForm(false);
       setPassword("");
       setShowPopup(false);
+      setWalletType('embedded');
     }
   };
 
-  // No external wallet; nothing to do here
+  // Handle external wallet connection
+  useEffect(() => {
+    const handleExternalWallet = async () => {
+      if (externalConnected && externalPublicKey) {
+        const address = externalPublicKey.toBase58();
+        await createUserAndBalance(address, true);
+        setWalletType('external');
+        setShowPopup(false);
+        setShowWalletChoice(false);
+      }
+    };
+    handleExternalWallet();
+  }, [externalConnected, externalPublicKey]);
 
   const handlePromptClose = () => {
     setShowReferralPrompt(false);
@@ -251,8 +271,13 @@ export default function ConnectButton() {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  const handleDisconnectOnly = () => {
+  const handleDisconnectOnly = async () => {
+    if (walletType === 'external' && externalConnected) {
+      await externalDisconnect();
+    }
     clearEmbeddedFromLocal();
+    localStorage.removeItem('walletType');
+    setWalletType(null);
     setShowMenu(false);
     window.location.reload();
   };
@@ -261,7 +286,12 @@ export default function ConnectButton() {
     try {
       await signOut(); // sign out Supabase/Google
     } catch {}
+    if (walletType === 'external' && externalConnected) {
+      await externalDisconnect();
+    }
     clearEmbeddedFromLocal();
+    localStorage.removeItem('walletType');
+    setWalletType(null);
     setShowMenu(false);
     // On next Google sign-in, app can re-link the wallet via existing server association
     window.location.reload();
@@ -287,18 +317,23 @@ export default function ConnectButton() {
     );
   }
 
+  // Determine which wallet is active
+  const activeWallet = embeddedWallet || (externalConnected && externalPublicKey ? { publicKey: externalPublicKey.toBase58() } : null);
+  const isExternal = walletType === 'external' || (externalConnected && !embeddedWallet);
+
   return (
     <div className={styles.connectButtonWrapper} ref={wrapperRef}>
-      {embeddedWallet ? (
+      {activeWallet ? (
         <div className={styles.walletInfo}>
           <button className={`${styles.singleButton} ${styles.addressButton}`} onClick={() => setShowMenu((m) => !m)} aria-haspopup="menu" aria-expanded={showMenu}>
-            <FaWallet className={styles.buttonIcon} /> {embeddedWallet.publicKey.slice(0, 4)}...{embeddedWallet.publicKey.slice(-4)}
+            <FaWallet className={styles.buttonIcon} /> {activeWallet.publicKey.slice(0, 4)}...{activeWallet.publicKey.slice(-4)}
+            {isExternal && <span className={styles.externalBadge}>🔌</span>}
           </button>
           {showMenu && (
             <div className={styles.dropdownMenu}>
               <div className={styles.menuHeader}>
-                <div className={styles.menuHeaderTitle}>Wallet</div>
-                <div className={styles.menuHeaderSub}>{embeddedWallet.publicKey.slice(0, 6)}...{embeddedWallet.publicKey.slice(-6)}</div>
+                <div className={styles.menuHeaderTitle}>{isExternal ? 'External Wallet' : 'Embedded Wallet'}</div>
+                <div className={styles.menuHeaderSub}>{activeWallet.publicKey.slice(0, 6)}...{activeWallet.publicKey.slice(-6)}</div>
               </div>
               <div className={styles.menuDivider} />
               <button className={styles.menuItem} onClick={handleCopyAddress}>
@@ -320,17 +355,17 @@ export default function ConnectButton() {
           <FaWallet className={styles.buttonIcon} />
         </button>
       )}
-      {embeddedWallet && <span className={styles.connectedStatus}></span>}
+      {activeWallet && <span className={styles.connectedStatus}></span>}
       {userCreated && (
         <p className={styles.successMessage}>
           <FaCheckCircle /> Welcome!
         </p>
       )}
 
-      {showPopup && !embeddedWallet && (
+      {showPopup && !activeWallet && (
         <div className={styles.popupOverlay}>
           <div className={styles.popup}>
-            <button className={styles.closeButton} onClick={() => setShowPopup(false)}>
+            <button className={styles.closeButton} onClick={() => { setShowPopup(false); setShowWalletChoice(false); }}>
               <FaTimes />
             </button>
             <h3>Get Started</h3>
@@ -360,6 +395,34 @@ export default function ConnectButton() {
                 >
                   <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
                 </button>
+              ) : showWalletChoice ? (
+                <>
+                  <p className={styles.walletOnlyNote}>
+                    Choose how you want to connect:
+                  </p>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={() => {
+                      setShowEmbeddedForm(true);
+                      setShowPopup(false);
+                      setShowWalletChoice(false);
+                    }}
+                  >
+                    <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
+                  </button>
+                  <div className={styles.divider}>
+                    <span>or</span>
+                  </div>
+                  <div className={styles.externalWalletWrapper}>
+                    <WalletMultiButton className={styles.externalWalletButton} />
+                  </div>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={() => setShowWalletChoice(false)}
+                  >
+                    Back
+                  </button>
+                </>
               ) : (
                 <>
                   <p className={styles.walletOnlyNote}>
@@ -376,12 +439,9 @@ export default function ConnectButton() {
                   </div>
                   <button
                     className={styles.popupWalletButton}
-                    onClick={() => {
-                      setShowEmbeddedForm(true);
-                      setShowPopup(false);
-                    }}
+                    onClick={() => setShowWalletChoice(true)}
                   >
-                    <FaRocket className={styles.buttonIcon} /> Create Wallet
+                    <FaWallet className={styles.buttonIcon} /> Connect Wallet
                   </button>
                 </>
               )}
@@ -396,7 +456,7 @@ export default function ConnectButton() {
         </div>
       )}
 
-      {showEmbeddedForm && !embeddedWallet && (
+      {showEmbeddedForm && !activeWallet && (
         <div className={styles.embeddedFormOverlay}>
           <div className={styles.embeddedForm}>
             <h3><FaKey /> Forge Key</h3>
@@ -433,7 +493,7 @@ export default function ConnectButton() {
         </div>
       )}
 
-      {showRetrieveForm && !embeddedWallet && (
+      {showRetrieveForm && !activeWallet && (
         <div className={styles.embeddedFormOverlay}>
           <div className={styles.embeddedForm}>
             <h3><FaKey /> Unlock Wallet</h3>

@@ -536,3 +536,67 @@
     font-size: 16px;
   }
 }
+
+/* External wallet styles */
+.externalBadge {
+  margin-left: 4px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.externalWalletWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.externalWalletButton {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(243, 99, 22, 0.5) !important;
+  background: linear-gradient(45deg, #1a1a1a, #333) !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: uppercase !important;
+  transition: all 0.3s ease !important;
+}
+
+.externalWalletButton:hover {
+  background: linear-gradient(45deg, rgba(243, 99, 22, 0.9), #1a1a1a) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.6) !important;
+}
+
+.menuItemDanger {
+  color: #ff6b6b !important;
+}
+
+.menuItemDanger:hover {
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.18), rgba(255, 107, 107, 0.07)) !important;
+  color: #ff8888 !important;
+}
+
+.menuDivider {
+  height: 1px;
+  background: rgba(243, 99, 22, 0.15);
+  margin: 6px 0;
+}
+
+@keyframes menuReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

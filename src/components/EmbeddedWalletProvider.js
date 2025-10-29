@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useState, useEffect } from "react";
-import { Connection, Keypair } from "@solana/web3.js";
+import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import CryptoJS from "crypto-js";
 import { RPC_URL } from "@/constants"; // Ensure RPC_URL is defined in your constants
 import { supabase } from "@/services/supabase/supabaseClient";
 import { useAuth } from "./AuthProvider";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 // Fast proxy fetch with timeout and 1 retry (improves perceived latency)
 const callProxy = async (payload) => {
@@ -50,6 +51,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
   const [transactionToSign, setTransactionToSign] = useState(null);
   const [resolveSignPromise, setResolveSignPromise] = useState(null);
   const { user, loading: authLoading } = useAuth();
+  const { publicKey: externalPublicKey, signTransaction: externalSignTransaction, sendTransaction: externalSendTransaction, connected: externalConnected } = useWallet();
 
   const connection = new Connection(RPC_URL);
   const WALLET_FUNCTION = process.env.NEXT_PUBLIC_WALLET_FUNCTION || "wallet-encryption";
@@ -293,10 +295,31 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   };
 
-  // Sign and send transaction with password prompt
+  // Sign and send transaction - supports both embedded and external wallets
   const signAndSendTransaction = async (transaction) => {
+    // Check if external wallet is connected
+    if (externalConnected && externalPublicKey) {
+      try {
+        // Use external wallet (Phantom, etc.)
+        if (externalSendTransaction) {
+          const signature = await externalSendTransaction(transaction, connection);
+          return signature;
+        } else if (externalSignTransaction) {
+          const signedTx = await externalSignTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signedTx.serialize());
+          return signature;
+        } else {
+          throw new Error("External wallet does not support transaction signing");
+        }
+      } catch (error) {
+        setError(`External wallet transaction failed: ${error.message}`);
+        throw error;
+      }
+    }
+
+    // Use embedded wallet
     if (!wallet) {
-      throw new Error("Embedded wallet not initialized");
+      throw new Error("No wallet connected");
     }
 
     setPasswordPrompt(true);
@@ -356,9 +379,23 @@ export const EmbeddedWalletProvider = ({ children }) => {
     setResolveSignPromise(null);
   };
 
+  // Determine active wallet (embedded or external)
+  const activeWallet = wallet || (externalConnected && externalPublicKey ? { publicKey: externalPublicKey.toBase58() } : null);
+  const isExternalWallet = externalConnected && !wallet;
+
   return (
     <EmbeddedWalletContext.Provider
-      value={{ wallet, createEmbeddedWallet, retrieveEmbeddedWallet, getSecretKey, signAndSendTransaction, isLoading, error }}
+      value={{ 
+        wallet: activeWallet, 
+        createEmbeddedWallet, 
+        retrieveEmbeddedWallet, 
+        getSecretKey, 
+        signAndSendTransaction, 
+        isLoading, 
+        error,
+        isExternalWallet,
+        externalPublicKey: externalConnected ? externalPublicKey : null
+      }}
     >
       {passwordPrompt && (
         <div
