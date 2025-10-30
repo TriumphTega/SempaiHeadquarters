@@ -47,7 +47,7 @@ export default function ConnectButton() {
 
       const { data: existingUser, error: fetchError } = await supabase
         .from("users")
-        .select("id, referral_code, has_updated_profile")
+        .select("id, referral_code, has_updated_profile, email")
         .eq("wallet_address", walletAddress)
         .single();
 
@@ -100,6 +100,21 @@ export default function ConnectButton() {
         userId = newUser.id;
         console.log("New user created successfully:", newUser);
         setUserCreated(true);
+
+        // Save external wallet to user_wallets table (no private key for external wallets)
+        if (isExternal) {
+          const { error: walletError } = await supabase
+            .from("user_wallets")
+            .insert({
+              user_id: userId,
+              address: walletAddress,
+              private_key: null // External wallets don't store private keys
+            });
+          
+          if (walletError && walletError.code !== '23505') { // Ignore duplicate key errors
+            console.warn("Warning: Could not save external wallet to user_wallets:", walletError.message);
+          }
+        }
 
         const { error: balanceError } = await supabase
           .from("wallet_balances")
@@ -221,7 +236,57 @@ export default function ConnectButton() {
       }
     };
     handleExternalWallet();
-  }, [externalConnected, externalPublicKey]);
+  }, [externalConnected, externalPublicKey, createUserAndBalance]);
+
+  // Link external wallet to Google account when user signs in after connecting
+  useEffect(() => {
+    const linkWalletToAccount = async () => {
+      if (user && externalConnected && externalPublicKey && walletType === 'external') {
+        try {
+          const address = externalPublicKey.toBase58();
+          
+          // Update user with wallet address
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ wallet_address: address })
+            .eq('id', user.id);
+          
+          if (updateError) {
+            console.error('Error linking wallet to account:', updateError);
+            return;
+          }
+
+          // Check if wallet already exists in user_wallets
+          const { data: existingWallet } = await supabase
+            .from('user_wallets')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('address', address)
+            .single();
+
+          // Only insert if wallet doesn't exist
+          if (!existingWallet) {
+            const { error: walletError } = await supabase
+              .from('user_wallets')
+              .insert({ 
+                user_id: user.id, 
+                address: address,
+                private_key: null // External wallets don't store private keys
+              });
+            
+            if (walletError && walletError.code !== '23505') { // Ignore duplicate key errors
+              console.error('Error saving wallet to user_wallets:', walletError);
+            }
+          }
+
+          console.log('External wallet linked to Google account successfully');
+        } catch (err) {
+          console.error('Error in linkWalletToAccount:', err);
+        }
+      }
+    };
+    linkWalletToAccount();
+  }, [user, externalConnected, externalPublicKey, walletType]);
 
   const handlePromptClose = () => {
     setShowReferralPrompt(false);
@@ -264,8 +329,9 @@ export default function ConnectButton() {
   };
 
   const handleCopyAddress = () => {
-    if (embeddedWallet?.publicKey) {
-      navigator.clipboard.writeText(embeddedWallet.publicKey);
+    const address = activeWallet?.publicKey;
+    if (address) {
+      navigator.clipboard.writeText(address);
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
@@ -376,25 +442,47 @@ export default function ConnectButton() {
                   <span>Checking wallet...</span>
                 </div>
               ) : user && hasWallet ? (
-                <button
-                  className={styles.popupEmbeddedButton}
-                  onClick={() => {
-                    setShowRetrieveForm(true);
-                    setShowPopup(false);
-                  }}
-                >
-                  <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
-                </button>
+                <>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={() => {
+                      setShowRetrieveForm(true);
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaKey className={styles.buttonIcon} /> Retrieve My Wallet
+                  </button>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={async () => {
+                      await signOut();
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaTimes className={styles.buttonIcon} /> Sign Out
+                  </button>
+                </>
               ) : user && !hasWallet ? (
-                <button
-                  className={styles.popupEmbeddedButton}
-                  onClick={() => {
-                    setShowEmbeddedForm(true);
-                    setShowPopup(false);
-                  }}
-                >
-                  <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
-                </button>
+                <>
+                  <button
+                    className={styles.popupEmbeddedButton}
+                    onClick={() => {
+                      setShowEmbeddedForm(true);
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaRocket className={styles.buttonIcon} /> Create In-App Wallet
+                  </button>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={async () => {
+                      await signOut();
+                      setShowPopup(false);
+                    }}
+                  >
+                    <FaTimes className={styles.buttonIcon} /> Sign Out
+                  </button>
+                </>
               ) : showWalletChoice ? (
                 <>
                   <p className={styles.walletOnlyNote}>
