@@ -400,6 +400,9 @@ export default function ConnectButton() {
               <div className={styles.menuHeader}>
                 <div className={styles.menuHeaderTitle}>{isExternal ? 'External Wallet' : 'Embedded Wallet'}</div>
                 <div className={styles.menuHeaderSub}>{activeWallet.publicKey.slice(0, 6)}...{activeWallet.publicKey.slice(-6)}</div>
+                {user && user.email && (
+                  <div className={styles.menuHeaderEmail}>{user.email}</div>
+                )}
               </div>
               <div className={styles.menuDivider} />
               <button className={styles.menuItem} onClick={handleCopyAddress}>
@@ -407,9 +410,15 @@ export default function ConnectButton() {
               </button>
               {copied && <div className={styles.tooltip}>Copied!</div>}
               <div className={styles.menuDivider} />
-              <button className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={handleSignOutAll}>
-                <FaGoogle /> Sign out
-              </button>
+              {!user ? (
+                <button className={styles.menuItem} onClick={signInWithGoogle}>
+                  <FaGoogle /> Secure with Google
+                </button>
+              ) : (
+                <button className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={handleSignOutAll}>
+                  <FaGoogle /> Sign out
+                </button>
+              )}
               <button className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={handleDisconnectOnly}>
                 <FaTimes /> Disconnect
               </button>
