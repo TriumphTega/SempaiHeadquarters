@@ -507,7 +507,7 @@ export default function EditProfile() {
             <Link href="/" className={styles.navLink}>
               <FaHome /> Home
             </Link>
-            <Link href="/writers-profile" className={styles.navLink}>
+            <Link href="/profile" className={styles.navLink}>
               <FaExchangeAlt /> View Profile
             </Link>
             <ConnectButton />

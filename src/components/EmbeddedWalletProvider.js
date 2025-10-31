@@ -136,6 +136,18 @@ export const EmbeddedWalletProvider = ({ children }) => {
         const name = user.user_metadata?.full_name || email?.split("@")[0] || null;
         const image = user.user_metadata?.avatar_url || null;
 
+        // Check if this email already exists with a DIFFERENT wallet address
+        const { data: existingUserWithEmail } = await supabase
+          .from('users')
+          .select('id, wallet_address, email')
+          .eq('email', email)
+          .neq('id', user.id)
+          .single();
+
+        if (existingUserWithEmail && existingUserWithEmail.wallet_address && existingUserWithEmail.wallet_address !== publicKeyStr) {
+          throw new Error(`This email is already linked to a different wallet (${existingUserWithEmail.wallet_address.slice(0, 4)}...${existingUserWithEmail.wallet_address.slice(-4)}). Please use a different email or connect the correct wallet.`);
+        }
+
         const { data: upserted, error: upsertErr } = await supabase
           .from("users")
           .upsert(

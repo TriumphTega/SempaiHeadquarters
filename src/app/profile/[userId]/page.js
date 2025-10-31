@@ -1,4 +1,4 @@
-// src/app/writers-profile/[userId]/page.js
+// src/app/profile/[userId]/page.js
 "use client";
 
 import { useState, useEffect, useContext } from "react";

@@ -48,8 +48,8 @@ export default function CreatorsProfilePage() {
         else if (user.isArtist) setUserRole("artist");
         else if (user.isWriter) setUserRole("writer");
         else {
-          router.push("/profile");
-          return;
+          // Non-creators can still view their profile
+          setUserRole("user");
         }
 
         const { data: profile, error: profileError } = await supabase

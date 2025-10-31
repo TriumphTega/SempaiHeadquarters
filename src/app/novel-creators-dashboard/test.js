@@ -684,8 +684,8 @@ export default function Home() {
                       <p className={styles.announcementMessage}>{announcement.message}</p>
                       <div className={styles.announcementDetails}>
                         <Link
-                          href={`/writers-profile/${announcement.user_id}`}
-                          onClick={() => handleNavigation(`/writers-profile/${announcement.user_id}`)}
+                          href={`/profile/${announcement.user_id}`}
+                          onClick={() => handleNavigation(`/profile/${announcement.user_id}`)}
                           className={styles.announcementAuthor}
                         >
                           <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
@@ -732,8 +732,8 @@ export default function Home() {
               <FaExchangeAlt className={styles.navIcon} /> Swap
             </Link>
             <Link
-              href={isWalletConnected && (isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile"}
-              onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/writers-profile/${userId}` : "/editprofile") : toggleConnectPopup())}
+              href={isWalletConnected && (isWriter || isArtist) ? `/profile/${userId}` : "/editprofile"}
+              onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/profile/${userId}` : "/editprofile") : toggleConnectPopup())}
               className={styles.navLink}
             >
               <FaUser className={styles.navIcon} /> Profile
@@ -900,8 +900,8 @@ export default function Home() {
                     </Link>
                     {novel.writer.isWriter && (
                       <Link
-                        href={`/writers-profile/${novel.user_id}`}
-                        onClick={() => handleNavigation(`/writers-profile/${novel.user_id}`)}
+                        href={`/profile/${novel.user_id}`}
+                        onClick={() => handleNavigation(`/profile/${novel.user_id}`)}
                         className={styles.writerName}
                       >
                         <FaFeatherAlt className={styles.writerBadge} /> {novel.writer.name}
@@ -942,8 +942,8 @@ export default function Home() {
                     </Link>
                     {mangaItem.writer.isArtist && (
                       <Link
-                        href={`/writers-profile/${mangaItem.user_id}`}
-                        onClick={() => handleNavigation(`/writers-profile/${mangaItem.user_id}`)}
+                        href={`/profile/${mangaItem.user_id}`}
+                        onClick={() => handleNavigation(`/profile/${mangaItem.user_id}`)}
                         className={styles.writerName}
                       >
                         <FaFeatherAlt className={styles.writerBadge} /> {mangaItem.writer.name}

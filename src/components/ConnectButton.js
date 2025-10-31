@@ -245,6 +245,37 @@ export default function ConnectButton() {
         try {
           const address = externalPublicKey.toBase58();
           
+          // Check if this email already exists with a DIFFERENT wallet address
+          const { data: existingUserWithEmail, error: emailCheckError } = await supabase
+            .from('users')
+            .select('id, wallet_address, email')
+            .eq('email', user.email)
+            .neq('id', user.id)
+            .single();
+
+          if (existingUserWithEmail && existingUserWithEmail.wallet_address && existingUserWithEmail.wallet_address !== address) {
+            // Email already linked to a different wallet - prevent sign in
+            setError(`This email is already linked to a different wallet (${existingUserWithEmail.wallet_address.slice(0, 4)}...${existingUserWithEmail.wallet_address.slice(-4)}). Please use a different email or connect the correct wallet.`);
+            await signOut();
+            setShowPopup(false);
+            return;
+          }
+
+          // Check if current user already has a different wallet linked
+          const { data: currentUserData } = await supabase
+            .from('users')
+            .select('wallet_address')
+            .eq('id', user.id)
+            .single();
+
+          if (currentUserData?.wallet_address && currentUserData.wallet_address !== address) {
+            // User already has a different wallet linked
+            setError(`Your account is already linked to wallet ${currentUserData.wallet_address.slice(0, 4)}...${currentUserData.wallet_address.slice(-4)}. Please disconnect and connect the correct wallet.`);
+            await signOut();
+            setShowPopup(false);
+            return;
+          }
+          
           // Update user with wallet address
           const { error: updateError } = await supabase
             .from('users')
@@ -253,6 +284,7 @@ export default function ConnectButton() {
           
           if (updateError) {
             console.error('Error linking wallet to account:', updateError);
+            setError('Failed to link wallet to account. Please try again.');
             return;
           }
 
@@ -282,11 +314,14 @@ export default function ConnectButton() {
           console.log('External wallet linked to Google account successfully');
         } catch (err) {
           console.error('Error in linkWalletToAccount:', err);
+          if (err.message !== 'JSON object requested, multiple (or no) rows returned') {
+            setError('An error occurred while linking your wallet. Please try again.');
+          }
         }
       }
     };
     linkWalletToAccount();
-  }, [user, externalConnected, externalPublicKey, walletType]);
+  }, [user, externalConnected, externalPublicKey, walletType, signOut]);
 
   const handlePromptClose = () => {
     setShowReferralPrompt(false);

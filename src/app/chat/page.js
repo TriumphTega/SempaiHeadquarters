@@ -35,7 +35,7 @@ function Message({ msg, walletAddress, onReply, isPrivate, onScrollToParent }) {
         )}
         <span className={styles.userName}>
           {msg.is_writer ? (
-            <Link href={`/writers-profile/${msg.user_id}`} className={styles.writerNameLink}>
+            <Link href={`/profile/${msg.user_id}`} className={styles.writerNameLink}>
               {truncateName(msg.name)}
             </Link>
           ) : (

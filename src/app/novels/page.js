@@ -390,7 +390,7 @@ export default function NovelsPage() {
                 </div>
               </Link>
               <div className={styles.bookMeta}>
-                <Link href={`/writers-profile/${novel.user_id}`} className={styles.authorLink}>
+                <Link href={`/profile/${novel.user_id}`} className={styles.authorLink}>
                   <FaFeather /> {novel.users?.name || "Unknown"}
                 </Link>
                 <span><FaEye /> {novel.viewers_count.toLocaleString()}</span>
