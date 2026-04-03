@@ -67,7 +67,7 @@ export default function Haven() {
       <main className={styles.main}>
         {/* How to Use Section */}
         <section className={styles.howTo}>
-          <h1 className={styles.howToTitle}>How to Use Sempaihq.xyz</h1>
+          <h1 className={styles.howToTitle}>How to Use sempaihq.com</h1>
           <ol className={styles.howToList}>
             <li>Visit the Dapp in the browser. (Jupiter or Phantom)</li>
             <li>Create your account/login by connecting seamlessly.</li>

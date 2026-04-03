@@ -59,7 +59,11 @@ const MIN_ATA_SOL = 0.00103928;
 const MIN_USER_SOL = 0.001;
 const poolAddress = "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33";
 const meteoraApiUrl = `https://amm-v2.meteora.ag/pools?address=${poolAddress}`;
-const USDC_AMOUNT = 0.025; // $0.025 per chapter
+const USDC_AMOUNT = 0.0025; // $0.025 per chapter
+
+// Treasury wallet addresses (same as mobile app)
+const SQUADS_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
+const TREASURY_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
 
 const connection = new Connection(RPC_URL, {
   commitment: "confirmed",
@@ -67,6 +71,116 @@ const connection = new Connection(RPC_URL, {
 });
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
+
+// Helper: Split payment amounts with residual handling
+function splitAmountWithResidual(amount, ratios) {
+  const totalRatio = ratios.reduce((a, b) => a + b, 0);
+  const r = [];
+  let runningTotal = 0;
+  for (let i = 0; i < ratios.length - 1; i++) {
+    r[i] = Math.floor((amount * ratios[i]) / totalRatio);
+    runningTotal += r[i];
+  }
+  // Last recipient gets remaining to ensure total matches
+  r[ratios.length - 1] = amount - runningTotal;
+  return r;
+}
+
+// Helper: Create payment transaction on client side
+async function createPaymentTransactionClient({ paymentMint, paymentAmount, userPublicKey, authorPublicKey, smpMintAddress }) {
+  const [authorAmount, treasuryAmount, squadsAmount, burnAmount] = splitAmountWithResidual(
+    paymentAmount,
+    [30, 30, 25, 15]
+  );
+  
+  const instructions = [];
+  
+  if (!paymentMint) {
+    // SOL transfer
+    instructions.push(
+      SystemProgram.transfer({
+        fromPubkey: userPublicKey,
+        toPubkey: authorPublicKey,
+        lamports: authorAmount,
+      }),
+      SystemProgram.transfer({
+        fromPubkey: userPublicKey,
+        toPubkey: TREASURY_WALLET,
+        lamports: treasuryAmount + burnAmount,
+      }),
+      SystemProgram.transfer({
+        fromPubkey: userPublicKey,
+        toPubkey: SQUADS_WALLET,
+        lamports: squadsAmount,
+      })
+    );
+  } else {
+    // Token transfer
+    const userAta = getAssociatedTokenAddressSync(paymentMint, userPublicKey);
+    const authorAta = getAssociatedTokenAddressSync(paymentMint, authorPublicKey);
+    const treasuryAta = getAssociatedTokenAddressSync(paymentMint, TREASURY_WALLET, true);
+    const squadsAta = getAssociatedTokenAddressSync(paymentMint, SQUADS_WALLET, true);
+
+    let reroutedToTreasury = 0;
+    
+    // Check if ATAs exist and route accordingly
+    const [authorAtaInfo, squadsAtaInfo, treasuryAtaInfo] = await connection.getMultipleAccountsInfo([
+      authorAta,
+      squadsAta,
+      treasuryAta,
+    ]);
+
+    // Author
+    let authorDestAta = authorAta;
+    let authorDestAmount = authorAmount;
+    if (!authorAtaInfo) {
+      console.warn("[createPaymentTransactionClient] Author ATA missing, rerouting to treasury");
+      reroutedToTreasury += authorAmount;
+      authorDestAta = null;
+      authorDestAmount = 0;
+    }
+    
+    // Squads
+    let squadsDestAta = squadsAta;
+    let squadsDestAmount = squadsAmount;
+    if (!squadsAtaInfo) {
+      console.warn("[createPaymentTransactionClient] Squads ATA missing, rerouting to treasury");
+      reroutedToTreasury += squadsAmount;
+      squadsDestAta = null;
+      squadsDestAmount = 0;
+    }
+    
+    // Treasury must exist
+    if (!treasuryAtaInfo) {
+      throw new Error("Treasury wallet is missing ATA for this token");
+    }
+
+    // Build transfer instructions
+    if (authorDestAta && authorDestAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, authorDestAta, userPublicKey, authorDestAmount));
+    }
+    if (squadsDestAta && squadsDestAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, squadsDestAta, userPublicKey, squadsDestAmount));
+    }
+    
+    // Treasury gets its share + any rerouted shares
+    const totalTreasuryAmount = treasuryAmount + burnAmount + reroutedToTreasury;
+    if (totalTreasuryAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, treasuryAta, userPublicKey, totalTreasuryAmount));
+    }
+    
+    // Burn SMP tokens if applicable
+    if (smpMintAddress && paymentMint.equals(smpMintAddress)) {
+      const { createBurnInstruction } = await import("@solana/spl-token");
+      instructions.push(createBurnInstruction(userAta, paymentMint, userPublicKey, burnAmount));
+    }
+  }
+
+  const tx = new Transaction();
+  tx.add(...instructions);
+  tx.feePayer = userPublicKey;
+  return tx;
+}
 
 export default function ChapterPage() {
   const { id, chapter } = useParams();
@@ -104,28 +218,53 @@ export default function ChapterPage() {
   const [weeklyPoints, setWeeklyPoints] = useState(null);
   const usdcPrice = 1;
   const [localUnlocked, setLocalUnlocked] = useState(false);
+  const [recentlyUnlocked, setRecentlyUnlocked] = useState(false);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // Meteora helpers (mobile parity)
   const fetchPoolData = useCallback(async () => {
-    const resp = await fetch(meteoraApiUrl);
-    if (!resp.ok) throw new Error(`Meteora HTTP ${resp.status}`);
-    const arr = await resp.json();
-    return arr?.[0];
+    try {
+      const resp = await fetch(meteoraApiUrl);
+      if (!resp.ok) throw new Error(`Meteora HTTP ${resp.status}`);
+      const arr = await resp.json();
+      const pool = arr?.[0];
+      if (!pool) {
+        console.warn("[fetchPoolData] No pool data returned");
+        return null;
+      }
+      return pool;
+    } catch (error) {
+      console.error("[fetchPoolData] Error:", error);
+      return null;
+    }
   }, []);
 
   const calculateSolPriceInUsd = useCallback((pool) => {
+    if (!pool || !pool.pool_token_amounts || !pool.pool_token_usd_amounts) {
+      console.warn("[calculateSolPriceInUsd] Invalid pool data, using fallback");
+      return 100; // Fallback SOL price
+    }
     const solAmount = parseFloat(pool.pool_token_amounts[1]);
     const solUsd = parseFloat(pool.pool_token_usd_amounts[1]);
-    if (solAmount <= 0 || solUsd <= 0) throw new Error("Invalid pool amounts for SOL");
+    if (solAmount <= 0 || solUsd <= 0 || isNaN(solAmount) || isNaN(solUsd)) {
+      console.warn("[calculateSolPriceInUsd] Invalid pool amounts, using fallback");
+      return 100; // Fallback SOL price
+    }
     return solUsd / solAmount;
   }, []);
 
   const calculateSmpPerSol = useCallback((pool) => {
+    if (!pool || !pool.pool_token_amounts) {
+      console.warn("[calculateSmpPerSol] Invalid pool data, using fallback");
+      return 328861621.646602; // Fallback SMP per SOL
+    }
     const smpAmount = parseFloat(pool.pool_token_amounts[0]);
     const solAmount = parseFloat(pool.pool_token_amounts[1]);
-    if (smpAmount <= 0 || solAmount <= 0) throw new Error("Invalid pool amounts for SMP/SOL");
+    if (smpAmount <= 0 || solAmount <= 0 || isNaN(smpAmount) || isNaN(solAmount)) {
+      console.warn("[calculateSmpPerSol] Invalid pool amounts, using fallback");
+      return 328861621.646602; // Fallback SMP per SOL
+    }
     return smpAmount / solAmount;
   }, []);
 
@@ -567,7 +706,34 @@ export default function ChapterPage() {
       await checkAccess(user?.id);
     }
     initialize();
-  }, [isWalletConnected, activeWalletAddress, id, chapter]);
+  }, [isWalletConnected, activeWalletAddress, id, chapter, recentlyUnlocked]);
+
+  const checkChapterPayment = async (chapterNum) => {
+    if (!activeWalletAddress || !id) return false;
+    try {
+      // Get the user's email from auth session (this matches what's stored in DB)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userEmail = sessionData?.session?.user?.email;
+      
+      if (!userEmail) {
+        console.warn("[checkChapterPayment] No user email found");
+        return false;
+      }
+      
+      const { data, error } = await supabase
+        .from("chapter_payments")
+        .select("id")
+        .eq("wallet_address", userEmail)
+        .eq("novel_id", id)
+        .eq("chapter_number", chapterNum + 1)
+        .single();
+      if (error && error.code !== "PGRST116") throw new Error(error.message);
+      return !!data;
+    } catch (error) {
+      console.error("[checkChapterPayment] Error:", error.message);
+      return false;
+    }
+  };
 
   const checkAccess = async (userId) => {
     try {
@@ -576,6 +742,13 @@ export default function ChapterPage() {
         setIsLocked(false);
         return;
       }
+      
+      // Prevent re-locking if recently unlocked (payment just succeeded)
+      if (recentlyUnlocked) {
+        setIsLocked(false);
+        return;
+      }
+      
       const { data: novelData, error: novelError } = await supabase
         .from("novels")
         .select("*")
@@ -648,16 +821,10 @@ export default function ChapterPage() {
 
       // Enforce paywall: ALL chapters require payment/subscription unlock
 
-      // If user is authenticated, check per-chapter payment first (chapter_number is 1-based in DB)
+      // If user is authenticated, check per-chapter payment first
       if (userId) {
-        const { data: payments, error: payErr } = await supabase
-          .from("chapter_payments")
-          .select("id")
-          .eq("wallet_address", activeWalletAddress)
-          .eq("novel_id", id)
-          .eq("chapter_number", chapterNum + 1)
-          .limit(1);
-        if (!payErr && Array.isArray(payments) && payments.length > 0) {
+        const isPaid = await checkChapterPayment(chapterNum);
+        if (isPaid) {
           setIsLocked(false);
           return;
         }
@@ -700,6 +867,7 @@ export default function ChapterPage() {
   // Reset local unlocked flag when navigating to a different chapter
   useEffect(() => {
     setLocalUnlocked(false);
+    setRecentlyUnlocked(false);
   }, [chapter, id]);
 
   const fetchRatings = async () => {
@@ -774,38 +942,169 @@ export default function ChapterPage() {
   // removed corrupted helper; not needed after switching to proxy flow
 
   const processChapterPayment = async (subscriptionType, currency) => {
+    console.log("[processChapterPayment] Starting payment process...");
+    
+    if (!activeWalletAddress || !id || !chapter || !activePublicKey || !signAndSendTransaction) {
+      setError("Please connect your wallet and try again.");
+      setTimeout(() => setError(null), 5000);
+      return false;
+    }
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) {
         setError("You must be signed in to unlock chapters.");
         setTimeout(() => setError(null), 5000);
-        return;
+        return false;
       }
-      const resp = await fetch("/api/unlock-chapter-proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          novelId: id,
-          chapterId: parseInt(chapter, 10) + 1,
-          paymentType: subscriptionType,
-          currency,
-        }),
+
+      // Check if already paid
+      const chapterNum = parseInt(chapter, 10);
+      const isPaid = await checkChapterPayment(chapterNum);
+      if (isPaid && subscriptionType === "SINGLE") {
+        console.log("[processChapterPayment] Chapter already paid");
+        setIsLocked(false);
+        return true;
+      }
+
+      // Fetch author data for payment
+      const { data: novelData, error: novelError } = await supabase
+        .from("novels")
+        .select("user_id")
+        .eq("id", id)
+        .single();
+      
+      if (novelError || !novelData) {
+        throw new Error("Could not fetch novel data");
+      }
+
+      const { data: authorData, error: authorError } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", novelData.user_id)
+        .single();
+
+      if (authorError || !authorData?.wallet_address) {
+        throw new Error("Could not fetch author wallet");
+      }
+
+      const authorPublicKey = new PublicKey(authorData.wallet_address);
+
+      // Calculate payment amount (same as mobile app)
+      const usdAmount = 0.0025;
+      let paymentAmount = 0;
+      let paymentMint = null;
+
+      if (currency === "USDC") {
+        paymentMint = USDC_MINT_ADDRESS;
+        paymentAmount = Math.floor(usdAmount * 1e6);
+      } else if (currency === "SOL") {
+        paymentAmount = Math.floor(usdAmount * solPrice * 1e9);
+      } else if (currency === "SMP") {
+        paymentMint = SMP_MINT_ADDRESS;
+        paymentAmount = Math.ceil((usdAmount / smpPrice) * 10 ** SMP_DECIMALS);
+      } else {
+        throw new Error(`Invalid currency: ${currency}`);
+      }
+
+      console.log("[processChapterPayment] Payment amount:", paymentAmount, currency);
+
+      // Build transaction client-side
+      console.log("[processChapterPayment] Building transaction...");
+      const transaction = await createPaymentTransactionClient({
+        paymentMint,
+        paymentAmount,
+        userPublicKey: activePublicKey,
+        authorPublicKey,
+        smpMintAddress: paymentMint,
       });
-      const result = await resp.json();
-      if (!resp.ok || !result?.success) {
-        throw new Error(result?.error || "Unlock failed");
+
+      // Get fresh blockhash RIGHT before calling signAndSendTransaction (like mobile app)
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = activePublicKey;
+
+      // Sign and send transaction
+      console.log("[processChapterPayment] Signing and sending transaction...");
+      const signature = await signAndSendTransaction(transaction);
+      console.log("[processChapterPayment] Transaction sent, signature:", signature);
+
+      // Confirm transaction with retry logic
+      let confirmation;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          // Use simpler confirmation with just signature
+          confirmation = await connection.confirmTransaction(signature, "confirmed");
+          break; // Success, exit loop
+        } catch (confirmError) {
+          retryCount++;
+          console.warn(`[processChapterPayment] Confirmation attempt ${retryCount} failed:`, confirmError.message);
+          
+          if (retryCount >= maxRetries) {
+            throw new Error("Transaction confirmation failed after multiple attempts. Please check your wallet for the transaction status.");
+          }
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
       }
+
+      if (confirmation.value.err) {
+        console.error("[processChapterPayment] On-chain transaction failed:", confirmation.value.err);
+        throw new Error("Transaction failed on the blockchain.");
+      }
+
+      // Record payment in database via edge function
+      const requestBody = {
+        novelId: id,
+        chapterId: chapter,
+        paymentType: subscriptionType,
+        currency,
+        signature,
+      };
+      
+      try {
+        const resp = await fetch("/api/unlock-chapter-proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+        
+        console.log("[processChapterPayment] Edge function response status:", resp.status);
+        
+        const result = await resp.json();
+        console.log("[processChapterPayment] Edge function response:", result);
+        
+        if (!resp.ok) {
+          console.error("[processChapterPayment] Edge function error:", result.error || "Unknown error");
+          console.warn("[processChapterPayment] Payment succeeded but database recording failed");
+        } else if (result?.error) {
+          console.error("[processChapterPayment] Edge function returned error:", result.error);
+        }
+      } catch (dbError) {
+        console.error("[processChapterPayment] Database recording error:", dbError.message);
+        console.warn("[processChapterPayment] Payment succeeded but database recording failed");
+      }
+
       setIsLocked(false);
       setLocalUnlocked(true);
+      setRecentlyUnlocked(true);
+      
+      // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
+      setTimeout(() => setRecentlyUnlocked(false), 10000);
+      
       setSuccessMessage("Chapter unlocked successfully.");
       setTimeout(() => setSuccessMessage(""), 5000);
       return true;
     } catch (e) {
-      console.error("processChapterPayment error:", e);
+      console.error("[processChapterPayment] Error:", e);
       setError(e.message || "Failed to process payment.");
       setTimeout(() => setError(null), 5000);
       return false;

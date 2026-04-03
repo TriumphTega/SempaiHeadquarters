@@ -141,7 +141,7 @@ export default function MangaChapter() {
   }, [walletPanelOpen, isWalletConnected, fetchOnChainSmp]);
 
   const MIN_WITHDRAWAL = 2500;
-  const API_BASE_URL = "https://sempaihq.xyz";
+  const API_BASE_URL = "https://sempaihq.com";
   const handleWithdraw = async () => {
     try {
       if (!isWalletConnected || !activeWalletAddress) throw new Error("Please connect your wallet.");

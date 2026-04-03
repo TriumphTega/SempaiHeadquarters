@@ -49,6 +49,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
   const [passwordPrompt, setPasswordPrompt] = useState(false);
   const [password, setPassword] = useState("");
   const [transactionToSign, setTransactionToSign] = useState(null);
+  const [serializedTransaction, setSerializedTransaction] = useState(null);
   const [resolveSignPromise, setResolveSignPromise] = useState(null);
   const { user, loading: authLoading } = useAuth();
   const { publicKey: externalPublicKey, signTransaction: externalSignTransaction, sendTransaction: externalSendTransaction, connected: externalConnected } = useWallet();
@@ -334,8 +335,16 @@ export const EmbeddedWalletProvider = ({ children }) => {
       throw new Error("No wallet connected");
     }
 
+    // Serialize transaction for storage
+    // Don't set blockhash - will set fresh one at signing time
+    const serialized = transaction.serialize({ 
+      requireAllSignatures: false,
+      verifySignatures: false
+    });
+    const base64Tx = Buffer.from(serialized).toString('base64');
+
     setPasswordPrompt(true);
-    setTransactionToSign(transaction);
+    setSerializedTransaction(base64Tx);
 
     try {
       const signature = await new Promise((resolve, reject) => {
@@ -345,14 +354,14 @@ export const EmbeddedWalletProvider = ({ children }) => {
     } finally {
       setPasswordPrompt(false);
       setPassword("");
-      setTransactionToSign(null);
+      setSerializedTransaction(null);
       setResolveSignPromise(null);
     }
   };
 
   // Handle password submission
   const handlePasswordSubmit = async () => {
-    if (!resolveSignPromise || !transactionToSign) return;
+    if (!resolveSignPromise || !serializedTransaction) return;
 
     try {
       const secretKey = await getSecretKey();
@@ -362,16 +371,46 @@ export const EmbeddedWalletProvider = ({ children }) => {
       }
 
       const keypair = Keypair.fromSecretKey(secretKey);
-      const transaction = transactionToSign;
+      
+      // Deserialize transaction
+      const serialized = Buffer.from(serializedTransaction, 'base64');
+      const transaction = Transaction.from(serialized);
 
-      // Sign the transaction
-      transaction.sign([keypair]);
+      // Sign the transaction (blockhash should already be set)
+      transaction.sign(keypair);
 
-      // Send the transaction
-      const signature = await connection.sendRawTransaction(transaction.serialize(), {
-        skipPreflight: false,
-        maxRetries: 2,
-      });
+      // Get fresh blockhash right before sending (account for password delay)
+      const { blockhash: freshBlockhash } = await connection.getLatestBlockhash('processed');
+      transaction.recentBlockhash = freshBlockhash;
+      
+      // Re-sign with fresh blockhash
+      transaction.signatures = [];
+      transaction.sign(keypair);
+
+      // Send the transaction with retry logic (matching mobile app pattern)
+      let signature;
+      let sendRetries = 0;
+      const maxSendRetries = 3;
+      
+      while (sendRetries < maxSendRetries) {
+        try {
+          signature = await connection.sendRawTransaction(transaction.serialize(), {
+            skipPreflight: true, // Skip simulation to avoid blockhash issues
+            maxRetries: 2,
+          });
+          break; // Success
+        } catch (sendError) {
+          sendRetries++;
+          console.warn(`[handlePasswordSubmit] Send attempt ${sendRetries} failed:`, sendError.message);
+          
+          if (sendRetries >= maxSendRetries) {
+            throw sendError;
+          }
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * sendRetries));
+        }
+      }
 
       resolveSignPromise.resolve(signature);
     } catch (error) {
@@ -387,7 +426,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
     setPasswordPrompt(false);
     setPassword("");
-    setTransactionToSign(null);
+    setSerializedTransaction(null);
     setResolveSignPromise(null);
   };
 

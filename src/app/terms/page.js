@@ -40,7 +40,7 @@ export default function Terms() {
             <li><strong>Device:</strong> any internet connected device such as a phone, tablet, computer or any other device that can be used to visit Sempai HQ and use the services.</li>
             <li><strong>Service:</strong> refers to the service provided by Sempai HQ as described in the relative terms (if available) and on this platform.</li>
             <li><strong>Third-party service:</strong> refers to advertisers, contest sponsors, promotional and marketing partners, and others who provide our content or whose products or services we think may interest you.</li>
-            <li><strong>Website:</strong> Sempai HQ's site, which can be accessed via this URL: https://sempaihq.xyz</li>
+            <li><strong>Website:</strong> Sempai HQ's site, which can be accessed via this URL: https://sempaihq.com</li>
             <li><strong>You:</strong> a person or entity that is registered with Sempai HQ to use the Services.</li>
           </ul>
 
