@@ -219,6 +219,7 @@ export default function ChapterPage() {
   const usdcPrice = 1;
   const [localUnlocked, setLocalUnlocked] = useState(false);
   const [recentlyUnlocked, setRecentlyUnlocked] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -725,7 +726,7 @@ export default function ChapterPage() {
         .select("id")
         .eq("wallet_address", userEmail)
         .eq("novel_id", id)
-        .eq("chapter_number", chapterNum + 1)
+        .eq("chapter_number", chapterNum)
         .single();
       if (error && error.code !== "PGRST116") throw new Error(error.message);
       return !!data;
@@ -866,8 +867,23 @@ export default function ChapterPage() {
 
   // Reset local unlocked flag when navigating to a different chapter
   useEffect(() => {
+    // Reset all states to ensure clean slate for new chapter
     setLocalUnlocked(false);
     setRecentlyUnlocked(false);
+    setError(null);
+    setSuccessMessage("");
+    setWarningMessage("");
+    setIsProcessing(false);
+    setLoading(true); // Start loading for new chapter
+    
+    // Force checkAccess to run after a short delay
+    const timer = setTimeout(() => {
+      if (userId) {
+        checkAccess(userId);
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [chapter, id]);
 
   const fetchRatings = async () => {
@@ -947,8 +963,14 @@ export default function ChapterPage() {
     if (!activeWalletAddress || !id || !chapter || !activePublicKey || !signAndSendTransaction) {
       setError("Please connect your wallet and try again.");
       setTimeout(() => setError(null), 5000);
+      setIsProcessing(false);
       return false;
     }
+
+    setIsProcessing(true);
+    setError(null);
+    setSuccessMessage("");
+    setWarningMessage("");
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -956,6 +978,7 @@ export default function ChapterPage() {
       if (!token) {
         setError("You must be signed in to unlock chapters.");
         setTimeout(() => setError(null), 5000);
+        setIsProcessing(false);
         return false;
       }
 
@@ -965,6 +988,7 @@ export default function ChapterPage() {
       if (isPaid && subscriptionType === "SINGLE") {
         console.log("[processChapterPayment] Chapter already paid");
         setIsLocked(false);
+        setIsProcessing(false);
         return true;
       }
 
@@ -1037,8 +1061,14 @@ export default function ChapterPage() {
       
       while (retryCount < maxRetries) {
         try {
+          // Wait a bit before first confirmation attempt
+          if (retryCount === 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          console.log(`[processChapterPayment] Confirmation attempt ${retryCount + 1} for signature: ${signature}`);
           // Use simpler confirmation with just signature
           confirmation = await connection.confirmTransaction(signature, "confirmed");
+          console.log('[processChapterPayment] Confirmation successful:', confirmation);
           break; // Success, exit loop
         } catch (confirmError) {
           retryCount++;
@@ -1108,6 +1138,8 @@ export default function ChapterPage() {
       setError(e.message || "Failed to process payment.");
       setTimeout(() => setError(null), 5000);
       return false;
+    } finally {
+      setIsProcessing(false);
     }
   };
 

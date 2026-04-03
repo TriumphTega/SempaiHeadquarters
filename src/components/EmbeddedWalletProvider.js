@@ -398,6 +398,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
             skipPreflight: true, // Skip simulation to avoid blockhash issues
             maxRetries: 2,
           });
+          console.log('[handlePasswordSubmit] Transaction sent, signature:', signature);
           break; // Success
         } catch (sendError) {
           sendRetries++;
