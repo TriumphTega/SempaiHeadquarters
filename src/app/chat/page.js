@@ -7,7 +7,7 @@ import { supabase } from "@/services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import styles from "./Chat.module.css";
 
-// Utility function to truncate names longer than 12 characters
+// Utility function to truncate names longer than 12 character
 const truncateName = (name) => {
   if (!name || name.length <= 12) return name;
   return `${name.slice(0, 3)}**${name.slice(-3)}`;
