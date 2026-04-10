@@ -55,6 +55,9 @@ const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwy
 const SMP_DECIMALS = 6;
 const TARGET_WALLET = TREASURY_PUBLIC_KEY;
 
+// Ad video configuration
+const AD_VIDEO_PATH = "/ad_video.mp4"; // Update this with your video filename
+
 const MIN_ATA_SOL = 0.00103928;
 const MIN_USER_SOL = 0.001;
 const poolAddress = "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33";
@@ -223,6 +226,9 @@ export default function ChapterPage() {
   const [localUnlocked, setLocalUnlocked] = useState(false);
   const [recentlyUnlocked, setRecentlyUnlocked] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasInsufficientSmp, setHasInsufficientSmp] = useState(false);
+  const [hasUsedAdUnlockToday, setHasUsedAdUnlockToday] = useState(false);
+  const [showAdOption, setShowAdOption] = useState(false);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -369,10 +375,26 @@ export default function ChapterPage() {
       // Display on-chain balance in UI
       const onChain = await fetchSmpBalanceOnChain();
       setSmpBalance(onChain ?? 0);
+      
+      // Check if user has insufficient SMP for chapter unlock
+      const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
+      const insufficientSmp = onChain < requiredSmp;
+      setHasInsufficientSmp(insufficientSmp);
+      
+      // Check ad unlock eligibility if user has insufficient SMP
+      if (insufficientSmp && userData.id) {
+        // Check ad unlock eligibility
+        const isEligible = await checkAdUnlockEligibility(userData.id);
+        setShowAdOption(isEligible);
+      } else {
+        setShowAdOption(false);
+      }
     } catch (error) {
       console.error("Error fetching user balances:", error);
       setError("Unable to load wallet balances.");
       setSmpBalance(0);
+      setHasInsufficientSmp(false);
+      setShowAdOption(false);
       setTimeout(() => setError(null), 5000);
     }
   }, [activeWalletAddress, fetchSmpBalanceOnChain]);
@@ -739,6 +761,201 @@ export default function ChapterPage() {
     }
   };
 
+  const checkAdUnlockEligibility = async (currentUserId = null) => {
+    const targetUserId = currentUserId || userId;
+    if (!targetUserId || !id || !chapter) return false;
+    try {
+      const chapterNum = parseInt(chapter, 10);
+      
+      // Check if user has already used ad unlock today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayUnlock, error: todayError } = await supabase
+        .from("ad_based_unlocks")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .gte("ad_watched_at", today)
+        .limit(1);
+      
+      if (todayError && todayError.code !== "PGRST116") throw new Error(todayError.message);
+      
+      const hasUsedToday = todayUnlock && todayUnlock.length > 0;
+      setHasUsedAdUnlockToday(hasUsedToday);
+      
+      // Check if this specific chapter was already unlocked via ad
+      const { data: chapterUnlock, error: chapterError } = await supabase
+        .from("ad_based_unlocks")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .eq("novel_id", id)
+        .eq("chapter_number", chapterNum)
+        .single();
+      
+      if (chapterError && chapterError.code !== "PGRST116") throw new Error(chapterError.message);
+      
+      return !hasUsedToday && !chapterUnlock;
+    } catch (error) {
+      console.error("[checkAdUnlockEligibility] Error:", error.message);
+      return false;
+    }
+  };
+
+  const handleAdBasedUnlock = async () => {
+    if (!userId || !id || !chapter || isProcessing) {
+      setError("Unable to process ad unlock. Please try again.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const chapterNum = parseInt(chapter, 10);
+      
+      // Check eligibility again
+      const isEligible = await checkAdUnlockEligibility();
+      if (!isEligible) {
+        setError(hasUsedAdUnlockToday 
+          ? "You have already used your free ad unlock for today. Come back tomorrow!" 
+          : "This chapter was already unlocked via ad.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Helper function to complete the unlock process
+      const completeAdUnlock = async () => {
+        // Record the ad-based unlock
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userEmail = sessionData?.session?.user?.email;
+        
+        if (!userEmail) {
+          throw new Error("User session not found");
+        }
+
+        const { error: adUnlockError } = await supabase
+          .from("ad_based_unlocks")
+          .insert({
+            user_id: userId,
+            novel_id: id,
+            chapter_number: chapterNum,
+            unlocked_at: new Date().toISOString(),
+            ad_watched_at: new Date().toISOString(),
+          });
+
+        if (adUnlockError) throw new Error(`Failed to record ad unlock: ${adUnlockError.message}`);
+
+        // Record in chapter_payments as well for consistency
+        const { error: paymentError } = await supabase
+          .from("chapter_payments")
+          .insert({
+            wallet_address: userEmail,
+            novel_id: id,
+            chapter_number: chapterNum,
+            payment_type: "AD_BASED",
+            currency: "FREE",
+            amount: 0,
+            transaction_id: `AD_UNLOCK_${Date.now()}`,
+            created_at: new Date().toISOString(),
+          });
+
+        if (paymentError) {
+          console.warn("[handleAdBasedUnlock] Failed to record payment entry:", paymentError.message);
+        }
+
+        // Unlock the chapter
+        setIsLocked(false);
+        setLocalUnlocked(true);
+        setRecentlyUnlocked(true);
+        
+        setSuccessMessage("Chapter unlocked successfully! You can read it now.");
+        setTimeout(() => setSuccessMessage(""), 5000);
+        
+        // Update eligibility states
+        await checkAdUnlockEligibility();
+        
+        // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
+        setTimeout(() => setRecentlyUnlocked(false), 10000);
+      };
+
+      // Play the actual video ad
+      setSuccessMessage("Loading video ad...");
+      await delay(1000);
+      
+      // Create and play video ad
+      const videoAd = document.createElement('video');
+      videoAd.src = AD_VIDEO_PATH;
+      videoAd.style.position = 'fixed';
+      videoAd.style.top = '50%';
+      videoAd.style.left = '50%';
+      videoAd.style.transform = 'translate(-50%, -50%)';
+      videoAd.style.zIndex = '10000';
+      videoAd.style.maxWidth = '90vw';
+      videoAd.style.maxHeight = '90vh';
+      videoAd.style.backgroundColor = 'black';
+      videoAd.controls = true;
+      videoAd.autoplay = true;
+      
+      // Create overlay container
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+      overlay.style.backgroundColor = 'rgba(0,0,0,0.9)';
+      overlay.style.zIndex = '9999';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      
+      // Add video to overlay
+      overlay.appendChild(videoAd);
+      document.body.appendChild(overlay);
+      
+      setSuccessMessage("Watching video ad... Please wait for it to complete.");
+      
+      // Wait for video to finish playing
+      return new Promise((resolve, reject) => {
+        videoAd.onended = async () => {
+          try {
+            // Remove overlay
+            document.body.removeChild(overlay);
+            
+            // Continue with unlock process
+            await completeAdUnlock();
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        videoAd.onerror = () => {
+          document.body.removeChild(overlay);
+          reject(new Error('Video ad failed to load'));
+        };
+        
+        // Fallback timeout (60 seconds max for longer videos)
+        setTimeout(() => {
+          if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+            reject(new Error('Video ad timeout'));
+          }
+        }, 60000);
+      }).catch(async (error) => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+        throw error;
+      });
+      
+    } catch (error) {
+      console.error("[handleAdBasedUnlock] Error:", error);
+      setError(`Ad unlock failed: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const checkAccess = async (userId) => {
     try {
       // If we've just unlocked via this session, trust the local flag to avoid race conditions
@@ -836,6 +1053,20 @@ export default function ChapterPage() {
       if (userId) {
         const isPaid = await checkChapterPayment(chapterNum);
         if (isPaid) {
+          setIsLocked(false);
+          return;
+        }
+        
+        // Check for ad-based unlock
+        const { data: adUnlock, error: adError } = await supabase
+          .from("ad_based_unlocks")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("novel_id", id)
+          .eq("chapter_number", chapterNum)
+          .single();
+        
+        if (!adError && adUnlock) {
           setIsLocked(false);
           return;
         }
@@ -1392,12 +1623,45 @@ export default function ChapterPage() {
             </div>
             {!advanceInfo?.is_advance ? (
               <div className={styles.centerAction}>
-                <button
-                  onClick={() => processChapterPayment("SINGLE", "SMP")}
-                  className={styles.readWithSmpButton}
-                >
-                  <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
-                </button>
+                {hasInsufficientSmp && showAdOption ? (
+                  <>
+                    <p className={styles.subMessage}>
+                      <FaGem className={styles.gemIcon} /> You don't have enough SMP. Watch an ad to unlock for free!
+                    </p>
+                    <div className={styles.paymentOptions}>
+                      <button
+                        onClick={handleAdBasedUnlock}
+                        className={`${styles.unlockButton} ${styles.adUnlock}`}
+                        disabled={isProcessing || hasUsedAdUnlockToday}
+                        title={hasUsedAdUnlockToday ? "Already used today" : "Watch an ad to unlock this chapter for free"}
+                      >
+                        <FaGem className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>
+                          {isProcessing ? "Processing..." : hasUsedAdUnlockToday ? "Ad Unlock Used Today" : "Watch Ad - Free Unlock"}
+                        </span>
+                        <span className={styles.price}>One chapter per day</span>
+                      </button>
+                    </div>
+                    <p className={styles.alternativeOption}>Or pay with SMP:</p>
+                    <button
+                      onClick={() => processChapterPayment("SINGLE", "SMP")}
+                      className={styles.readWithSmpButton}
+                      disabled={hasInsufficientSmp}
+                      title={hasInsufficientSmp ? "Insufficient SMP balance" : "Pay with SMP tokens"}
+                    >
+                      <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => processChapterPayment("SINGLE", "SMP")}
+                    className={styles.readWithSmpButton}
+                    disabled={hasInsufficientSmp}
+                    title={hasInsufficientSmp ? "Insufficient SMP balance" : "Pay with SMP tokens"}
+                  >
+                    <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
+                  </button>
+                )}
               </div>
             ) : (
               <>

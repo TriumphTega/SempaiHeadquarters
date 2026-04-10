@@ -1064,6 +1064,53 @@
   margin-top: 10px;
   font-style: italic;
 }
+
+/* Ad-based unlock styles */
+.adUnlock {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: 2px solid #28a745;
+  color: white;
+  font-weight: bold;
+  position: relative;
+  overflow: hidden;
+}
+
+.adUnlock:disabled {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  border-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.adUnlock:not(:disabled):hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(40, 167, 69, 0.5);
+}
+
+.adUnlock::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.adUnlock:not(:disabled):hover::before {
+  left: 100%;
+}
+
+.alternativeOption {
+  text-align: center;
+  margin: 15px 0 10px 0;
+  color: #999;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 .balanceFloat {
   position: fixed;
   top: 100px; /* Moved down to avoid navbar overlap */
