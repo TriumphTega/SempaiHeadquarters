@@ -156,21 +156,24 @@ async function createPaymentTransactionClient({ paymentMint, paymentAmount, user
     }
 
     // Build transfer instructions
+    // IMPORTANT: Transfers must be from the user's ATA, signed by the user.
+    // Author
     if (authorDestAta && authorDestAmount > 0) {
       instructions.push(createTransferInstruction(userAta, authorDestAta, userPublicKey, authorDestAmount));
     }
+    // Squads
     if (squadsDestAta && squadsDestAmount > 0) {
       instructions.push(createTransferInstruction(userAta, squadsDestAta, userPublicKey, squadsDestAmount));
     }
-    
-    // Treasury gets its share + any rerouted shares
+
+    // Treasury gets its share + burn + any rerouted shares
     const totalTreasuryAmount = treasuryAmount + burnAmount + reroutedToTreasury;
     if (totalTreasuryAmount > 0) {
       instructions.push(createTransferInstruction(userAta, treasuryAta, userPublicKey, totalTreasuryAmount));
     }
-    
-    // Burn SMP tokens if applicable
-    if (smpMintAddress && paymentMint.equals(smpMintAddress)) {
+
+    // Burn SMP tokens if applicable (burn is performed from user's ATA)
+    if (smpMintAddress && paymentMint.equals(smpMintAddress) && burnAmount > 0) {
       const { createBurnInstruction } = await import("@solana/spl-token");
       instructions.push(createBurnInstruction(userAta, paymentMint, userPublicKey, burnAmount));
     }
@@ -1054,47 +1057,34 @@ export default function ChapterPage() {
       const signature = await signAndSendTransaction(transaction);
       console.log("[processChapterPayment] Transaction sent, signature:", signature);
 
-      // Confirm transaction with retry logic
-      let confirmation;
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (retryCount < maxRetries) {
-        try {
-          // Wait a bit before first confirmation attempt
-          if (retryCount === 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-          console.log(`[processChapterPayment] Confirmation attempt ${retryCount + 1} for signature: ${signature}`);
-          // Use simpler confirmation with just signature
-          confirmation = await connection.confirmTransaction(signature, "confirmed");
-          console.log('[processChapterPayment] Confirmation successful:', confirmation);
-          break; // Success, exit loop
-        } catch (confirmError) {
-          retryCount++;
-          console.warn(`[processChapterPayment] Confirmation attempt ${retryCount} failed:`, confirmError.message);
-          
-          if (retryCount >= maxRetries) {
-            throw new Error("Transaction confirmation failed after multiple attempts. Please check your wallet for the transaction status.");
-          }
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      const start = Date.now();
+      let landed = false;
+      while (Date.now() - start < 5000) {
+        const statusResp = await connection.getSignatureStatus(signature);
+        const status = statusResp?.value;
+        if (status?.err) {
+          throw new Error("Transaction failed on-chain.");
         }
+        if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
+          landed = true;
+          break;
+        }
+        await delay(500);
+      }
+      if (!landed) {
+        throw new Error("Transaction not confirmed yet. Please try again.");
       }
 
-      if (confirmation.value.err) {
-        console.error("[processChapterPayment] On-chain transaction failed:", confirmation.value.err);
-        throw new Error("Transaction failed on the blockchain.");
-      }
+      console.log("[processChapterPayment] Transaction landed, recording payment...");
 
       // Record payment in database via edge function
       const requestBody = {
         novelId: id,
-        chapterId: chapter,
+        chapterId: parseInt(chapter, 10), // Send as number like mobile app
         paymentType: subscriptionType,
         currency,
         signature,
+        transactionId: signature, // Add transactionId field
       };
       
       try {
@@ -1126,6 +1116,9 @@ export default function ChapterPage() {
       setIsLocked(false);
       setLocalUnlocked(true);
       setRecentlyUnlocked(true);
+      
+      // Fetch updated balance after payment
+      await fetchUserBalances();
       
       // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
       setTimeout(() => setRecentlyUnlocked(false), 10000);
