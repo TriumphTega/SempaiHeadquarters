@@ -763,6 +763,13 @@ export default function ChapterPage() {
 
       const chapterNum = parseInt(chapter, 10);
       const totalChapters = Object.keys(novelData.chaptercontents || {}).length;
+
+      // Free preview: first 3 chapters are unlocked by default
+      if (!Number.isNaN(chapterNum) && chapterNum <= 2) {
+        setIsLocked(false);
+        return;
+      }
+
       const chapterAdvanceInfo =
         novelData.advance_chapters?.find((c) => c.index === chapterNum) || {
           is_advance: false,
@@ -985,8 +992,15 @@ export default function ChapterPage() {
         return false;
       }
 
+      // Free preview: prevent payment attempt for chapters 0,1,2
+      const currentChapterNum = parseInt(chapter, 10);
+      if (!Number.isNaN(currentChapterNum) && currentChapterNum <= 2) {
+        setIsLocked(false);
+        return true;
+      }
+
       // Check if already paid
-      const chapterNum = parseInt(chapter, 10);
+      const chapterNum = currentChapterNum;
       const isPaid = await checkChapterPayment(chapterNum);
       if (isPaid && subscriptionType === "SINGLE") {
         console.log("[processChapterPayment] Chapter already paid");
