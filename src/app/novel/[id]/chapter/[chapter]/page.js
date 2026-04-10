@@ -1073,9 +1073,17 @@ export default function ChapterPage() {
 
       const start = Date.now();
       let landed = false;
-      while (Date.now() - start < 5000) {
+      console.log("[processChapterPayment] Starting confirmation poll for signature:", signature);
+      
+      while (Date.now() - start < 10000) { // 10 seconds instead of 5
         const statusResp = await connection.getSignatureStatus(signature);
         const status = statusResp?.value;
+        console.log(`[processChapterPayment] Status check ${Math.floor((Date.now() - start) / 1000)}s:`, {
+          confirmationStatus: status?.confirmationStatus,
+          err: status?.err,
+          slot: status?.slot
+        });
+        
         if (status?.err) {
           throw new Error("Transaction failed on-chain.");
         }
@@ -1085,7 +1093,24 @@ export default function ChapterPage() {
         }
         await delay(500);
       }
+      
       if (!landed) {
+        // Last resort: check transaction status directly
+        console.log("[processChapterPayment] Transaction not confirmed in 10s, checking status directly...");
+        const finalStatus = await connection.getSignatureStatus(signature, {
+          searchTransactionHistory: true
+        });
+        console.log("[processChapterPayment] Final status check:", finalStatus?.value);
+        
+        if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
+          landed = true;
+        } else if (finalStatus?.value?.err) {
+          throw new Error("Transaction failed on-chain.");
+        }
+      }
+      
+      if (!landed) {
+        console.error("[processChapterPayment] Transaction confirmation failed after all attempts");
         throw new Error("Transaction not confirmed yet. Please try again.");
       }
 
@@ -1327,20 +1352,22 @@ export default function ChapterPage() {
       <div className={styles.chapterContainer}>
         <div className={styles.headerSection}>
           <h1 className={styles.chapterTitle}>{chapterTitle}</h1>
-          <div className={styles.audioControls}>
-            <button onClick={() => readText(chapterData)} className={styles.audioButton}>
-              <FaVolumeUp /> Read Aloud
-            </button>
-            <button onClick={pauseText} className={styles.audioButton}>
-              <FaPause /> Pause
-            </button>
-            <button onClick={resumeText} className={styles.audioButton}>
-              <FaPlay /> Resume
-            </button>
-            <button onClick={stopText} className={styles.audioButton}>
-              <FaStop /> Stop
-            </button>
-          </div>
+          {!isLocked && (
+            <div className={styles.audioControls}>
+              <button onClick={() => readText(chapterData)} className={styles.audioButton}>
+                <FaVolumeUp /> Read Aloud
+              </button>
+              <button onClick={pauseText} className={styles.audioButton}>
+                <FaPause /> Pause
+              </button>
+              <button onClick={resumeText} className={styles.audioButton}>
+                <FaPlay /> Resume
+              </button>
+              <button onClick={stopText} className={styles.audioButton}>
+                <FaStop /> Stop
+              </button>
+            </div>
+          )}
           {successMessage && (
             <div className={styles.successMessage}>
               <FaGem /> {successMessage}
