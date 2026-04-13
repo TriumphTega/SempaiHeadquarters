@@ -1,0 +1,204 @@
+.userDisplay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.userDisplay.clickable {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.userDisplay.clickable:hover {
+  opacity: 0.8;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+}
+
+.tiny {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+.small {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
+
+.medium {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.large {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+.username {
+  font-weight: 500;
+  color: #333;
+}
+
+.username.tiny {
+  font-size: 12px;
+}
+
+.username.small {
+  font-size: 14px;
+}
+
+.username.medium {
+  font-size: 16px;
+}
+
+.username.large {
+  font-size: 18px;
+}
+
+.badgePlaceholder {
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: 2px solid #e0e0e0;
+}
+
+.badgePlaceholder.tiny {
+  width: 16px;
+  height: 16px;
+}
+
+.badgePlaceholder.small {
+  width: 20px;
+  height: 20px;
+}
+
+.badgePlaceholder.medium {
+  width: 24px;
+  height: 24px;
+}
+
+.badgePlaceholder.large {
+  width: 32px;
+  height: 32px;
+}
+
+/* Inline version for tight spaces */
+.inlineUserDisplay {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  color: #333;
+}
+
+.inlineUserDisplay.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.inlineBadge {
+  margin-left: 4px;
+}
+
+/* Profile header version */
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.profileHeader .avatar {
+  width: 80px;
+  height: 80px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.profileHeader .username {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.profileHeader .badge {
+  margin-top: 8px;
+}
+
+/* Chat version */
+.chatUser {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #f1f3f4;
+  border-radius: 16px;
+  margin: 2px;
+}
+
+.chatUser .avatar {
+  width: 24px;
+  height: 24px;
+}
+
+.chatUser .username {
+  font-size: 13px;
+  color: #5f6368;
+}
+
+/* Comment version */
+.commentUser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.commentUser .avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.commentUser .username {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Leaderboard version */
+.leaderboardUser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.leaderboardUser .avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.leaderboardUser .username {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.leaderboardUser .badge {
+  margin-left: auto;
+}

@@ -7,6 +7,7 @@ import { FaComment, FaReply, FaTimes, FaTrash, FaEye, FaEyeSlash } from "react-i
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import { PublicKey } from "@solana/web3.js";
+import { InlineUserDisplay } from "../UserDisplay";
 import styles from "./CommentSection.module.css";
 
 const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleReplies, showReplies, deleteComment, currentUserId }) => {
@@ -15,7 +16,11 @@ const Comment = ({ comment, replies, addReply, replyingTo, cancelReply, toggleRe
   return (
     <div className={styles.comment}>
       <div className={styles.commentHeader}>
-        <span className={styles.commentUsername}>{formatUsername(comment.username)}</span>
+        <InlineUserDisplay 
+          userId={comment.user_id}
+          username={formatUsername(comment.username)}
+          showBadge={true}
+        />
         <span className={styles.commentTimestamp}>
           {new Date(comment.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
         </span>

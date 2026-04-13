@@ -13,6 +13,7 @@ import {
 import {
   TOKEN_PROGRAM_ID,
   createTransferInstruction,
+  createAssociatedTokenAccountInstruction,
   getOrCreateAssociatedTokenAccount,
   getAccount,
   getAssociatedTokenAddressSync,
@@ -74,9 +75,9 @@ const poolAddress = "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33";
 const meteoraApiUrl = `https://amm-v2.meteora.ag/pools?address=${poolAddress}`;
 const USDC_AMOUNT = 0.0025; // $0.025 per chapter
 
-// Treasury wallet addresses (same as mobile app)
-const SQUADS_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
-const TREASURY_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
+// Revenue split wallet addresses
+const FOUNDER_FUND_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
+const SEMPAI_HQ_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
 
 const connection = new Connection(RPC_URL, {
   commitment: "confirmed",
@@ -101,94 +102,120 @@ function splitAmountWithResidual(amount, ratios) {
 
 // Helper: Create payment transaction on client side
 async function createPaymentTransactionClient({ paymentMint, paymentAmount, userPublicKey, authorPublicKey, smpMintAddress }) {
-  const [authorAmount, treasuryAmount, squadsAmount, burnAmount] = splitAmountWithResidual(
+  const [creatorAmount, sempaiHqAmount, founderFundAmount] = splitAmountWithResidual(
     paymentAmount,
-    [30, 30, 25, 15]
+    [50, 30, 20]
   );
   
   const instructions = [];
   
   if (!paymentMint) {
-    // SOL transfer
+    // SOL transfer - 50% to creator, 30% to Sempai HQ, 20% to Founder Fund
     instructions.push(
       SystemProgram.transfer({
         fromPubkey: userPublicKey,
         toPubkey: authorPublicKey,
-        lamports: authorAmount,
+        lamports: creatorAmount,
       }),
       SystemProgram.transfer({
         fromPubkey: userPublicKey,
-        toPubkey: TREASURY_WALLET,
-        lamports: treasuryAmount + burnAmount,
+        toPubkey: SEMPAI_HQ_WALLET,
+        lamports: sempaiHqAmount,
       }),
       SystemProgram.transfer({
         fromPubkey: userPublicKey,
-        toPubkey: SQUADS_WALLET,
-        lamports: squadsAmount,
+        toPubkey: FOUNDER_FUND_WALLET,
+        lamports: founderFundAmount,
       })
     );
   } else {
-    // Token transfer
+    // Token transfer - 50% to creator, 30% to Sempai HQ, 20% to Founder Fund
     const userAta = getAssociatedTokenAddressSync(paymentMint, userPublicKey);
-    const authorAta = getAssociatedTokenAddressSync(paymentMint, authorPublicKey);
-    const treasuryAta = getAssociatedTokenAddressSync(paymentMint, TREASURY_WALLET, true);
-    const squadsAta = getAssociatedTokenAddressSync(paymentMint, SQUADS_WALLET, true);
+    const creatorAta = getAssociatedTokenAddressSync(paymentMint, authorPublicKey);
+    const sempaiHqAta = getAssociatedTokenAddressSync(paymentMint, SEMPAI_HQ_WALLET, true);
+    const founderFundAta = getAssociatedTokenAddressSync(paymentMint, FOUNDER_FUND_WALLET, true);
 
-    let reroutedToTreasury = 0;
+    let reroutedToFounderFund = 0;
     
     // Check if ATAs exist and route accordingly
-    const [authorAtaInfo, squadsAtaInfo, treasuryAtaInfo] = await connection.getMultipleAccountsInfo([
-      authorAta,
-      squadsAta,
-      treasuryAta,
+    const [creatorAtaInfo, sempaiHqAtaInfo, founderFundAtaInfo] = await connection.getMultipleAccountsInfo([
+      creatorAta,
+      sempaiHqAta,
+      founderFundAta,
     ]);
 
-    // Author
-    let authorDestAta = authorAta;
-    let authorDestAmount = authorAmount;
-    if (!authorAtaInfo) {
-      console.warn("[createPaymentTransactionClient] Author ATA missing, rerouting to treasury");
-      reroutedToTreasury += authorAmount;
-      authorDestAta = null;
-      authorDestAmount = 0;
+    // Check user's SOL balance for ATA creation costs
+    const userBalance = await connection.getBalance(userPublicKey);
+    const ataRentExemption = 0.00203928 * LAMPORTS_PER_SOL; // Approximate rent exemption
+    const requiredSolForAtas = (!creatorAtaInfo ? ataRentExemption : 0) + (!sempaiHqAtaInfo ? ataRentExemption : 0);
+    
+    console.log("[createPaymentTransactionClient] User SOL balance:", userBalance / LAMPORTS_PER_SOL);
+    console.log("[createPaymentTransactionClient] Required SOL for ATAs:", requiredSolForAtas / LAMPORTS_PER_SOL);
+
+    // Creator - Create ATA if missing and user has enough SOL
+    let creatorDestAta = creatorAta;
+    let creatorDestAmount = creatorAmount;
+    if (!creatorAtaInfo) {
+      if (userBalance >= requiredSolForAtas) {
+        console.log("[createPaymentTransactionClient] Creating Creator ATA");
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            userPublicKey, // payer
+            creatorAta, // ata
+            authorPublicKey, // owner
+            paymentMint // mint
+          )
+        );
+      } else {
+        console.warn("[createPaymentTransactionClient] Insufficient SOL for Creator ATA, rerouting to Founder Fund");
+        reroutedToFounderFund += creatorAmount;
+        creatorDestAta = null;
+        creatorDestAmount = 0;
+      }
     }
     
-    // Squads
-    let squadsDestAta = squadsAta;
-    let squadsDestAmount = squadsAmount;
-    if (!squadsAtaInfo) {
-      console.warn("[createPaymentTransactionClient] Squads ATA missing, rerouting to treasury");
-      reroutedToTreasury += squadsAmount;
-      squadsDestAta = null;
-      squadsDestAmount = 0;
+    // Sempai HQ - Create ATA if missing and user has enough SOL
+    let sempaiHqDestAta = sempaiHqAta;
+    let sempaiHqDestAmount = sempaiHqAmount;
+    if (!sempaiHqAtaInfo) {
+      if (userBalance >= requiredSolForAtas) {
+        console.log("[createPaymentTransactionClient] Creating Sempai HQ ATA");
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            userPublicKey, // payer
+            sempaiHqAta, // ata
+            SEMPAI_HQ_WALLET, // owner
+            paymentMint // mint
+          )
+        );
+      } else {
+        console.warn("[createPaymentTransactionClient] Insufficient SOL for Sempai HQ ATA, rerouting to Founder Fund");
+        reroutedToFounderFund += sempaiHqAmount;
+        sempaiHqDestAta = null;
+        sempaiHqDestAmount = 0;
+      }
     }
     
-    // Treasury must exist
-    if (!treasuryAtaInfo) {
-      throw new Error("Treasury wallet is missing ATA for this token");
+    // Founder Fund must exist
+    if (!founderFundAtaInfo) {
+      throw new Error("Founder Fund wallet is missing ATA for this token");
     }
 
     // Build transfer instructions
     // IMPORTANT: Transfers must be from the user's ATA, signed by the user.
-    // Author
-    if (authorDestAta && authorDestAmount > 0) {
-      instructions.push(createTransferInstruction(userAta, authorDestAta, userPublicKey, authorDestAmount));
+    // Creator
+    if (creatorDestAta && creatorDestAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, creatorDestAta, userPublicKey, creatorDestAmount));
     }
-    // Squads
-    if (squadsDestAta && squadsDestAmount > 0) {
-      instructions.push(createTransferInstruction(userAta, squadsDestAta, userPublicKey, squadsDestAmount));
-    }
-
-    // Treasury gets its share + burn + any rerouted shares
-    const totalTreasuryAmount = treasuryAmount + burnAmount + reroutedToTreasury;
-    if (totalTreasuryAmount > 0) {
-      instructions.push(createTransferInstruction(userAta, treasuryAta, userPublicKey, totalTreasuryAmount));
+    // Sempai HQ
+    if (sempaiHqDestAta && sempaiHqDestAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, sempaiHqDestAta, userPublicKey, sempaiHqDestAmount));
     }
 
-    // Burn SMP tokens if applicable (burn is performed from user's ATA)
-    if (smpMintAddress && paymentMint.equals(smpMintAddress) && burnAmount > 0) {
-      const { createBurnInstruction } = await import("@solana/spl-token");
-      instructions.push(createBurnInstruction(userAta, paymentMint, userPublicKey, burnAmount));
+    // Founder Fund gets its share + any rerouted shares
+    const totalFounderFundAmount = founderFundAmount + reroutedToFounderFund;
+    if (totalFounderFundAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, founderFundAta, userPublicKey, totalFounderFundAmount));
     }
   }
 
@@ -536,11 +563,39 @@ export default function ChapterPage() {
         )
       );
 
+      // Debug: Log transaction details before sending
+      console.log("[processChapterPayment] Transaction details:", {
+        instructions: transaction.instructions.length,
+        feePayer: transaction.feePayer?.toBase58(),
+        recentBlockhash: transaction.recentBlockhash,
+        lamports: transaction.instructions.map(i => i.lamports || 0),
+        instructionTypes: transaction.instructions.map(i => {
+          if (i.programId.equals(TOKEN_PROGRAM_ID)) {
+            return "Token";
+          } else if (i.programId.equals(SystemProgram.programId)) {
+            return "System";
+          } else {
+            return "Other";
+          }
+        })
+      });
+
+      // Estimate transaction cost
+      try {
+        const message = transaction.compileMessage();
+        const estimatedFees = await connection.getFeeForMessage(message);
+        console.log("[processChapterPayment] Estimated transaction fees:", estimatedFees?.value?.lamports);
+      } catch (feeError) {
+        console.error("[processChapterPayment] Error estimating fees:", feeError);
+      }
+
       // Use the unified signAndSendTransaction function for both embedded and external wallets
       let signature;
       if (embeddedWallet || signAndSendTransaction) {
+        console.log("[processChapterPayment] Using embedded wallet to sign and send");
         signature = await signAndSendTransaction(transaction);
       } else if (connected && sendTransaction) {
+        console.log("[processChapterPayment] Using external wallet to send");
         signature = await sendTransaction(transaction, connection, {
           skipPreflight: false,
           preflightCommitment: "confirmed",
@@ -548,6 +603,8 @@ export default function ChapterPage() {
       } else {
         throw new Error("No valid wallet available for signing the transaction.");
       }
+
+      console.log("[processChapterPayment] Transaction sent with signature:", signature);
 
       await connection.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
@@ -564,7 +621,11 @@ export default function ChapterPage() {
       if (updateError) throw new Error(`Error updating Supabase balance: ${updateError.message}`);
 
       let readerReward = 100;
-      const authorReward = 500;
+      // Revenue split: 50% creator, 30% Sempai HQ, 20% Founder Fund
+      const totalPayment = 1000; // Total SMP tokens for $0.025
+      const creatorReward = Math.floor(totalPayment * 0.5); // 500 tokens (50%)
+      const sempaiHqReward = Math.floor(totalPayment * 0.3); // 300 tokens (30%)
+      const founderFundReward = totalPayment - creatorReward - sempaiHqReward; // 200 tokens (20%)
       const numericBalance = Number(amethystBalance) || 0;
       if (numericBalance >= 5000000) readerReward = 250;
       else if (numericBalance >= 1000000) readerReward = 200;
@@ -573,7 +634,7 @@ export default function ChapterPage() {
       else if (numericBalance >= 100000) readerReward = 120;
 
       const newReaderBalance = (user.weekly_points || 0) + readerReward;
-      const newAuthorBalance = (novelOwner.balance || 0) + authorReward;
+      const newAuthorBalance = (novelOwner.balance || 0) + creatorReward;
 
       const updates = [
         supabase
@@ -610,33 +671,52 @@ export default function ChapterPage() {
       if (walletError) throw new Error(`Error updating wallet balances: ${walletError.message}`);
 
       const walletEventsData = [
-        {
-          destination_user_id: user.id,
-          event_type: "deposit",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "Token",
-          amount_change: readerReward,
-          wallet_address: activeWalletAddress,
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-          destination_chain: "SOL",
-        },
+        // Creator (50%)
         {
           destination_user_id: novelOwner.id,
           event_type: "deposit",
           event_details: eventDetails,
           source_chain: "SOL",
           source_currency: "SMP",
-          amount_change: authorReward,
+          amount_change: creatorReward,
           wallet_address: novelOwner.wallet_address,
           source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
           destination_chain: "SOL",
+          metadata: { split_type: "creator", percentage: 50 }
         },
+        // Sempai HQ (30%)
+        {
+          destination_user_id: "sempai-hq-system",
+          event_type: "deposit",
+          event_details: eventDetails,
+          source_chain: "SOL",
+          source_currency: "SMP",
+          amount_change: sempaiHqReward,
+          wallet_address: SEMPAI_HQ_WALLET.toString(),
+          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+          destination_chain: "SOL",
+          metadata: { split_type: "sempai-hq", percentage: 30 }
+        },
+        // Founder Fund (20%)
+        {
+          destination_user_id: "founder-fund-system",
+          event_type: "deposit",
+          event_details: eventDetails,
+          source_chain: "SOL",
+          source_currency: "SMP",
+          amount_change: founderFundReward,
+          wallet_address: FOUNDER_FUND_WALLET.toString(),
+          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
+          destination_chain: "SOL",
+          metadata: { split_type: "founder-fund", percentage: 20 }
+        },
+        // User withdrawal
         {
           destination_user_id: user.id,
           event_type: "withdrawal",
           event_details: eventDetails,
           source_chain: "SOL",
+          source_currency: "Token",
           source_currency: "SMP",
           amount_change: -requiredSmp,
           wallet_address: activeWalletAddress,
@@ -938,6 +1018,45 @@ export default function ChapterPage() {
         .single();
 
       if (benefactorError) throw new Error(`Failed to record benefactor access: ${benefactorError.message}`);
+
+      // Update user's benefactor status
+      const { data: currentUserData, error: userError } = await supabase
+        .from("users")
+        .select("is_benefactor, benefactor_level, total_benefactor_payments")
+        .eq("id", user.id)
+        .single();
+
+      if (!userError && currentUserData) {
+        const newTotalPayments = (currentUserData.total_benefactor_payments || 0) + 1.00;
+        let newLevel = currentUserData.benefactor_level || 'bronze';
+        
+        // Determine benefactor level based on total payments
+        if (newTotalPayments >= 50) {
+          newLevel = 'platinum';
+        } else if (newTotalPayments >= 20) {
+          newLevel = 'gold';
+        } else if (newTotalPayments >= 10) {
+          newLevel = 'silver';
+        } else {
+          newLevel = 'bronze';
+        }
+
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({
+            is_benefactor: true,
+            benefactor_level: newLevel,
+            benefactor_since: currentUserData.benefactor_since || new Date().toISOString(),
+            total_benefactor_payments: newTotalPayments
+          })
+          .eq("id", user.id);
+
+        if (updateError) {
+          console.warn("[handleBenefactorUnlock] Failed to update benefactor status:", updateError.message);
+        } else {
+          console.log("[handleBenefactorUnlock] Updated benefactor status:", { level: newLevel, total: newTotalPayments });
+        }
+      }
 
       // Record in chapter_payments for consistency
       const { error: paymentError } = await supabase
@@ -1567,12 +1686,33 @@ export default function ChapterPage() {
         if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
           landed = true;
         } else if (finalStatus?.value?.err) {
-          throw new Error("Transaction failed on-chain.");
+          console.error("[processChapterPayment] On-chain transaction error:", finalStatus?.value?.err);
+          console.error("[processChapterPayment] Error details:", JSON.stringify(finalStatus?.value?.err, null, 2));
+          throw new Error(`Transaction failed on-chain: ${JSON.stringify(finalStatus?.value?.err)}`);
         }
       }
       
       if (!landed) {
         console.error("[processChapterPayment] Transaction confirmation failed after all attempts");
+        console.error("[processChapterPayment] Signature:", signature);
+        console.error("[processChapterPayment] Final status:", finalStatus?.value);
+        
+        // Try to get more detailed error information
+        try {
+          const tx = await connection.getTransaction(signature, {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0
+          });
+          console.error("[processChapterPayment] Transaction details:", tx);
+          
+          if (tx?.meta?.err) {
+            console.error("[processChapterPayment] Transaction error:", tx.meta.err);
+            throw new Error(`Transaction failed: ${JSON.stringify(tx.meta.err)}`);
+          }
+        } catch (detailError) {
+          console.error("[processChapterPayment] Error getting transaction details:", detailError);
+        }
+        
         throw new Error("Transaction not confirmed yet. Please try again.");
       }
 
