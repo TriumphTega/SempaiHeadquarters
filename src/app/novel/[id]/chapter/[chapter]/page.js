@@ -26,18 +26,28 @@ import {
   FaBars,
   FaTimes,
   FaBookOpen,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaUpload,
+  FaUserShield,
+  FaGem,
+  FaSun,
+  FaMoon,
+  FaImage,
+  FaBullhorn,
+  FaLock,
+  FaRocket,
+  FaCrown,
   FaVolumeUp,
   FaPause,
   FaPlay,
   FaStop,
+  FaStar,
   FaChevronLeft,
   FaChevronRight,
-  FaGem,
-  FaLock,
-  FaRocket,
-  FaCrown,
-  FaStar,
   FaWallet,
+  FaSpinner,
 } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
@@ -229,6 +239,9 @@ export default function ChapterPage() {
   const [hasInsufficientSmp, setHasInsufficientSmp] = useState(false);
   const [hasUsedAdUnlockToday, setHasUsedAdUnlockToday] = useState(false);
   const [showAdOption, setShowAdOption] = useState(false);
+  const [benefactorAccess, setBenefactorAccess] = useState(null);
+  const [showBenefactorOption, setShowBenefactorOption] = useState(false);
+  const [benefactorAnnouncements, setBenefactorAnnouncements] = useState([]);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -389,12 +402,24 @@ export default function ChapterPage() {
       } else {
         setShowAdOption(false);
       }
+      
+      // Check for benefactor access
+      const benefactorData = await checkBenefactorAccess();
+      setBenefactorAccess(benefactorData);
+      
+      // Show benefactor option if no access and this is an advance chapter
+      if (!benefactorData && advanceInfo?.is_advance) {
+        setShowBenefactorOption(true);
+      } else {
+        setShowBenefactorOption(false);
+      }
     } catch (error) {
       console.error("Error fetching user balances:", error);
       setError("Unable to load wallet balances.");
       setSmpBalance(0);
       setHasInsufficientSmp(false);
       setShowAdOption(false);
+      setShowBenefactorOption(false);
       setTimeout(() => setError(null), 5000);
     }
   }, [activeWalletAddress, fetchSmpBalanceOnChain]);
@@ -511,15 +536,10 @@ export default function ChapterPage() {
         )
       );
 
+      // Use the unified signAndSendTransaction function for both embedded and external wallets
       let signature;
-      if (embeddedWallet) {
-        const password = prompt("Enter your wallet password to proceed:");
-        if (!password) throw new Error("Password required for embedded wallet.");
-        const secretKey = getSecretKey(password);
-        if (!secretKey) throw new Error("Failed to decrypt secret key. Invalid password?");
-        const keypair = Keypair.fromSecretKey(secretKey);
-        transaction.sign(keypair);
-        signature = await connection.sendRawTransaction(transaction.serialize());
+      if (embeddedWallet || signAndSendTransaction) {
+        signature = await signAndSendTransaction(transaction);
       } else if (connected && sendTransaction) {
         signature = await sendTransaction(transaction, connection, {
           skipPreflight: false,
@@ -761,6 +781,49 @@ export default function ChapterPage() {
     }
   };
 
+  const checkBenefactorAccess = async () => {
+    if (!activeWalletAddress || !id) return null;
+    
+    try {
+      const { data: benefactorData, error: benefactorError } = await supabase
+        .from("benefactor_early_access")
+        .select("*")
+        .eq("benefactor_wallet", activeWalletAddress)
+        .eq("novel_id", id)
+        .eq("is_active", true)
+        .single();
+      
+      if (benefactorError && benefactorError.code !== "PGRST116") {
+        console.error("[checkBenefactorAccess] Error:", benefactorError.message);
+        return null;
+      }
+      
+      if (benefactorData) {
+        // Check if access has expired
+        if (new Date(benefactorData.expires_at) <= new Date()) {
+          // Expire the access
+          await supabase
+            .from("benefactor_early_access")
+            .update({ is_active: false })
+            .eq("id", benefactorData.id);
+          return null;
+        }
+        
+        // Check remaining chapters
+        if (benefactorData.chapters_remaining <= 0) {
+          return null;
+        }
+        
+        return benefactorData;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("[checkBenefactorAccess] Error:", error.message);
+      return null;
+    }
+  };
+
   const checkAdUnlockEligibility = async (currentUserId = null) => {
     const targetUserId = currentUserId || userId;
     if (!targetUserId || !id || !chapter) return false;
@@ -796,6 +859,125 @@ export default function ChapterPage() {
     } catch (error) {
       console.error("[checkAdUnlockEligibility] Error:", error.message);
       return false;
+    }
+  };
+
+  const handleBenefactorUnlock = async (currency) => {
+    if (!activeWalletAddress || !id || !chapter || isProcessing) {
+      setError("Unable to process benefactor unlock. Please try again.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const chapterNum = parseInt(chapter, 10);
+      
+      // Check if user already has benefactor access
+      const existingAccess = await checkBenefactorAccess();
+      if (existingAccess) {
+        setError("You already have benefactor access to this novel.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Check if novel has at least one published chapter (requirement for benefactor access)
+      const { data: novelData, error: novelError } = await supabase
+        .from("novels")
+        .select("user_id, chaptertitles")
+        .eq("id", id)
+        .single();
+      
+      if (novelError || !novelData) {
+        setError("Novel not found or access denied.");
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!novelData.chaptertitles || novelData.chaptertitles.length === 0) {
+        setError("Benefactor access requires at least one published chapter.");
+        setIsProcessing(false);
+        return;
+      }
+
+      setSuccessMessage("Processing benefactor payment...");
+      
+      // Process $1 payment based on currency
+      let paymentResult;
+      if (currency === "SOL") {
+        paymentResult = await processSolanaPayment(1.00, "BENEFACTOR");
+      } else if (currency === "USDC") {
+        paymentResult = await processUSDCPayment(1.00, "BENEFACTOR");
+      } else if (currency === "SMP") {
+        paymentResult = await processSMPPayment(1.00, "BENEFACTOR");
+      } else {
+        throw new Error("Invalid currency selected");
+      }
+
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error || "Payment failed");
+      }
+
+      // Record benefactor access
+      const { data: benefactorData, error: benefactorError } = await supabase
+        .from("benefactor_early_access")
+        .insert({
+          benefactor_wallet: activeWalletAddress,
+          novel_id: id,
+          chapters_unlocked: 3,
+          chapters_remaining: 3,
+          payment_amount: 1.00,
+          payment_currency: currency,
+          transaction_id: paymentResult.signature || `BENEFACTOR_${Date.now()}`,
+          paid_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString(), // 14 days
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (benefactorError) throw new Error(`Failed to record benefactor access: ${benefactorError.message}`);
+
+      // Record in chapter_payments for consistency
+      const { error: paymentError } = await supabase
+        .from("chapter_payments")
+        .insert({
+          wallet_address: activeWalletAddress,
+          novel_id: id,
+          chapter_number: chapterNum,
+          payment_type: "BENEFACTOR",
+          currency: currency,
+          amount: 1.00,
+          transaction_id: paymentResult.signature || `BENEFACTOR_${Date.now()}`,
+          created_at: new Date().toISOString(),
+        });
+
+      if (paymentError) {
+        console.warn("[handleBenefactorUnlock] Failed to record payment entry:", paymentError.message);
+      }
+
+      // Update benefactor access state
+      setBenefactorAccess(benefactorData);
+      setShowBenefactorOption(false);
+      
+      // Unlock the current chapter
+      setIsLocked(false);
+      setLocalUnlocked(true);
+      setRecentlyUnlocked(true);
+      
+      setSuccessMessage("Benefactor access activated! You now have early access to 3 chapters for 14 days.");
+      setTimeout(() => setSuccessMessage(""), 5000);
+      
+      // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
+      setTimeout(() => setRecentlyUnlocked(false), 10000);
+      
+    } catch (error) {
+      console.error("[handleBenefactorUnlock] Error:", error);
+      setError(`Benefactor unlock failed: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1069,6 +1251,55 @@ export default function ChapterPage() {
         if (!adError && adUnlock) {
           setIsLocked(false);
           return;
+        }
+        
+        // Check for benefactor access
+        const benefactorData = await checkBenefactorAccess();
+        if (benefactorData) {
+          // Check if this chapter is within the benefactor's remaining chapters
+          const { data: accessLog, error: logError } = await supabase
+            .from("benefactor_access_log")
+            .select("id")
+            .eq("benefactor_access_id", benefactorData.id)
+            .eq("chapter_number", chapterNum)
+            .single();
+          
+          if (logError && logError.code !== "PGRST116") {
+            console.error("[checkAccess] Benefactor log error:", logError.message);
+          }
+          
+          if (!logError && accessLog) {
+            // Chapter already accessed via benefactor
+            setIsLocked(false);
+            return;
+          }
+          
+          if (benefactorData.chapters_remaining > 0) {
+            // Grant access and log the chapter access
+            setIsLocked(false);
+            
+            // Log the chapter access
+            await supabase
+              .from("benefactor_access_log")
+              .insert({
+                benefactor_access_id: benefactorData.id,
+                novel_id: id,
+                chapter_number: chapterNum,
+                accessed_at: new Date().toISOString(),
+              });
+            
+            // Update remaining chapters
+            const newRemaining = benefactorData.chapters_remaining - 1;
+            await supabase
+              .from("benefactor_early_access")
+              .update({ chapters_remaining: newRemaining })
+              .eq("id", benefactorData.id);
+            
+            // Update local state
+            setBenefactorAccess({ ...benefactorData, chapters_remaining: newRemaining });
+            
+            return;
+          }
         }
       }
 
@@ -1635,10 +1866,19 @@ export default function ChapterPage() {
                         disabled={isProcessing || hasUsedAdUnlockToday}
                         title={hasUsedAdUnlockToday ? "Already used today" : "Watch an ad to unlock this chapter for free"}
                       >
-                        <FaGem className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>
-                          {isProcessing ? "Processing..." : hasUsedAdUnlockToday ? "Ad Unlock Used Today" : "Watch Ad - Free Unlock"}
-                        </span>
+                        {isProcessing ? (
+                          <>
+                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                            <span className={styles.buttonText}>Loading Ad...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaGem className={styles.buttonIcon} />
+                            <span className={styles.buttonText}>
+                              {hasUsedAdUnlockToday ? "Ad Unlock Used Today" : "Watch Ad - Free Unlock"}
+                            </span>
+                          </>
+                        )}
                         <span className={styles.price}>One chapter per day</span>
                       </button>
                     </div>
@@ -1646,25 +1886,123 @@ export default function ChapterPage() {
                     <button
                       onClick={() => processChapterPayment("SINGLE", "SMP")}
                       className={styles.readWithSmpButton}
-                      disabled={hasInsufficientSmp}
+                      disabled={hasInsufficientSmp || isProcessing}
                       title={hasInsufficientSmp ? "Insufficient SMP balance" : "Pay with SMP tokens"}
                     >
-                      <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
+                      {isProcessing ? (
+                        <>
+                          <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                          <span className={styles.buttonText}>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaGem className={styles.buttonIcon} />
+                          <span className={styles.buttonText}>Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)</span>
+                        </>
+                      )}
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => processChapterPayment("SINGLE", "SMP")}
                     className={styles.readWithSmpButton}
-                    disabled={hasInsufficientSmp}
+                    disabled={hasInsufficientSmp || isProcessing}
                     title={hasInsufficientSmp ? "Insufficient SMP balance" : "Pay with SMP tokens"}
                   >
-                    <FaGem className={styles.buttonIcon} /> Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaGem className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>Read with {(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP ($0.025)</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
             ) : (
               <>
+                {showBenefactorOption && !benefactorAccess && (
+                  <>
+                    <p className={styles.subMessage}>
+                      <FaStar className={styles.gemIcon} /> Get early access to 3 chapters for just $1!
+                    </p>
+                    <div className={styles.paymentOptions}>
+                      <button
+                        onClick={() => handleBenefactorUnlock("SOL")}
+                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
+                        disabled={isProcessing}
+                        title="Get early access to 3 chapters for $1"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                            <span className={styles.buttonText}>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaStar className={styles.buttonIcon} />
+                            <span className={styles.buttonText}>Early Access - $1</span>
+                          </>
+                        )}
+                        <span className={styles.price}>3 chapters for 14 days</span>
+                      </button>
+                      <button
+                        onClick={() => handleBenefactorUnlock("USDC")}
+                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
+                        disabled={isProcessing}
+                        title="Get early access to 3 chapters for $1 USDC"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                            <span className={styles.buttonText}>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaStar className={styles.buttonIcon} />
+                            <span className={styles.buttonText}>Early Access - $1 USDC</span>
+                          </>
+                        )}
+                        <span className={styles.price}>3 chapters for 14 days</span>
+                      </button>
+                      <button
+                        onClick={() => handleBenefactorUnlock("SMP")}
+                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
+                        disabled={isProcessing}
+                        title="Get early access to 3 chapters for $1 SMP"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                            <span className={styles.buttonText}>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaStar className={styles.buttonIcon} />
+                            <span className={styles.buttonText}>Early Access - $1 SMP</span>
+                          </>
+                        )}
+                        <span className={styles.price}>3 chapters for 14 days</span>
+                      </button>
+                    </div>
+                    <p className={styles.alternativeOption}>Or unlock with subscription:</p>
+                  </>
+                )}
+                {benefactorAccess && (
+                  <div className={styles.benefactorStatus}>
+                    <FaStar className={styles.gemIcon} />
+                    <span className={styles.statusText}>
+                      Benefactor Access: {benefactorAccess.chapters_remaining}/3 chapters remaining
+                    </span>
+                    <span className={styles.expiryText}>
+                      Expires: {new Date(benefactorAccess.expires_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
                 <p className={styles.subMessage}>
                   <FaGem className={styles.gemIcon} /> Unlock with a subscription
                 </p>
@@ -1672,59 +2010,114 @@ export default function ChapterPage() {
                   <button
                     onClick={() => initiatePayment("3CHAPTERS", "SOL")}
                     className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree || !solPrice}
+                    disabled={!canUnlockNextThree || !solPrice || isProcessing}
                     title={!canUnlockNextThree ? "Unlock previous chapters first" : !solPrice ? "Price unavailable" : ""}
                   >
-                    <FaRocket className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>3 Chapters (SOL)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaRocket className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>3 Chapters (SOL)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
                   </button>
                   <button
                     onClick={() => initiatePayment("FULL", "SOL")}
                     className={`${styles.unlockButton} ${styles.fullChapters}`}
-                    disabled={!solPrice}
+                    disabled={!solPrice || isProcessing}
                     title={!solPrice ? "Price unavailable" : ""}
                   >
-                    <FaCrown className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>All Chapters (SOL)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCrown className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>All Chapters (SOL)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
                   </button>
                   <button
                     onClick={() => initiatePayment("3CHAPTERS", "USDC")}
                     className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree}
+                    disabled={!canUnlockNextThree || isProcessing}
                     title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
                   >
-                    <FaRocket className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>3 Chapters (USDC)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaRocket className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>3 Chapters (USDC)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
                   </button>
                   <button
                     onClick={() => initiatePayment("FULL", "USDC")}
                     className={`${styles.unlockButton} ${styles.fullChapters}`}
+                    disabled={isProcessing}
                   >
-                    <FaCrown className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>All Chapters (USDC)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCrown className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>All Chapters (USDC)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
                   </button>
                   <button
                     onClick={() => initiatePayment("3CHAPTERS", "SMP")}
                     className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree || !smpPrice}
+                    disabled={!canUnlockNextThree || !smpPrice || isProcessing}
                     title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
                   >
-                    <FaRocket className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>3 Chapters (SMP)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaRocket className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>3 Chapters (SMP)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
                   </button>
                   <button
                     onClick={() => initiatePayment("FULL", "SMP")}
                     className={`${styles.unlockButton} ${styles.fullChapters}`}
-                    disabled={!smpPrice}
+                    disabled={!smpPrice || isProcessing}
                     title={!smpPrice ? "SMP price unavailable" : ""}
                   >
-                    <FaCrown className={styles.buttonIcon} />
-                    <span className={styles.buttonText}>All Chapters (SMP)</span>
+                    {isProcessing ? (
+                      <>
+                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
+                        <span className={styles.buttonText}>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCrown className={styles.buttonIcon} />
+                        <span className={styles.buttonText}>All Chapters (SMP)</span>
+                      </>
+                    )}
                     <span className={styles.price}>$15 / {fullChaptersSmp} SMP</span>
                   </button>
                 </div>
@@ -1843,7 +2236,7 @@ export default function ChapterPage() {
               </button>
             </div>
             <p className={styles.popupNote}>
-              {embeddedWallet ? "You will be prompted for your password." : "Please approve the transaction in your wallet."}
+              {embeddedWallet ? "Transaction will be signed automatically." : "Please approve the transaction in your wallet."}
             </p>
           </div>
         </div>
