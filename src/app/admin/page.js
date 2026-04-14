@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -9,11 +9,13 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaUser, FaBook, FaImage, FaComment, FaClock, FaGift } from "react-icons/fa";
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import debounce from "lodash/debounce"; // Add lodash for debouncing
 import styles from "../../styles/AdminPage.module.css";
 
 export default function AdminPage() {
   const { connected, publicKey } = useWallet();
+  const { wallet } = useContext(EmbeddedWalletContext);
   const [data, setData] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,13 +90,18 @@ export default function AdminPage() {
   // Check superuser and fetch initial data
   useEffect(() => {
     const checkSuperuser = async () => {
-      if (!connected || !publicKey) {
+      // Support both external and embedded wallets
+      const activePublicKey = wallet?.publicKey
+        ? wallet.publicKey
+        : publicKey;
+      
+      if (!activePublicKey) {
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      const walletAddress = publicKey.toString();
+      const walletAddress = activePublicKey.toString();
       const { data, error } = await supabase
         .from("users")
         .select("isSuperuser")
@@ -113,7 +120,7 @@ export default function AdminPage() {
     };
 
     checkSuperuser();
-  }, [connected, publicKey, fetchTableData]);
+  }, [connected, publicKey, wallet, fetchTableData]);
 
   // Fetch data when table, page, or search changes
   useEffect(() => {
@@ -142,7 +149,10 @@ export default function AdminPage() {
     );
   }
 
-  if (!connected) {
+  // Check if either external or embedded wallet is connected
+  const isConnected = connected || (wallet?.publicKey);
+  
+  if (!isConnected) {
     return (
       <div className={styles.connectContainer}>
         <h2 className={styles.connectTitle}>Connect Your Wallet</h2>
@@ -273,9 +283,9 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {data.length > 0 ? (
-              data.map((row) => (
-                <>
-                  <tr key={row.id} onClick={() => toggleRow(row.id)} className={styles.tableRow}>
+              data.map((row, index) => (
+                <React.Fragment key={row.id}>
+                  <tr onClick={() => toggleRow(row.id)} className={styles.tableRow}>
                     {selectedTable === "users" && (
                       <>
                         <td>{row.id}</td>
@@ -399,7 +409,7 @@ export default function AdminPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))
             ) : (
               <tr>

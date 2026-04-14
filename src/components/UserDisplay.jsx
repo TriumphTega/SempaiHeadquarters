@@ -1,6 +1,5 @@
 import React from 'react';
 import BenefactorBadge from './BenefactorBadge';
-import { useBenefactorStatus } from '../hooks/useBenefactorStatus';
 import styles from './UserDisplay.module.css';
 
 const UserDisplay = ({ 
@@ -14,8 +13,6 @@ const UserDisplay = ({
   className = '',
   onClick = null 
 }) => {
-  const { isBenefactor, benefactorLevel, loading } = useBenefactorStatus(userId);
-
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -41,18 +38,13 @@ const UserDisplay = ({
         {username || 'Anonymous'}
       </span>
       
-      {/* Benefactor Badge */}
-      {showBadge && !loading && isBenefactor && (
+      {/* Benefactor Badge - TODO: Add benefactor status check */}
+      {showBadge && (
         <BenefactorBadge 
-          level={benefactorLevel} 
+          level="bronze" 
           size={badgeSize}
           showLabel={showLabel}
         />
-      )}
-      
-      {/* Loading placeholder */}
-      {showBadge && loading && (
-        <div className={`${styles.badgePlaceholder} ${styles[badgeSize]}`}></div>
       )}
     </div>
   );
@@ -65,8 +57,6 @@ export const InlineUserDisplay = ({
   showBadge = true,
   onClick = null 
 }) => {
-  const { isBenefactor, benefactorLevel, loading } = useBenefactorStatus(userId);
-
   return (
     <span 
       className={`${styles.inlineUserDisplay} ${onClick ? styles.clickable : ''}`}
@@ -74,9 +64,10 @@ export const InlineUserDisplay = ({
     >
       {username || 'Anonymous'}
       
-      {showBadge && !loading && isBenefactor && (
+      {/* Benefactor Badge - TODO: Add benefactor status check */}
+      {showBadge && (
         <BenefactorBadge 
-          level={benefactorLevel} 
+          level="bronze" 
           size="tiny"
           className={styles.inlineBadge}
         />

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
+import { InlineUserDisplay } from "@/components/UserDisplay";
 import {
   Connection,
   SystemProgram,
@@ -1695,6 +1696,11 @@ export default function ChapterPage() {
       if (!landed) {
         console.error("[processChapterPayment] Transaction confirmation failed after all attempts");
         console.error("[processChapterPayment] Signature:", signature);
+        
+        // Get final status for error reporting
+        const finalStatus = await connection.getSignatureStatus(signature, {
+          searchTransactionHistory: true
+        });
         console.error("[processChapterPayment] Final status:", finalStatus?.value);
         
         // Try to get more detailed error information
