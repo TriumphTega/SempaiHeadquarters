@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { InlineUserDisplay } from "@/components/UserDisplay";
+import BenefactorPricing from "@/components/BenefactorPricing";
 import {
   Connection,
   SystemProgram,
@@ -435,8 +436,8 @@ export default function ChapterPage() {
       const benefactorData = await checkBenefactorAccess();
       setBenefactorAccess(benefactorData);
       
-      // Show benefactor option if no access and this is an advance chapter
-      if (!benefactorData && advanceInfo?.is_advance) {
+      // Show benefactor option if no access (for any locked chapter)
+      if (!benefactorData) {
         setShowBenefactorOption(true);
       } else {
         setShowBenefactorOption(false);
@@ -943,7 +944,7 @@ export default function ChapterPage() {
     }
   };
 
-  const handleBenefactorUnlock = async (currency) => {
+  const handleBenefactorUnlock = async (plan) => {
     if (!activeWalletAddress || !id || !chapter || isProcessing) {
       setError("Unable to process benefactor unlock. Please try again.");
       return;
@@ -955,6 +956,19 @@ export default function ChapterPage() {
     try {
       const chapterNum = parseInt(chapter, 10);
       
+      // Define pricing tiers
+      const pricingTiers = {
+        blue: { price: 1.00, chapters: 3, name: "Blue" },
+        iron: { price: 2.00, chapters: 6, name: "Iron" },
+        silver: { price: 3.00, chapters: 10, name: "Silver" },
+        gold: { price: 5.00, chapters: 999, name: "Gold" }, // 999 = unlimited
+      };
+
+      const tier = pricingTiers[plan.id];
+      if (!tier) {
+        throw new Error("Invalid plan selected");
+      }
+
       // Check if user already has benefactor access
       const existingAccess = await checkBenefactorAccess();
       if (existingAccess) {
@@ -982,19 +996,11 @@ export default function ChapterPage() {
         return;
       }
 
-      setSuccessMessage("Processing benefactor payment...");
+      setSuccessMessage(`Processing ${tier.name} benefactor payment...`);
       
-      // Process $1 payment based on currency
+      // Process payment based on plan price - default to SOL for now
       let paymentResult;
-      if (currency === "SOL") {
-        paymentResult = await processSolanaPayment(1.00, "BENEFACTOR");
-      } else if (currency === "USDC") {
-        paymentResult = await processUSDCPayment(1.00, "BENEFACTOR");
-      } else if (currency === "SMP") {
-        paymentResult = await processSMPPayment(1.00, "BENEFACTOR");
-      } else {
-        throw new Error("Invalid currency selected");
-      }
+      paymentResult = await processSolanaPayment(tier.price, "BENEFACTOR");
 
       if (!paymentResult.success) {
         throw new Error(paymentResult.error || "Payment failed");
@@ -1006,13 +1012,13 @@ export default function ChapterPage() {
         .insert({
           benefactor_wallet: activeWalletAddress,
           novel_id: id,
-          chapters_unlocked: 3,
-          chapters_remaining: 3,
-          payment_amount: 1.00,
-          payment_currency: currency,
+          chapters_unlocked: tier.chapters,
+          chapters_remaining: tier.chapters,
+          payment_amount: tier.price,
+          payment_currency: "SOL",
           transaction_id: paymentResult.signature || `BENEFACTOR_${Date.now()}`,
           paid_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString(), // 14 days
+          expires_at: tier.chapters === 999 ? null : new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString(), // 14 days for limited, null for unlimited
           is_active: true,
         })
         .select()
@@ -1086,7 +1092,10 @@ export default function ChapterPage() {
       setLocalUnlocked(true);
       setRecentlyUnlocked(true);
       
-      setSuccessMessage("Benefactor access activated! You now have early access to 3 chapters for 14 days.");
+      const accessMessage = tier.chapters === 999 
+        ? `${tier.name} benefactor access activated! You now have unlimited access to all advance chapters.`
+        : `${tier.name} benefactor access activated! You now have early access to ${tier.chapters} chapters for 14 days.`;
+      setSuccessMessage(accessMessage);
       setTimeout(() => setSuccessMessage(""), 5000);
       
       // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
@@ -2068,75 +2077,27 @@ export default function ChapterPage() {
                     )}
                   </button>
                 )}
+                
+                {showBenefactorOption && !benefactorAccess && (
+                  <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
+                )}
+                
+                {benefactorAccess && (
+                  <div className={styles.benefactorStatus}>
+                    <FaStar className={styles.gemIcon} />
+                    <span className={styles.statusText}>
+                      Benefactor Access: {benefactorAccess.chapters_remaining}/3 chapters remaining
+                    </span>
+                    <span className={styles.expiryText}>
+                      Expires: {new Date(benefactorAccess.expires_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <>
                 {showBenefactorOption && !benefactorAccess && (
-                  <>
-                    <p className={styles.subMessage}>
-                      <FaStar className={styles.gemIcon} /> Get early access to 3 chapters for just $1!
-                    </p>
-                    <div className={styles.paymentOptions}>
-                      <button
-                        onClick={() => handleBenefactorUnlock("SOL")}
-                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
-                        disabled={isProcessing}
-                        title="Get early access to 3 chapters for $1"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                            <span className={styles.buttonText}>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FaStar className={styles.buttonIcon} />
-                            <span className={styles.buttonText}>Early Access - $1</span>
-                          </>
-                        )}
-                        <span className={styles.price}>3 chapters for 14 days</span>
-                      </button>
-                      <button
-                        onClick={() => handleBenefactorUnlock("USDC")}
-                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
-                        disabled={isProcessing}
-                        title="Get early access to 3 chapters for $1 USDC"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                            <span className={styles.buttonText}>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FaStar className={styles.buttonIcon} />
-                            <span className={styles.buttonText}>Early Access - $1 USDC</span>
-                          </>
-                        )}
-                        <span className={styles.price}>3 chapters for 14 days</span>
-                      </button>
-                      <button
-                        onClick={() => handleBenefactorUnlock("SMP")}
-                        className={`${styles.unlockButton} ${styles.benefactorUnlock}`}
-                        disabled={isProcessing}
-                        title="Get early access to 3 chapters for $1 SMP"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                            <span className={styles.buttonText}>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FaStar className={styles.buttonIcon} />
-                            <span className={styles.buttonText}>Early Access - $1 SMP</span>
-                          </>
-                        )}
-                        <span className={styles.price}>3 chapters for 14 days</span>
-                      </button>
-                    </div>
-                    <p className={styles.alternativeOption}>Or unlock with subscription:</p>
-                  </>
+                  <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
                 )}
                 {benefactorAccess && (
                   <div className={styles.benefactorStatus}>
@@ -2149,124 +2110,6 @@ export default function ChapterPage() {
                     </span>
                   </div>
                 )}
-                <p className={styles.subMessage}>
-                  <FaGem className={styles.gemIcon} /> Unlock with a subscription
-                </p>
-                <div className={styles.paymentOptions}>
-                  <button
-                    onClick={() => initiatePayment("3CHAPTERS", "SOL")}
-                    className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree || !solPrice || isProcessing}
-                    title={!canUnlockNextThree ? "Unlock previous chapters first" : !solPrice ? "Price unavailable" : ""}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaRocket className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>3 Chapters (SOL)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$3 / {threeChaptersSol} SOL</span>
-                  </button>
-                  <button
-                    onClick={() => initiatePayment("FULL", "SOL")}
-                    className={`${styles.unlockButton} ${styles.fullChapters}`}
-                    disabled={!solPrice || isProcessing}
-                    title={!solPrice ? "Price unavailable" : ""}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCrown className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>All Chapters (SOL)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$15 / {fullChaptersSol} SOL</span>
-                  </button>
-                  <button
-                    onClick={() => initiatePayment("3CHAPTERS", "USDC")}
-                    className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree || isProcessing}
-                    title={!canUnlockNextThree ? "Unlock previous chapters first" : ""}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaRocket className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>3 Chapters (USDC)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$3 / {threeChaptersUsdc} USDC</span>
-                  </button>
-                  <button
-                    onClick={() => initiatePayment("FULL", "USDC")}
-                    className={`${styles.unlockButton} ${styles.fullChapters}`}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCrown className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>All Chapters (USDC)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$15 / {fullChaptersUsdc} USDC</span>
-                  </button>
-                  <button
-                    onClick={() => initiatePayment("3CHAPTERS", "SMP")}
-                    className={`${styles.unlockButton} ${styles.threeChapters}`}
-                    disabled={!canUnlockNextThree || !smpPrice || isProcessing}
-                    title={!canUnlockNextThree ? "Unlock previous chapters first" : !smpPrice ? "SMP price unavailable" : ""}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaRocket className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>3 Chapters (SMP)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$3 / {threeChaptersSmp} SMP</span>
-                  </button>
-                  <button
-                    onClick={() => initiatePayment("FULL", "SMP")}
-                    className={`${styles.unlockButton} ${styles.fullChapters}`}
-                    disabled={!smpPrice || isProcessing}
-                    title={!smpPrice ? "SMP price unavailable" : ""}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <FaSpinner className={`${styles.buttonIcon} ${styles.spinner}`} />
-                        <span className={styles.buttonText}>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCrown className={styles.buttonIcon} />
-                        <span className={styles.buttonText}>All Chapters (SMP)</span>
-                      </>
-                    )}
-                    <span className={styles.price}>$15 / {fullChaptersSmp} SMP</span>
-                  </button>
-                </div>
               </>
             )}
           </div>

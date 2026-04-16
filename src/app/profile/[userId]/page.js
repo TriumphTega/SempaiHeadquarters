@@ -9,6 +9,7 @@ import LoadingPage from "@/components/LoadingPage";
 import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import ConnectButton from "@/components/ConnectButton";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
+import BenefactorPricing from "@/components/BenefactorPricing";
 import styles from "../CreatorsProfile.module.css";
 import Link from "next/link";
 
@@ -29,6 +30,11 @@ export default function CreatorsProfilePage() {
   const [isArtist, setIsArtist] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [showCreatorChoice, setShowCreatorChoice] = useState(false);
+  const [showBenefactorOption, setShowBenefactorOption] = useState(false);
+  const [benefactorAccess, setBenefactorAccess] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
@@ -68,6 +74,173 @@ export default function CreatorsProfilePage() {
   useEffect(() => {
     if (connected || embeddedWallet) setWalletReady(true);
   }, [connected, publicKey, embeddedWallet]);
+
+  // Check benefactor access
+  const checkBenefactorAccess = async () => {
+    if (!walletReady) return null;
+
+    const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+    if (!walletAddress) return null;
+
+    try {
+      const { data: benefactorData, error } = await supabase
+        .from("benefactor_early_access")
+        .select("*")
+        .eq("benefactor_wallet", walletAddress)
+        .gte("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Benefactor check error:", error);
+      }
+
+      return benefactorData;
+    } catch (err) {
+      console.error("Benefactor check error:", err);
+      return null;
+    }
+  };
+
+  // Handle benefactor subscription from profile page
+  const handleBenefactorSubscription = async (plan) => {
+    if (!walletReady) {
+      setErrorMessage("Please connect your wallet first");
+      return;
+    }
+
+    const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
+    if (!walletAddress) {
+      setErrorMessage("Wallet not connected");
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      // Calculate payment amount based on plan
+      const paymentAmounts = {
+        blue: 1,
+        iron: 2,
+        silver: 3,
+        gold: 5,
+      };
+
+      const paymentAmount = paymentAmounts[plan.id] || 1;
+
+      // Get creator's novels for benefactor access
+      const { data: creatorNovels, error: novelsError } = await supabase
+        .from("novels")
+        .select("id, title")
+        .eq("user_id", userId)
+        .eq("is_visible", true);
+
+      if (novelsError) throw new Error(`Failed to fetch creator's novels: ${novelsError.message}`);
+
+      if (!creatorNovels || creatorNovels.length === 0) {
+        throw new Error("This creator has no visible novels to unlock.");
+      }
+
+      // Create benefactor access for each novel
+      const chaptersAllowed = {
+        blue: 3,
+        iron: 6,
+        silver: 10,
+        gold: 9999, // Unlimited
+      };
+
+      const chaptersToUnlock = chaptersAllowed[plan.id] || 3;
+
+      for (const novel of creatorNovels) {
+        const { error: accessError } = await supabase
+          .from("benefactor_early_access")
+          .insert({
+            benefactor_wallet: walletAddress,
+            novel_id: novel.id,
+            chapters_unlocked: chaptersToUnlock,
+            chapters_remaining: chaptersToUnlock,
+            payment_amount: paymentAmount,
+            payment_currency: "SMP",
+            paid_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+            is_active: true,
+          });
+
+        if (accessError) {
+          console.error(`Failed to create access for novel ${novel.id}:`, accessError);
+        }
+      }
+
+      // Update benefactor stats
+      const { data: existingStats, error: statsError } = await supabase
+        .from("benefactor_stats")
+        .select("*")
+        .eq("wallet_address", walletAddress)
+        .maybeSingle();
+
+      if (statsError && statsError.code !== "PGRST116") {
+        console.error("Stats check error:", statsError);
+      }
+
+      const benefactorLevels = {
+        blue: "Blue",
+        iron: "Iron",
+        silver: "Silver",
+        gold: "Gold",
+      };
+
+      if (existingStats) {
+        await supabase
+          .from("benefactor_stats")
+          .update({
+            benefactor_level: benefactorLevels[plan.id],
+            total_benefactor_payments: existingStats.total_benefactor_payments + paymentAmount,
+            total_benefactor_purchases: existingStats.total_benefactor_purchases + 1,
+            novels_supported: existingStats.novels_supported + creatorNovels.length,
+            last_purchase_date: new Date().toISOString(),
+          })
+          .eq("wallet_address", walletAddress);
+      } else {
+        await supabase
+          .from("benefactor_stats")
+          .insert({
+            wallet_address: walletAddress,
+            username: creatorData?.name || "Anonymous",
+            benefactor_level: benefactorLevels[plan.id],
+            total_benefactor_payments: paymentAmount,
+            total_benefactor_purchases: 1,
+            novels_supported: creatorNovels.length,
+            benefactor_since: new Date().toISOString(),
+            last_purchase_date: new Date().toISOString(),
+          });
+      }
+
+      // Update user's benefactor status
+      await supabase
+        .from("users")
+        .update({
+          is_benefactor: true,
+          benefactor_level: benefactorLevels[plan.id],
+          benefactor_since: new Date().toISOString(),
+          total_benefactor_payments: paymentAmount,
+        })
+        .eq("wallet_address", walletAddress);
+
+      setSuccessMessage(`Successfully subscribed to ${creatorData?.name || "this creator"} as a ${plan.name} benefactor! You now have access to ${chaptersToUnlock === 9999 ? "unlimited" : chaptersToUnlock} advance chapters.`);
+      setShowBenefactorOption(false);
+      
+      // Refresh benefactor access
+      const updatedAccess = await checkBenefactorAccess();
+      setBenefactorAccess(updatedAccess);
+
+    } catch (err) {
+      console.error("Benefactor subscription error:", err);
+      setErrorMessage(err.message || "Failed to complete subscription. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfileDetails = async () => {
@@ -124,6 +297,17 @@ export default function CreatorsProfilePage() {
 
         setCreatorData({ ...user, ...profile });
         setNovels(novelsData || []);
+
+        // Check benefactor access and show benefactor option if not own profile
+        if (!isOwnProfile && walletReady) {
+          const benefactorData = await checkBenefactorAccess();
+          setBenefactorAccess(benefactorData);
+          
+          // Show benefactor option if no active access
+          if (!benefactorData) {
+            setShowBenefactorOption(true);
+          }
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -132,7 +316,7 @@ export default function CreatorsProfilePage() {
     };
 
     fetchProfileDetails();
-  }, [userId, walletReady, publicKey, embeddedWallet]);
+  }, [userId, walletReady, publicKey, embeddedWallet, isOwnProfile]);
 
   useEffect(() => {
     // Close creator choice popup on outside click
@@ -240,6 +424,46 @@ export default function CreatorsProfilePage() {
                   <p className={styles.placeholder}>No creations yet.</p>
                 )}
               </section>
+
+              {/* Benefactor Subscription Section */}
+              {!isOwnProfile && showBenefactorOption && !benefactorAccess && (
+                <section className={styles.benefactorSection}>
+                  <h2 className={styles.sectionTitle}><FaRocket /> Become a Benefactor</h2>
+                  <p className={styles.benefactorSubtitle}>
+                    Support {creatorData?.name || "this creator"} and get early access to their advance chapters
+                  </p>
+                  {successMessage && (
+                    <div className={styles.successMessage}>{successMessage}</div>
+                  )}
+                  {errorMessage && (
+                    <div className={styles.errorMessage}>{errorMessage}</div>
+                  )}
+                  <BenefactorPricing
+                    onSelectPlan={handleBenefactorSubscription}
+                    isProcessing={isProcessing}
+                    creatorId={userId}
+                    creatorName={creatorData?.name}
+                  />
+                </section>
+              )}
+
+              {/* Benefactor Status Display */}
+              {!isOwnProfile && benefactorAccess && (
+                <section className={styles.benefactorStatus}>
+                  <h2 className={styles.sectionTitle}><FaRocket /> Your Benefactor Status</h2>
+                  <div className={styles.benefactorInfo}>
+                    <p className={styles.benefactorText}>
+                      You are currently a <strong>{benefactorAccess.benefactor_level || "benefactor"}</strong> supporter of {creatorData?.name || "this creator"}.
+                    </p>
+                    <p className={styles.benefactorText}>
+                      You have access to <strong>{benefactorAccess.chapters_remaining === 9999 ? "unlimited" : benefactorAccess.chapters_remaining}</strong> advance chapters.
+                    </p>
+                    <p className={styles.benefactorText}>
+                      Your access expires on <strong>{new Date(benefactorAccess.expires_at).toLocaleDateString()}</strong>
+                    </p>
+                  </div>
+                </section>
+              )}
               {isOwnProfile && (
                 <div className={styles.profileActions}>
                   <button onClick={() => handleNavigation("/editprofile")} className={styles.navButton}>

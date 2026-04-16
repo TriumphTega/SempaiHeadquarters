@@ -1,0 +1,661 @@
+.container {
+  max-width: 100%;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 60px;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+.title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 50px rgba(251, 191, 36, 0.4);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.subtitle {
+  font-size: 1.35rem;
+  color: #94a3b8;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 60px;
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.planCard {
+  position: relative;
+  background: rgba(20, 20, 20, 0.95);
+  border: 2px solid rgba(255, 98, 0, 0.4);
+  border-radius: 20px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out backwards;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: auto;
+}
+
+.planCard:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.planCard:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.planCard:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.planCard:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.planCard:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 98, 0, 0.8);
+}
+
+.planCard.hovered {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+}
+
+.planCard.featured {
+  border-width: 3px;
+  z-index: 10;
+  box-shadow: 0 12px 24px rgba(255, 98, 0, 0.3);
+}
+
+.planCard.featured:hover {
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(255, 98, 0, 0.5);
+}
+
+.featuredBadge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #000;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.planImage {
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 20px;
+}
+
+.svgImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+.planName {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+}
+
+.planPrice {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.priceAmount {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ff6200;
+  text-shadow: 0 4px 8px rgba(255, 98, 0, 0.5);
+  display: inline-block;
+  line-height: 1;
+}
+
+.planChapters {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  line-height: 1.4;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.selectButton {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #ff6200 0%, #ff8345 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 98, 0, 0.4);
+  margin-bottom: 20px;
+  margin-top: auto;
+}
+
+.selectButton:hover {
+  background: linear-gradient(135deg, #ff8345 0%, #ffa366 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 98, 0, 0.6);
+}
+
+.selectButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.planFeatures {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.feature {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.feature:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: translateX(4px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.footer {
+  text-align: center;
+  margin-top: 60px;
+  animation: fadeIn 1s ease-out 0.5s backwards;
+}
+
+.footerText {
+  color: #64748b;
+  font-size: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .plansGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .planImage {
+    max-width: 250px;
+  }
+  
+  .title {
+    font-size: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 40px 20px;
+  }
+  
+  .header {
+    margin-bottom: 40px;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .plansGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 400px;
+  }
+  
+  .planCard {
+    padding: 20px;
+  }
+  
+  .planImage {
+    max-width: 200px;
+    margin-bottom: 16px;
+  }
+  
+  .planName {
+    font-size: 1.25rem;
+  }
+  
+  .priceAmount {
+    font-size: 2.5rem;
+  }
+  
+  .planChapters {
+    font-size: 0.95rem;
+    padding: 10px;
+  }
+  
+  .selectButton {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+  }
+  
+  .feature {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+  
+  .featuredBadge {
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    top: -10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 30px 16px;
+  }
+  
+  .header {
+    margin-bottom: 30px;
+  }
+  
+  .title {
+    font-size: 2rem;
+    letter-spacing: 1.5px;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .planCard {
+    padding: 16px;
+  }
+  
+  .planImage {
+    max-width: 180px;
+    margin-bottom: 12px;
+  }
+  
+  .planName {
+    font-size: 1.1rem;
+  }
+  
+  .priceAmount {
+    font-size: 2rem;
+  }
+  
+  .planChapters {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+  
+  .selectButton {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .feature {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .plansGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+  }
+  
+  .planCard {
+    padding: 28px;
+  }
+  
+  .planImage {
+    max-width: 320px;
+    margin-bottom: 24px;
+  }
+  
+  .title {
+    font-size: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1.5rem;
+  }
+  
+  .planName {
+    font-size: 1.75rem;
+  }
+  
+  .priceAmount {
+    font-size: 4rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.6);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes priceGlow {
+  0%, 100% {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    text-shadow: 0 4px 16px rgba(255, 255, 255, 0.3), 0 4px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .plansGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    max-width: 800px;
+  }
+  
+  .planCard {
+    padding: 36px 28px;
+    min-height: 480px;
+  }
+  
+  .planCard.featured {
+    transform: scale(1);
+  }
+  
+  .planCard.featured:hover {
+    transform: translateY(-12px) scale(1.05);
+  }
+  
+  .title {
+    font-size: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 40px 24px;
+  }
+  
+  .header {
+    margin-bottom: 50px;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .plansGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 400px;
+  }
+  
+  .planCard {
+    padding: 32px 24px;
+    min-height: 440px;
+  }
+  
+  .planCard.featured {
+    transform: scale(1);
+    border-width: 2px;
+  }
+  
+  .planCard.featured:hover {
+    transform: translateY(-8px) scale(1.03);
+  }
+  
+  .planCard:hover {
+    transform: translateY(-8px) scale(1.02);
+  }
+  
+  .priceAmount {
+    font-size: 3.5rem;
+  }
+  
+  .planIcon {
+    font-size: 2.5rem;
+  }
+  
+  .planName {
+    font-size: 1.5rem;
+  }
+  
+  .planChapters {
+    font-size: 1.05rem;
+    padding: 14px;
+  }
+  
+  .selectButton {
+    padding: 16px 24px;
+    font-size: 1.05rem;
+  }
+  
+  .feature {
+    font-size: 0.95rem;
+    padding: 10px 14px;
+  }
+  
+  .featuredBadge {
+    font-size: 0.75rem;
+    padding: 6px 16px;
+    top: -12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 32px 16px;
+  }
+  
+  .header {
+    margin-bottom: 40px;
+  }
+  
+  .title {
+    font-size: 2rem;
+    letter-spacing: 1.5px;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .planCard {
+    padding: 28px 20px;
+    min-height: 400px;
+  }
+  
+  .priceAmount {
+    font-size: 3rem;
+  }
+  
+  .planIcon {
+    font-size: 2rem;
+  }
+  
+  .planName {
+    font-size: 1.25rem;
+  }
+  
+  .planChapters {
+    font-size: 1rem;
+    padding: 12px;
+  }
+  
+  .selectButton {
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+  
+  .feature {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+  
+  .featuredBadge {
+    font-size: 0.7rem;
+    padding: 5px 14px;
+    top: -10px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .plansGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 36px;
+    max-width: 1600px;
+  }
+  
+  .planCard {
+    padding: 48px 36px;
+    min-height: 560px;
+  }
+  
+  .title {
+    font-size: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1.5rem;
+  }
+}

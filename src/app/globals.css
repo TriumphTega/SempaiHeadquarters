@@ -1,7 +1,7 @@
 /* Define the custom font */
 @font-face {
-  font-family: 'AnimeAce'; /* Name you’ll use in font-family */
-  src: url('/fonts/animeace.ttf') format('truetype'); /* Path relative to /public */
+  font-family: 'Yoruka'; /* Name you'll use in font-family */
+  src: url('/fonts/Yoruka-1j9rL.ttf') format('truetype'); /* Path relative to /public */
   font-weight: normal; /* Adjust if your font has specific weights */
   font-style: normal; /* Adjust if your font has specific styles */
 }
@@ -38,7 +38,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'AnimeAce', Arial, Helvetica, sans-serif; /* Use custom font with fallbacks */
+  font-family: 'Yoruka', Arial, Helvetica, sans-serif; /* Use custom font with fallbacks */
   font-size: 60%; /* Reduces font size to 70% of default (approx 11.2px from 16px) */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -49,7 +49,7 @@ body {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  font-family: inherit; /* Inherit AnimeAce from body */
+  font-family: inherit; /* Inherit Yoruka from body */
   font-size: inherit; /* Inherit the reduced size from body */
 }
 
