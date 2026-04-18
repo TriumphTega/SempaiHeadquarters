@@ -22,6 +22,18 @@ function Message({ msg, walletAddress, onReply, isPrivate, onScrollToParent }) {
   const isSuper = msg.is_superuser || (msg.is_writer && msg.is_artist);
   const showWriterBadge = msg.is_writer && !msg.is_artist && !msg.is_superuser;
   const showArtistBadge = msg.is_artist && !msg.is_writer && !msg.is_superuser;
+  const showBenefactorBadge = msg.is_benefactor;
+
+  // Get benefactor badge image based on level
+  const getBenefactorBadgeImage = () => {
+    if (!msg.is_benefactor) return null;
+    const level = msg.current_writer_subscription?.toLowerCase();
+    if (level === 'gold') return '/plan-image/Gold.svg';
+    if (level === 'silver') return '/plan-image/Silver.svg';
+    if (level === 'blue') return '/plan-image/Blue.svg';
+    if (level === 'iron') return '/plan-image/Black.svg';
+    return '/plan-image/Black.svg'; // Default
+  };
 
   return (
     <div
@@ -58,6 +70,11 @@ function Message({ msg, walletAddress, onReply, isPrivate, onScrollToParent }) {
           {showArtistBadge && (
             <span className={styles.writerBadge}>
               <img src="/animations/artist-badge.png" alt="Artist Badge" width="16" height="16" />
+            </span>
+          )}
+          {showBenefactorBadge && (
+            <span className={styles.writerBadge}>
+              <img src={getBenefactorBadgeImage()} alt="Benefactor Badge" width="16" height="16" />
             </span>
           )}
         </span>
@@ -212,11 +229,12 @@ export default function ChatPage() {
         const contactWallet = msg.sender_wallet === walletAddress ? msg.recipient_wallet : msg.sender_wallet;
         if (!uniqueContacts.has(contactWallet)) {
           uniqueContacts.add(contactWallet);
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from("users")
             .select("id, name, wallet_address, image, isWriter, isArtist, isSuperuser")
             .eq("wallet_address", contactWallet)
-            .single();
+            .maybeSingle();
+          if (userError && userError.code !== "PGRST116") console.error("Error fetching user for recent chat:", userError.message);
           contacts.push({
             id: userData?.id || null,
             name: userData?.name || contactWallet,
@@ -314,10 +332,10 @@ export default function ChatPage() {
         messagesData.map(async (msg) => {
           const { data: userData, error: userError } = await supabase
             .from("users")
-            .select("id, name, image, isWriter, isArtist, isSuperuser")
+            .select("id, name, image, isWriter, isArtist, isSuperuser, is_benefactor, benefactor_level, current_writer_subscription")
             .eq("wallet_address", msg.wallet_address)
-            .single();
-          if (userError) console.error("Error fetching user for message:", userError.message);
+            .maybeSingle();
+          if (userError && userError.code !== "PGRST116") console.error("Error fetching user for message:", userError.message);
 
           let parent_name = null;
           let parent_content = null;
@@ -326,22 +344,22 @@ export default function ChatPage() {
               .from("messages")
               .select("wallet_address, content")
               .eq("id", msg.parent_id)
-              .single();
-            if (parentError) {
+              .maybeSingle();
+            if (parentError && parentError.code !== "PGRST116") {
               console.error("Error fetching parent message:", parentError.message);
             } else if (parentMsg) {
               const { data: parentUser, error: parentUserError } = await supabase
                 .from("users")
                 .select("name")
                 .eq("wallet_address", parentMsg.wallet_address)
-                .single();
-              if (parentUserError) console.error("Error fetching parent user:", parentUserError.message);
+                .maybeSingle();
+              if (parentUserError && parentUserError.code !== "PGRST116") console.error("Error fetching parent user:", parentUserError.message);
               parent_name = parentUser?.name || parentMsg.wallet_address || "Unknown";
               parent_content = parentMsg.content || null;
             }
           }
 
-          return {
+          const enrichedMessage = {
             ...msg,
             user_id: userData?.id || null,
             name: userData?.name || msg.wallet_address,
@@ -355,9 +373,18 @@ export default function ChatPage() {
             is_writer: userData?.isWriter || false,
             is_artist: userData?.isArtist || false,
             is_superuser: userData?.isSuperuser || false,
+            is_benefactor: userData?.is_benefactor || false,
+            benefactor_level: userData?.benefactor_level || null,
+            current_writer_subscription: userData?.current_writer_subscription || null,
             parent_name,
             parent_content,
           };
+          console.log("Enriched message benefactor data:", {
+            is_benefactor: enrichedMessage.is_benefactor,
+            benefactor_level: enrichedMessage.benefactor_level,
+            name: enrichedMessage.name
+          });
+          return enrichedMessage;
         })
       );
       console.log("Enriched group messages:", enrichedMessages);
@@ -400,10 +427,10 @@ export default function ChatPage() {
         messagesData.map(async (msg) => {
           const { data: senderData, error: senderError } = await supabase
             .from("users")
-            .select("id, name, image, isWriter, isArtist, isSuperuser")
+            .select("id, name, image, isWriter, isArtist, isSuperuser, is_benefactor, benefactor_level, current_writer_subscription")
             .eq("wallet_address", msg.sender_wallet)
-            .single();
-          if (senderError) console.error("Error fetching sender:", senderError.message);
+            .maybeSingle();
+          if (senderError && senderError.code !== "PGRST116") console.error("Error fetching sender:", senderError.message);
 
           let parent_name = null;
           let parent_content = null;
@@ -412,16 +439,16 @@ export default function ChatPage() {
               .from("private_messages")
               .select("sender_wallet, content")
               .eq("id", msg.parent_id)
-              .single();
-            if (parentError) {
+              .maybeSingle();
+            if (parentError && parentError.code !== "PGRST116") {
               console.error("Error fetching parent private message:", parentError.message);
             } else if (parentMsg) {
               const { data: parentUser, error: parentUserError } = await supabase
                 .from("users")
                 .select("name")
                 .eq("wallet_address", parentMsg.sender_wallet)
-                .single();
-              if (parentUserError) console.error("Error fetching parent user:", parentUserError.message);
+                .maybeSingle();
+              if (parentUserError && parentUserError.code !== "PGRST116") console.error("Error fetching parent user:", parentUserError.message);
               parent_name = parentUser?.name || parentMsg.sender_wallet || "Unknown";
               parent_content = parentMsg.content || null;
             }
@@ -441,6 +468,9 @@ export default function ChatPage() {
             is_writer: senderData?.isWriter || false,
             is_artist: senderData?.isArtist || false,
             is_superuser: senderData?.isSuperuser || false,
+            is_benefactor: senderData?.is_benefactor || false,
+            benefactor_level: senderData?.benefactor_level || null,
+            current_writer_subscription: senderData?.current_writer_subscription || null,
             status: msg.status || "sent",
             parent_name,
             parent_content,
@@ -468,10 +498,61 @@ export default function ChatPage() {
     console.log("useEffect for fetching messages triggered with activeChat:", activeChat);
     if (activeChat === "group") {
       fetchGroupMessages();
+
+      // Subscribe to new group messages
+      const groupChannel = supabase
+        .channel("group-messages")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+          },
+          (payload) => {
+            console.log("New group message received:", payload);
+            fetchGroupMessages();
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            console.log("Subscribed to group messages");
+          }
+        });
+
+      return () => {
+        supabase.removeChannel(groupChannel);
+      };
     } else {
       fetchPrivateMessages(activeChat);
+
+      // Subscribe to new private messages
+      const privateChannel = supabase
+        .channel(`private-messages-${activeChat}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "private_messages",
+            filter: `or(sender_wallet.eq.${walletAddress},recipient_wallet.eq.${walletAddress})`,
+          },
+          (payload) => {
+            console.log("New private message received:", payload);
+            fetchPrivateMessages(activeChat);
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            console.log("Subscribed to private messages for:", activeChat);
+          }
+        });
+
+      return () => {
+        supabase.removeChannel(privateChannel);
+      };
     }
-  }, [activeChat, fetchGroupMessages, fetchPrivateMessages]);
+  }, [activeChat, fetchGroupMessages, fetchPrivateMessages, walletAddress]);
 
   useEffect(() => {
     if (!walletAddress || activeChat === "group") {
@@ -496,8 +577,11 @@ export default function ChatPage() {
         if (status === "SUBSCRIBED") {
           console.log("Subscribed to typing channel for:", activeChat);
           setTypingChannel(channel);
-        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
-          console.error("Typing channel status:", status);
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("Typing channel error:", status);
+        } else if (status === "CLOSED") {
+          console.log("Typing channel closed");
+          setTypingChannel(null);
         }
       });
 
@@ -550,7 +634,7 @@ export default function ChatPage() {
         .from("users")
         .select("id, name")
         .eq("wallet_address", walletAddress)
-        .single();
+        .maybeSingle();
       if (userError || !userData) {
         setError("User not found: " + (userError?.message || "No data"));
         setUploading(false);
@@ -567,14 +651,14 @@ export default function ChatPage() {
               .from("messages")
               .select("wallet_address, content")
               .eq("id", replyingTo)
-              .single())?.data;
+              .maybeSingle())?.data;
           if (parentMsg) {
             const { data: parentUser, error: parentUserError } = await supabase
               .from("users")
               .select("name")
               .eq("wallet_address", parentMsg.wallet_address)
-              .single();
-            if (parentUserError) console.error("Error fetching parent user:", parentUserError.message);
+              .maybeSingle();
+            if (parentUserError && parentUserError.code !== "PGRST116") console.error("Error fetching parent user:", parentUserError.message);
             parent_name = parentUser?.name || parentMsg.wallet_address || "Unknown";
             parent_content = parentMsg.content || null;
           }
@@ -584,14 +668,14 @@ export default function ChatPage() {
               .from("private_messages")
               .select("sender_wallet, content")
               .eq("id", replyingTo)
-              .single())?.data;
+              .maybeSingle())?.data;
           if (parentMsg) {
             const { data: parentUser, error: parentUserError } = await supabase
               .from("users")
               .select("name")
               .eq("wallet_address", parentMsg.sender_wallet)
-              .single();
-            if (parentUserError) console.error("Error fetching parent user:", parentUserError.message);
+              .maybeSingle();
+            if (parentUserError && parentUserError.code !== "PGRST116") console.error("Error fetching parent user:", parentUserError.message);
             parent_name = parentUser?.name || parentMsg.sender_wallet || "Unknown";
             parent_content = parentMsg.content || null;
           }
@@ -609,11 +693,11 @@ export default function ChatPage() {
             parent_id: replyingTo,
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) {
           setError("Failed to send group message: " + error.message);
-        } else {
+        } else if (data) {
           setMessages((prev) => [
             ...prev,
             { ...data, name: userData.name, parent_name, parent_content },
@@ -654,11 +738,11 @@ export default function ChatPage() {
             status: "sent",
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) {
           setError("Failed to send private message: " + error.message);
-        } else {
+        } else if (data) {
           setPrivateMessages((prev) => ({
             ...prev,
             [activeChat]: prev[activeChat].map((msg) =>
@@ -672,8 +756,8 @@ export default function ChatPage() {
             .from("users")
             .select("id, wallet_address")
             .eq("wallet_address", activeChat)
-            .single();
-          if (recipientError) console.error("Error fetching recipient:", recipientError.message);
+            .maybeSingle();
+          if (recipientError && recipientError.code !== "PGRST116") console.error("Error fetching recipient:", recipientError.message);
 
           if (recipientData && recipientData.wallet_address !== walletAddress) {
             await supabase.from("notifications").insert({

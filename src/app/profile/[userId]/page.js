@@ -29,6 +29,9 @@ export default function CreatorsProfilePage() {
   const [isWriter, setIsWriter] = useState(false);
   const [isArtist, setIsArtist] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
+  const [isBenefactor, setIsBenefactor] = useState(false);
+  const [benefactorLevel, setBenefactorLevel] = useState(null);
+  const [currentWriterSubscription, setCurrentWriterSubscription] = useState(null);
   const [showCreatorChoice, setShowCreatorChoice] = useState(false);
   const [showBenefactorOption, setShowBenefactorOption] = useState(false);
   const [benefactorAccess, setBenefactorAccess] = useState(null);
@@ -37,6 +40,17 @@ export default function CreatorsProfilePage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
+
+  // Get benefactor badge image based on level
+  const getBenefactorBadgeImage = () => {
+    if (!isBenefactor) return null;
+    const level = currentWriterSubscription?.toLowerCase();
+    if (level === 'gold') return '/plan-image/Gold.svg';
+    if (level === 'silver') return '/plan-image/Silver.svg';
+    if (level === 'blue') return '/plan-image/Blue.svg';
+    if (level === 'iron') return '/plan-image/Black.svg';
+    return '/plan-image/Black.svg'; // Default
+  };
 
   // Normalize website URL
   const normalizeWebsiteUrl = (url) => {
@@ -75,28 +89,44 @@ export default function CreatorsProfilePage() {
     if (connected || embeddedWallet) setWalletReady(true);
   }, [connected, publicKey, embeddedWallet]);
 
-  // Check benefactor access
+  // Check writer subscription access
   const checkBenefactorAccess = async () => {
-    if (!walletReady) return null;
+    if (!walletReady || !userId) return null;
 
     const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
     if (!walletAddress) return null;
 
     try {
-      const { data: benefactorData, error } = await supabase
-        .from("benefactor_early_access")
+      const { data: subscriptionData, error } = await supabase
+        .from("writer_subscriptions")
         .select("*")
         .eq("benefactor_wallet", walletAddress)
-        .gte("expires_at", new Date().toISOString())
+        .eq("writer_id", userId)
+        .eq("is_active", true)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
-        console.error("Benefactor check error:", error);
+        console.error("Writer subscription check error:", error);
       }
 
-      return benefactorData;
+      if (subscriptionData) {
+        // Check if subscription has expired
+        if (new Date(subscriptionData.expires_at) <= new Date()) {
+          // Expire the subscription
+          await supabase
+            .from("writer_subscriptions")
+            .update({ is_active: false })
+            .eq("id", subscriptionData.id);
+          
+          return null;
+        }
+        
+        return subscriptionData;
+      }
+
+      return null;
     } catch (err) {
-      console.error("Benefactor check error:", err);
+      console.error("Writer subscription check error:", err);
       return null;
     }
   };
@@ -253,7 +283,7 @@ export default function CreatorsProfilePage() {
       try {
         const { data: user, error: userError } = await supabase
           .from("users")
-          .select("id, isWriter, isArtist, isSuperuser, name, wallet_address, image")
+          .select("id, isWriter, isArtist, isSuperuser, name, wallet_address, image, is_benefactor, benefactor_level, current_writer_subscription")
           .eq("id", userId)
           .single();
 
@@ -263,6 +293,9 @@ export default function CreatorsProfilePage() {
         setIsWriter(user.isWriter || false);
         setIsArtist(user.isArtist || false);
         setIsSuperuser(user.isSuperuser || false);
+        setIsBenefactor(user.is_benefactor || false);
+        setBenefactorLevel(user.benefactor_level || null);
+        setCurrentWriterSubscription(user.current_writer_subscription || null);
 
         // Set user role for styling
         if (user.isSuperuser) setUserRole("superuser");
@@ -381,6 +414,13 @@ export default function CreatorsProfilePage() {
                 <h2 className={styles.sectionTitle}>
                   <img src={creatorData?.image || "/images/default-profile.jpg"} alt="Profile" className={styles.profileIcon} />
                   {creatorData?.name || creatorData?.wallet_address.slice(0, 8)}
+                  {isBenefactor && (
+                    <img
+                      src={getBenefactorBadgeImage()}
+                      alt="Benefactor Badge"
+                      style={{ width: '24px', height: '24px', marginLeft: '8px' }}
+                    />
+                  )}
                 </h2>
                 <p className={styles.bio}>{creatorData?.bio || "No bio provided."}</p>
                 <div className={styles.socials}>

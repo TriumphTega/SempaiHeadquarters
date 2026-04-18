@@ -7,6 +7,7 @@
   position: relative;
   transition: all 0.3s ease;
   cursor: pointer;
+  font-family: 'Yoruka', inherit;
 }
 
 .benefactorBadge:hover {
@@ -92,6 +93,7 @@
   margin-left: 8px;
   font-size: 0.75em;
   white-space: nowrap;
+  font-family: 'Yoruka', inherit;
 }
 
 .inlineBadge .icon {

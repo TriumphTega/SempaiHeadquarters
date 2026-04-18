@@ -55,6 +55,7 @@
   padding: 2px 6px;
   font-size: 12px;
   animation: pulse 1.5s infinite;
+  font-family: 'Yoruka', inherit;
 }
 
 @keyframes pulse {

@@ -69,6 +69,7 @@
   border-radius: 50%;
   background: #f0f0f0;
   border: 2px solid #e0e0e0;
+  font-family: 'Yoruka', inherit;
 }
 
 .badgePlaceholder.tiny {
@@ -107,6 +108,7 @@
 
 .inlineBadge {
   margin-left: 4px;
+  font-family: 'Yoruka', inherit;
 }
 
 /* Profile header version */
@@ -201,4 +203,5 @@
 
 .leaderboardUser .badge {
   margin-left: auto;
+  font-family: 'Yoruka', inherit;
 }

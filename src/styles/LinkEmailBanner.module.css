@@ -228,7 +228,7 @@
 .walletInfo code {
   display: block;
   color: #60a5fa;
-  font-family: 'Courier New', monospace;
+  font-family: 'Yoruka', 'Courier New', monospace;
   font-size: 0.875rem;
   word-break: break-all;
 }

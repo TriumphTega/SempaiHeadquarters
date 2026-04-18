@@ -330,7 +330,7 @@
   border-radius: 6px;
   background: #000;
   color: #fff;
-  font-family: monospace;
+  font-family: 'Yoruka', monospace;
   resize: none;
   height: 80px;
   font-size: 12px;
@@ -552,6 +552,7 @@
   margin-left: 4px;
   font-size: 12px;
   opacity: 0.9;
+  font-family: 'Yoruka', inherit;
 }
 
 .externalWalletWrapper {

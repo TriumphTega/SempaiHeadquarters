@@ -51,7 +51,7 @@
   
   .privateKey {
     word-break: break-all;
-    font-family: monospace;
+    font-family: 'Yoruka', monospace;
     background-color: #e0e0e0;
     padding: 10px;
     border-radius: 5px;

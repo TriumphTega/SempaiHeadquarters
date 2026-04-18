@@ -867,36 +867,52 @@ export default function ChapterPage() {
     if (!activeWalletAddress || !id) return null;
     
     try {
-      const { data: benefactorData, error: benefactorError } = await supabase
-        .from("benefactor_early_access")
+      // First get the novel to find the writer (author)
+      const { data: novelData, error: novelError } = await supabase
+        .from("novels")
+        .select("user_id")
+        .eq("id", id)
+        .single();
+      
+      if (novelError || !novelData) {
+        console.error("[checkBenefactorAccess] Error fetching novel:", novelError?.message);
+        return null;
+      }
+
+      const writerId = novelData.user_id;
+
+      // Check for active subscription to this writer
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from("writer_subscriptions")
         .select("*")
         .eq("benefactor_wallet", activeWalletAddress)
-        .eq("novel_id", id)
+        .eq("writer_id", writerId)
         .eq("is_active", true)
         .single();
       
-      if (benefactorError && benefactorError.code !== "PGRST116") {
-        console.error("[checkBenefactorAccess] Error:", benefactorError.message);
+      if (subscriptionError && subscriptionError.code !== "PGRST116") {
+        console.error("[checkBenefactorAccess] Error:", subscriptionError.message);
         return null;
       }
       
-      if (benefactorData) {
-        // Check if access has expired
-        if (new Date(benefactorData.expires_at) <= new Date()) {
-          // Expire the access
+      if (subscriptionData) {
+        // Check if subscription has expired
+        if (new Date(subscriptionData.expires_at) <= new Date()) {
+          // Expire the subscription
           await supabase
-            .from("benefactor_early_access")
+            .from("writer_subscriptions")
             .update({ is_active: false })
-            .eq("id", benefactorData.id);
+            .eq("id", subscriptionData.id);
+          
           return null;
         }
         
-        // Check remaining chapters
-        if (benefactorData.chapters_remaining <= 0) {
+        // Check remaining chapters (only applies to non-gold plans)
+        if (subscriptionData.chapters_remaining <= 0 && subscriptionData.plan_type !== 'gold') {
           return null;
         }
         
-        return benefactorData;
+        return subscriptionData;
       }
       
       return null;
@@ -944,6 +960,107 @@ export default function ChapterPage() {
     }
   };
 
+  const processSmpPayment = async (smpAmount, novelId) => {
+    try {
+      console.log("[processSmpPayment] Starting benefactor payment process...");
+
+      if (!activeWalletAddress || !id || !activePublicKey || !signAndSendTransaction) {
+        return { success: false, error: "Please connect your wallet and try again." };
+      }
+
+      // Get novel author wallet
+      const { data: novelData, error: novelError } = await supabase
+        .from("novels")
+        .select("user_id")
+        .eq("id", novelId)
+        .single();
+
+      if (novelError || !novelData) {
+        return { success: false, error: "Could not fetch novel data" };
+      }
+
+      const { data: authorData, error: authorError } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", novelData.user_id)
+        .single();
+
+      if (authorError || !authorData?.wallet_address) {
+        return { success: false, error: "Could not fetch author wallet" };
+      }
+
+      const authorPublicKey = new PublicKey(authorData.wallet_address);
+
+      // Calculate payment amount
+      const paymentAmount = Math.floor(smpAmount * 10 ** SMP_DECIMALS);
+      const paymentMint = SMP_MINT_ADDRESS;
+
+      console.log("[processSmpPayment] Payment amount:", paymentAmount, "SMP");
+
+      // Build transaction using the same pattern as chapter payments
+      console.log("[processSmpPayment] Building transaction...");
+      const transaction = await createPaymentTransactionClient({
+        paymentMint,
+        paymentAmount,
+        userPublicKey: activePublicKey,
+        authorPublicKey,
+        smpMintAddress: paymentMint,
+      });
+
+      // Get fresh blockhash
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = activePublicKey;
+
+      // Sign and send transaction
+      console.log("[processSmpPayment] Signing and sending transaction...");
+      const signature = await signAndSendTransaction(transaction);
+      console.log("[processSmpPayment] Transaction sent, signature:", signature);
+
+      // Wait for confirmation
+      const start = Date.now();
+      let landed = false;
+      console.log("[processSmpPayment] Starting confirmation poll for signature:", signature);
+
+      while (Date.now() - start < 10000) {
+        const statusResp = await connection.getSignatureStatus(signature);
+        const status = statusResp?.value;
+
+        if (status?.err) {
+          throw new Error("Transaction failed on-chain.");
+        }
+        if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
+          landed = true;
+          break;
+        }
+        await delay(500);
+      }
+
+      if (!landed) {
+        console.log("[processSmpPayment] Transaction not confirmed in 10s, checking status directly...");
+        const finalStatus = await connection.getSignatureStatus(signature, {
+          searchTransactionHistory: true
+        });
+
+        if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
+          landed = true;
+        } else if (finalStatus?.value?.err) {
+          throw new Error(`Transaction failed on-chain: ${JSON.stringify(finalStatus?.value?.err)}`);
+        }
+      }
+
+      if (!landed) {
+        throw new Error("Transaction not confirmed yet. Please try again.");
+      }
+
+      console.log("[processSmpPayment] Transaction confirmed successfully");
+      return { success: true, signature };
+    } catch (error) {
+      console.error("[processSmpPayment] Error:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
   const handleBenefactorUnlock = async (plan) => {
     if (!activeWalletAddress || !id || !chapter || isProcessing) {
       setError("Unable to process benefactor unlock. Please try again.");
@@ -956,12 +1073,12 @@ export default function ChapterPage() {
     try {
       const chapterNum = parseInt(chapter, 10);
       
-      // Define pricing tiers
+      // Define pricing tiers (SMP test mode - small amounts)
       const pricingTiers = {
-        blue: { price: 1.00, chapters: 3, name: "Blue" },
-        iron: { price: 2.00, chapters: 6, name: "Iron" },
-        silver: { price: 3.00, chapters: 10, name: "Silver" },
-        gold: { price: 5.00, chapters: 999, name: "Gold" }, // 999 = unlimited
+        blue: { price: 0.001, chapters: 3, name: "Blue" },
+        iron: { price: 0.002, chapters: 6, name: "Iron" },
+        silver: { price: 0.003, chapters: 10, name: "Silver" },
+        gold: { price: 0.005, chapters: 999, name: "Gold" }, // 999 = unlimited
       };
 
       const tier = pricingTiers[plan.id];
@@ -969,121 +1086,62 @@ export default function ChapterPage() {
         throw new Error("Invalid plan selected");
       }
 
-      // Check if user already has benefactor access
+      // Check if user already has writer subscription
       const existingAccess = await checkBenefactorAccess();
       if (existingAccess) {
-        setError("You already have benefactor access to this novel.");
+        setError("You already have an active subscription to this writer.");
         setIsProcessing(false);
         return;
       }
 
-      // Check if novel has at least one published chapter (requirement for benefactor access)
-      const { data: novelData, error: novelError } = await supabase
-        .from("novels")
-        .select("user_id, chaptertitles")
-        .eq("id", id)
-        .single();
+      setSuccessMessage(`Processing ${tier.name} writer subscription...`);
       
-      if (novelError || !novelData) {
-        setError("Novel not found or access denied.");
-        setIsProcessing(false);
-        return;
-      }
-      
-      if (!novelData.chaptertitles || novelData.chaptertitles.length === 0) {
-        setError("Benefactor access requires at least one published chapter.");
-        setIsProcessing(false);
-        return;
+      // Use existing smpPrice state
+      if (!smpPrice || smpPrice === 0) {
+        throw new Error("Unable to fetch SMP price");
       }
 
-      setSuccessMessage(`Processing ${tier.name} benefactor payment...`);
-      
-      // Process payment based on plan price - default to SOL for now
-      let paymentResult;
-      paymentResult = await processSolanaPayment(tier.price, "BENEFACTOR");
+      // Calculate expected SMP amount
+      const expectedSmpAmount = tier.price / smpPrice;
+
+      // Process SMP payment transaction
+      const paymentResult = await processSmpPayment(expectedSmpAmount, id);
 
       if (!paymentResult.success) {
         throw new Error(paymentResult.error || "Payment failed");
       }
 
-      // Record benefactor access
-      const { data: benefactorData, error: benefactorError } = await supabase
-        .from("benefactor_early_access")
-        .insert({
-          benefactor_wallet: activeWalletAddress,
-          novel_id: id,
-          chapters_unlocked: tier.chapters,
-          chapters_remaining: tier.chapters,
-          payment_amount: tier.price,
-          payment_currency: "SOL",
-          transaction_id: paymentResult.signature || `BENEFACTOR_${Date.now()}`,
-          paid_at: new Date().toISOString(),
-          expires_at: tier.chapters === 999 ? null : new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString(), // 14 days for limited, null for unlimited
-          is_active: true,
-        })
-        .select()
-        .single();
+      // Get auth session for token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (benefactorError) throw new Error(`Failed to record benefactor access: ${benefactorError.message}`);
-
-      // Update user's benefactor status
-      const { data: currentUserData, error: userError } = await supabase
-        .from("users")
-        .select("is_benefactor, benefactor_level, total_benefactor_payments")
-        .eq("id", user.id)
-        .single();
-
-      if (!userError && currentUserData) {
-        const newTotalPayments = (currentUserData.total_benefactor_payments || 0) + 1.00;
-        let newLevel = currentUserData.benefactor_level || 'bronze';
-        
-        // Determine benefactor level based on total payments
-        if (newTotalPayments >= 50) {
-          newLevel = 'platinum';
-        } else if (newTotalPayments >= 20) {
-          newLevel = 'gold';
-        } else if (newTotalPayments >= 10) {
-          newLevel = 'silver';
-        } else {
-          newLevel = 'bronze';
-        }
-
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({
-            is_benefactor: true,
-            benefactor_level: newLevel,
-            benefactor_since: currentUserData.benefactor_since || new Date().toISOString(),
-            total_benefactor_payments: newTotalPayments
-          })
-          .eq("id", user.id);
-
-        if (updateError) {
-          console.warn("[handleBenefactorUnlock] Failed to update benefactor status:", updateError.message);
-        } else {
-          console.log("[handleBenefactorUnlock] Updated benefactor status:", { level: newLevel, total: newTotalPayments });
-        }
+      if (!token) {
+        throw new Error("You must be signed in to unlock benefactor access.");
       }
 
-      // Record in chapter_payments for consistency
-      const { error: paymentError } = await supabase
-        .from("chapter_payments")
-        .insert({
-          wallet_address: activeWalletAddress,
-          novel_id: id,
-          chapter_number: chapterNum,
-          payment_type: "BENEFACTOR",
-          currency: currency,
-          amount: 1.00,
-          transaction_id: paymentResult.signature || `BENEFACTOR_${Date.now()}`,
-          created_at: new Date().toISOString(),
-        });
+      // Call benefactor payment edge function
+      const response = await fetch("/api/benefactor-payment-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          novelId: id,
+          planType: plan.id,
+          signature: paymentResult.signature,
+          userPublicKey: activeWalletAddress,
+        }),
+      });
 
-      if (paymentError) {
-        console.warn("[handleBenefactorUnlock] Failed to record payment entry:", paymentError.message);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Benefactor payment failed");
       }
 
-      // Update benefactor access state
+      // Fetch benefactor access from database to get full record
+      const benefactorData = await checkBenefactorAccess();
       setBenefactorAccess(benefactorData);
       setShowBenefactorOption(false);
       
@@ -1093,8 +1151,8 @@ export default function ChapterPage() {
       setRecentlyUnlocked(true);
       
       const accessMessage = tier.chapters === 999 
-        ? `${tier.name} benefactor access activated! You now have unlimited access to all advance chapters.`
-        : `${tier.name} benefactor access activated! You now have early access to ${tier.chapters} chapters for 14 days.`;
+        ? `${tier.name} writer subscription activated! You now have unlimited access to all novels by this writer for 30 days.`
+        : `${tier.name} writer subscription activated! You now have early access to ${tier.chapters} chapters across all novels by this writer for 14 days.`;
       setSuccessMessage(accessMessage);
       setTimeout(() => setSuccessMessage(""), 5000);
       
@@ -1382,51 +1440,55 @@ export default function ChapterPage() {
           return;
         }
         
-        // Check for benefactor access
-        const benefactorData = await checkBenefactorAccess();
-        if (benefactorData) {
-          // Check if this chapter is within the benefactor's remaining chapters
+        // Check for writer subscription access
+        const subscriptionData = await checkBenefactorAccess();
+        if (subscriptionData) {
+          // Check if this chapter has already been accessed under this subscription
           const { data: accessLog, error: logError } = await supabase
-            .from("benefactor_access_log")
+            .from("writer_access_log")
             .select("id")
-            .eq("benefactor_access_id", benefactorData.id)
+            .eq("subscription_id", subscriptionData.id)
+            .eq("novel_id", id)
             .eq("chapter_number", chapterNum)
             .single();
-          
+
           if (logError && logError.code !== "PGRST116") {
-            console.error("[checkAccess] Benefactor log error:", logError.message);
+            console.error("[checkAccess] Writer access log error:", logError.message);
           }
-          
+
           if (!logError && accessLog) {
-            // Chapter already accessed via benefactor
+            // Chapter already accessed via writer subscription
             setIsLocked(false);
             return;
           }
-          
-          if (benefactorData.chapters_remaining > 0) {
+
+          // For unlimited access (gold plan) or remaining chapters > 0, grant access
+          if (subscriptionData.plan_type === 'gold' || subscriptionData.chapters_remaining > 0) {
             // Grant access and log the chapter access
             setIsLocked(false);
-            
+
             // Log the chapter access
             await supabase
-              .from("benefactor_access_log")
+              .from("writer_access_log")
               .insert({
-                benefactor_access_id: benefactorData.id,
+                subscription_id: subscriptionData.id,
                 novel_id: id,
                 chapter_number: chapterNum,
                 accessed_at: new Date().toISOString(),
               });
-            
-            // Update remaining chapters
-            const newRemaining = benefactorData.chapters_remaining - 1;
-            await supabase
-              .from("benefactor_early_access")
-              .update({ chapters_remaining: newRemaining })
-              .eq("id", benefactorData.id);
-            
-            // Update local state
-            setBenefactorAccess({ ...benefactorData, chapters_remaining: newRemaining });
-            
+
+            // Only decrement if not gold (unlimited)
+            if (subscriptionData.plan_type !== 'gold') {
+              const newRemaining = subscriptionData.chapters_remaining - 1;
+              await supabase
+                .from("writer_subscriptions")
+                .update({ chapters_remaining: newRemaining })
+                .eq("id", subscriptionData.id);
+
+              // Update local state
+              setBenefactorAccess({ ...subscriptionData, chapters_remaining: newRemaining });
+            }
+
             return;
           }
         }
@@ -2086,8 +2148,13 @@ export default function ChapterPage() {
                   <div className={styles.benefactorStatus}>
                     <FaStar className={styles.gemIcon} />
                     <span className={styles.statusText}>
-                      Benefactor Access: {benefactorAccess.chapters_remaining}/3 chapters remaining
+                      Writer Subscription: {benefactorAccess.plan_type?.toUpperCase()} Plan
                     </span>
+                    {benefactorAccess.plan_type !== 'gold' && (
+                      <span className={styles.statusText}>
+                        {benefactorAccess.chapters_remaining}/{benefactorAccess.chapters_unlocked} chapters remaining
+                      </span>
+                    )}
                     <span className={styles.expiryText}>
                       Expires: {new Date(benefactorAccess.expires_at).toLocaleDateString()}
                     </span>
@@ -2103,8 +2170,13 @@ export default function ChapterPage() {
                   <div className={styles.benefactorStatus}>
                     <FaStar className={styles.gemIcon} />
                     <span className={styles.statusText}>
-                      Benefactor Access: {benefactorAccess.chapters_remaining}/3 chapters remaining
+                      Writer Subscription: {benefactorAccess.plan_type?.toUpperCase()} Plan
                     </span>
+                    {benefactorAccess.plan_type !== 'gold' && (
+                      <span className={styles.statusText}>
+                        {benefactorAccess.chapters_remaining}/{benefactorAccess.chapters_unlocked} chapters remaining
+                      </span>
+                    )}
                     <span className={styles.expiryText}>
                       Expires: {new Date(benefactorAccess.expires_at).toLocaleDateString()}
                     </span>

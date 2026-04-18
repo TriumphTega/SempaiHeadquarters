@@ -254,6 +254,7 @@
   margin-left: 6px;
   display: inline-flex;
   align-items: center;
+  font-family: 'Yoruka', inherit;
  }
  
  .messageStatus {
