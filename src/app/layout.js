@@ -25,13 +25,13 @@ export default function RootLayout({ children }) {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Sempai HQ - Explore Novels and Chapters" />
         <meta name="twitter:description" content="Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers." />
-        <meta name="twitter:image" content="https://sempaihq.com/images/logo.jpeg" />
-        <meta name="twitter:site" content="@SempaiHQ" />
+        <meta name="twitter:image" content="https://sempaihq.com/images/sempai.jpg" />
+        <meta name="twitter:site" content="@HomeforSempai" />
         
         {/* Open Graph Meta Tags */}
         <meta property="og:title" content="Sempai HQ - Explore Novels and Chapters" />
         <meta property="og:description" content="Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers." />
-        <meta property="og:image" content="https://sempaihq.com/images/logo.jpeg" />
+        <meta property="og:image" content="https://sempaihq.com/images/sempai.jpg" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://sempaihq.com" />
         
