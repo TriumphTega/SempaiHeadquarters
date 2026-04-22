@@ -803,7 +803,8 @@ export default function ChapterPage() {
           .eq("id", id)
           .single();
         if (novelError || !novelData) {
-          setError("Novel not found");
+          console.error("Novel fetch error:", novelError);
+          setError(`Novel not found: ${novelError?.message || "Unknown error"}`);
           setLoading(false);
           return;
         }
