@@ -795,7 +795,25 @@ export default function ChapterPage() {
   useEffect(() => {
     async function initialize() {
       const chapterNum = parseInt(chapter, 10);
-      // Require wallet connection for ALL chapters
+      // First 3 chapters are free and don't require wallet connection
+      if (chapterNum <= 2) {
+        let { data: novelData, error: novelError } = await supabase
+          .from("novels")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (novelError || !novelData) {
+          setError("Novel not found");
+          setLoading(false);
+          return;
+        }
+        setNovel(novelData);
+        setIsLocked(false);
+        setLoading(false);
+        return;
+      }
+
+      // Require wallet connection for chapters 4+
       if (!isWalletConnected) {
         setShowConnectPopup(true);
         setLoading(false);
