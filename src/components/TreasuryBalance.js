@@ -58,47 +58,90 @@ const TreasuryBalance = () => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{
+        textAlign: 'center',
+        padding: '20px',
+      }}>
+        <div style={{
+          width: '24px', height: '24px',
+          border: '2.5px solid rgba(255,255,255,0.06)',
+          borderTopColor: 'rgba(243,99,22,0.7)',
+          borderRadius: '50%',
+          margin: '0 auto',
+          animation: 'treasurySpin 0.9s cubic-bezier(0.45,0.05,0.55,0.95) infinite',
+        }} />
+        <style>{`@keyframes treasurySpin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
   }
 
   return (
     <div style={{
-      background: 'black',
-      padding: '20px',
-      borderRadius: '15px',
-      boxShadow: '0 4px 12px rgba(243, 99, 22, 0.7)',
+      background: 'rgba(8, 8, 14, 0.5)',
+      backdropFilter: 'blur(16px) saturate(140%)',
+      WebkitBackdropFilter: 'blur(16px) saturate(140%)',
+      padding: '20px 28px',
+      borderRadius: '20px',
       textAlign: 'center',
-      maxWidth: '400px',
-      margin: '20px auto',
+      maxWidth: '380px',
+      margin: '24px auto 0',
       color: '#fff',
-      fontFamily: 'Arial, sans-serif',
-      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-      border: '2px solid rgb(243, 99, 22)'
+      border: '1px solid rgba(243, 99, 22, 0.12)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)',
+      transition: 'all 0.4s cubic-bezier(0.22,1,0.36,1)',
+      position: 'relative',
+      overflow: 'hidden',
     }}
       onMouseEnter={e => {
-        e.currentTarget.style.transform = 'scale(1.05)';
-        e.currentTarget.style.boxShadow = '0 6px 18px rgba(243, 99, 22, 1)';
+        e.currentTarget.style.transform = 'translateY(-3px) scale(1.01)';
+        e.currentTarget.style.borderColor = 'rgba(243, 99, 22, 0.25)';
+        e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.5), 0 0 30px rgba(243,99,22,0.06), inset 0 1px 0 rgba(255,255,255,0.04)';
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(243, 99, 22, 0.7)';
+        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+        e.currentTarget.style.borderColor = 'rgba(243, 99, 22, 0.12)';
+        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)';
       }}
     >
-      <h3 style={{
-        fontSize: '1.8rem',
-        margin: '0',
-        letterSpacing: '1px',
-        color: 'rgb(243, 99, 22)',
+      {/* Subtle top accent line */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: '15%',
+        right: '15%',
+        height: '1px',
+        background: 'linear-gradient(90deg, transparent, rgba(243,99,22,0.4), transparent)',
+      }} />
+      <p style={{
+        fontSize: '0.65rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+        margin: '0 0 8px',
+        color: 'rgba(243, 99, 22, 0.7)',
       }}>
-        Amethyst Treasury Balance
+        Treasury
+      </p>
+      <h3 style={{
+        fontSize: '1.1rem',
+        margin: '0',
+        fontWeight: 700,
+        letterSpacing: '-0.01em',
+        color: '#fff',
+        textShadow: '0 0 20px rgba(243,99,22,0.15)',
+      }}>
+        Amethyst Balance
       </h3>
       <p style={{
-        fontSize: '2.5rem',
-        fontWeight: 'bold',
+        fontSize: '2rem',
+        fontWeight: 800,
         margin: '10px 0 0',
-        color: '#FFFFFF',
+        color: '#fff',
+        letterSpacing: '-0.02em',
+        textShadow: '0 0 30px rgba(243,99,22,0.2)',
       }}>
-        {Number(balance)} AMT
+        {Number(balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'rgba(243,99,22,0.7)' }}>AMT</span>
       </p>
     </div>
   );

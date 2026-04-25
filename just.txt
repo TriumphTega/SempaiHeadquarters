@@ -1,0 +1,427 @@
+# Meteora In-Page Swap Integration (Next.js)
+
+This implementation swaps directly inside your page using Meteora DLMM SDK.
+
+Install:
+
+```bash
+npm install @meteora-ag/dlmm @coral-xyz/anchor bn.js
+```
+
+---
+
+# 1. `/app/api/meteora-swap/route.js`
+
+```javascript
+import DLMM from "@meteora-ag/dlmm";
+import BN from "bn.js";
+
+import {
+  Connection,
+  PublicKey,
+  VersionedTransaction,
+} from "@solana/web3.js";
+
+import {
+  RPC_URL,
+  AMETHYST_MINT_ADDRESS,
+  SMP_MINT_ADDRESS,
+} from "@/constants";
+
+const connection = new Connection(
+  RPC_URL,
+  "confirmed"
+);
+
+const POOL_ADDRESS = new PublicKey(
+  "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33"
+);
+
+const TOKEN_X = new PublicKey(
+  AMETHYST_MINT_ADDRESS
+);
+
+const TOKEN_Y = new PublicKey(
+  SMP_MINT_ADDRESS
+);
+
+export async function POST(req) {
+  try {
+    const body = await req.json();
+
+    const {
+      userAddress,
+      amount,
+      inputMint,
+      outputMint,
+    } = body;
+
+    if (
+      !userAddress ||
+      !amount ||
+      !inputMint ||
+      !outputMint
+    ) {
+      return Response.json(
+        {
+          success: false,
+          error: "Missing fields",
+        },
+        { status: 400 }
+      );
+    }
+
+    const userPublicKey = new PublicKey(
+      userAddress
+    );
+
+    // CREATE DLMM POOL
+
+    const dlmmPool = await DLMM.create(
+      connection,
+      POOL_ADDRESS
+    );
+
+    // DETERMINE DIRECTION
+
+    const swapForY =
+      inputMint === TOKEN_X.toString() &&
+      outputMint === TOKEN_Y.toString();
+
+    const swapForX =
+      inputMint === TOKEN_Y.toString() &&
+      outputMint === TOKEN_X.toString();
+
+    if (!swapForY && !swapForX) {
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Pool only supports Amethyst <-> SMP",
+        },
+        { status: 400 }
+      );
+    }
+
+    // SMP + AMETHYST = 9 DECIMALS
+
+    const decimals = 9;
+
+    const rawAmount = new BN(
+      Math.floor(
+        Number(amount) *
+          Math.pow(10, decimals)
+      )
+    );
+
+    // GET BIN ARRAYS
+
+    const binArrays =
+      await dlmmPool.getBinArrayForSwap(
+        swapForY,
+        4
+      );
+
+    // QUOTE
+
+    const quote = dlmmPool.swapQuote(
+      rawAmount,
+      swapForY,
+      new BN(100), // 1% slippage
+      binArrays,
+      false,
+      0
+    );
+
+    // BUILD SWAP TX
+
+    const swapTx = await dlmmPool.swap({
+      inToken: new PublicKey(inputMint),
+      outToken: new PublicKey(outputMint),
+      inAmount: rawAmount,
+      minOutAmount: quote.minOutAmount,
+      lbPair: dlmmPool.pubkey,
+      user: userPublicKey,
+      binArraysPubkey:
+        quote.binArraysPubkey,
+    });
+
+    const latestBlockhash =
+      await connection.getLatestBlockhash();
+
+    swapTx.feePayer = userPublicKey;
+
+    swapTx.recentBlockhash =
+      latestBlockhash.blockhash;
+
+    const serializedTx = swapTx
+      .serialize({
+        requireAllSignatures: false,
+      })
+      .toString("base64");
+
+    return Response.json({
+      success: true,
+      transaction: serializedTx,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return Response.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+```
+
+---
+
+# 2. `/app/swap/page.js`
+
+```javascript
+"use client";
+
+import { useState } from "react";
+
+import {
+  Connection,
+  VersionedTransaction,
+  Keypair,
+} from "@solana/web3.js";
+
+import { useWallet } from "@solana/wallet-adapter-react";
+
+import {
+  RPC_URL,
+  AMETHYST_MINT_ADDRESS,
+  SMP_MINT_ADDRESS,
+} from "@/constants";
+
+const connection = new Connection(
+  RPC_URL,
+  "confirmed"
+);
+
+export default function SwapPage() {
+  const {
+    connected,
+    publicKey,
+    signTransaction,
+    sendTransaction,
+  } = useWallet();
+
+  const [amount, setAmount] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [coinFrom, setCoinFrom] =
+    useState("AMETHYST");
+
+  const [coinTo, setCoinTo] =
+    useState("SMP");
+
+  const TOKEN_MINTS = {
+    AMETHYST:
+      AMETHYST_MINT_ADDRESS,
+
+    SMP: SMP_MINT_ADDRESS,
+  };
+
+  const handleSwap = async () => {
+    try {
+      setLoading(true);
+
+      setMessage("");
+
+      if (!connected || !publicKey) {
+        throw new Error(
+          "Connect wallet first"
+        );
+      }
+
+      if (
+        !amount ||
+        Number(amount) <= 0
+      ) {
+        throw new Error(
+          "Enter valid amount"
+        );
+      }
+
+      const response = await fetch(
+        "/api/meteora-swap",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            userAddress:
+              publicKey.toString(),
+
+            amount:
+              Number(amount),
+
+            inputMint:
+              TOKEN_MINTS[
+                coinFrom
+              ],
+
+            outputMint:
+              TOKEN_MINTS[coinTo],
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!data.success) {
+        throw new Error(
+          data.error ||
+            "Swap failed"
+        );
+      }
+
+      const txBuffer = Buffer.from(
+        data.transaction,
+        "base64"
+      );
+
+      const transaction =
+        VersionedTransaction.deserialize(
+          txBuffer
+        );
+
+      const signedTx =
+        await signTransaction(
+          transaction
+        );
+
+      const signature =
+        await sendTransaction(
+          signedTx,
+          connection,
+          {
+            skipPreflight: false,
+            maxRetries: 3,
+          }
+        );
+
+      await connection.confirmTransaction(
+        signature,
+        "confirmed"
+      );
+
+      setMessage(
+        `Swap successful: ${signature}`
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        maxWidth: "500px",
+        margin: "40px auto",
+      }}
+    >
+      <h1>Meteora Swap</h1>
+
+      <input
+        type="number"
+        placeholder="Amount"
+        value={amount}
+        onChange={(e) =>
+          setAmount(e.target.value)
+        }
+      />
+
+      <br />
+      <br />
+
+      <select
+        value={coinFrom}
+        onChange={(e) =>
+          setCoinFrom(e.target.value)
+        }
+      >
+        <option value="AMETHYST">
+          Amethyst
+        </option>
+
+        <option value="SMP">
+          SMP
+        </option>
+      </select>
+
+      <br />
+      <br />
+
+      <select
+        value={coinTo}
+        onChange={(e) =>
+          setCoinTo(e.target.value)
+        }
+      >
+        <option value="AMETHYST">
+          Amethyst
+        </option>
+
+        <option value="SMP">
+          SMP
+        </option>
+      </select>
+
+      <br />
+      <br />
+
+      <button
+        onClick={handleSwap}
+        disabled={loading}
+      >
+        {loading
+          ? "Swapping..."
+          : "Swap"}
+      </button>
+
+      <br />
+      <br />
+
+      <p>{message}</p>
+    </div>
+  );
+}
+```
+
+---
+
+# Important
+
+This swaps directly through Meteora DLMM inside your app.
+
+No redirects.
+
+No Jupiter.
+
+Your wallet signs the Meteora transaction directly.
+
+Meteora DLMM SDK docs: ([docs.meteora.ag](https://docs.meteora.ag/developer-guide/guides/dlmm/typescript-sdk/sdk-functions?utm_source=chatgpt.com))
