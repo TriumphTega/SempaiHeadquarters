@@ -59,6 +59,7 @@
     "react-slick": "^0.30.3",
     "react-toastify": "^11.0.5",
     "slick-carousel": "^1.8.1",
+    "tweetnacl": "^1.0.3",
     "vercel": "^39.3.0"
   },
   "devDependencies": {

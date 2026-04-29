@@ -53,7 +53,7 @@ export const AMETHYST_MINT_ADDRESS = new PublicKey('4TxguLvR4vXwpS4CJXEemZ9DUhVY
 export const SMP_MINT_ADDRESS = new PublicKey('SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor');
 export const USDC_MINT_ADDRESS = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 export const DEVNET_RPC_URL = 'https://api.devnet.solana.com';
-export const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=ad8457f8-9c51-4122-95d4-91b15728ea90';
+export const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=10569fbb-6306-4fd1-868d-ae082d32204a';
 export const TARGET_WALLET = TREASURY_PUBLIC_KEY;
 export const SMP_DECIMALS = 6;
 export const AMETHYST_DECIMALS = 6;

@@ -440,7 +440,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
             // Sign transaction
             transaction.sign(keypair);
 
-            // Send transaction with retry logic
+            // Send transaction with retry logic and proper confirmation
             let signature;
             let sendRetries = 0;
             const maxSendRetries = 3;
@@ -448,22 +448,37 @@ export const EmbeddedWalletProvider = ({ children }) => {
             while (sendRetries < maxSendRetries) {
               try {
                 signature = await connection.sendRawTransaction(transaction.serialize(), {
-                  skipPreflight: true,
+                  skipPreflight: false, // Enable preflight for better validation
                   maxRetries: 2,
                 });
+                
+                // Wait for confirmation
+                console.log("[EmbeddedWallet] Transaction sent, waiting for confirmation:", signature);
+                const confirmation = await connection.confirmTransaction(signature, {
+                  commitment: "confirmed",
+                });
+                
+                if (confirmation.value.err) {
+                  throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+                }
+                
+                console.log("[EmbeddedWallet] Transaction confirmed successfully");
                 break;
+                
               } catch (sendError) {
                 sendRetries++;
+                console.error(`[EmbeddedWallet] Send attempt ${sendRetries} failed:`, sendError.message);
+                
                 if (sendRetries >= maxSendRetries) {
                   throw sendError;
                 }
                 // Brief delay before retry
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 1000 * sendRetries));
               }
             }
 
             if (!signature) {
-              throw new Error("Failed to send transaction");
+              throw new Error("Failed to send transaction after retries");
             }
 
             return signature;

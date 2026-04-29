@@ -47,6 +47,12 @@ const TreasuryBalance = () => {
 
         setBalance(finalAmount); // Set formatted balance
       } catch (error) {
+        // Ignore 429 rate limit errors - just keep last known balance
+        if (error.message && error.message.includes('429')) {
+          console.log('Treasury balance rate limited, keeping last balance');
+          setLoading(false);
+          return;
+        }
         console.error("Error fetching balance:", error);
         setBalance(0); // If an error occurs, set balance to 0
       } finally {

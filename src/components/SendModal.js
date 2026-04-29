@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useContext } from "react";
-import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, createTransferInstruction, getAccount } from "@solana/spl-token";
+import { Connection, PublicKey, VersionedTransaction, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } from "@solana/web3.js";
+import { getAssociatedTokenAddress, getAssociatedTokenAddressSync, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants";
 import { FaTimes, FaGem, FaCoins, FaDollarSign, FaPaperPlane } from "react-icons/fa";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
@@ -28,6 +28,9 @@ export default function SendModal({ isOpen, onClose, activeWalletAddress }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showATAConfirmation, setShowATAConfirmation] = useState(false);
+  const [ataCreationCost, setAtaCreationCost] = useState(0);
+  const [pendingTransaction, setPendingTransaction] = useState(null);
 
   useEffect(() => {
     if (isOpen && activeWalletAddress) {
@@ -35,124 +38,448 @@ export default function SendModal({ isOpen, onClose, activeWalletAddress }) {
     }
   }, [isOpen, activeWalletAddress, selectedToken]);
 
-  const fetchBalance = async () => {
+  // Helper to Check if ATA Exists
+  const checkAtaExists = async (mint, owner) => {
+    console.log("[checkAtaExists] Starting ATA check for mint:", mint.toString(), "owner:", owner.toString());
     try {
-      const token = TOKEN_MINTS[selectedToken];
-      let balance = 0;
-
-      if (selectedToken === "SOL") {
-        const solBalance = await connection.getBalance(new PublicKey(activeWalletAddress));
-        balance = solBalance / 1_000_000_000;
-      } else {
-        const ataAddress = getAssociatedTokenAddressSync(token.mint, new PublicKey(activeWalletAddress));
-        const ataInfo = await connection.getAccountInfo(ataAddress);
-        if (ataInfo) {
-          const ata = await getAccount(connection, ataAddress);
-          balance = Number(ata.amount) / Math.pow(10, token.decimals);
-        }
+      const ata = getAssociatedTokenAddressSync(mint, owner);
+      console.log("[checkAtaExists] ATA address calculated:", ata.toString());
+      console.log("[checkAtaExists] Checking if ATA exists on-chain...");
+      await getAccount(connection, ata);
+      console.log("[checkAtaExists] ATA exists:", ata.toString());
+      return true;
+    } catch (e) {
+      if (e.name === "TokenAccountNotFoundError") {
+        console.log("[checkAtaExists] ATA does not exist for owner:", owner.toString());
+        return false;
       }
-
-      setBalance(balance);
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-      setBalance(0);
+      console.error("[checkAtaExists] Failed to check ATA:", e.message, e.name);
+      throw e;
     }
   };
 
-  const handleSend = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid amount.");
-      return;
-    }
-    if (!recipientAddress) {
-      setError("Please enter a recipient address.");
-      return;
-    }
-    if (parseFloat(amount) > balance) {
-      setError("Insufficient balance.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setSuccessMessage("");
-
+const fetchBalance = async (retryCount = 0) => {
+    console.log(`[fetchBalance] Starting balance fetch (attempt ${retryCount + 1}) for token: ${selectedToken}`);
+    const maxRetries = 3;
     try {
       const token = TOKEN_MINTS[selectedToken];
-      const rawAmount = Math.floor(parseFloat(amount) * Math.pow(10, token.decimals));
-      const recipient = new PublicKey(recipientAddress);
-      const sender = new PublicKey(activeWalletAddress);
-
-      let transaction;
+      console.log("[fetchBalance] Token info:", { symbol: token.symbol, mint: token.mint.toString(), decimals: token.decimals });
+      let balance = 0;
 
       if (selectedToken === "SOL") {
-        // SOL transfer
-        transaction = await connection.buildTransaction({
-          fromPubkey: sender,
-          toPubkey: recipient,
-          lamports: rawAmount,
-        });
+        console.log("[fetchBalance] Fetching SOL balance for address:", activeWalletAddress);
+        try {
+          const solBalance = await connection.getBalance(new PublicKey(activeWalletAddress));
+          balance = solBalance / 1_000_000_000;
+          console.log("[fetchBalance] SOL balance fetched:", balance);
+        } catch (solError) {
+          console.error("[fetchBalance] Error fetching SOL balance:", solError);
+          if (retryCount < maxRetries) {
+            console.log(`[fetchBalance] Retrying SOL balance fetch (${retryCount + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            return fetchBalance(retryCount + 1);
+          }
+          throw new Error("Failed to fetch SOL balance. Please check your network connection.");
+        }
       } else {
-        // Token transfer
-        const senderATA = getAssociatedTokenAddressSync(token.mint, sender);
-        const recipientATA = getAssociatedTokenAddressSync(token.mint, recipient);
-        
-        transaction = new Transaction().add(
-          createTransferInstruction(
-            senderATA,
-            recipientATA,
-            sender,
-            rawAmount
-          )
-        );
+        console.log("[fetchBalance] Fetching token balance for:", selectedToken);
+        try {
+          const ataAddress = getAssociatedTokenAddressSync(token.mint, new PublicKey(activeWalletAddress));
+          console.log("[fetchBalance] ATA address:", ataAddress.toString());
+          const ataInfo = await connection.getAccountInfo(ataAddress);
+          console.log("[fetchBalance] ATA exists:", !!ataInfo);
+          if (ataInfo) {
+            console.log("[fetchBalance] Getting account details...");
+            const ata = await getAccount(connection, ataAddress);
+            balance = Number(ata.amount) / Math.pow(10, token.decimals);
+            console.log("[fetchBalance] Token balance calculated:", balance);
+          } else {
+            console.log("[fetchBalance] No ATA found, balance is 0");
+          }
+        } catch (tokenError) {
+          console.error("[fetchBalance] Error fetching token balance:", tokenError);
+          if (retryCount < maxRetries) {
+            console.log(`[fetchBalance] Retrying ${selectedToken} balance fetch (${retryCount + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            return fetchBalance(retryCount + 1);
+          }
+          throw new Error(`Failed to fetch ${selectedToken} balance. Please check your network connection.`);
+        }
       }
 
+      console.log("[fetchBalance] Setting balance:", balance);
+      setBalance(balance);
+      setError(""); // Clear any previous errors
+    } catch (error) {
+      console.error("[fetchBalance] Error fetching balance:", error);
+      setBalance(0);
+      setError(error.message || "Failed to fetch balance");
+    }
+  };
+
+  const handleATAConfirmation = async () => {
+    console.log("[handleATAConfirmation] Starting ATA confirmation process");
+    setLoading(true);
+    setShowATAConfirmation(false);
+    setError("");
+
+    try {
+      const tx = pendingTransaction;
+      console.log("[handleATAConfirmation] Pending transaction:", tx);
+      if (!tx) throw new Error("No pending transaction");
+
+      console.log("[handleATAConfirmation] Building transaction instructions...");
+      const instructions = [];
+      
+      // Add sender ATA creation if needed
+      if (tx.needsSenderATA) {
+        console.log("[handleATAConfirmation] Adding sender ATA creation...");
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            tx.sender,      // Payer (sender pays for own ATA)
+            tx.senderATA,    // ATA address
+            tx.sender,      // Owner
+            tx.tokenMint    // Mint
+          )
+        );
+        console.log("[handleATAConfirmation] Sender ATA instruction added");
+      }
+      
+      // Add recipient ATA creation instruction
+      console.log("[handleATAConfirmation] Adding recipient ATA creation...");
+      instructions.push(
+        createAssociatedTokenAccountInstruction(
+          tx.sender,      // Payer (sender pays for recipient's ATA)
+          tx.recipientATA, // ATA address
+          tx.recipient,   // Owner
+          tx.tokenMint    // Mint
+        )
+      );
+      console.log("[handleATAConfirmation] Recipient ATA instruction added");
+      
+      // Add transfer instruction
+      console.log("[handleATAConfirmation] Adding transfer instruction...");
+      instructions.push(
+        createTransferInstruction(
+          tx.senderATA,
+          tx.recipientATA,
+          tx.sender,
+          tx.rawAmount
+        )
+      );
+      console.log("[handleATAConfirmation] Transfer instruction added");
+
+      console.log("[handleATAConfirmation] Creating transaction with", instructions.length, "instructions");
+      let transaction = new Transaction().add(...instructions);
+
+      console.log("[handleATAConfirmation] Getting latest blockhash...");
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
-      transaction.feePayer = sender;
+      transaction.feePayer = tx.sender;
+      console.log("[handleATAConfirmation] Transaction prepared:", { blockhash, feePayer: tx.sender.toString() });
 
       let signature;
 
-      if (embeddedWallet) {
-        const secretKey = await getSecretKey();
-        if (!secretKey) throw new Error("Failed to decrypt secret key. Please check your wallet setup.");
-        const keypair = Keypair.fromSecretKey(secretKey);
-        transaction.sign([keypair]);
-        signature = await connection.sendRawTransaction(transaction.serialize(), {
-          skipPreflight: false,
-          maxRetries: 2,
-        });
-      } else if (signTransaction && sendTransaction) {
+      console.log("[handleATAConfirmation] Checking wallet status:", { 
+        hasEmbeddedWallet: !!embeddedWallet, 
+        hasSignTransaction: !!signTransaction, 
+        hasSendTransaction: !!sendTransaction 
+      });
+
+      // Use wallet adapter signing (more reliable)
+      if (signTransaction && sendTransaction) {
+        console.log("[handleATAConfirmation] Using wallet adapter signing");
         const signedTransaction = await signTransaction(transaction);
+        console.log("[handleATAConfirmation] Transaction signed, sending...");
         signature = await sendTransaction(signedTransaction, connection, {
           skipPreflight: false,
           maxRetries: 2,
         });
+        console.log("[handleATAConfirmation] Transaction sent with signature:", signature);
+      } else if (embeddedWallet) {
+        console.log("[handleATAConfirmation] Using embedded wallet signing");
+        console.log("[handleATAConfirmation] Getting secret key...");
+        const secretKey = await getSecretKey();
+        if (!secretKey) throw new Error("Failed to decrypt secret key. Please check your wallet setup.");
+        const keypair = Keypair.fromSecretKey(secretKey);
+        
+        console.log("[handleATAConfirmation] Keypair public key:", keypair.publicKey.toString());
+        console.log("[handleATAConfirmation] Expected sender address:", tx.sender.toString());
+        
+        if (keypair.publicKey.toString() !== tx.sender.toString()) {
+          throw new Error("Wallet address mismatch. Please ensure you're using the correct wallet.");
+        }
+        
+        console.log("[handleATAConfirmation] About to send and confirm transaction...");
+        signature = await sendAndConfirmTransaction(connection, transaction, [keypair], {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+        console.log("[handleATAConfirmation] Transaction confirmed with signature:", signature);
       } else {
         throw new Error("Wallet signing method not available.");
       }
 
+      console.log("[handleATAConfirmation] Confirming transaction on-chain...");
       await connection.confirmTransaction({
         blockhash,
         lastValidBlockHeight,
         signature,
       });
+      console.log("[handleATAConfirmation] Transaction fully confirmed");
 
-      setSuccessMessage(`Successfully sent ${amount} ${selectedToken}! Signature: ${signature}`);
+      console.log("[handleATAConfirmation] Updating UI state...");
+      setSuccessMessage(`Tokens sent successfully! Signature: ${signature}`);
       setAmount("");
       setRecipientAddress("");
+      setTimeout(() => setSuccessMessage(""), 5000);
       fetchBalance();
-      
-      setTimeout(() => {
-        onClose();
-        setSuccessMessage("");
-      }, 3000);
-
     } catch (error) {
-      console.error("Error sending tokens:", error);
-      setError(`Send failed: ${error.message}`);
+      console.error("[handleATAConfirmation] Error:", error);
+      setError(`Failed to send tokens: ${error.message}`);
     } finally {
+      console.log("[handleATAConfirmation] Cleaning up...");
       setLoading(false);
+      setPendingTransaction(null);
+    }
+  };
+
+  const handleSend = async () => {
+    console.log("[handleSend] ========== SEND PROCESS STARTED ==========");
+    console.log("[handleSend] Send button clicked");
+    console.log("[handleSend] Current state:", {
+      amount,
+      recipientAddress,
+      balance,
+      selectedToken,
+      activeWalletAddress,
+      loading
+    });
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      console.log("[handleSend] Validation failed: Invalid amount");
+      setError("Please enter a valid amount.");
+      return;
+    }
+    if (!recipientAddress) {
+      console.log("[handleSend] Validation failed: No recipient address");
+      setError("Please enter a recipient address.");
+      return;
+    }
+    if (parseFloat(amount) > balance) {
+      console.log("[handleSend] Validation failed: Insufficient balance");
+      setError("Insufficient balance.");
+      return;
+    }
+
+    console.log("[handleSend] Validation passed, starting send process");
+    setLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      console.log("[handleSend] Getting token information...");
+      const token = TOKEN_MINTS[selectedToken];
+      if (!token) {
+        throw new Error(`Invalid token selected: ${selectedToken}`);
+      }
+      console.log("[handleSend] Token info:", { symbol: token.symbol, mint: token.mint.toString(), decimals: token.decimals });
+      
+      console.log("[handleSend] Calculating raw amount...");
+      const rawAmount = Math.floor(parseFloat(amount) * Math.pow(10, token.decimals));
+      console.log("[handleSend] Raw amount:", rawAmount, "from amount:", amount);
+      
+      console.log("[handleSend] Creating PublicKey objects...");
+      const recipient = new PublicKey(recipientAddress);
+      const sender = new PublicKey(activeWalletAddress);
+      console.log("[handleSend] Sender:", sender.toString());
+      console.log("[handleSend] Recipient:", recipient.toString());
+
+      let transaction;
+
+      try {
+        if (selectedToken === "SOL") {
+          console.log("[handleSend] Creating SOL transfer transaction...");
+          transaction = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: sender,
+              toPubkey: recipient,
+              lamports: rawAmount,
+            })
+          );
+          console.log("[handleSend] SOL transaction created");
+        } else {
+          console.log("[handleSend] Creating token transfer transaction...");
+          
+          // Validate recipient address
+          console.log("[handleSend] Validating recipient address...");
+          if (recipientAddress.includes("squas.so") || recipient.toString().startsWith("SQS")) {
+            throw new Error("Squads addresses cannot hold tokens directly. Please use the squad's vault address instead.");
+          }
+          
+          console.log("[handleSend] Calculating ATA addresses...");
+          const senderATA = getAssociatedTokenAddressSync(token.mint, sender);
+          const recipientATA = getAssociatedTokenAddressSync(token.mint, recipient);
+          
+          console.log("[handleSend] Sender ATA:", senderATA.toString());
+          console.log("[handleSend] Recipient ATA:", recipientATA.toString());
+          
+          const instructions = [];
+          
+          // Check and Create Sender ATA
+          console.log("[handleSend] Checking sender ATA existence...");
+          const senderAtaExists = await checkAtaExists(token.mint, sender);
+          if (!senderAtaExists) {
+            console.log("[handleSend] Sender ATA doesn't exist, adding creation instruction...");
+            instructions.push(
+              createAssociatedTokenAccountInstruction(
+                sender,      // Payer (sender pays for own ATA)
+                senderATA,    // ATA address
+                sender,      // Owner
+                token.mint    // Mint
+              )
+            );
+            console.log("[handleSend] Sender ATA creation instruction added");
+          } else {
+            console.log("[handleSend] Sender ATA already exists");
+          }
+          
+          // Check if recipient needs ATA
+          console.log("[handleSend] Checking recipient ATA existence...");
+          const recipientAtaExists = await checkAtaExists(token.mint, recipient);
+          if (!recipientAtaExists) {
+            console.log("[handleSend] Recipient ATA doesn't exist, calculating cost...");
+            const rentExemption = await connection.getMinimumBalanceForRentExemption(165); // ATA size
+            const ataCostSOL = rentExemption / 1_000_000_000;
+            
+            console.log("[handleSend] Recipient needs ATA creation, cost:", ataCostSOL, "SOL");
+            
+            console.log("[handleSend] Storing pending transaction and showing confirmation modal...");
+            console.log("[handleSend] Pending transaction data:", {
+              sender: sender.toString(),
+              recipient: recipient.toString(),
+              ataCost: ataCostSOL,
+              needsSenderATA: !senderAtaExists
+            });
+            setPendingTransaction({
+              sender,
+              recipient,
+              senderATA,
+              recipientATA,
+              rawAmount,
+              tokenMint: token.mint,
+              ataCost: ataCostSOL,
+              needsSenderATA: !senderAtaExists
+            });
+            setAtaCreationCost(ataCostSOL);
+            console.log("[handleSend] Setting showATAConfirmation to true...");
+            setShowATAConfirmation(true);
+            setLoading(false);
+            console.log("[handleSend] Modal should now be visible");
+            return; // Exit here, wait for user confirmation
+          } else {
+            console.log("[handleSend] Recipient ATA already exists");
+          }
+          
+          // Add the transfer instruction
+          console.log("[handleSend] Adding transfer instruction...");
+          instructions.push(
+            createTransferInstruction(
+              senderATA,
+              recipientATA,
+              sender,
+              rawAmount
+            )
+          );
+          console.log("[handleSend] Transfer instruction added");
+          
+          console.log("[handleSend] Creating transaction with", instructions.length, "instructions");
+          transaction = new Transaction().add(...instructions);
+          console.log("[handleSend] Token transaction created successfully");
+        }
+      } catch (txError) {
+        console.error("[handleSend] Error creating transaction:", txError);
+        throw new Error(`Failed to create transaction: ${txError.message}`);
+      }
+
+      if (!transaction) {
+        throw new Error("Failed to create transaction");
+      }
+
+      console.log("[handleSend] Transaction created, preparing for signing...");
+      console.log("[handleSend] Transaction instructions count:", transaction.instructions.length);
+
+      console.log("[handleSend] Getting latest blockhash...");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = sender;
+      console.log("[handleSend] Transaction prepared:", { blockhash, feePayer: sender.toString() });
+
+      let signature;
+
+      console.log("[handleSend] Checking wallet capabilities...");
+      console.log("[handleSend] Wallet status:", { 
+        hasEmbeddedWallet: !!embeddedWallet, 
+        hasSignTransaction: !!signTransaction, 
+        hasSendTransaction: !!sendTransaction 
+      });
+
+      // Use wallet adapter signing (more reliable)
+      if (signTransaction && sendTransaction) {
+        console.log("[handleSend] Using wallet adapter signing method");
+        const signedTransaction = await signTransaction(transaction);
+        console.log("[handleSend] Transaction signed with wallet adapter, sending...");
+        signature = await sendTransaction(signedTransaction, connection, {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+        console.log("[handleSend] Transaction sent with signature:", signature);
+      } else if (embeddedWallet) {
+        console.log("[handleSend] Using embedded wallet signing method");
+        console.log("[handleSend] Getting secret key...");
+        const secretKey = await getSecretKey();
+        if (!secretKey) throw new Error("Failed to decrypt secret key. Please check your wallet setup.");
+        const keypair = Keypair.fromSecretKey(secretKey);
+        
+        console.log("[handleSend] Keypair public key:", keypair.publicKey.toString());
+        console.log("[handleSend] Expected sender address:", sender.toString());
+        
+        if (keypair.publicKey.toString() !== sender.toString()) {
+          throw new Error("Wallet address mismatch. Please ensure you're using the correct wallet.");
+        }
+        
+        console.log("[handleSend] About to send and confirm transaction...");
+        signature = await sendAndConfirmTransaction(connection, transaction, [keypair], {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+        console.log("[handleSend] Transaction confirmed with signature:", signature);
+      } else {
+        throw new Error("Wallet signing method not available.");
+      }
+
+      console.log("[handleSend] Confirming transaction on-chain...");
+      await connection.confirmTransaction({
+        blockhash,
+        lastValidBlockHeight,
+        signature,
+      });
+      console.log("[handleSend] Transaction fully confirmed");
+
+      console.log("[handleSend] Updating UI with success...");
+      setSuccessMessage(`Tokens sent successfully! Signature: ${signature}`);
+      setAmount("");
+      setRecipientAddress("");
+      setTimeout(() => setSuccessMessage(""), 5000);
+      console.log("[handleSend] Refreshing balance...");
+      fetchBalance();
+    } catch (error) {
+      console.error("[handleSend] Error in send process:", error);
+      setError(`Failed to send tokens: ${error.message}`);
+    } finally {
+      console.log("[handleSend] Cleaning up loading state...");
+      setLoading(false);
+      console.log("[handleSend] ========== SEND PROCESS COMPLETED ==========");
     }
   };
 
@@ -482,6 +809,140 @@ export default function SendModal({ isOpen, onClose, activeWalletAddress }) {
           </div>
         </div>
       </div>
+
+      {/* ATA Creation Confirmation Modal */}
+      {showATAConfirmation && (
+        <>
+          {console.log("[ATA Modal] Rendering modal, showATAConfirmation:", showATAConfirmation)}
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(255,0,0,0.5)', // Red background for debugging
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            border: '5px solid yellow', // Yellow border for debugging
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(20,20,28,0.95), rgba(12,12,18,0.98))',
+              borderRadius: '20px',
+              padding: '32px',
+              maxWidth: '420px',
+              width: '90%',
+              border: '1px solid rgba(243,99,22,0.2)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(243,99,22,0.1)',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(243,99,22,0.2), rgba(255,98,0,0.15))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(243,99,22,0.3)',
+              }}>
+                <FaGem size={20} style={{ color: 'rgba(243,99,22,0.9)' }} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
+                  Create Token Account
+                </h3>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>
+                  Recipient needs a token account
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px',
+              border: '1px solid rgba(243,99,22,0.1)',
+            }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: '0 0 8px 0', lineHeight: '1.5' }}>
+                The recipient doesn't have a token account for {selectedToken}. You'll need to pay for its creation.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Creation Cost
+                </span>
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'rgba(243,99,22,0.9)' }}>
+                  {ataCreationCost.toFixed(6)} SOL
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  setShowATAConfirmation(false);
+                  setPendingTransaction(null);
+                }}
+                style={{
+                  flex: 1,
+                  color: '#fff',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleATAConfirmation}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  color: '#fff',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  background: loading ? 'rgba(243,99,22,0.3)' : 'linear-gradient(135deg, rgba(243,99,22,0.9), rgba(255,98,0,0.85))',
+                  boxShadow: '0 4px 16px rgba(243,99,22,0.2)',
+                  border: '1px solid rgba(243,99,22,0.25)',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(243,99,22,0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(243,99,22,0.2)';
+                }}
+              >
+                {loading ? 'Creating...' : 'Create & Send'}
+              </button>
+            </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

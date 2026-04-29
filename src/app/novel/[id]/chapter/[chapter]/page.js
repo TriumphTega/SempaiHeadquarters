@@ -79,7 +79,7 @@ const USDC_AMOUNT = 0.0025; // $0.025 per chapter
 
 // Revenue split wallet addresses
 const FOUNDER_FUND_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
-const SEMPAI_HQ_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
+const SEMPAI_HQ_WALLET = new PublicKey("4ZFvgNZygfiCSAS4aKBbQEgwJgBq5fRT9oLAH56GrF6H");
 
 const connection = new Connection(RPC_URL, {
   commitment: "confirmed",
@@ -1738,79 +1738,10 @@ export default function ChapterPage() {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = activePublicKey;
 
-      // Sign and send transaction
+      // Sign and send transaction (now includes confirmation)
       console.log("[processChapterPayment] Signing and sending transaction...");
       const signature = await signAndSendTransaction(transaction);
-      console.log("[processChapterPayment] Transaction sent, signature:", signature);
-
-      const start = Date.now();
-      let landed = false;
-      console.log("[processChapterPayment] Starting confirmation poll for signature:", signature);
-      
-      while (Date.now() - start < 10000) { // 10 seconds instead of 5
-        const statusResp = await connection.getSignatureStatus(signature);
-        const status = statusResp?.value;
-        console.log(`[processChapterPayment] Status check ${Math.floor((Date.now() - start) / 1000)}s:`, {
-          confirmationStatus: status?.confirmationStatus,
-          err: status?.err,
-          slot: status?.slot
-        });
-        
-        if (status?.err) {
-          throw new Error("Transaction failed on-chain.");
-        }
-        if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
-          landed = true;
-          break;
-        }
-        await delay(500);
-      }
-      
-      if (!landed) {
-        // Last resort: check transaction status directly
-        console.log("[processChapterPayment] Transaction not confirmed in 10s, checking status directly...");
-        const finalStatus = await connection.getSignatureStatus(signature, {
-          searchTransactionHistory: true
-        });
-        console.log("[processChapterPayment] Final status check:", finalStatus?.value);
-        
-        if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
-          landed = true;
-        } else if (finalStatus?.value?.err) {
-          console.error("[processChapterPayment] On-chain transaction error:", finalStatus?.value?.err);
-          console.error("[processChapterPayment] Error details:", JSON.stringify(finalStatus?.value?.err, null, 2));
-          throw new Error(`Transaction failed on-chain: ${JSON.stringify(finalStatus?.value?.err)}`);
-        }
-      }
-      
-      if (!landed) {
-        console.error("[processChapterPayment] Transaction confirmation failed after all attempts");
-        console.error("[processChapterPayment] Signature:", signature);
-        
-        // Get final status for error reporting
-        const finalStatus = await connection.getSignatureStatus(signature, {
-          searchTransactionHistory: true
-        });
-        console.error("[processChapterPayment] Final status:", finalStatus?.value);
-        
-        // Try to get more detailed error information
-        try {
-          const tx = await connection.getTransaction(signature, {
-            commitment: "confirmed",
-            maxSupportedTransactionVersion: 0
-          });
-          console.error("[processChapterPayment] Transaction details:", tx);
-          
-          if (tx?.meta?.err) {
-            console.error("[processChapterPayment] Transaction error:", tx.meta.err);
-            throw new Error(`Transaction failed: ${JSON.stringify(tx.meta.err)}`);
-          }
-        } catch (detailError) {
-          console.error("[processChapterPayment] Error getting transaction details:", detailError);
-        }
-        
-        throw new Error("Transaction not confirmed yet. Please try again.");
-      }
+      console.log("[processChapterPayment] Transaction sent and confirmed, signature:", signature);
 
       console.log("[processChapterPayment] Transaction landed, recording payment...");
 
