@@ -180,11 +180,43 @@
   }
   
   .novelIntro {
-    font-size: 1.4rem;
-    color: #fff;
-    opacity: 0.9;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #ccc;
   }
-  
+
+  /* Summary Link Container */
+  .summaryLinkContainer {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+  }
+
+  .summaryLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(255, 98, 0, 0.7));
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .summaryLink:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(243, 99, 22, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .summaryIcon {
+    font-size: 1.1rem;
+  }
+
   .highlight {
     color: #ff6200;
     font-weight: bold;

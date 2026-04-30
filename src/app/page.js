@@ -810,6 +810,9 @@ export default function Home() {
             <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
             </Link>
+            <Link href="/summary" onClick={() => handleNavigation("/summary")} className={styles.navLink}>
+              <FaBookOpen className={styles.navIcon} /> Summary
+            </Link>
             <div className={styles.moreWrapper}>
               <button className={styles.moreToggle} onClick={toggleMore} aria-expanded={moreOpen} aria-haspopup="menu">
                 <FaBars className={styles.navIcon} /> More

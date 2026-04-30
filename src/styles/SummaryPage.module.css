@@ -1,0 +1,327 @@
+/* Summary Page Styles */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header */
+.header {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.2rem;
+  transition: color 0.3s ease;
+}
+
+.logoLink:hover {
+  color: #f36316;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  margin-right: 0.5rem;
+}
+
+.logoText {
+  color: #ffffff;
+}
+
+.pageTitle {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Search Section */
+.searchSection {
+  padding: 2rem 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.searchContainer {
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.searchContainer:focus-within {
+  border-color: #f36316;
+  box-shadow: 0 0 0 3px rgba(243, 99, 22, 0.2);
+}
+
+.searchIcon {
+  color: #9ca3af;
+  margin-right: 0.75rem;
+  font-size: 1rem;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+}
+
+.searchInput::placeholder {
+  color: #6b7280;
+}
+
+/* Main Content */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: calc(100vh - 200px);
+}
+
+.novelsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.novelCard {
+  background: linear-gradient(135deg, rgba(20, 20, 28, 0.9), rgba(12, 12, 18, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: #ffffff;
+  transition: all 0.3s ease;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.novelCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f36316, #ff6200);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.novelCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  border-color: rgba(243, 99, 22, 0.3);
+}
+
+.novelCard:hover::before {
+  transform: scaleX(1);
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.novelTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  line-height: 1.3;
+  color: #ffffff;
+}
+
+.summaryPreview {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.readMore {
+  color: #f36316;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.readMore::after {
+  content: '→';
+  transition: transform 0.3s ease;
+}
+
+.novelCard:hover .readMore::after {
+  transform: translateX(4px);
+}
+
+/* No Results */
+.noResults {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+.noResultsIcon {
+  font-size: 4rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.noResults h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+}
+
+.noResults p {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Error States */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.errorText {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 1rem 0;
+}
+
+.errorMessage {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin: 0 0 2rem 0;
+}
+
+.backHomeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f36316, #ff6200);
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.backHomeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.3);
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 0 1rem;
+  }
+  
+  .pageTitle {
+    font-size: 1.25rem;
+  }
+  
+  .searchSection {
+    padding: 1.5rem 1rem;
+  }
+  
+  .searchContainer {
+    margin: 0 1rem;
+  }
+  
+  .main {
+    padding: 1.5rem 1rem;
+  }
+  
+  .novelsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .novelCard {
+    padding: 1rem;
+  }
+  
+  .novelTitle {
+    font-size: 1.1rem;
+  }
+  
+  .summaryPreview {
+    font-size: 0.9rem;
+  }
+}

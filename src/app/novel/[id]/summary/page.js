@@ -1,10 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../../../services/supabase/supabaseClient";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
@@ -18,23 +16,18 @@ const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
 export default function NovelSummaryPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { connected, publicKey } = useWallet();
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [warningMessage, setWarningMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showConnectPopup, setShowConnectPopup] = useState(false);
 
   // Toggle mobile menu
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
-    setShowConnectPopup(false);
   };
 
-  // Fetch novel data
-  const fetchNovel = useCallback(async () => {
+  // Fetch novel data (no authentication required)
+  const fetchNovel = async () => {
     try {
       const { data, error } = await supabase
         .from("novels")
@@ -49,78 +42,12 @@ export default function NovelSummaryPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  };
 
-  // Update token balance
-  const updateTokenBalance = useCallback(async () => {
-    if (!publicKey || !novel) return;
-
-    try {
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("id, wallet_address, balance")
-        .eq("wallet_address", publicKey.toString())
-        .single();
-
-      if (userError || !user) throw new Error("User not found");
-
-      const eventDetails = `${publicKey}${novel.title}Summary`;
-      const { data: existingEvent, error: eventError } = await supabase
-        .from("wallet_events")
-        .select("id")
-        .eq("event_details", eventDetails)
-        .eq("wallet_address", publicKey.toString())
-        .maybeSingle();
-
-      if (eventError && eventError.code !== "PGRST116") throw new Error("Error checking wallet events");
-
-      if (existingEvent) {
-        setWarningMessage("⚠️ You've been credited for this summary before.");
-        setTimeout(() => setWarningMessage(""), 5000);
-        return;
-      }
-
-      const newBalance = (user.balance || 0) + 50;
-      const { error: balanceError } = await supabase
-        .from("users")
-        .update({ balance: newBalance })
-        .eq("id", user.id);
-
-      if (balanceError) throw new Error("Error updating balance");
-
-      const { error: walletBalanceError } = await supabase
-        .from("wallet_balances")
-        .upsert([{ user_id: user.id, chain: "SOL", currency: "Token", amount: newBalance, decimals: 0, wallet_address: publicKey.toString() }]);
-
-      if (walletBalanceError) throw new Error("Error updating wallet balance");
-
-      const { error: walletEventError } = await supabase
-        .from("wallet_events")
-        .insert([{ destination_user_id: user.id, event_type: "deposit", event_details, source_chain: "SOL", source_currency: "Token", amount_change: 50, wallet_address: publicKey.toString(), source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27", destination_chain: "SOL" }]);
-
-      if (walletEventError) throw new Error("Error inserting wallet event");
-
-      setSuccessMessage("Tokens credited for reading this summary!");
-      setTimeout(() => setSuccessMessage(""), 5000);
-    } catch (error) {
-      setError(error.message);
-      console.error("Unexpected error:", error);
-    }
-  }, [publicKey, novel]);
-
-  // Initial fetch and token update
+  // Fetch novel data on component mount
   useEffect(() => {
-    if (!connected) {
-      setShowConnectPopup(true);
-      setLoading(false);
-      return;
-    }
     fetchNovel();
-  }, [connected, fetchNovel]);
-
-  useEffect(() => {
-    if (!loading && novel && connected) updateTokenBalance();
-  }, [loading, novel, connected, updateTokenBalance]);
+  }, [id, fetchNovel]);
 
   // Text-to-speech controls
   const readText = (text) => {
@@ -140,24 +67,6 @@ export default function NovelSummaryPage() {
   const stopText = () => window.speechSynthesis.cancel();
 
   if (loading) return <LoadingPage />;
-
-  if (!connected) {
-    return (
-      <div className={styles.connectPopupOverlay}>
-        <div className={styles.connectPopup}>
-          <button onClick={() => setShowConnectPopup(false)} className={styles.closePopupButton}>
-            <FaTimes />
-          </button>
-          <h3 className={styles.popupTitle}>Access Denied</h3>
-          <p className={styles.popupMessage}>Connect your wallet to view this summary.</p>
-          <WalletMultiButton className={styles.connectWalletButton} />
-          <Link href="/" onClick={() => router.push("/")} className={styles.backHomeLink}>
-            <FaHome /> Back to Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (error || !novel) {
     return (
@@ -217,17 +126,7 @@ export default function NovelSummaryPage() {
               <FaStop /> Stop
             </button>
           </div>
-          {successMessage && (
-            <div className={styles.successMessage}>
-              <FaGem /> {successMessage}
-            </div>
-          )}
-          {warningMessage && (
-            <div className={styles.warningMessage}>
-              {warningMessage}
-            </div>
-          )}
-          {error && (
+                    {error && (
             <div className={styles.errorMessage}>
               {error}
             </div>

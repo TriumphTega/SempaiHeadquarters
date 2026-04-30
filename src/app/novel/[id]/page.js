@@ -238,6 +238,13 @@ export default function NovelPage() {
           </p>
         </div>
 
+        {/* Summary Link */}
+        <div className={styles.summaryLinkContainer}>
+          <Link href={`/novel/${id}/summary`} className={styles.summaryLink}>
+            <FaBookOpen className={styles.summaryIcon} /> View Novel Summary
+          </Link>
+        </div>
+
         {/* Chapters Grid */}
         <div className={styles.chaptersGrid}>
           {novel.chaptertitles && Object.keys(novel.chaptertitles).length > 0 ? (
