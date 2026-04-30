@@ -1,0 +1,673 @@
+/* Leaderboard Page Styles */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header */
+.header {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.2rem;
+  transition: color 0.3s ease;
+}
+
+.logoLink:hover {
+  color: #f36316;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  margin-right: 0.5rem;
+}
+
+.logoText {
+  color: #ffffff;
+}
+
+.pageTitle {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Time Frame Selector */
+.timeFrameSelector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timeButton {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.timeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.timeButton.active {
+  background: linear-gradient(135deg, #f36316, #ff6200);
+  color: #ffffff;
+  border-color: #f36316;
+}
+
+/* Main Content */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: calc(100vh - 200px);
+}
+
+/* No Results */
+.noResults {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+.noResultsIcon {
+  font-size: 4rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.noResults h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+}
+
+.noResults p {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Leaderboard */
+.leaderboard {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 100%;
+}
+
+.leaderboardHeader {
+  display: grid;
+  grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(243, 99, 22, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.rankHeader,
+.readerHeader,
+.pointsHeader,
+.amethystHeader,
+.effectiveHeader,
+.totalHeader {
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  white-space: normal;
+  text-align: center;
+  padding: 0.25rem 0.25rem;
+  line-height: 1.2;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Reader Rows */
+.readerRow {
+  display: grid;
+  grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  align-items: center;
+  min-height: 45px;
+}
+
+.readerRow:hover {
+  background: rgba(243, 99, 22, 0.1);
+  transform: translateX(4px);
+}
+
+.readerRow.topReader {
+  background: linear-gradient(135deg, rgba(243, 99, 22, 0.2), rgba(243, 99, 22, 0.1));
+  border: 1px solid rgba(243, 99, 22, 0.4);
+  position: relative;
+}
+
+.readerRow.topReader::before {
+  content: '👑';
+  position: absolute;
+  top: -8px;
+  right: 1rem;
+  font-size: 1.2rem;
+}
+
+/* Reader Cells */
+.rankCell,
+.readerCell,
+.pointsCell,
+.amethystCell,
+.effectiveCell,
+.totalCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.25rem;
+  text-align: center;
+}
+
+.readerCell {
+  text-align: left;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0; /* Important for text truncation */
+}
+
+.readerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0; /* Important for text truncation */
+}
+
+.readerName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.walletAddress {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.pointsCell {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f36316;
+}
+
+.pointsValue {
+  color: #ffffff;
+}
+
+/* Amethyst Display */
+.amethystCell {
+  position: relative;
+}
+
+.amethystContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(163, 93, 204, 0.1);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(163, 93, 204, 0.3);
+}
+
+.amethystIcon {
+  color: #a359ff;
+  font-size: 0.9rem;
+}
+
+.amethystCount {
+  font-weight: 600;
+  color: #a359ff;
+  font-size: 0.8rem;
+}
+
+.multiplier {
+  color: #a359ff;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Effective Points */
+.effectiveCell {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ff6200;
+}
+
+.effectivePoints {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(255, 98, 0, 0.3);
+}
+
+/* Total Points */
+.totalCell {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.totalValue {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Rank Icons */
+.crownIcon {
+  color: #ffd700;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}
+
+.trophyIcon {
+  color: #c0c0c0;
+  font-size: 0.9rem;
+  text-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+}
+
+.medalIcon {
+  color: #cd7f32;
+  font-size: 0.9rem;
+  text-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+}
+
+.starIcon {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  text-shadow: 0 2px 4px rgba(156, 163, 125, 0.3);
+}
+
+/* Rank Badges */
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.rankBadge.first {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #000;
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}
+
+.rankBadge.second {
+  background: linear-gradient(135deg, #c0c0c0, #e5e7eb);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+}
+
+.rankBadge.third {
+  background: linear-gradient(135deg, #cd7f32, #f4e4c1);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+}
+
+.rankBadge.default {
+  background: rgba(156, 163, 125, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Error States */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.errorText {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 1rem 0;
+}
+
+.errorMessage {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin: 0 0 2rem 0;
+}
+
+.backHomeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f36316, #ff6200);
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.backHomeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.3);
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .leaderboardHeader {
+    grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .readerRow {
+    grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .readerName {
+    font-size: 0.9rem;
+  }
+  
+  .walletAddress {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 0 1rem;
+  }
+  
+  .pageTitle {
+    font-size: 1.25rem;
+  }
+  
+  .timeFrameSelector {
+    padding: 1rem 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .timeButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .leaderboardHeader {
+    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px;
+    gap: 0.3rem;
+    padding: 0.4rem;
+  }
+  
+  .readerRow {
+    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px;
+    gap: 0.3rem;
+    padding: 0.4rem;
+    min-height: 40px;
+  }
+  
+  .rankHeader,
+  .readerHeader,
+  .pointsHeader,
+  .amethystHeader,
+  .effectiveHeader,
+  .totalHeader {
+    font-size: 0.6rem;
+    letter-spacing: 0.2px;
+    padding: 0.2rem 0.1rem;
+  }
+  
+  .rankCell,
+  .pointsCell,
+  .amethystCell,
+  .effectiveCell,
+  .totalCell {
+    padding: 0.2rem 0.1rem;
+  }
+  
+  .readerName {
+    font-size: 0.75rem;
+  }
+  
+  .walletAddress {
+    font-size: 0.55rem;
+    padding: 0.1rem 0.2rem;
+  }
+  
+  .pointsValue {
+    font-size: 0.75rem;
+  }
+  
+  .amethystContainer {
+    padding: 0.15rem 0.25rem;
+    gap: 0.2rem;
+  }
+  
+  .amethystIcon {
+    font-size: 0.7rem;
+  }
+  
+  .amethystCount {
+    font-size: 0.65rem;
+  }
+  
+  .multiplier {
+    font-size: 0.55rem;
+  }
+  
+  .effectivePoints {
+    font-size: 0.75rem;
+  }
+  
+  .totalValue {
+    font-size: 0.65rem;
+  }
+  
+  .rankBadge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .leaderboardHeader {
+    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px;
+    gap: 0.2rem;
+    padding: 0.3rem 0.4rem;
+  }
+  
+  .readerRow {
+    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px;
+    gap: 0.2rem;
+    padding: 0.3rem 0.4rem;
+    min-height: 35px;
+  }
+  
+  .rankHeader,
+  .readerHeader,
+  .pointsHeader,
+  .amethystHeader,
+  .effectiveHeader,
+  .totalHeader {
+    font-size: 0.55rem;
+    letter-spacing: 0.1px;
+    padding: 0.15rem 0.05rem;
+  }
+  
+  .rankCell,
+  .pointsCell,
+  .amethystCell,
+  .effectiveCell,
+  .totalCell {
+    padding: 0.15rem 0.05rem;
+  }
+  
+  .readerName {
+    font-size: 0.7rem;
+  }
+  
+  .walletAddress {
+    font-size: 0.5rem;
+    padding: 0.08rem 0.15rem;
+  }
+  
+  .pointsValue {
+    font-size: 0.65rem;
+  }
+  
+  .amethystContainer {
+    padding: 0.1rem 0.15rem;
+    gap: 0.15rem;
+  }
+  
+  .amethystIcon {
+    font-size: 0.6rem;
+  }
+  
+  .amethystCount {
+    font-size: 0.55rem;
+  }
+  
+  .multiplier {
+    font-size: 0.45rem;
+  }
+  
+  .effectivePoints {
+    font-size: 0.65rem;
+  }
+  
+  .totalValue {
+    font-size: 0.55rem;
+  }
+  
+  .rankBadge {
+    width: 20px;
+    height: 20px;
+    font-size: 0.55rem;
+  }
+}
+
+/* Wide Screen Optimizations */
+@media (min-width: 1400px) {
+  .leaderboardHeader {
+    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+  }
+  
+  .readerRow {
+    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    min-height: 70px;
+  }
+  
+  .readerName {
+    font-size: 1.1rem;
+  }
+  
+  .walletAddress {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+  .pointsValue {
+    font-size: 1.3rem;
+  }
+  
+  .amethystContainer {
+    padding: 0.6rem 1rem;
+  }
+  
+  .amethystIcon {
+    font-size: 1.4rem;
+  }
+  
+  .amethystCount {
+    font-size: 1.1rem;
+  }
+  
+  .multiplier {
+    font-size: 1rem;
+  }
+  
+  .effectivePoints {
+    font-size: 1.4rem;
+  }
+  
+  .totalValue {
+    font-size: 1.2rem;
+  }
+}

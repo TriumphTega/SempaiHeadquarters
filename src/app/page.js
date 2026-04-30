@@ -25,7 +25,8 @@ import {
   FaStar,
   FaWallet,
   FaChartBar,
-  FaDownload
+  FaDownload,
+  FaTrophy
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
@@ -809,6 +810,9 @@ export default function Home() {
             </Link>
             <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
+            </Link>
+            <Link href="/leaderboard" onClick={() => handleNavigation("/leaderboard")} className={styles.navLink}>
+              <FaTrophy className={styles.navIcon} /> Leaderboard
             </Link>
             <Link href="/summary" onClick={() => handleNavigation("/summary")} className={styles.navLink}>
               <FaBookOpen className={styles.navIcon} /> Summary

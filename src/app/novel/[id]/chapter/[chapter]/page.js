@@ -5,19 +5,14 @@ import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { InlineUserDisplay } from "@/components/UserDisplay";
 import BenefactorPricing from "@/components/BenefactorPricing";
-import {
-  Connection,
-  SystemProgram,
-  Transaction,
-  PublicKey,
-  LAMPORTS_PER_SOL,
-} from "@solana/web3.js";
+import { PublicKey, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   createTransferInstruction,
   createAssociatedTokenAccountInstruction,
   getOrCreateAssociatedTokenAccount,
   getAccount,
+  getAssociatedTokenAddress,
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from "@solana/spl-token";
@@ -54,7 +49,6 @@ import {
 } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
-import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import styles from "../../../../../styles/ChapterPage.module.css";
 import {
   RPC_URL,
@@ -239,7 +233,7 @@ export default function ChapterPage() {
   const activeWalletAddress = activePublicKey?.toString();
   const isWalletConnected = !!activePublicKey;
 
-  const { balance: amethystBalance } = UseAmethystBalance();
+  const [amethystBalance, setAmethystBalance] = useState(null);
 
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -417,6 +411,45 @@ export default function ChapterPage() {
       // Display on-chain balance in UI
       const onChain = await fetchSmpBalanceOnChain();
       setSmpBalance(onChain ?? 0);
+      
+      // Fetch and cache Amethyst balance from blockchain (using same method as swap page)
+      try {
+        const amethystMintPublicKey = AMETHYST_MINT_ADDRESS;
+        const userPublicKey = new PublicKey(activeWalletAddress);
+
+        // Use the same method as swap page
+        const ataAddress = getAssociatedTokenAddressSync(amethystMintPublicKey, userPublicKey);
+        const ataInfo = await connection.getAccountInfo(ataAddress);
+        
+        let blockchainAmethystBalance = 0;
+        if (ataInfo) {
+          const ata = unpackAccount(ataAddress, ataInfo);
+          blockchainAmethystBalance = Math.floor(Number(ata.amount) / Math.pow(10, 6)); // 6 decimals for Amethyst, convert to integer
+        }
+
+        // Update the cache in database
+        const { error: updateError } = await supabase
+          .from("amethyst_balances")
+          .upsert({
+            user_id: userData.id,
+            wallet_address: activeWalletAddress,
+            amethyst_balance: blockchainAmethystBalance,
+            last_updated: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (updateError) {
+          console.error("[fetchUserBalances] Error updating Amethyst cache:", updateError);
+        } else {
+          console.log("[fetchUserBalances] Updated Amethyst cache to:", blockchainAmethystBalance);
+        }
+
+        setAmethystBalance(blockchainAmethystBalance);
+      } catch (err) {
+        console.error("[fetchUserBalances] Error fetching Amethyst balance:", err);
+        setAmethystBalance(0);
+      }
       
       // Check if user has insufficient SMP for chapter unlock
       const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
@@ -628,12 +661,41 @@ export default function ChapterPage() {
       const creatorReward = Math.floor(totalPayment * 0.5); // 500 tokens (50%)
       const sempaiHqReward = Math.floor(totalPayment * 0.3); // 300 tokens (30%)
       const founderFundReward = totalPayment - creatorReward - sempaiHqReward; // 200 tokens (20%)
-      const numericBalance = Number(amethystBalance) || 0;
+      
+      // Fetch Amethyst balance directly from blockchain to ensure accuracy
+      let currentAmethystBalance = 0;
+      try {
+        console.log("[Chapter Unlock] Starting Amethyst balance fetch...");
+        const amethystMintPublicKey = AMETHYST_MINT_ADDRESS;
+        const userPublicKey = new PublicKey(activeWalletAddress);
+        
+        const ataAddress = getAssociatedTokenAddressSync(amethystMintPublicKey, userPublicKey);
+        const ataInfo = await connection.getAccountInfo(ataAddress);
+        
+        if (ataInfo) {
+          const ata = unpackAccount(ataAddress, ataInfo);
+          currentAmethystBalance = Math.floor(Number(ata.amount) / Math.pow(10, 6));
+          console.log(`[Chapter Unlock] Blockchain Amethyst balance: ${currentAmethystBalance}`);
+        } else {
+          console.log("[Chapter Unlock] No ATA found for Amethyst");
+        }
+      } catch (err) {
+        console.error("[Chapter Unlock] Error fetching Amethyst balance:", err);
+        currentAmethystBalance = Number(amethystBalance) || 0; // Fallback to state
+      }
+      
+      const numericBalance = currentAmethystBalance;
+      
+      // Debug logging to see actual values
+      console.log(`[Chapter Unlock] Fetched Amethyst Balance: ${currentAmethystBalance}, Type: ${typeof currentAmethystBalance}, Numeric: ${numericBalance}`);
+      
       if (numericBalance >= 5000000) readerReward = 250;
       else if (numericBalance >= 1000000) readerReward = 200;
       else if (numericBalance >= 500000) readerReward = 170;
       else if (numericBalance >= 250000) readerReward = 150;
       else if (numericBalance >= 100000) readerReward = 120;
+      
+      console.log(`[Chapter Unlock] Final Reader Reward: ${readerReward} (for ${numericBalance} Amethyst)`);
 
       const newReaderBalance = (user.weekly_points || 0) + readerReward;
       const newAuthorBalance = (novelOwner.balance || 0) + creatorReward;
@@ -1788,6 +1850,99 @@ export default function ChapterPage() {
       // Fetch updated balance after payment
       await fetchUserBalances();
       
+      // Calculate and apply Amethyst multiplier bonus for weekly points
+      try {
+        // Get user data for weekly points update
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userEmail = sessionData?.session?.user?.email;
+        
+        if (userEmail) {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("id, weekly_points")
+            .eq("email", userEmail)
+            .single();
+          
+          if (userData) {
+            // Calculate Amethyst bonus based on current balance
+            let readerReward = 100; // Base reward
+            const numericBalance = Number(amethystBalance) || 0;
+            
+            console.log(`[processChapterPayment] Amethyst Balance for bonus: ${numericBalance}`);
+            
+            if (numericBalance >= 5000000) readerReward = 250;
+            else if (numericBalance >= 1000000) readerReward = 200;
+            else if (numericBalance >= 500000) readerReward = 170;
+            else if (numericBalance >= 250000) readerReward = 150;
+            else if (numericBalance >= 100000) readerReward = 120;
+            
+            console.log(`[processChapterPayment] Final Reader Reward: ${readerReward} (for ${numericBalance} Amethyst)`);
+            
+            // Update weekly points with Amethyst bonus
+            const newReaderBalance = (userData.weekly_points || 0) + readerReward;
+            const { error: updateError } = await supabase
+              .from("users")
+              .update({ weekly_points: newReaderBalance })
+              .eq("id", userData.id);
+            
+            if (updateError) {
+              console.error("[processChapterPayment] Error updating weekly points:", updateError);
+            } else {
+              console.log(`[processChapterPayment] Updated weekly points to: ${newReaderBalance}`);
+              setWeeklyPoints(newReaderBalance);
+              
+              // Show success message with the correct reward
+              setSuccessMessage(
+                `Payment successful! ${(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP sent on-chain. You earned ${readerReward} points.`
+              );
+              setTimeout(() => setSuccessMessage(""), 5000);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[processChapterPayment] Error calculating Amethyst bonus:", err);
+      }
+      
+      // Check if Amethyst balance was updated in the database
+      setTimeout(async () => {
+        try {
+          // Get user data to get user ID
+          const { data: sessionData } = await supabase.auth.getSession();
+          const userEmail = sessionData?.session?.user?.email;
+          
+          if (!userEmail) {
+            console.log("[AmethystCheck] No user session found");
+            return;
+          }
+          
+          // Get user ID from users table
+          const { data: userData } = await supabase
+            .from("users")
+            .select("id")
+            .eq("email", userEmail)
+            .single();
+          
+          if (!userData) {
+            console.log("[AmethystCheck] User not found in database");
+            return;
+          }
+          
+          const { data: amethystData } = await supabase
+            .from("amethyst_balances")
+            .select("amethyst_balance, last_updated")
+            .eq("user_id", userData.id)
+            .single();
+          
+          if (amethystData) {
+            console.log("[AmethystCheck] Database Amethyst balance:", amethystData.amethyst_balance, "Last updated:", amethystData.last_updated);
+          } else {
+            console.log("[AmethystCheck] No Amethyst balance record found for user:", userData.id);
+          }
+        } catch (err) {
+          console.error("[AmethystCheck] Error checking Amethyst balance:", err);
+        }
+      }, 2000); // Check 2 seconds after payment
+      
       // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
       setTimeout(() => setRecentlyUnlocked(false), 10000);
       
@@ -1950,6 +2105,10 @@ export default function ChapterPage() {
           <div className={styles.balanceItem}>
             <FaWallet className={styles.balanceIcon} />
             <span>SMP: {smpBalance !== null ? smpBalance.toLocaleString() : "Loading..."}</span>
+          </div>
+          <div className={styles.balanceItem}>
+            <FaGem className={styles.balanceIcon} />
+            <span>Amethyst: {amethystBalance !== null ? amethystBalance.toLocaleString() : "Loading..."}</span>
           </div>
           <div className={styles.balanceItem}>
             <FaStar className={styles.balanceIcon} />
