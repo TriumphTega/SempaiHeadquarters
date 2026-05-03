@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../SempaiHQ_app"
+		},
+		{
+			"path": "../lars"
 		}
 	],
 	"settings": {}

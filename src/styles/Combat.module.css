@@ -1,21 +1,1193 @@
-/* Combat.module.css */
+/* Combat.module.css - Premium Combat System */
 
-/* Combat Layout */
-.gildedCard {
-  border-radius: 15px;
+/* Core Combat Layout */
+.combatCard {
+  border-radius: 0;
+  border: none;
+  box-shadow: 0 0 30px rgba(139, 0, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.1);
+  background: linear-gradient(135deg, #2c1810 0%, #1a0e08 50%, #0f0704 100%);
+  color: #ffd700;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  overflow: hidden;
+  margin: 0;
+}
+
+.arenaHeader {
+  background: linear-gradient(90deg, #8b0000 0%, #cd5c5c 50%, #8b0000 100%);
+  border-bottom: 2px solid #ffd700;
+  position: relative;
+  overflow: hidden;
+}
+
+.arenaHeader::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+  animation: headerShine 3s infinite;
+}
+
+@keyframes headerShine {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+.arenaTitle {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6347;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  0% { text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6347; }
+  100% { text-shadow: 0 0 15px #ffd700, 0 0 30px #ff6347, 0 0 40px #ff0000; }
+}
+
+.turnIndicator {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.currentTurn {
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: turnPulse 1s infinite;
+}
+
+.headerFleeButton {
+  background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%);
   border: 2px solid #ffd700;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-  background: linear-gradient(to bottom, #fff8e1, #fdf5e6);
-  color: #3d2601;
-  padding: 1.5rem;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 5px #ffd700;
+  box-shadow: 0 0 15px rgba(220, 20, 60, 0.6), 0 0 30px rgba(255, 215, 0, 0.3);
+  animation: fleePulse 2s ease-in-out infinite;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 20px;
+}
+
+.headerFleeButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.8), 0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.headerFleeButton:active {
+  transform: scale(0.95);
+}
+
+.headerFleeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes fleePulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(220, 20, 60, 0.6), 0 0 30px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(220, 20, 60, 0.8), 0 0 50px rgba(255, 215, 0, 0.5); }
+}
+
+.playerTurn {
+  color: #90ee90;
+  text-shadow: 0 0 10px #90ee90;
+}
+
+.enemyTurn {
+  color: #ff6347;
+  text-shadow: 0 0 10px #ff6347;
+}
+
+@keyframes turnPulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
 }
 
 .combatBody {
   position: relative;
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 8px;
+  background: radial-gradient(ellipse at center, #2c1810 0%, #1a0e08 60%, #0f0704 100%);
+  padding: 30px;
+  border-radius: 15px;
   overflow: hidden;
+  min-height: 600px;
+}
+
+/* Arena Background Effects */
+.arenaBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mistEffect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  opacity: 0.6;
+}
+
+.mistAnimation {
+  animation: mistDrift 8s ease-in-out infinite;
+}
+
+@keyframes mistDrift {
+  0%, 100% { transform: translateX(0) translateY(0); opacity: 0.6; }
+  25% { transform: translateX(20px) translateY(-10px); opacity: 0.8; }
+  50% { transform: translateX(-10px) translateY(15px); opacity: 0.5; }
+  75% { transform: translateX(15px) translateY(5px); opacity: 0.7; }
+}
+
+.templeRuins {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 150px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  opacity: 0.4;
+}
+
+.lightingEffect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+  animation: lightingFlicker 4s ease-in-out infinite;
+}
+
+@keyframes lightingFlicker {
+  0%, 100% { opacity: 0.3; }
+  25% { opacity: 0.5; }
+  50% { opacity: 0.2; }
+  75% { opacity: 0.4; }
+}
+
+.arenaContainer {
+  position: relative;
+  z-index: 2;
+}
+
+/* Combat Arena Layout */
+.combatArena {
+  margin-bottom: 30px;
+  min-height: 300px;
+}
+
+.combatantSide {
+  position: relative;
+}
+
+.characterContainer {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+  border: 2px solid #8b0000;
+  border-radius: 15px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.characterContainer::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ffd700, #ff6347, #ffd700);
+  border-radius: 15px;
+  opacity: 0.6;
+  z-index: -1;
+  animation: borderGlow 3s linear infinite;
+}
+
+@keyframes borderGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.characterInfo {
+  margin-bottom: 20px;
+}
+
+.characterName {
+  color: #ffd700;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-shadow: 0 0 5px #ffd700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nameIcon {
+  animation: iconSpin 3s linear infinite;
+}
+
+@keyframes iconSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.healthContainer {
+  margin-bottom: 10px;
+}
+
+/* Classic Fighting Game Layout */
+.fightingArena {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fightingGame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+}
+
+/* Health Bars Container - Top of Screen */
+.healthBarsContainer {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(26, 14, 8, 0.6) 100%);
+  border-bottom: 3px solid #8b0000;
+  position: relative;
+  z-index: 10;
+}
+
+.fighterHealthBar {
+  flex: 1;
+  max-width: 45%;
+  margin: 0 10px;
+}
+
+.fighterName {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 0.9rem;
+  text-shadow: 0 0 5px #8b0000;
+}
+
+.nameTag {
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+}
+
+.healthText {
+  font-size: 0.85rem;
+  color: #ff6347;
+}
+
+/* Fighting Stage - Main Battle Area */
+.fightingStage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+  background: linear-gradient(180deg, #1a0e08 0%, #2c1810 50%, #4a2c1a 100%);
+}
+
+.stageBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.stageFloor {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, #3d2817 0%, #2c1810 100%);
+  border-top: 4px solid #8b0000;
+}
+
+.stageWall {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(139, 0, 0, 0.1) 0%, transparent 30%);
+}
+
+/* Fighters Container - Characters on Same Plane */
+.fightersContainer {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 100%;
+  padding: 0 10%;
+  z-index: 5;
+}
+
+.fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.playerFighter {
+  margin-left: 5%;
+}
+
+.enemyFighter {
+  margin-right: 5%;
+}
+
+/* Attack Animations - Lightweight CSS */
+.playerBasic_attack {
+  animation: playerAttackMove 0.4s ease-out;
+}
+
+.playerSkill_attack {
+  animation: playerSkillMove 0.6s ease-out;
+}
+
+.playerHealing {
+  animation: playerHealMove 0.8s ease-out;
+}
+
+.playerHit {
+  animation: playerHitMove 0.3s ease-out;
+}
+
+.enemyAttack {
+  animation: enemyAttackMove 0.4s ease-out;
+}
+
+.enemyHit {
+  animation: enemyHitMove 0.3s ease-out;
+}
+
+@keyframes playerAttackMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(80px); }
+}
+
+@keyframes playerSkillMove {
+  0%, 100% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(50px) scale(1.1); }
+  60% { transform: translateX(100px) scale(1.2); }
+}
+
+@keyframes playerHealMove {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  50% { transform: translateX(0); filter: brightness(1.5) drop-shadow(0 0 20px #90ee90); }
+}
+
+@keyframes playerHitMove {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-20px); filter: brightness(0.5); }
+  75% { transform: translateX(10px); filter: brightness(0.8); }
+}
+
+@keyframes enemyAttackMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-80px); }
+}
+
+@keyframes enemyHitMove {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(20px); filter: brightness(0.5); }
+  75% { transform: translateX(-10px); filter: brightness(0.8); }
+}
+
+/* Equipment Bar */
+.equipmentBar {
+  background: linear-gradient(180deg, rgba(26, 14, 8, 0.8) 0%, rgba(139, 0, 0, 0.4) 100%);
+  border-top: 2px solid #8b0000;
+  padding: 10px 20px;
+  text-align: center;
+}
+
+.equipmentDisplay {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.equipmentItem {
+  background: rgba(139, 0, 0, 0.3);
+  border: 1px solid #8b0000;
+  border-radius: 8px;
+  padding: 5px 15px;
+  color: #ffd700;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-shadow: 0 0 3px #8b0000;
+}
+
+.healthDanger .healthFill {
+  background: linear-gradient(90deg, #ff0000 0%, #dc143c 50%, #8b0000 100%);
+  animation: healthPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes healthPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.equipmentDisplay {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.equipmentItem {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(139, 0, 0, 0.3) 100%);
+  border: 1px solid #ffd700;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  color: #ffd700;
+  text-shadow: 0 0 3px #ffd700;
+}
+
+.enemyLevel {
+  background: linear-gradient(135deg, rgba(255, 0, 0, 0.3) 0%, rgba(139, 0, 0, 0.5) 100%);
+  border: 1px solid #ff6347;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  color: #ff6347;
+  text-shadow: 0 0 3px #ff6347;
+  display: inline-block;
+}
+
+/* Character Sprites */
+.characterSpriteContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.characterSprite {
+  position: relative;
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.8));
+  transition: transform 0.3s ease;
+}
+
+.characterImage {
+  border-radius: 10px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Sprite Animations */
+.idleAnimation {
+  /* Characters stand still on ground */
+}
+
+/* Effect Sprites */
+.effectSprite {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
+  animation: effectPop 0.3s ease-out;
+}
+
+@keyframes effectPop {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.basic_attackAnimation {
+  animation: basicAttack 1s ease-out;
+}
+
+@keyframes basicAttack {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(30px) scale(1.1); }
+  50% { transform: translateX(50px) scale(1.2); }
+  70% { transform: translateX(30px) scale(1.1); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.skill_attackAnimation {
+  animation: skillAttack 1.2s ease-out;
+}
+
+@keyframes skillAttack {
+  0% { transform: translateX(0) scale(1) rotate(0deg); }
+  25% { transform: translateX(20px) scale(1.1) rotate(-5deg); }
+  50% { transform: translateX(60px) scale(1.3) rotate(5deg); }
+  75% { transform: translateX(30px) scale(1.1) rotate(-2deg); }
+  100% { transform: translateX(0) scale(1) rotate(0deg); }
+}
+
+.healingAnimation {
+  animation: healing 1.5s ease-in-out;
+}
+
+@keyframes healing {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+  25% { transform: scale(1.05) rotate(5deg); filter: brightness(1.2); }
+  50% { transform: scale(1.1) rotate(-5deg); filter: brightness(1.5) hue-rotate(60deg); }
+  75% { transform: scale(1.05) rotate(5deg); filter: brightness(1.2); }
+}
+
+.hitAnimation {
+  animation: hitReaction 0.8s ease-out;
+}
+
+@keyframes hitReaction {
+  0% { transform: translateX(0) scale(1); }
+  25% { transform: translateX(-10px) scale(0.95) rotate(-5deg); }
+  50% { transform: translateX(-15px) scale(0.9) rotate(5deg); }
+  75% { transform: translateX(-5px) scale(0.95) rotate(-2deg); }
+  100% { transform: translateX(0) scale(1) rotate(0deg); }
+}
+
+.skillGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.basic_attack .skillGlow {
+  background: radial-gradient(circle, rgba(255, 99, 71, 0.6) 0%, transparent 70%);
+  animation: attackGlow 1s ease-out;
+}
+
+.skill_attack .skillGlow {
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.8) 0%, transparent 70%);
+  animation: skillGlow 1.2s ease-out;
+}
+
+.healing .skillGlow {
+  background: radial-gradient(circle, rgba(144, 238, 144, 0.8) 0%, transparent 70%);
+  animation: healGlow 1.5s ease-out;
+}
+
+@keyframes attackGlow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+@keyframes skillGlow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(180deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5) rotate(360deg); }
+}
+
+@keyframes healGlow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+}
+
+/* VS Indicator */
+.vsContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.vsGlow {
+  position: relative;
+  text-align: center;
+}
+
+.vsText {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 20px #ffd700, 0 0 40px #ff6347;
+  animation: vsPulse 2s ease-in-out infinite;
+  margin: 0;
+}
+
+.vsSlash {
+  font-size: 2rem;
+  color: #ff6347;
+  text-shadow: 0 0 15px #ff6347;
+  animation: slashFlash 1s ease-in-out infinite;
+}
+
+@keyframes vsPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes slashFlash {
+  0%, 100% { opacity: 0.5; transform: rotate(0deg); }
+  50% { opacity: 1; transform: rotate(10deg); }
+}
+
+/* Floating Damage Numbers */
+.floatingNumber {
+  position: absolute;
+  font-weight: bold;
+  font-size: 1.5rem;
+  text-shadow: 0 0 5px currentColor;
+  animation: floatUp 2s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+  80% { transform: translateY(-80px) scale(1); opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.8); opacity: 0; }
+}
+
+.damageNumber {
+  color: #ff6347;
+  text-shadow: 0 0 10px #ff6347;
+}
+
+.healNumber {
+  color: #90ee90;
+  text-shadow: 0 0 10px #90ee90;
+}
+
+.critNumber {
+  color: #ffd700;
+  font-size: 2rem;
+  text-shadow: 0 0 15px #ffd700;
+  animation: critFloat 2s ease-out forwards;
+}
+
+@keyframes critFloat {
+  0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+  20% { transform: translateY(-20px) scale(1.5) rotate(10deg); opacity: 1; }
+  80% { transform: translateY(-80px) scale(1.2) rotate(-5deg); opacity: 1; }
+  100% { transform: translateY(-120px) scale(1) rotate(0deg); opacity: 0; }
+}
+
+/* Action Panel */
+.actionPanel {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
+  border: 2px solid #8b0000;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cinematicPanel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+  animation: panelShine 4s linear infinite;
+}
+
+@keyframes panelShine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.actionButton {
+  background: linear-gradient(135deg, #8b0000 0%, #cd5c5c 100%);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: bold;
+  text-shadow: 0 0 5px currentColor;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.attackButton {
+  background: linear-gradient(135deg, #dc143c 0%, #ff6347 100%);
+  box-shadow: 0 4px 15px rgba(220, 20, 60, 0.4);
+}
+
+.fleeButton {
+  background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);
+  box-shadow: 0 4px 15px rgba(74, 74, 74, 0.4);
+}
+
+.prominentFleeButton {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%);
+  border: 3px solid #ffd700;
+  border-radius: 15px;
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 5px #ffd700;
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+  animation: fleePulse 2s ease-in-out infinite;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.prominentFleeButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px rgba(220, 20, 60, 1), 0 0 60px rgba(255, 215, 0, 0.6);
+}
+
+.prominentFleeButton:active {
+  transform: scale(0.95);
+}
+
+@keyframes fleePulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(220, 20, 60, 0.8), 0 0 40px rgba(255, 215, 0, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(220, 20, 60, 1), 0 0 60px rgba(255, 215, 0, 0.6); }
+}
+
+.buttonIcon {
+  font-size: 1.5rem;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+.buttonText {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.buttonCost {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.skillDropdown, .potionDropdown {
+  background: linear-gradient(135deg, #4a0e0e 0%, #2c0808 100%);
+  border: 2px solid #8b0000;
+  border-radius: 12px;
+  color: #ffd700;
+  font-weight: bold;
+  min-width: 150px;
+}
+
+.skillDropdown:hover, .potionDropdown:hover {
+  background: linear-gradient(135deg, #5a0e0e 0%, #3c0808 100%);
+  border-color: #ff6347;
+}
+
+/* Enhanced Buttons */
+.glowButton {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.glowButton:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+}
+
+.glowButton:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.glowButton::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.glowButton:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.iconPulse {
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Combat Log */
+.combatLogContainer {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(139, 0, 0, 0.3) 100%);
+  border: 2px solid #8b0000;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.logTitle {
+  color: #ffd700;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-shadow: 0 0 5px #ffd700;
+}
+
+.logIcon {
+  animation: logSpin 3s linear infinite;
+}
+
+@keyframes logSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.combatLog {
+  max-height: 150px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.cinematicLog {
+  scrollbar-width: thin;
+  scrollbar-color: #8b0000 transparent;
+}
+
+.cinematicLog::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cinematicLog::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.cinematicLog::-webkit-scrollbar-thumb {
+  background: #8b0000;
+  border-radius: 4px;
+}
+
+.logEntry {
+  background: rgba(139, 0, 0, 0.2);
+  border: none;
+  color: #ffd700;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  border-left: 3px solid #ff6347;
+}
+
+.animatedEntry {
+  animation: logSlideIn 0.5s ease-out;
+}
+
+@keyframes logSlideIn {
+  0% { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Victory/Defeat Screen */
+.resultScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  border-radius: 15px;
+}
+
+.winResult {
+  background: linear-gradient(135deg, rgba(0, 100, 0, 0.9) 0%, rgba(0, 50, 0, 0.9) 100%);
+}
+
+.loseResult {
+  background: linear-gradient(135deg, rgba(100, 0, 0, 0.9) 0%, rgba(50, 0, 0, 0.9) 100%);
+}
+
+.resultContent {
+  text-align: center;
+  padding: 30px;
+  border-radius: 15px;
+  border: 3px solid #ffd700;
+  background: rgba(0, 0, 0, 0.8);
+  animation: resultPop 0.5s ease-out;
+}
+
+.resultTitle {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.winResult .resultTitle {
+  color: #90ee90;
+}
+
+.loseResult .resultTitle {
+  color: #ff6347;
+}
+
+.resultMessage {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  color: #ffd700;
+}
+
+.rewardsDisplay {
+  margin-bottom: 20px;
+}
+
+.rewardItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  color: #ffd700;
+}
+
+.rewardIcon {
+  animation: rewardBounce 1s ease-in-out infinite;
+}
+
+@keyframes rewardBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.resultButton {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 12px;
+  border: 2px solid #ffd700;
+}
+
+/* Screen Shake Effect */
+.screenShake {
+  animation: screenShake 0.3s ease-in-out;
+}
+
+@keyframes screenShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+/* Loading State */
+.arenaLoading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  color: #ffd700;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-top: 3px solid #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-top: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .combatCard {
+    border-radius: 15px;
+  }
+  
+  .arenaTitle {
+    font-size: 1.5rem;
+  }
+  
+  .combatBody {
+    padding: 20px;
+    min-height: 500px;
+  }
+  
+  .characterContainer {
+    padding: 15px;
+  }
+  
+  .characterName {
+    font-size: 1.2rem;
+  }
+  
+  .healthBar {
+    height: 20px;
+  }
+  
+  .characterSpriteContainer {
+    height: 150px;
+  }
+  
+  .characterImage {
+    width: 150px !important;
+    height: 150px !important;
+  }
+  
+  .vsText {
+    font-size: 2rem;
+  }
+  
+  .actionPanel {
+    padding: 15px;
+  }
+  
+  .actionButton {
+    padding: 10px 15px;
+    min-width: 100px;
+  }
+  
+  .buttonText {
+    font-size: 0.9rem;
+  }
+  
+  .floatingNumber {
+    font-size: 1.2rem;
+  }
+  
+  .critNumber {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .combatBody {
+    padding: 15px;
+    min-height: 400px;
+  }
+  
+  .characterContainer {
+    padding: 10px;
+  }
+  
+  .characterName {
+    font-size: 1rem;
+  }
+  
+  .healthBar {
+    height: 15px;
+  }
+  
+  .characterSpriteContainer {
+    height: 120px;
+  }
+  
+  .characterImage {
+    width: 120px !important;
+    height: 120px !important;
+  }
+  
+  .vsText {
+    font-size: 1.5rem;
+  }
+  
+  .actionPanel {
+    padding: 10px;
+  }
+  
+  .actionButton {
+    padding: 8px 12px;
+    min-width: 80px;
+  }
+  
+  .buttonText {
+    font-size: 0.8rem;
+  }
+  
+  .buttonIcon {
+    font-size: 1.2rem;
+  }
+  
+  .floatingNumber {
+    font-size: 1rem;
+  }
+  
+  .critNumber {
+    font-size: 1.3rem;
+  }
+  
+  .resultTitle {
+    font-size: 2rem;
+  }
+  
+  .resultMessage {
+    font-size: 1rem;
+  }
 }
 
 /* Canvas Arena */

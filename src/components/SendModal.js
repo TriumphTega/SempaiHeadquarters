@@ -4,9 +4,10 @@ import { useState, useEffect, useContext } from "react";
 import { Connection, PublicKey, VersionedTransaction, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } from "@solana/web3.js";
 import { getAssociatedTokenAddress, getAssociatedTokenAddressSync, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants";
-import { FaTimes, FaGem, FaCoins, FaDollarSign, FaPaperPlane } from "react-icons/fa";
+import { FaTimes, FaGem, FaCoins, FaDollarSign, FaPaperPlane, FaShieldAlt, FaChartLine } from "react-icons/fa";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import { useWallet } from "@solana/wallet-adapter-react";
+import WithdrawalReputationService from "@/services/porp/WithdrawalReputationService";
 
 const connection = new Connection(RPC_URL);
 
@@ -31,12 +32,86 @@ export default function SendModal({ isOpen, onClose, activeWalletAddress }) {
   const [showATAConfirmation, setShowATAConfirmation] = useState(false);
   const [ataCreationCost, setAtaCreationCost] = useState(0);
   const [pendingTransaction, setPendingTransaction] = useState(null);
+  
+  // PoRP Layer 3 - Withdrawal Reputation State
+  const [withdrawalService] = useState(() => new WithdrawalReputationService());
+  const [reputationInfo, setReputationInfo] = useState(null);
+  const [withdrawalCheck, setWithdrawalCheck] = useState(null);
+  const [showReputationWarning, setShowReputationWarning] = useState(false);
+  const [amountUSD, setAmountUSD] = useState(0);
 
   useEffect(() => {
     if (isOpen && activeWalletAddress) {
       fetchBalance();
+      fetchReputationInfo();
     }
   }, [isOpen, activeWalletAddress, selectedToken]);
+
+  // Update USD value when amount or token changes
+  useEffect(() => {
+    if (amount && selectedToken) {
+      updateUSDValue();
+    } else {
+      setAmountUSD(0);
+    }
+  }, [amount, selectedToken]);
+
+  // Check withdrawal eligibility when amount changes
+  useEffect(() => {
+    if (amountUSD > 0 && reputationInfo) {
+      checkWithdrawalEligibility();
+    }
+  }, [amountUSD, reputationInfo]);
+
+  // PoRP Layer 3 - Withdrawal Reputation Functions
+  const fetchReputationInfo = async () => {
+    try {
+      console.log('[SendModal] Fetching reputation info for:', activeWalletAddress);
+      const info = await withdrawalService.getUserReputationTier(activeWalletAddress);
+      setReputationInfo(info);
+      console.log('[SendModal] Reputation info loaded:', info);
+    } catch (error) {
+      console.error('[SendModal] Error fetching reputation info:', error);
+    }
+  };
+
+  const updateUSDValue = async () => {
+    try {
+      const amountFloat = parseFloat(amount);
+      if (isNaN(amountFloat) || amountFloat <= 0) {
+        setAmountUSD(0);
+        return;
+      }
+      
+      const usdValue = await withdrawalService.convertTokenToUSD(selectedToken, amountFloat);
+      setAmountUSD(usdValue);
+    } catch (error) {
+      console.error('[SendModal] Error converting to USD:', error);
+      setAmountUSD(0);
+    }
+  };
+
+  const checkWithdrawalEligibility = async () => {
+    try {
+      console.log('[SendModal] Checking withdrawal eligibility:', { amountUSD, token: selectedToken });
+      const check = await withdrawalService.checkWithdrawalEligibility(
+        activeWalletAddress, 
+        amountUSD, 
+        selectedToken
+      );
+      setWithdrawalCheck(check);
+      
+      if (!check.canWithdraw) {
+        setShowReputationWarning(true);
+      } else {
+        setShowReputationWarning(false);
+      }
+      
+      console.log('[SendModal] Withdrawal eligibility check:', check);
+    } catch (error) {
+      console.error('[SendModal] Error checking withdrawal eligibility:', error);
+    }
+  };
 
   // Helper to Check if ATA Exists
   const checkAtaExists = async (mint, owner) => {
@@ -272,6 +347,13 @@ const fetchBalance = async (retryCount = 0) => {
       return;
     }
 
+    // PoRP Layer 3 - Withdrawal Reputation Check
+    if (withdrawalCheck && !withdrawalCheck.canWithdraw) {
+      console.log("[handleSend] Validation failed: Withdrawal not permitted by reputation system");
+      setError(withdrawalCheck.reason);
+      return;
+    }
+
     console.log("[handleSend] Validation passed, starting send process");
     setLoading(true);
     setError("");
@@ -466,6 +548,16 @@ const fetchBalance = async (retryCount = 0) => {
       });
       console.log("[handleSend] Transaction fully confirmed");
 
+      // PoRP Layer 3 - Record withdrawal for reputation tracking
+      try {
+        console.log("[handleSend] Recording withdrawal for reputation system...");
+        await withdrawalService.recordWithdrawal(activeWalletAddress, amountUSD, selectedToken, signature);
+        console.log("[handleSend] Withdrawal recorded successfully");
+      } catch (recordError) {
+        console.error("[handleSend] Failed to record withdrawal:", recordError);
+        // Don't fail the transaction if recording fails
+      }
+
       console.log("[handleSend] Updating UI with success...");
       setSuccessMessage(`Tokens sent successfully! Signature: ${signature}`);
       setAmount("");
@@ -621,6 +713,58 @@ const fetchBalance = async (retryCount = 0) => {
               {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {selectedToken}
             </p>
           </div>
+
+          {/* PoRP Layer 3 - Reputation & USD Display */}
+          {reputationInfo && (
+            <div style={{
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px',
+              position: 'relative',
+              zIndex: 10,
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(243,99,22,0.08)',
+              backdropFilter: 'blur(8px)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div>
+                  <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                    <FaShieldAlt style={{ marginRight: '4px', color: 'rgba(243,99,22,0.7)' }} />
+                    Withdrawal Tier
+                  </p>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: '#fff', margin: 0, textTransform: 'capitalize' }}>
+                    {reputationInfo.tier}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                    Daily Limit
+                  </p>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: 'rgba(243,99,22,0.9)', margin: 0 }}>
+                    ${reputationInfo.limits.maxWithdrawalUSD}
+                  </p>
+                </div>
+              </div>
+              {amountUSD > 0 && (
+                <div style={{ 
+                  paddingTop: '8px', 
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: '12px',
+                  color: 'rgba(255,255,255,0.6)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Amount (USD):</span>
+                    <span style={{ 
+                      fontWeight: 600, 
+                      color: amountUSD > reputationInfo.limits.maxWithdrawalUSD ? '#ff7b7b' : '#42d675' 
+                    }}>
+                      ${amountUSD.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recipient Address */}
           <div style={{ marginBottom: '16px', position: 'relative', zIndex: 10 }}>
@@ -942,6 +1086,142 @@ const fetchBalance = async (retryCount = 0) => {
             </div>
           </div>
         </>
+      )}
+
+      {/* PoRP Layer 3 - Withdrawal Reputation Warning Modal */}
+      {showReputationWarning && withdrawalCheck && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(20,20,28,0.98), rgba(12,12,18,0.99))',
+            borderRadius: '20px',
+            padding: '32px',
+            maxWidth: '460px',
+            width: '90%',
+            border: '1px solid rgba(239,68,68,0.3)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(239,68,68,0.15)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.15))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(239,68,68,0.3)',
+              }}>
+                <FaShieldAlt size={20} style={{ color: 'rgba(239,68,68,0.9)' }} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
+                  Withdrawal Restricted
+                </h3>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>
+                  Anti-dump protection active
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px',
+              border: '1px solid rgba(239,68,68,0.1)',
+            }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: '0 0 12px 0', lineHeight: '1.5' }}>
+                {withdrawalCheck.reason}
+              </p>
+              
+              {withdrawalCheck.maxAmount && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                    Your Daily Limit
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: 'rgba(243,99,22,0.9)' }}>
+                    ${withdrawalCheck.maxAmount}
+                  </span>
+                </div>
+              )}
+
+              {withdrawalCheck.requiredScore && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                    Next Tier Requires
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: 'rgba(243,99,22,0.9)' }}>
+                    {withdrawalCheck.requiredScore} pts
+                  </span>
+                </div>
+              )}
+
+              {withdrawalCheck.cooldownEnd && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                    Cooldown Ends
+                  </span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'rgba(243,99,22,0.9)' }}>
+                    {new Date(withdrawalCheck.cooldownEnd).toLocaleTimeString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ 
+              background: 'rgba(243,99,22,0.08)', 
+              borderRadius: '12px', 
+              padding: '14px', 
+              marginBottom: '20px',
+              border: '1px solid rgba(243,99,22,0.2)'
+            }}>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: '1.5' }}>
+                <FaChartLine style={{ marginRight: '4px', color: 'rgba(243,99,22,0.7)' }} />
+                <strong>Tip:</strong> Read more novels and complete comprehension challenges to increase your reputation tier and unlock higher withdrawal limits.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowReputationWarning(false)}
+                style={{
+                  flex: 1,
+                  color: '#fff',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                I Understand
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

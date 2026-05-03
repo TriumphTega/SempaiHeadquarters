@@ -1,0 +1,2255 @@
+# Proof-of-Reading Protocol (PoRP) Implementation Plan
+# Complete Technical Architecture and Deployment Strategy
+# Version 1.0 - May 2026
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+The Proof-of-Reading Protocol (PoRP) is a 4-layer behavioral proof-of-work system designed
+to prevent Sybil attacks in SempaiHQ's read-to-earn ecosystem while maintaining zero friction
+for honest users. This implementation plan provides a comprehensive 10-week roadmap to
+deploy all PoRP components across both web (SempaiHeadquarters) and mobile (SempaiHQ_app)
+platforms.
+
+TIMELINE: 10 weeks across 4 phases
+ESTIMATED EFFORT: ~260 engineering hours
+IMPACT: Eliminates bot drainage, protects low-liquidity tokenomics, enables sustainable growth
+
+================================================================================
+PHASE 0: FOUNDATION (Week 1-2)
+================================================================================
+
+OBJECTIVE: Establish database schema, API architecture, and security infrastructure
+
+1. DATABASE SCHEMA DESIGN
+-------------------------
+
+New Tables Required:
+
+-- Reading sessions and behavioral tracking
+CREATE TABLE reading_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    novel_id UUID REFERENCES novels(id),
+    chapter_number INTEGER,
+    device_hash VARCHAR(64),
+    session_data JSONB, -- scroll patterns, timing, interactions
+    entropy_score DECIMAL(3,2),
+    time_on_page_seconds INTEGER,
+    status VARCHAR(20) DEFAULT 'active', -- active, completed, flagged
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Cryptographic session receipts
+CREATE TABLE session_receipts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID REFERENCES reading_sessions(id),
+    user_id UUID REFERENCES users(id),
+    pages_read INTEGER[],
+    time_on_pages INTEGER[],
+    entropy_score DECIMAL(3,2),
+    device_hash VARCHAR(64),
+    server_signature TEXT, -- Ed25519 signature
+    issued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    used_for_claim BOOLEAN DEFAULT FALSE
+);
+
+-- Reading comprehension challenges
+CREATE TABLE comprehension_challenges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    novel_id UUID REFERENCES novels(id),
+    chapter_number INTEGER,
+    question TEXT,
+    options TEXT[], -- 4 options array
+    correct_answer INTEGER,
+    difficulty VARCHAR(10) DEFAULT 'medium',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Challenge attempts
+CREATE TABLE challenge_attempts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID REFERENCES reading_sessions(id),
+    challenge_id UUID REFERENCES comprehension_challenges(id),
+    user_answer INTEGER,
+    is_correct BOOLEAN,
+    response_time_ms INTEGER,
+    attempted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Reading reputation scoring
+CREATE TABLE reading_reputation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) UNIQUE,
+    total_pages_read INTEGER DEFAULT 0,
+    total_reading_time_seconds BIGINT DEFAULT 0,
+    challenges_passed INTEGER DEFAULT 0,
+    challenges_attempted INTEGER DEFAULT 0,
+    reputation_score INTEGER DEFAULT 0, -- 0-1000+
+    current_tier VARCHAR(20) DEFAULT 'seed', -- seed, reader, scholar, sage
+    last_withdrawal_at TIMESTAMP WITH TIME ZONE,
+    consecutive_failed_challenges INTEGER DEFAULT 0,
+    flagged_for_review BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Reputation staking
+CREATE TABLE reputation_stakes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    amount_smp BIGINT NOT NULL,
+    staked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    slashed_at TIMESTAMP WITH TIME ZONE,
+    slash_reason TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    multiplier_applied DECIMAL(3,2) DEFAULT 1.0 -- 1.0 to 1.5
+);
+
+-- Withdrawal gating
+CREATE TABLE withdrawal_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    amount_smp BIGINT NOT NULL,
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    processed_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) DEFAULT 'pending', -- pending, queued, processed, rejected
+    cooldown_end_at TIMESTAMP WITH TIME ZONE,
+    tier_at_request VARCHAR(20),
+    receipt_ids UUID[] REFERENCES session_receipts(id)
+);
+
+2. API ROUTES ARCHITECTURE
+--------------------------
+
+Core Endpoints to Implement:
+- /api/session/start - Initialize reading session
+- /api/session/track - Submit behavioral data
+- /api/session/verify - Complete session, request receipt
+- /api/challenge/get - Get comprehension question
+- /api/challenge/submit - Submit answer
+- /api/rewards/claim - Batch claim with receipts
+- /api/reputation/score - Get RRS status
+- /api/stake/deposit - Stake SMP for multiplier
+- /api/withdraw/request - Request withdrawal with gating
+
+3. SECURITY INFRASTRUCTURE
+--------------------------
+
+- Ed25519 key pair generation for receipt signing
+- Server-side private key secure storage
+- Device fingerprinting salt rotation
+- Rate limiting configuration
+- Input validation framework
+
+================================================================================
+PHASE 1: LAYER 1 - READING SESSION PROOF (Week 3-4)
+================================================================================
+
+OBJECTIVE: Implement behavioral tracking and cryptographic receipt system
+
+1. CLIENT-SIDE BEHAVIORAL TRACKING
+---------------------------------
+
+File: src/services/porp/ReadingTracker.js
+
+class ReadingTracker {
+  constructor() {
+    this.sessionId = null;
+    this.startTime = null;
+    this.scrollEvents = [];
+    this.interactionEvents = [];
+    this.deviceHash = this.generateDeviceHash();
+  }
+
+  async startSession(novelId, chapterNumber) {
+    const response = await fetch('/api/session/start', {
+      method: 'POST',
+      body: JSON.stringify({
+        novelId,
+        chapterNumber,
+        deviceHash: this.deviceHash
+      })
+    });
+    this.sessionId = response.sessionId;
+    this.startTime = Date.now();
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    // Scroll tracking
+    window.addEventListener('scroll', this.handleScroll.bind(this), { passive: true });
+    
+    // Interaction tracking
+    document.addEventListener('click', this.handleInteraction.bind(this));
+    document.addEventListener('keypress', this.handleInteraction.bind(this));
+    
+    // Visibility tracking
+    document.addEventListener('visibilitychange', this.handleVisibility.bind(this));
+  }
+
+  handleScroll(event) {
+    this.scrollEvents.push({
+      timestamp: Date.now() - this.startTime,
+      scrollY: window.scrollY,
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight
+    });
+  }
+
+  handleInteraction(event) {
+    this.interactionEvents.push({
+      timestamp: Date.now() - this.startTime,
+      type: event.type,
+      target: event.target.tagName,
+      position: { x: event.clientX, y: event.clientY }
+    });
+  }
+
+  calculateEntropy() {
+    // Analyze randomness in scroll patterns and interactions
+    const scrollPattern = this.analyzeScrollPattern();
+    const interactionPattern = this.analyzeInteractionPattern();
+    return (scrollPattern.entropy + interactionPattern.entropy) / 2;
+  }
+
+  analyzeScrollPattern() {
+    if (this.scrollEvents.length < 2) return { entropy: 0 };
+    
+    // Calculate variance in scroll velocities
+    const velocities = [];
+    for (let i = 1; i < this.scrollEvents.length; i++) {
+      const timeDiff = this.scrollEvents[i].timestamp - this.scrollEvents[i-1].timestamp;
+      const scrollDiff = this.scrollEvents[i].scrollY - this.scrollEvents[i-1].scrollY;
+      velocities.push(Math.abs(scrollDiff / timeDiff));
+    }
+    
+    const mean = velocities.reduce((a, b) => a + b, 0) / velocities.length;
+    const variance = velocities.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / velocities.length;
+    
+    // Normalize variance to 0-1 scale
+    return { entropy: Math.min(1, variance / 1000) };
+  }
+
+  analyzeInteractionPattern() {
+    if (this.interactionEvents.length === 0) return { entropy: 0 };
+    
+    // Calculate time intervals between interactions
+    const intervals = [];
+    for (let i = 1; i < this.interactionEvents.length; i++) {
+      intervals.push(this.interactionEvents[i].timestamp - this.interactionEvents[i-1].timestamp);
+    }
+    
+    // Calculate entropy based on interval variance
+    const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const variance = intervals.reduce((sum, interval) => sum + Math.pow(interval - mean, 2), 0) / intervals.length;
+    
+    return { entropy: Math.min(1, variance / 10000) };
+  }
+
+  generateDeviceHash() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('Device fingerprint hash', 2, 2);
+    
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      canvas.toDataURL()
+    ].join('|');
+    
+    // Simple hash (in production, use crypto.subtle.digest)
+    let hash = 0;
+    for (let i = 0; i < fingerprint.length; i++) {
+      const char = fingerprint.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    return Math.abs(hash).toString(16);
+  }
+
+  async completeSession() {
+    const sessionData = {
+      timeOnPage: Date.now() - this.startTime,
+      scrollEvents: this.scrollEvents,
+      interactionEvents: this.interactionEvents,
+      entropyScore: this.calculateEntropy()
+    };
+
+    const response = await fetch('/api/session/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: this.sessionId,
+        sessionData
+      })
+    });
+
+    return response.receipt; // Cryptographic receipt
+  }
+}
+
+2. SERVER-SIDE SESSION VERIFICATION
+------------------------------------
+
+File: src/app/api/session/verify/route.js
+
+import { NextResponse } from 'next/server';
+import { supabase } from '@/services/supabase/supabaseClient';
+import crypto from 'crypto';
+
+export async function POST(request) {
+  try {
+    const { sessionId, sessionData } = await request.json();
+    
+    // Validate session exists and belongs to user
+    const session = await validateSession(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 400 });
+    }
+    
+    // Bot detection heuristics
+    const botFlags = detectBots(sessionData);
+    if (botFlags.length > 0) {
+      await flagSession(sessionId, botFlags);
+      return NextResponse.json({ error: 'Session flagged for review' }, { status: 403 });
+    }
+    
+    // Validate time-on-page (minimum 20 seconds)
+    if (sessionData.timeOnPage < 20000) {
+      return NextResponse.json({ error: 'Insufficient reading time' }, { status: 400 });
+    }
+    
+    // Validate entropy score (minimum 0.6)
+    if (sessionData.entropyScore < 0.6) {
+      return NextResponse.json({ error: 'Low behavioral entropy' }, { status: 400 });
+    }
+    
+    // Update session with completion data
+    await supabase
+      .from('reading_sessions')
+      .update({
+        session_data: sessionData,
+        entropy_score: sessionData.entropyScore,
+        time_on_page_seconds: Math.floor(sessionData.timeOnPage / 1000),
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', sessionId);
+    
+    // Issue cryptographic receipt
+    const receipt = await issueSessionReceipt(session, sessionData);
+    
+    return NextResponse.json({ receipt });
+  } catch (error) {
+    console.error('Session verification error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+function detectBots(sessionData) {
+  const flags = [];
+  
+  // Check for instant page loads
+  if (sessionData.timeOnPage < 5000) flags.push('instant_read');
+  
+  // Check for uniform scroll patterns
+  const scrollVariance = calculateScrollVariance(sessionData.scrollEvents);
+  if (scrollVariance < 0.1) flags.push('uniform_scroll');
+  
+  // Check for lack of interactions
+  if (sessionData.interactionEvents.length === 0) flags.push('no_interactions');
+  
+  // Check for linear scroll progression
+  if (isLinearScroll(sessionData.scrollEvents)) flags.push('linear_scroll');
+  
+  return flags;
+}
+
+function calculateScrollVariance(scrollEvents) {
+  if (scrollEvents.length < 2) return 0;
+  
+  const velocities = [];
+  for (let i = 1; i < scrollEvents.length; i++) {
+    const timeDiff = scrollEvents[i].timestamp - scrollEvents[i-1].timestamp;
+    const scrollDiff = scrollEvents[i].scrollY - scrollEvents[i-1].scrollY;
+    if (timeDiff > 0) {
+      velocities.push(Math.abs(scrollDiff / timeDiff));
+    }
+  }
+  
+  if (velocities.length === 0) return 0;
+  
+  const mean = velocities.reduce((a, b) => a + b, 0) / velocities.length;
+  const variance = velocities.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / velocities.length;
+  
+  return Math.min(1, variance / 1000);
+}
+
+function isLinearScroll(scrollEvents) {
+  if (scrollEvents.length < 3) return false;
+  
+  // Check if scroll positions increase consistently
+  for (let i = 1; i < scrollEvents.length; i++) {
+    if (scrollEvents[i].scrollY <= scrollEvents[i-1].scrollY) {
+      return false; // Not strictly increasing
+    }
+  }
+  
+  return true;
+}
+
+async function issueSessionReceipt(session, sessionData) {
+  const receiptData = {
+    user: session.user_id,
+    novel_id: session.novel_id,
+    pages: [session.chapter_number],
+    top_seconds: [Math.floor(sessionData.timeOnPage / 1000)],
+    entropy_score: sessionData.entropyScore,
+    device_hash: session.device_hash,
+    timestamp: Math.floor(Date.now() / 1000)
+  };
+  
+  // Sign with server Ed25519 private key
+  const signature = signReceipt(receiptData);
+  
+  // Store receipt in database
+  const { data: receipt } = await supabase
+    .from('session_receipts')
+    .insert({
+      session_id: session.id,
+      user_id: session.user_id,
+      pages_read: receiptData.pages,
+      time_on_pages: receiptData.top_seconds,
+      entropy_score: receiptData.entropy_score,
+      device_hash: receiptData.device_hash,
+      server_signature: signature,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+    })
+    .select()
+    .single();
+  
+  return {
+    ...receiptData,
+    sig: signature,
+    receipt_id: receipt.id
+  };
+}
+
+function signReceipt(data) {
+  // In production, use proper Ed25519 signing
+  const message = JSON.stringify(data);
+  return crypto.createHash('sha256').update(message).digest('hex');
+}
+
+3. INTEGRATION POINTS
+---------------------
+
+Web Integration:
+- Modify src/app/novel/[id]/chapter/[chapter]/page.js
+- Add ReadingTracker initialization on chapter load
+- Handle session completion on page exit
+
+Mobile Integration:
+- Modify screens/ChapterScreen.js in SempaiHQ_app
+- Use React Native gesture handlers for scroll tracking
+- Implement background session tracking
+
+================================================================================
+PHASE 2: LAYER 2 - READING COMPREHENSION CHALLENGE (Week 5-6)
+================================================================================
+
+OBJECTIVE: Implement comprehension challenges to verify content understanding
+
+1. QUESTION GENERATION PIPELINE
+-------------------------------
+
+File: src/services/porp/QuestionGenerator.js
+
+class QuestionGenerator {
+  constructor() {
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
+  }
+
+  async generateQuestions(chapterText, chapterNumber, novelId) {
+    // Check if questions already exist
+    const existingQuestions = await this.getExistingQuestions(novelId, chapterNumber);
+    if (existingQuestions.length > 0) {
+      return existingQuestions;
+    }
+
+    const prompt = `
+      Generate 4 multiple choice questions from this chapter text:
+      ${chapterText.substring(0, 3000)} // First 3000 chars to avoid token limits
+      
+      Requirements:
+      - Questions should test comprehension of key plot points
+      - Each question must have exactly 4 options
+      - Only one option should be correct
+      - Questions should be answerable by someone who read the text
+      - Avoid questions about minor details
+      
+      Format: JSON array with objects containing:
+      - question: string (the question text)
+      - options: array of 4 strings (multiple choice options)
+      - correct_answer: integer (0-3, index of correct option)
+    `;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.openaiApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7
+        })
+      });
+
+      const data = await response.json();
+      const questions = JSON.parse(data.choices[0].message.content);
+
+      // Store questions in database
+      await this.storeQuestions(novelId, chapterNumber, questions);
+
+      return questions;
+    } catch (error) {
+      console.error('Question generation failed:', error);
+      // Fallback to template questions
+      return this.getFallbackQuestions();
+    }
+  }
+
+  async getExistingQuestions(novelId, chapterNumber) {
+    const { data } = await supabase
+      .from('comprehension_challenges')
+      .select('*')
+      .eq('novel_id', novelId)
+      .eq('chapter_number', chapterNumber);
+    
+    return data || [];
+  }
+
+  async storeQuestions(novelId, chapterNumber, questions) {
+    for (const question of questions) {
+      await supabase
+        .from('comprehension_challenges')
+        .insert({
+          novel_id: novelId,
+          chapter_number: chapterNumber,
+          question: question.question,
+          options: question.options,
+          correct_answer: question.correct_answer,
+          difficulty: 'medium'
+        });
+    }
+  }
+
+  getFallbackQuestions() {
+    return [
+      {
+        question: "What was the main theme of this chapter?",
+        options: ["Love and friendship", "Betrayal and revenge", "Adventure and discovery", "Mystery and suspense"],
+        correct_answer: 0
+      },
+      {
+        question: "How would you describe the pacing of this chapter?",
+        options: ["Fast-paced and action-packed", "Slow and contemplative", "Varied pacing", "Consistent rhythm"],
+        correct_answer: 2
+      }
+    ];
+  }
+
+  async getRandomChallenge(novelId, chapterNumber) {
+    const questions = await this.getExistingQuestions(novelId, chapterNumber);
+    if (questions.length === 0) {
+      return null;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * questions.length);
+    return questions[randomIndex];
+  }
+}
+
+2. CHALLENGE UI COMPONENT
+--------------------------
+
+File: src/components/PoRP/ComprehensionChallenge.jsx
+
+import React, { useState, useEffect } from 'react';
+
+export default function ComprehensionChallenge({ challenge, onSubmit, onClose }) {
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(60); // 60 seconds timer
+  const [startTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeRemaining(60 - Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  const handleSubmit = async () => {
+    if (selectedAnswer === null) return;
+    
+    setIsSubmitting(true);
+    const responseTime = Date.now() - startTime;
+    
+    await onSubmit(selectedAnswer, responseTime);
+    setIsSubmitting(false);
+  };
+
+  const handleTimeout = () => {
+    // Auto-submit with no answer on timeout
+    onSubmit(-1, 60000); // -1 indicates timeout
+  };
+
+  if (timeRemaining <= 0) {
+    handleTimeout();
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Reading Check</h3>
+          <span className="text-sm text-gray-500">{timeRemaining}s</span>
+        </div>
+        
+        <p className="text-gray-700 mb-6">{challenge.question}</p>
+        
+        <div className="space-y-3 mb-6">
+          {challenge.options.map((option, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedAnswer(index)}
+              className={`w-full text-left p-4 rounded-lg border transition-all ${
+                selectedAnswer === index 
+                  ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              <span className="font-medium">{String.fromCharCode(65 + index)}.</span> {option}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex gap-3">
+          <button
+            onClick={handleSubmit}
+            disabled={selectedAnswer === null || isSubmitting}
+            className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+          </button>
+          
+          <button
+            onClick={onClose}
+            className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Skip
+          </button>
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-4 text-center">
+          This helps us verify you're reading the content
+        </p>
+      </div>
+    </div>
+  );
+}
+
+3. CHALLENGE LOGIC INTEGRATION
+-------------------------------
+
+File: src/app/api/challenge/get/route.js
+
+import { NextResponse } from 'next/server';
+import { supabase } from '@/services/supabase/supabaseClient';
+import { QuestionGenerator } from '@/services/porp/QuestionGenerator';
+
+export async function POST(request) {
+  try {
+    const { sessionId, novelId, chapterNumber } = await request.json();
+    
+    // Validate session
+    const session = await supabase
+      .from('reading_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 400 });
+    }
+    
+    // Get random challenge (12.5% chance)
+    if (Math.random() > 0.125) {
+      return NextResponse.json({ challenge: null }); // No challenge this time
+    }
+    
+    const generator = new QuestionGenerator();
+    const challenge = await generator.getRandomChallenge(novelId, chapterNumber);
+    
+    if (!challenge) {
+      return NextResponse.json({ challenge: null }); // No questions available
+    }
+    
+    return NextResponse.json({ 
+      challenge: {
+        id: challenge.id,
+        question: challenge.question,
+        options: challenge.options
+      }
+    });
+  } catch (error) {
+    console.error('Challenge retrieval error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+File: src/app/api/challenge/submit/route.js
+
+export async function POST(request) {
+  try {
+    const { sessionId, challengeId, userAnswer, responseTime } = await request.json();
+    
+    // Get challenge details
+    const challenge = await supabase
+      .from('comprehension_challenges')
+      .select('*')
+      .eq('id', challengeId)
+      .single();
+    
+    if (!challenge) {
+      return NextResponse.json({ error: 'Invalid challenge' }, { status: 400 });
+    }
+    
+    const isCorrect = userAnswer === challenge.correct_answer;
+    
+    // Record attempt
+    await supabase
+      .from('challenge_attempts')
+      .insert({
+        session_id: sessionId,
+        challenge_id: challengeId,
+        user_answer: userAnswer,
+        is_correct: isCorrect,
+        response_time_ms: responseTime
+      });
+    
+    // Update user reputation
+    await updateUserChallengeStats(session.user_id, isCorrect);
+    
+    // Check for consecutive failures
+    if (!isCorrect) {
+      await checkConsecutiveFailures(session.user_id);
+    }
+    
+    return NextResponse.json({ 
+      correct: isCorrect,
+      canProceed: isCorrect || userAnswer === -1 // Allow proceed on timeout
+    });
+  } catch (error) {
+    console.error('Challenge submission error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+async function updateUserChallengeStats(userId, isCorrect) {
+  const { data: reputation } = await supabase
+    .from('reading_reputation')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  
+  if (!reputation) {
+    // Create reputation record
+    await supabase
+      .from('reading_reputation')
+      .insert({
+        user_id: userId,
+        challenges_attempted: 1,
+        challenges_passed: isCorrect ? 1 : 0,
+        consecutive_failed_challenges: isCorrect ? 0 : 1
+      });
+  } else {
+    await supabase
+      .from('reading_reputation')
+      .update({
+        challenges_attempted: reputation.challenges_attempted + 1,
+        challenges_passed: reputation.challenges_passed + (isCorrect ? 1 : 0),
+        consecutive_failed_challenges: isCorrect ? 0 : reputation.consecutive_failed_challenges + 1
+      })
+      .eq('user_id', userId);
+  }
+}
+
+async function checkConsecutiveFailures(userId) {
+  const { data: reputation } = await supabase
+    .from('reading_reputation')
+    .select('consecutive_failed_challenges')
+    .eq('user_id', userId)
+    .single();
+  
+  if (reputation && reputation.consecutive_failed_challenges >= 3) {
+    // Flag user for review
+    await supabase
+      .from('reading_reputation')
+      .update({ flagged_for_review: true })
+      .eq('user_id', userId);
+    
+    // Pause rewards for 24 hours
+    // TODO: Implement reward pause logic
+  }
+}
+
+================================================================================
+PHASE 3: LAYER 3 - ANTI-DUMP WITHDRAWAL GATE (Week 7-8)
+================================================================================
+
+OBJECTIVE: Implement withdrawal gating based on Reading Reputation Score (RRS)
+
+1. RRS SCORING SYSTEM
+---------------------
+
+File: src/services/porp/ReputationService.js
+
+export class ReputationService {
+  static TIERS = {
+    seed: { 
+      minScore: 0, 
+      maxWithdrawal: 250000, 
+      cooldown: 72 * 60 * 60 * 1000, // 72 hours
+      name: 'Seed',
+      description: 'New reader - Limited withdrawals'
+    },
+    reader: { 
+      minScore: 100, 
+      maxWithdrawal: 500000, 
+      cooldown: 48 * 60 * 60 * 1000, // 48 hours
+      name: 'Reader',
+      description: 'Active reader - Moderate withdrawals'
+    },
+    scholar: { 
+      minScore: 500, 
+      maxWithdrawal: 1000000, 
+      cooldown: 24 * 60 * 60 * 1000, // 24 hours
+      name: 'Scholar',
+      description: 'Dedicated reader - Higher withdrawals'
+    },
+    sage: { 
+      minScore: 1000, 
+      maxWithdrawal: Infinity, 
+      cooldown: 0, // No cooldown
+      name: 'Sage',
+      description: 'Master reader - Unlimited withdrawals'
+    }
+  };
+
+  static async calculateRRS(userId) {
+    // Get user's reading statistics
+    const { data: reputation } = await supabase
+      .from('reading_reputation')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!reputation) {
+      return 0; // New user starts at 0
+    }
+    
+    // Base score from pages read
+    const pagesScore = reputation.total_pages_read * 1;
+    
+    // Bonus from challenge success rate
+    const challengeSuccessRate = reputation.challenges_attempted > 0 
+      ? reputation.challenges_passed / reputation.challenges_attempted 
+      : 0;
+    const challengeBonus = challengeSuccessRate * 200;
+    
+    // Bonus from total reading time (max 100 points)
+    const readingTimeHours = reputation.total_reading_time_seconds / 3600;
+    const timeBonus = Math.min(100, readingTimeHours * 2);
+    
+    // Consistency bonus based on regular reading patterns
+    const consistencyBonus = await this.calculateConsistencyBonus(userId);
+    
+    // Penalty for flagged accounts
+    const penalty = reputation.flagged_for_review ? -500 : 0;
+    
+    const totalScore = Math.max(0, pagesScore + challengeBonus + timeBonus + consistencyBonus + penalty);
+    
+    // Update the score in database
+    await supabase
+      .from('reading_reputation')
+      .update({ 
+        reputation_score: Math.floor(totalScore),
+        current_tier: this.getTier(totalScore),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+    
+    return Math.floor(totalScore);
+  }
+
+  static async calculateConsistencyBonus(userId) {
+    // Check if user has read in at least 3 of the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    const { data: recentSessions } = await supabase
+      .from('reading_sessions')
+      .select('created_at::date')
+      .eq('user_id', userId)
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .eq('status', 'completed');
+    
+    if (!recentSessions) return 0;
+    
+    const uniqueDays = new Set(recentSessions.map(s => s.created_at)).size;
+    return uniqueDays >= 3 ? 50 : 0;
+  }
+
+  static getTier(score) {
+    for (const [tierName, tierConfig] of Object.entries(this.TIERS)) {
+      if (score >= tierConfig.minScore) return tierName;
+    }
+    return 'seed';
+  }
+
+  static async canWithdraw(userId, amount) {
+    const reputation = await this.getUserReputation(userId);
+    if (!reputation) return { canWithdraw: false, reason: 'No reputation data' };
+    
+    const tier = this.getTier(reputation.reputation_score);
+    const tierConfig = this.TIERS[tier];
+    
+    // Check amount limit
+    if (amount > tierConfig.maxWithdrawal) {
+      return { 
+        canWithdraw: false, 
+        reason: `Amount exceeds tier limit of ${tierConfig.maxWithdrawal.toLocaleString()} SMP`,
+        tier,
+        tierConfig
+      };
+    }
+    
+    // Check cooldown
+    if (reputation.last_withdrawal_at && tierConfig.cooldown > 0) {
+      const timeSinceWithdrawal = Date.now() - new Date(reputation.last_withdrawal_at).getTime();
+      if (timeSinceWithdrawal < tierConfig.cooldown) {
+        const remainingTime = Math.ceil((tierConfig.cooldown - timeSinceWithdrawal) / (60 * 60 * 1000));
+        return { 
+          canWithdraw: false, 
+          reason: `Cooldown active. ${remainingTime} hours remaining`,
+          tier,
+          tierConfig
+        };
+      }
+    }
+    
+    return { canWithdraw: true, tier, tierConfig };
+  }
+
+  static async getUserReputation(userId) {
+    const { data } = await supabase
+      .from('reading_reputation')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    return data;
+  }
+
+  static async updateReadingStats(userId, pagesRead, readingTimeSeconds) {
+    const { data: reputation } = await supabase
+      .from('reading_reputation')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!reputation) {
+      // Create new reputation record
+      await supabase
+        .from('reading_reputation')
+        .insert({
+          user_id: userId,
+          total_pages_read: pagesRead,
+          total_reading_time_seconds: readingTimeSeconds,
+          reputation_score: pagesRead,
+          current_tier: this.getTier(pagesRead)
+        });
+    } else {
+      // Update existing record
+      const newPagesRead = reputation.total_pages_read + pagesRead;
+      const newReadingTime = reputation.total_reading_time_seconds + readingTimeSeconds;
+      const newScore = await this.calculateRRS(userId);
+      
+      await supabase
+        .from('reading_reputation')
+        .update({
+          total_pages_read: newPagesRead,
+          total_reading_time_seconds: newReadingTime,
+          reputation_score: newScore,
+          current_tier: this.getTier(newScore),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+    }
+  }
+}
+
+2. WITHDRAWAL GATE IMPLEMENTATION
+----------------------------------
+
+File: src/app/api/withdraw/request/route.js
+
+import { NextResponse } from 'next/server';
+import { supabase } from '@/services/supabase/supabaseClient';
+import { ReputationService } from '@/services/porp/ReputationService';
+
+export async function POST(request) {
+  try {
+    const { userId, amount, receiptIds } = await request.json();
+    
+    // Validate withdrawal amount
+    if (amount < 2500) {
+      return NextResponse.json({ error: 'Minimum withdrawal is 2,500 SMP' }, { status: 400 });
+    }
+    
+    // Check user balance
+    const { data: balance } = await supabase
+      .from('wallet_balances')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('currency', 'SMP')
+      .eq('chain', 'SOL')
+      .single();
+    
+    if (!balance || balance.amount < amount) {
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+    }
+    
+    // Check withdrawal eligibility based on RRS
+    const eligibility = await ReputationService.canWithdraw(userId, amount);
+    if (!eligibility.canWithdraw) {
+      return NextResponse.json({ 
+        error: eligibility.reason,
+        tier: eligibility.tier,
+        tierConfig: eligibility.tierConfig
+      }, { status: 400 });
+    }
+    
+    // Validate receipts if provided
+    if (receiptIds && receiptIds.length > 0) {
+      const receiptValidation = await validateReceipts(receiptIds, userId);
+      if (!receiptValidation.valid) {
+        return NextResponse.json({ error: 'Invalid or expired receipts' }, { status: 400 });
+      }
+    }
+    
+    // Create withdrawal request
+    const { data: withdrawal } = await supabase
+      .from('withdrawal_requests')
+      .insert({
+        user_id: userId,
+        amount_smp: amount,
+        tier_at_request: eligibility.tier,
+        receipt_ids: receiptIds || [],
+        cooldown_end_at: eligibility.tierConfig.cooldown > 0 
+          ? new Date(Date.now() + eligibility.tierConfig.cooldown).toISOString()
+          : null
+      })
+      .select()
+      .single();
+    
+    // Mark receipts as used
+    if (receiptIds && receiptIds.length > 0) {
+      await supabase
+        .from('session_receipts')
+        .update({ used_for_claim: true })
+        .in('id', receiptIds);
+    }
+    
+    // Update last withdrawal time
+    await supabase
+      .from('reading_reputation')
+      .update({ last_withdrawal_at: new Date().toISOString() })
+      .eq('user_id', userId);
+    
+    return NextResponse.json({ 
+      withdrawal: {
+        id: withdrawal.id,
+        amount: withdrawal.amount_smp,
+        status: withdrawal.status,
+        tier: eligibility.tier,
+        cooldownEnds: withdrawal.cooldown_end_at
+      }
+    });
+    
+  } catch (error) {
+    console.error('Withdrawal request error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+async function validateReceipts(receiptIds, userId) {
+  const { data: receipts } = await supabase
+    .from('session_receipts')
+    .select('*')
+    .in('id', receiptIds)
+    .eq('user_id', userId)
+    .eq('used_for_claim', false);
+  
+  if (!receipts || receipts.length !== receiptIds.length) {
+    return { valid: false };
+  }
+  
+  // Check if any receipts are expired
+  const now = new Date();
+  const expiredReceipts = receipts.filter(r => new Date(r.expires_at) < now);
+  
+  if (expiredReceipts.length > 0) {
+    return { valid: false };
+  }
+  
+  return { valid: true, receipts };
+}
+
+3. UI INTEGRATION
+-----------------
+
+File: src/components/PoRP/WithdrawalGate.jsx
+
+import React, { useState, useEffect } from 'react';
+import { ReputationService } from '@/services/porp/ReputationService';
+
+export default function WithdrawalGate({ userId, onWithdrawalRequest }) {
+  const [reputation, setReputation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [amount, setAmount] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadReputation();
+  }, [userId]);
+
+  const loadReputation = async () => {
+    try {
+      const rep = await ReputationService.getUserReputation(userId);
+      setReputation(rep);
+    } catch (err) {
+      console.error('Failed to load reputation:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const eligibility = await ReputationService.canWithdraw(userId, parseFloat(amount));
+      
+      if (!eligibility.canWithdraw) {
+        setError(eligibility.reason);
+        return;
+      }
+
+      await onWithdrawalRequest(parseFloat(amount));
+      setAmount('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4">Loading reputation data...</div>;
+  }
+
+  const tier = ReputationService.getTier(reputation?.reputation_score || 0);
+  const tierConfig = ReputationService.TIERS[tier];
+
+  return (
+    <div className="bg-white rounded-lg p-6 shadow-lg">
+      <h3 className="text-lg font-semibold mb-4">Withdraw SMP</h3>
+      
+      {/* Reputation Display */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-gray-600">Your Tier</span>
+          <span className="text-sm font-bold text-blue-600">{tierConfig.name}</span>
+        </div>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-600">Reputation Score</span>
+          <span className="text-sm font-medium">{reputation?.reputation_score || 0}</span>
+        </div>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-600">Max Withdrawal</span>
+          <span className="text-sm font-medium">
+            {tierConfig.maxWithdrawal === Infinity ? 'Unlimited' : tierConfig.maxWithdrawal.toLocaleString() + ' SMP'}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">Cooldown</span>
+          <span className="text-sm font-medium">
+            {tierConfig.cooldown === 0 ? 'None' : `${tierConfig.cooldown / (60 * 60 * 1000)} hours`}
+          </span>
+        </div>
+      </div>
+
+      {/* Withdrawal Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Amount (SMP)
+          </label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="2500"
+            max={tierConfig.maxWithdrawal === Infinity ? undefined : tierConfig.maxWithdrawal}
+            step="0.000001"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter amount to withdraw"
+            required
+          />
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={submitting || !amount}
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+        >
+          {submitting ? 'Processing...' : 'Request Withdrawal'}
+        </button>
+      </form>
+
+      <div className="mt-4 text-xs text-gray-500 text-center">
+        Withdrawals are processed within 24 hours and subject to tier limits.
+      </div>
+    </div>
+  );
+}
+
+================================================================================
+PHASE 4: LAYER 4 - REPUTATION STAKING & SLASHING (Week 9-10)
+================================================================================
+
+OBJECTIVE: Implement SMP staking for reward multipliers and anti-cheat slashing
+
+1. STAKING IMPLEMENTATION
+------------------------
+
+File: src/app/api/stake/deposit/route.js
+
+import { NextResponse } from 'next/server';
+import { supabase } from '@/services/supabase/supabaseClient';
+
+export async function POST(request) {
+  try {
+    const { userId, amount } = await request.json();
+    
+    // Validate minimum stake (50,000 SMP)
+    const MIN_STAKE = 50000;
+    if (amount < MIN_STAKE) {
+      return NextResponse.json({ 
+        error: `Minimum stake is ${MIN_STAKE.toLocaleString()} SMP` 
+      }, { status: 400 });
+    }
+    
+    // Check if user already has active stake
+    const { data: existingStake } = await supabase
+      .from('reputation_stakes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+    
+    if (existingStake) {
+      return NextResponse.json({ 
+        error: 'You already have an active stake. Unstake first to stake a different amount.' 
+      }, { status: 400 });
+    }
+    
+    // Check user balance
+    const { data: balance } = await supabase
+      .from('wallet_balances')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('currency', 'SMP')
+      .eq('chain', 'SOL')
+      .single();
+    
+    if (!balance || balance.amount < amount) {
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+    }
+    
+    // Calculate multiplier based on stake amount
+    const multiplier = calculateMultiplier(amount);
+    
+    // Create stake record
+    const { data: stake } = await supabase
+      .from('reputation_stakes')
+      .insert({
+        user_id: userId,
+        amount_smp: amount,
+        multiplier_applied: multiplier,
+        is_active: true
+      })
+      .select()
+      .single();
+    
+    // Lock staked tokens (transfer to escrow)
+    await lockStakedTokens(userId, amount);
+    
+    // Update user reputation with multiplier
+    await supabase
+      .from('reading_reputation')
+      .update({ 
+        reward_multiplier: multiplier,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+    
+    return NextResponse.json({ 
+      stake: {
+        id: stake.id,
+        amount: stake.amount_smp,
+        multiplier: stake.multiplier_applied
+      },
+      message: `Staked ${amount.toLocaleString()} SMP with ${multiplier}x reward multiplier`
+    });
+    
+  } catch (error) {
+    console.error('Stake deposit error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+function calculateMultiplier(stakeAmount) {
+  // Multiplier tiers:
+  // 50,000 - 99,999 SMP: 1.15x
+  // 100,000 - 499,999 SMP: 1.30x
+  // 500,000+ SMP: 1.50x
+  
+  if (stakeAmount >= 500000) return 1.5;
+  if (stakeAmount >= 100000) return 1.3;
+  if (stakeAmount >= 50000) return 1.15;
+  return 1.0;
+}
+
+async function lockStakedTokens(userId, amount) {
+  // In a real implementation, this would transfer tokens to an escrow contract
+  // For now, we'll just track the locked amount in the database
+  
+  await supabase
+    .from('wallet_balances')
+    .update({ 
+      amount: supabase.rpc('amount', '-', amount),
+      staked_amount: supabase.rpc('coalesce', ['staked_amount', 0], '+', amount)
+    })
+    .eq('user_id', userId)
+    .eq('currency', 'SMP')
+    .eq('chain', 'SOL');
+}
+
+File: src/app/api/stake/withdraw/route.js
+
+export async function POST(request) {
+  try {
+    const { userId } = await request.json();
+    
+    // Get active stake
+    const { data: stake } = await supabase
+      .from('reputation_stakes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+    
+    if (!stake) {
+      return NextResponse.json({ error: 'No active stake found' }, { status: 400 });
+    }
+    
+    // Check for slashing conditions
+    const { data: reputation } = await supabase
+      .from('reading_reputation')
+      .select('flagged_for_review, consecutive_failed_challenges')
+      .eq('user_id', userId)
+      .single();
+    
+    let slashAmount = 0;
+    let slashReason = null;
+    
+    if (reputation?.flagged_for_review) {
+      slashAmount = stake.amount_smp * 0.5; // 50% slash
+      slashReason = 'Flagged for review';
+    } else if (reputation?.consecutive_failed_challenges >= 3) {
+      slashAmount = stake.amount_smp * 0.3; // 30% slash
+      slashReason = 'Multiple failed challenges';
+    }
+    
+    // Process slash if needed
+    if (slashAmount > 0) {
+      await processSlash(userId, slashAmount, slashReason);
+    }
+    
+    // Return amount to user (minus slash)
+    const returnAmount = stake.amount_smp - slashAmount;
+    
+    // Update stake record
+    await supabase
+      .from('reputation_stakes')
+      .update({
+        is_active: false,
+        slashed_at: new Date().toISOString(),
+        slash_reason: slashReason
+      })
+      .eq('id', stake.id);
+    
+    // Return tokens to wallet
+    await supabase
+      .from('wallet_balances')
+      .update({ 
+        amount: supabase.rpc('amount', '+', returnAmount),
+        staked_amount: supabase.rpc('staked_amount', '-', stake.amount_smp)
+      })
+      .eq('user_id', userId)
+      .eq('currency', 'SMP')
+      .eq('chain', 'SOL');
+    
+    // Reset user multiplier
+    await supabase
+      .from('reading_reputation')
+      .update({ 
+        reward_multiplier: 1.0,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+    
+    return NextResponse.json({ 
+      amount: returnAmount,
+      slashed: slashAmount,
+      slashReason,
+      message: `Unstaked ${returnAmount.toLocaleString()} SMP${slashAmount > 0 ? ` (${slashAmount.toLocaleString()} SMP slashed)` : ''}`
+    });
+    
+  } catch (error) {
+    console.error('Stake withdraw error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+async function processSlash(userId, slashAmount, reason) {
+  // Burn portion
+  const burnAmount = slashAmount * 0.5;
+  await burnTokens(burnAmount);
+  
+  // Redistribute portion to honest users
+  const redistributeAmount = slashAmount * 0.5;
+  await redistributeToHonestUsers(redistributeAmount);
+  
+  // Log slash event
+  await supabase
+    .from('slash_events')
+    .insert({
+      user_id: userId,
+      amount_slashed: slashAmount,
+      amount_burned: burnAmount,
+      amount_redistributed: redistributeAmount,
+      reason: reason,
+      created_at: new Date().toISOString()
+    });
+}
+
+2. STAKING UI COMPONENT
+-----------------------
+
+File: src/components/PoRP/StakingPanel.jsx
+
+import React, { useState, useEffect } from 'react';
+
+export default function StakingPanel({ userId }) {
+  const [activeStake, setActiveStake] = useState(null);
+  const [stakeAmount, setStakeAmount] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    loadActiveStake();
+  }, [userId]);
+
+  const loadActiveStake = async () => {
+    try {
+      const response = await fetch('/api/stake/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setActiveStake(data.stake);
+      }
+    } catch (err) {
+      console.error('Failed to load stake:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStake = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/stake/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          amount: parseFloat(stakeAmount) 
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(data.message);
+        setActiveStake(data.stake);
+        setStakeAmount('');
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError('Failed to process stake');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUnstake = async () => {
+    setError('');
+    setSuccess('');
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/stake/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(data.message);
+        setActiveStake(null);
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError('Failed to process unstake');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getMultiplierInfo = (amount) => {
+    const num = parseFloat(amount);
+    if (num >= 500000) return { multiplier: 1.5, tier: 'Sage' };
+    if (num >= 100000) return { multiplier: 1.3, tier: 'Scholar' };
+    if (num >= 50000) return { multiplier: 1.15, tier: 'Reader' };
+    return { multiplier: 1.0, tier: 'None' };
+  };
+
+  if (loading) {
+    return <div className="p-4">Loading stake information...</div>;
+  }
+
+  const multiplierInfo = getMultiplierInfo(stakeAmount);
+
+  return (
+    <div className="bg-white rounded-lg p-6 shadow-lg">
+      <h3 className="text-lg font-semibold mb-4">Reputation Staking</h3>
+      
+      {activeStake ? (
+        // Active stake display
+        <div className="space-y-4">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-600">Staked Amount</span>
+              <span className="text-lg font-bold text-green-600">
+                {activeStake.amount.toLocaleString()} SMP
+              </span>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-600">Reward Multiplier</span>
+              <span className="text-sm font-bold text-blue-600">{activeStake.multiplier}x</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-600">Status</span>
+              <span className="text-sm font-medium text-green-600">Active</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleUnstake}
+            disabled={submitting}
+            className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-medium disabled:bg-gray-300 hover:bg-red-600 transition-colors"
+          >
+            {submitting ? 'Processing...' : 'Unstake'}
+          </button>
+
+          <div className="text-xs text-gray-500 text-center">
+            Warning: Unstaking may incur penalties if flagged for review
+          </div>
+        </div>
+      ) : (
+        // Staking form
+        <form onSubmit={handleStake} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Stake Amount (SMP)
+            </label>
+            <input
+              type="number"
+              value={stakeAmount}
+              onChange={(e) => setStakeAmount(e.target.value)}
+              min="50000"
+              step="1000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Minimum 50,000 SMP"
+              required
+            />
+          </div>
+
+          {stakeAmount && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600">Reward Multiplier</span>
+                <span className="text-lg font-bold text-blue-600">
+                  {multiplierInfo.multiplier}x ({multiplierInfo.tier})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+              {success}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting || !stakeAmount || parseFloat(stakeAmount) < 50000}
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+          >
+            {submitting ? 'Processing...' : 'Stake SMP'}
+          </button>
+
+          <div className="space-y-2 text-xs text-gray-500">
+            <div className="flex justify-between">
+              <span>50,000+ SMP:</span>
+              <span>1.15x multiplier</span>
+            </div>
+            <div className="flex justify-between">
+              <span>100,000+ SMP:</span>
+              <span>1.30x multiplier</span>
+            </div>
+            <div className="flex justify-between">
+              <span>500,000+ SMP:</span>
+              <span>1.50x multiplier</span>
+            </div>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+3. SLASHING ENGINE
+------------------
+
+File: src/services/porp/SlashingService.js
+
+export class SlashingService {
+  static async flagCheater(userId, reason, severity = 'medium') {
+    const stake = await this.getActiveStake(userId);
+    if (!stake) return { slashed: false, reason: 'No active stake' };
+    
+    let slashPercentage = 0.3; // Default 30%
+    
+    if (severity === 'high') {
+      slashPercentage = 0.5; // 50% for severe violations
+    } else if (severity === 'low') {
+      slashPercentage = 0.2; // 20% for minor violations
+    }
+    
+    const slashAmount = stake.amount_smp * slashPercentage;
+    
+    // Apply slash
+    await this.applySlash(userId, slashAmount, reason);
+    
+    return {
+      slashed: true,
+      amount: slashAmount,
+      percentage: slashPercentage * 100,
+      reason
+    };
+  }
+
+  static async applySlash(userId, slashAmount, reason) {
+    const stake = await this.getActiveStake(userId);
+    
+    // Burn portion (50% of slash)
+    const burnAmount = slashAmount * 0.5;
+    await this.burnTokens(burnAmount);
+    
+    // Redistribute portion (50% of slash)
+    const redistributeAmount = slashAmount * 0.5;
+    await this.redistributeToHonestUsers(redistributeAmount);
+    
+    // Update stake record
+    await supabase
+      .from('reputation_stakes')
+      .update({
+        is_active: false,
+        slashed_at: new Date().toISOString(),
+        slash_reason: reason
+      })
+      .eq('id', stake.id);
+    
+    // Log slash event
+    await supabase
+      .from('slash_events')
+      .insert({
+        user_id: userId,
+        amount_slashed: slashAmount,
+        amount_burned: burnAmount,
+        amount_redistributed: redistributeAmount,
+        reason: reason,
+        created_at: new Date().toISOString()
+      });
+    
+    // Update user reputation
+    await supabase
+      .from('reading_reputation')
+      .update({
+        flagged_for_review: true,
+        reward_multiplier: 1.0,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+  }
+
+  static async getActiveStake(userId) {
+    const { data } = await supabase
+      .from('reputation_stakes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+    
+    return data;
+  }
+
+  static async burnTokens(amount) {
+    // In a real implementation, this would send tokens to a burn address
+    console.log(`Burning ${amount} SMP tokens`);
+    
+    // Track burn event
+    await supabase
+      .from('token_burns')
+      .insert({
+        amount: amount,
+        reason: 'Stake slashing',
+        created_at: new Date().toISOString()
+      });
+  }
+
+  static async redistributeToHonestUsers(amount) {
+    // Get honest users (not flagged, with active stakes)
+    const { data: honestUsers } = await supabase
+      .from('reading_reputation')
+      .select('user_id')
+      .eq('flagged_for_review', false)
+      .gte('reputation_score', 100); // Reader tier and above
+    
+    if (!honestUsers || honestUsers.length === 0) return;
+    
+    // Distribute equally among honest users
+    const amountPerUser = Math.floor(amount / honestUsers.length);
+    
+    for (const user of honestUsers) {
+      await supabase
+        .from('wallet_balances')
+        .update({ 
+          amount: supabase.rpc('amount', '+', amountPerUser)
+        })
+        .eq('user_id', user.user_id)
+        .eq('currency', 'SMP')
+        .eq('chain', 'SOL');
+    }
+    
+    console.log(`Redistributed ${amount} SMP to ${honestUsers.length} honest users`);
+  }
+
+  static async getSlashEvents(userId, limit = 10) {
+    const { data } = await supabase
+      .from('slash_events')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    return data || [];
+  }
+}
+
+================================================================================
+INTEGRATION STRATEGY
+================================================================================
+
+WEB INTEGRATION (SempaiHeadquarters)
+-----------------------------------
+
+1. Chapter Page Enhancement
+   File: src/app/novel/[id]/chapter/[chapter]/page.js
+   
+   - Import ReadingTracker
+   - Initialize tracker on chapter load
+   - Handle session completion on page unload
+   - Integrate comprehension challenge modal
+   - Update reading stats on session completion
+
+2. Withdrawal Flow Update
+   File: src/app/novels/page.js
+   
+   - Replace existing withdrawal with PoRP-gated version
+   - Integrate WithdrawalGate component
+   - Display RRS tier and limits
+   - Handle cooldown periods
+
+3. Profile Enhancement
+   - Add RRS score display
+   - Show staking status
+   - Display tier badge
+   - Show reading statistics
+
+MOBILE INTEGRATION (SempaiHQ_app)
+---------------------------------
+
+1. Chapter Screen Enhancement
+   File: screens/ChapterScreen.js
+   
+   - Add React Native scroll tracking
+   - Implement gesture handlers
+   - Background session tracking
+   - Native challenge modal
+
+2. Native Event Handling
+   - Use PanGestureHandler for scroll
+   - Use AppState for visibility tracking
+   - Background task processing
+
+3. Storage Management
+   - Secure receipt storage
+   - Offline session caching
+   - Sync with backend
+
+================================================================================
+TESTING & VALIDATION PLAN
+================================================================================
+
+UNIT TESTS
+----------
+
+1. Behavioral Entropy Calculation
+   - Test scroll pattern analysis
+   - Test interaction pattern detection
+   - Validate entropy scoring algorithm
+
+2. Bot Detection Heuristics
+   - Test instant read detection
+   - Test uniform scroll detection
+   - Test linear scroll detection
+
+3. RRS Scoring Algorithm
+   - Test tier progression
+   - Test consistency bonus calculation
+   - Test penalty application
+
+4. Staking Multiplier Calculations
+   - Test multiplier tiers
+   - Test slash calculations
+   - Test redistribution logic
+
+INTEGRATION TESTS
+-----------------
+
+1. End-to-End Reading Session Flow
+   - Session initialization
+   - Behavioral tracking
+   - Challenge triggering
+   - Receipt issuance
+
+2. Receipt Generation and Validation
+   - Cryptographic signing
+   - Receipt verification
+   - Expiration handling
+
+3. Withdrawal Gating Enforcement
+   - Tier limit enforcement
+   - Cooldown period enforcement
+   - Batch receipt validation
+
+4. Challenge Flow Testing
+   - Question generation
+   - Answer validation
+   - Failure flagging
+
+LOAD TESTING
+------------
+
+1. Concurrent Session Handling
+   - 1000+ simultaneous reading sessions
+   - Database performance under load
+   - API response times
+
+2. Batch Receipt Processing
+   - Large batch claims
+   - Database transaction optimization
+   - Memory usage monitoring
+
+3. Database Performance
+   - Query optimization
+   - Index effectiveness
+   - Connection pooling
+
+SECURITY TESTING
+---------------
+
+1. Receipt Forgery Prevention
+   - Signature validation
+   - Tamper detection
+   - Replay attack prevention
+
+2. Bot Evasion Testing
+   - Sophisticated bot simulation
+   - Behavioral pattern manipulation
+   - Detection threshold tuning
+
+3. Economic Attack Simulation
+   - Flash crash attempts
+   - Coordinated withdrawal attacks
+   - Staking manipulation
+
+================================================================================
+DEPLOYMENT STRATEGY
+================================================================================
+
+PHASE 0 DEPLOYMENT (Week 2)
+---------------------------
+1. Database Schema Migration
+   - Run all table creation scripts
+   - Create indexes
+   - Set up foreign key constraints
+   - Test data integrity
+
+2. API Route Deployment
+   - Deploy basic endpoints
+   - Test connectivity
+   - Validate request/response formats
+   - Set up monitoring
+
+3. Security Infrastructure
+   - Generate Ed25519 key pair
+   - Configure secure storage
+   - Set up rate limiting
+   - Test authentication
+
+PHASE 1 DEPLOYMENT (Week 4)
+---------------------------
+1. Client-Side Tracking
+   - Deploy ReadingTracker
+   - Test event listeners
+   - Validate data collection
+   - Monitor performance impact
+
+2. Session Verification
+   - Activate verification logic
+   - Test bot detection
+   - Monitor false positives
+   - Tune thresholds
+
+3. Receipt System
+   - Activate receipt signing
+   - Test receipt validation
+   - Monitor expiration logic
+   - Verify cryptographic security
+
+PHASE 2 DEPLOYMENT (Week 6)
+---------------------------
+1. Question Generation
+   - Deploy LLM integration
+   - Test question quality
+   - Validate answer accuracy
+   - Monitor API costs
+
+2. Challenge System
+   - Activate challenge triggering
+   - Test UI components
+   - Validate answer processing
+   - Monitor failure rates
+
+3. Flagging System
+   - Activate consecutive failure tracking
+   - Test review flagging
+   - Set up alerting
+   - Validate pause logic
+
+PHASE 3 DEPLOYMENT (Week 8)
+---------------------------
+1. RRS Scoring
+   - Deploy scoring algorithm
+   - Test tier progression
+   - Validate consistency bonuses
+   - Monitor score distribution
+
+2. Withdrawal Gating
+   - Activate withdrawal limits
+   - Test cooldown enforcement
+   - Validate tier restrictions
+   - Monitor user experience
+
+3. Reputation Display
+   - Deploy UI components
+   - Test tier badges
+   - Validate score display
+   - Monitor engagement
+
+PHASE 4 DEPLOYMENT (Week 10)
+----------------------------
+1. Staking System
+   - Deploy staking contracts
+   - Test multiplier application
+   - Validate lock/unlock logic
+   - Monitor staking rates
+
+2. Slashing Engine
+   - Activate slashing logic
+   - Test penalty application
+   - Validate redistribution
+   - Monitor slash events
+
+3. Full Integration
+   - End-to-end testing
+   - Performance optimization
+   - Security validation
+   - User acceptance testing
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+SERVER-SIDE SECURITY
+--------------------
+
+1. Cryptographic Key Management
+   - Ed25519 private key secure storage
+   - Key rotation procedures
+   - Access control and auditing
+   - Backup and recovery
+
+2. API Security
+   - Rate limiting per user/IP
+   - Input validation and sanitization
+   - SQL injection prevention
+   - XSS protection
+
+3. Data Protection
+   - PII encryption at rest
+   - Secure data transmission
+   - Access logging and monitoring
+   - GDPR compliance
+
+CLIENT-SIDE SECURITY
+--------------------
+
+1. Device Fingerprinting
+   - Salt rotation for hash generation
+   - Anti-tampering measures
+   - Privacy-safe implementation
+   - User opt-out options
+
+2. Receipt Storage
+   - Secure local storage
+   - Encryption at rest
+   - Tamper detection
+   - Secure deletion
+
+3. Behavioral Data
+   - Minimal data collection
+   - On-device processing where possible
+   - User consent mechanisms
+   - Data retention policies
+
+ECONOMIC SECURITY
+-----------------
+
+1. Slashing Conditions
+   - Clear criteria definition
+   - Graduated penalty system
+   - Appeal mechanisms
+   - Transparency requirements
+
+2. Staking Economics
+   - Reasonable stake amounts
+   - Balanced multiplier system
+   - Liquidity considerations
+   - Market impact analysis
+
+3. Withdrawal Protection
+   - Tier-based limits
+   - Cooldown periods
+   - Emergency controls
+   - Circuit breakers
+
+================================================================================
+MONITORING & ANALYTICS
+================================================================================
+
+KEY METRICS
+-----------
+
+1. System Performance
+   - API response times
+   - Database query performance
+   - Error rates and types
+   - Resource utilization
+
+2. User Behavior
+   - Session completion rates
+   - Challenge success rates
+   - Reading time distribution
+   - Entropy score distribution
+
+3. Economic Impact
+   - Token burn rates
+   - Withdrawal patterns
+   - Staking participation
+   - Slashing events
+
+4. Security Metrics
+   - Bot detection accuracy
+   - False positive rates
+   - Attempted exploits
+   - Security incidents
+
+DASHBOARDS
+----------
+
+1. Administrative Dashboard
+   - User reputation overview
+   - Flagged accounts review
+   - System health monitoring
+   - Economic statistics
+
+2. User Analytics
+   - Personal RRS tracking
+   - Reading progress
+   - Staking performance
+   - Reward history
+
+3. Security Dashboard
+   - Bot detection alerts
+   - Suspicious activity monitoring
+   - Slash event tracking
+   - System threat analysis
+
+ALERTING SYSTEM
+---------------
+
+1. Critical Alerts
+   - System outages
+   - Security breaches
+   - Economic anomalies
+   - Data integrity issues
+
+2. Warning Alerts
+   - Performance degradation
+   - Unusual user patterns
+   - API rate limit approaching
+   - Resource exhaustion
+
+3. Informational Alerts
+   - New user milestones
+   - System updates
+   - Scheduled maintenance
+   - Performance improvements
+
+================================================================================
+CONCLUSION
+================================================================================
+
+The Proof-of-Reading Protocol implementation provides a comprehensive solution to the Sybil attack problem in read-to-earn ecosystems. By combining behavioral analysis, comprehension challenges, reputation systems, and economic incentives, PoRP creates a robust defense against automated attacks while maintaining a seamless experience for genuine readers.
+
+The 10-week implementation plan allows for gradual rollout and validation of each component, ensuring system stability and user acceptance. The modular architecture enables independent testing and deployment of each layer, reducing risk and allowing for optimization based on real-world usage.
+
+Key benefits of this implementation:
+- Eliminates bot drainage of reward pools
+- Protects low-liquidity tokenomics
+- Creates sustainable growth mechanics
+- Enhances user engagement through gamification
+- Provides transparent and fair reward distribution
+
+The system is designed to be:
+- Zero-friction for honest users
+- Expensive and time-consuming for attackers
+- Survivable at low liquidity levels
+- Cryptographically verifiable and transparent
+- Economically sustainable and self-regulating
+
+With proper implementation and monitoring, PoRP will significantly enhance the security and economic stability of the SempaiHQ ecosystem while providing valuable insights into user behavior and engagement patterns.
+
+================================================================================
+END OF IMPLEMENTATION PLAN
+================================================================================

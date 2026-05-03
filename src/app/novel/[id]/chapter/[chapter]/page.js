@@ -6,6 +6,12 @@ import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { InlineUserDisplay } from "@/components/UserDisplay";
 import BenefactorPricing from "@/components/BenefactorPricing";
 import { PublicKey, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
+import ReadingTracker from "../../../../../services/porp/ReadingTracker";
+import PoRPStatus from "../../../../../components/PoRP/PoRPStatus";
+import ComprehensionChallenge from "../../../../../components/PoRP/ComprehensionChallenge";
+import PoRPDashboard from "../../../../../components/PoRP/PoRPDashboard";
+import { balanceCache } from "../../../../../services/balance/BalanceCache";
+import { balanceUpdater } from "../../../../../services/balance/BalanceUpdater";
 import {
   TOKEN_PROGRAM_ID,
   createTransferInstruction,
@@ -265,8 +271,146 @@ export default function ChapterPage() {
   const [benefactorAccess, setBenefactorAccess] = useState(null);
   const [showBenefactorOption, setShowBenefactorOption] = useState(false);
   const [benefactorAnnouncements, setBenefactorAnnouncements] = useState([]);
+  
+  // PoRP tracking state
+  const [readingTracker, setReadingTracker] = useState(null);
+  const [porpSessionActive, setPorpSessionActive] = useState(false);
+  const [sessionReceipt, setSessionReceipt] = useState(null);
+  const [showPoRPStatus, setShowPoRPStatus] = useState(true);
+  
+  // PoRP Layer 2 - Challenge state
+  const [challengeData, setChallengeData] = useState(null);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  
+  // PoRP Layer 4 - Dashboard state
+  const [showPoRPDashboard, setShowPoRPDashboard] = useState(false);
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // PoRP tracking functions
+  const initializePoRPTracking = useCallback(async () => {
+    // Only start PoRP tracking if user has wallet connected (external or embedded)
+    if (!id || !chapter || porpSessionActive || !isWalletConnected) {
+      console.log('[PoRP] Skipping tracking - wallet not connected or session already active', {
+        hasId: !!id,
+        hasChapter: !!chapter,
+        sessionActive: porpSessionActive,
+        walletConnected: isWalletConnected
+      });
+      return;
+    }
+    
+    try {
+      console.log('[PoRP] Starting tracking with params:', { 
+        id, 
+        chapter, 
+        chapterParsed: parseInt(chapter, 10), 
+        activeWalletAddress,
+        isWalletConnected 
+      });
+      
+      const tracker = new ReadingTracker();
+      const sessionId = await tracker.startSession(id, parseInt(chapter, 10), activeWalletAddress);
+      
+      // Handle case where session couldn't be started (e.g., not authenticated)
+      if (!sessionId) {
+        console.log('[PoRP] Session not started - wallet may not be connected');
+        return;
+      }
+      
+      setReadingTracker(tracker);
+      setPorpSessionActive(true);
+      console.log(`[PoRP] Session initialized: ${sessionId}`);
+    } catch (error) {
+      console.error('[PoRP] Failed to initialize tracking:', error);
+      // Don't block user experience if PoRP fails
+    }
+  }, [id, chapter, porpSessionActive, isWalletConnected]);
+
+  const completePoRPTracking = useCallback(async () => {
+    if (!readingTracker || !porpSessionActive) return;
+    
+    try {
+      // Try to complete session with challenge
+      const result = await readingTracker.completeSessionWithChallenge(id, parseInt(chapter, 10), activeWalletAddress);
+      
+      if (result.requiresChallenge) {
+        console.log('[PoRP] Challenge required, showing challenge modal');
+        setChallengeData({
+          challenge: result.challenge,
+          sessionId: result.sessionId
+        });
+        setShowChallengeModal(true);
+        return; // Don't cleanup yet, wait for challenge completion
+      } else {
+        // No challenge required, session completed normally
+        setSessionReceipt(result.receipt);
+        console.log('[PoRP] Session completed, receipt issued:', result.receipt?.receipt_id);
+        setPorpSessionActive(false);
+        setReadingTracker(null);
+      }
+    } catch (error) {
+      console.error('[PoRP] Failed to complete session:', error);
+      setPorpSessionActive(false);
+      setReadingTracker(null);
+    }
+  }, [readingTracker, porpSessionActive, activeWalletAddress, id, chapter]);
+
+  // Handle challenge submission
+  const handleChallengeSubmit = useCallback(async (userAnswer, responseTime) => {
+    if (!challengeData || !readingTracker) return;
+    
+    try {
+      console.log('[PoRP] Submitting challenge answer:', { userAnswer, responseTime });
+      
+      const result = await readingTracker.submitChallengeAnswer(
+        challengeData.challenge.id, 
+        userAnswer, 
+        responseTime
+      );
+      
+      console.log('[PoRP] Challenge result:', result);
+      
+      if (result.canProceed) {
+        // Challenge passed or skipped, complete the session
+        const receipt = await readingTracker.completeSession(activeWalletAddress);
+        setSessionReceipt(receipt);
+        console.log('[PoRP] Session completed after challenge, receipt issued:', receipt?.receipt_id);
+      } else {
+        console.log('[PoRP] Challenge failed, but user can proceed');
+        // Still allow session completion even if challenge failed
+        const receipt = await readingTracker.completeSession(activeWalletAddress);
+        setSessionReceipt(receipt);
+        console.log('[PoRP] Session completed despite failed challenge, receipt issued:', receipt?.receipt_id);
+      }
+      
+      // Close challenge modal and cleanup
+      setShowChallengeModal(false);
+      setChallengeData(null);
+      setPorpSessionActive(false);
+      setReadingTracker(null);
+      
+    } catch (error) {
+      console.error('[PoRP] Failed to handle challenge submission:', error);
+      // Still cleanup on error
+      setShowChallengeModal(false);
+      setChallengeData(null);
+      setPorpSessionActive(false);
+      setReadingTracker(null);
+    }
+  }, [challengeData, readingTracker, activeWalletAddress]);
+
+  // Handle challenge modal close
+  const handleChallengeClose = useCallback(() => {
+    console.log('[PoRP] Challenge modal closed by user');
+    setShowChallengeModal(false);
+    setChallengeData(null);
+    
+    // Complete session without challenge when user closes modal
+    if (readingTracker && porpSessionActive) {
+      completePoRPTracking();
+    }
+  }, [readingTracker, porpSessionActive, completePoRPTracking]);
 
   // Meteora helpers (mobile parity)
   const fetchPoolData = useCallback(async () => {
@@ -363,32 +507,20 @@ export default function ChapterPage() {
     }
   }, [convertUsdcToSmp, fetchPoolData, calculateSolPriceInUsd]);
 
-  const fetchSmpBalanceOnChain = useCallback(async (retryCount = 3, retryDelay = 1000) => {
-    if (!activeWalletAddress || !activePublicKey) return 0;
-    for (let attempt = 1; attempt <= retryCount; attempt++) {
-      try {
-        const ataAddress = getAssociatedTokenAddressSync(SMP_MINT_ADDRESS, activePublicKey);
-        console.log("Fetching SMP balance for ATA:", ataAddress.toString());
-        const ataInfo = await connection.getAccountInfo(ataAddress);
-        if (!ataInfo) {
-          console.log("No ATA found for SMP, returning 0 balance");
-          return 0;
-        }
-        const ata = unpackAccount(ataAddress, ataInfo);
-        const balance = Number(ata.amount) / 10 ** SMP_DECIMALS;
-        console.log("On-chain SMP balance:", balance);
-        return balance;
-      } catch (error) {
-        console.error(`Attempt ${attempt} - Error fetching on-chain SMP balance:`, error);
-        if (attempt === retryCount || error.message.includes("403")) {
-          setError("Unable to fetch SMP balance due to network restrictions.");
-          setTimeout(() => setError(null), 5000);
-          return 0;
-        }
-        await delay(retryDelay * attempt);
-      }
+  const fetchSmpBalanceOnChain = useCallback(async () => {
+    if (!activeWalletAddress) return 0;
+    
+    try {
+      // Use cached balance instead of direct RPC call
+      const cachedBalance = await balanceCache.getBalance(activeWalletAddress, 'SMP', 'SOL');
+      console.log("SMP balance from cache:", cachedBalance);
+      return cachedBalance;
+    } catch (error) {
+      console.error("Error fetching SMP balance from cache:", error);
+      // Fallback to 0 if cache fails
+      return 0;
     }
-  }, [activeWalletAddress, activePublicKey]);
+  }, [activeWalletAddress]);
 
   // $0.025 worth of SMP in base units
   const SMP_READ_COST = useMemo(() => {
@@ -1628,7 +1760,21 @@ export default function ChapterPage() {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [chapter, id]);
+  }, [id]);
+
+  // Listen for PoRP dashboard open events
+  useEffect(() => {
+    const handleOpenDashboard = () => {
+      console.log('[ChapterPage] Opening PoRP dashboard');
+      setShowPoRPDashboard(true);
+    };
+
+    window.addEventListener('openPoRPDashboard', handleOpenDashboard);
+    
+    return () => {
+      window.removeEventListener('openPoRPDashboard', handleOpenDashboard);
+    };
+  }, []);
 
   const fetchRatings = async () => {
     if (!userId) return;
@@ -1667,8 +1813,17 @@ export default function ChapterPage() {
   };
 
   useEffect(() => {
-    if (!isLocked) fetchRatings();
-  }, [isLocked]);
+    if (!isLocked) {
+      fetchRatings();
+      // Initialize PoRP tracking when chapter is unlocked and user is authenticated
+      if (isWalletConnected && userId) {
+        initializePoRPTracking();
+      }
+    } else {
+      // Complete PoRP session when chapter is locked
+      completePoRPTracking();
+    }
+  }, [isLocked, initializePoRPTracking, completePoRPTracking, isWalletConnected, userId]);
 
   const handleRating = async (rating) => {
     if (!userId || !isWalletConnected) return;
@@ -1846,6 +2001,12 @@ export default function ChapterPage() {
       setIsLocked(false);
       setLocalUnlocked(true);
       setRecentlyUnlocked(true);
+      
+      // Proactively update cached balance after payment
+      if (currency === 'SMP') {
+        const paymentAmountSmp = paymentAmount / Math.pow(10, SMP_DECIMALS);
+        await balanceUpdater.updateAfterChapterPayment(activeWalletAddress, paymentAmountSmp, 'SMP');
+      }
       
       // Fetch updated balance after payment
       await fetchUserBalances();
@@ -2036,7 +2197,14 @@ export default function ChapterPage() {
     if (typeof window !== "undefined") {
       fetchPrices();
     }
-  }, [fetchNovel, fetchPrices]);
+    
+    // Cleanup PoRP tracking when component unmounts
+    return () => {
+      if (readingTracker && porpSessionActive) {
+        completePoRPTracking();
+      }
+    };
+  }, [fetchNovel, fetchPrices, readingTracker, porpSessionActive, completePoRPTracking]);
 
   // Do not run any client-side on-chain transfer after unlock.
   // The unlock is processed by the edge function and reflected in DB; we only re-check access via DB.
@@ -2415,6 +2583,33 @@ export default function ChapterPage() {
       <footer className={styles.footer}>
         <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
       </footer>
+
+      {/* PoRP Status Indicator */}
+      {showPoRPStatus && (porpSessionActive || sessionReceipt) && (
+        <PoRPStatus
+          isActive={porpSessionActive}
+          receipt={sessionReceipt}
+          onDismiss={() => setShowPoRPStatus(false)}
+        />
+      )}
+
+      {/* PoRP Layer 2 - Comprehension Challenge Modal */}
+      {showChallengeModal && challengeData && (
+        <ComprehensionChallenge
+          challenge={challengeData.challenge}
+          onSubmit={handleChallengeSubmit}
+          onClose={handleChallengeClose}
+        />
+      )}
+
+      {/* PoRP Layer 4 - Dashboard Modal */}
+      {showPoRPDashboard && (
+        <PoRPDashboard
+          userAddress={activeWalletAddress}
+          isOpen={showPoRPDashboard}
+          onClose={() => setShowPoRPDashboard(false)}
+        />
+      )}
     </div>
   );
 }
