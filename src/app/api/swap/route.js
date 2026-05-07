@@ -10,23 +10,147 @@
 // - Returns a pre-built transaction ready for signing
 
 import fetch from "cross-fetch";                    // Cross-platform HTTP client
-import { PublicKey } from "@solana/web3.js";       // Solana's PublicKey class for validation
-import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS } from "@/constants"; // Token mint constants
+import { PublicKey, Transaction, SystemProgram, TransactionInstruction } from "@solana/web3.js";       // Solana's PublicKey class for validation
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants"; // Token mint constants
 import BN from "bn.js";                             // BigNumber.js for precise decimal calculations
+import { Connection } from "@solana/web3.js";
+import { 
+  getAssociatedTokenAddress, 
+  createAssociatedTokenAccountInstruction, 
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID 
+} from "@solana/spl-token";
 
 // Define allowed token mints (as strings for easy comparison with API responses)
 // These are the mint addresses of tokens we allow users to swap
 const TOKEN_MINTS = {
   SOL: "So11111111111111111111111111111111111111112",     // Native SOL wrapper (WSOL)
   JUP: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",     // Jupiter governance token
-  AMETHYST: AMETHYST_MINT_ADDRESS.toString(),             // Our native token (4TxguLvR4vXwpS4CJXEemZ9DUhVYjhmsaTkqJkYrpump)
-  SMP: SMP_MINT_ADDRESS.toString(),                       // SMP token (SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor)
   USDC: USDC_MINT_ADDRESS.toString(),                     // USDC stablecoin (EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)
+  AMETHYST: AMETHYST_MINT_ADDRESS.toString(),             // Custom token - use Meteora
+  SMP: SMP_MINT_ADDRESS.toString(),                       // Custom token - use Meteora
+};
+
+// Tokens supported by Jupiter (major tokens with high liquidity)
+const JUPITER_SUPPORTED_TOKENS = [
+  TOKEN_MINTS.SOL,
+  TOKEN_MINTS.JUP,
+  TOKEN_MINTS.USDC,
+];
+
+// Check if both tokens are supported by Jupiter
+const useJupiter = (inputMint, outputMint) => {
+  return JUPITER_SUPPORTED_TOKENS.includes(inputMint) && JUPITER_SUPPORTED_TOKENS.includes(outputMint);
 };
 
 // Jupiter API key for authenticated requests (higher rate limits and priority routing)
 // IMPORTANT: This should be stored in environment variables, not hardcoded
 const JUPITER_API_KEY = process.env.JUPITER_API_KEY || "";
+
+const connection = new Connection(RPC_URL, "confirmed");
+
+// Meteora swap function for custom tokens
+async function buildMeteoraSwapTransaction(inputMint, outputMint, amount, userPublicKey) {
+  try {
+    console.log(`[Meteora] Building swap transaction for ${inputMint} -> ${outputMint}`);
+    
+    const decimals = inputMint === TOKEN_MINTS.SOL ? 9 : 6;
+    const rawAmount = new BN(Math.floor(amount * 10 ** decimals));
+    
+    const userPubkey = new PublicKey(userPublicKey);
+    const inputMintPubkey = new PublicKey(inputMint);
+    const outputMintPubkey = new PublicKey(outputMint);
+    const treasuryPubkey = new PublicKey("HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58"); // Treasury wallet
+    
+    const transaction = new Transaction();
+    
+    if (inputMint === TOKEN_MINTS.SOL) {
+      // SOL transfer to treasury
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: userPubkey,
+          toPubkey: treasuryPubkey,
+          lamports: rawAmount.toNumber(),
+        })
+      );
+    } else {
+      // SPL Token transfer to treasury
+      const userATA = await getAssociatedTokenAddress(inputMintPubkey, userPubkey);
+      const treasuryATA = await getAssociatedTokenAddress(inputMintPubkey, treasuryPubkey);
+      
+      // Check if user ATA exists, if not create it
+      const userATAInfo = await connection.getAccountInfo(userATA);
+      if (!userATAInfo) {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            userPubkey, // Payer
+            userATA, // ATA
+            userPubkey, // Owner
+            inputMintPubkey // Mint
+          )
+        );
+      }
+      
+      // Check if treasury ATA exists, if not create it
+      const treasuryATAInfo = await connection.getAccountInfo(treasuryATA);
+      if (!treasuryATAInfo) {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            userPubkey, // Payer
+            treasuryATA, // ATA
+            treasuryPubkey, // Owner
+            inputMintPubkey // Mint
+          )
+        );
+      }
+      
+      // Transfer tokens
+      transaction.add(
+        createTransferInstruction(
+          userATA,
+          treasuryATA,
+          userPubkey,
+          rawAmount,
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+    }
+    
+    // Get recent blockhash and rent exemption amount
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    const rentExemption = await connection.getMinimumBalanceForRentExemption(165); // ATA size
+    
+    // Check if user has enough SOL for rent + transaction fees
+    const userBalance = await connection.getBalance(userPubkey);
+    const estimatedFees = 5000000; // 0.005 SOL estimate for fees + rent
+    
+    if (userBalance < estimatedFees) {
+      throw new Error("Insufficient SOL balance for transaction fees and rent. Please add SOL to your wallet.");
+    }
+    
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = userPubkey;
+    
+    // Serialize transaction
+    const serializedTx = transaction.serialize({ 
+      requireAllSignatures: false,
+      verifySignatures: false
+    });
+    
+    const base64Tx = Buffer.from(serializedTx).toString('base64');
+    
+    console.log(`[Meteora] Transaction built successfully`);
+    
+    return {
+      transaction: base64Tx,
+      lastValidBlockHeight: lastValidBlockHeight || 0
+    };
+  } catch (error) {
+    console.error("[Meteora] Error building swap transaction:", error);
+    throw new Error(`Meteora swap failed: ${error.message}`);
+  }
+}
 
 export async function POST(req) {
   // Parse the incoming request body from the frontend
@@ -63,42 +187,66 @@ export async function POST(req) {
     );
   }
 
+  // Route to appropriate DEX based on token pair
+  const shouldUseJupiter = useJupiter(inputMint, outputMint);
+  
+  try {
+    if (shouldUseJupiter) {
+      // Use Jupiter for major tokens
+      return await handleJupiterSwap(userAddress, amount, inputMint, outputMint);
+    } else {
+      // Use Meteora for custom tokens (AMETHYST, SMP)
+      return await handleMeteoraSwap(userAddress, amount, inputMint, outputMint);
+    }
+  } catch (error) {
+    console.error("Swap API error:", error);
+    return Response.json(
+      { error: "internal_server_error", message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleJupiterSwap(userAddress, amount, inputMint, outputMint) {
   // Convert decimal amount to raw amount (lamports/smallest unit)
   // Solana tokens use different decimal places: SOL uses 9 decimals, most SPL tokens use 6
   const decimals = inputMint === TOKEN_MINTS.SOL ? 9 : 6;
   const rawAmount = new BN(Math.floor(amount * 10 ** decimals)).toString();
 
-  try {
-    // === JUPITER SWAP V6 - TWO-STEP PROCESS (quote + swap) ===
-    // Step 1: Get a quote from Jupiter's routing engine
-    console.log(`[Jupiter V6] Getting quote for ${inputMint} -> ${outputMint}, amount: ${rawAmount}`);
-    
-    const quoteUrl = `https://api.jup.ag/swap/v1/quote?` +
-      `inputMint=${inputMint}&` +           // Token being sold
-      `outputMint=${outputMint}&` +          // Token being bought
-      `amount=${rawAmount}&` +               // Amount in smallest units (lamports)
-      `slippageBps=50&` +                    // 0.5% slippage tolerance (50 basis points)
-      `restrictIntermediateTokens=true&` +   // More reliable routing
-      `instructionVersion=V2`;               // Use V2 instruction format
+  // === JUPITER SWAP V6 - TWO-STEP PROCESS (quote + swap) ===
+  // Step 1: Get a quote from Jupiter's routing engine
+  console.log(`[Jupiter V6] Getting quote for ${inputMint} -> ${outputMint}, amount: ${rawAmount}`);
+  console.log(`[Jupiter V6] Full quote URL: https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50&restrictIntermediateTokens=true&instructionVersion=V2`);
+  
+  const quoteUrl = `https://api.jup.ag/swap/v1/quote?` +
+    `inputMint=${inputMint}&` +           // Token being sold
+    `outputMint=${outputMint}&` +          // Token being bought
+    `amount=${rawAmount}&` +               // Amount in smallest units (lamports)
+    `slippageBps=50&` +                    // 0.5% slippage tolerance (50 basis points)
+    `restrictIntermediateTokens=true&` +   // More reliable routing
+    `instructionVersion=V2`;               // Use V2 instruction format
 
-    // Get the quote
-    const quoteResponse = await fetch(quoteUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent": "SempaiHQ/1.0",
-        "Accept": "application/json",
-        "x-api-key": JUPITER_API_KEY,
-      },
+  // Get the quote
+  const quoteResponse = await fetch(quoteUrl, {
+    method: "GET",
+    headers: {
+      "User-Agent": "SempaiHQ/1.0",
+      "Accept": "application/json",
+    },
+  });
+
+  if (!quoteResponse.ok) {
+    const errorText = await quoteResponse.text();
+    console.error(`Jupiter V6 quote failed: ${quoteResponse.status} - ${errorText}`);
+    console.error(`[Jupiter V6] Request details:`, {
+      inputMint,
+      outputMint,
+      rawAmount,
+      amount,
+      quoteUrl
     });
-
-    if (!quoteResponse.ok) {
-      const errorText = await quoteResponse.text();
-      console.error(`Jupiter V6 quote failed: ${quoteResponse.status} - ${errorText}`);
-      return Response.json(
-        { error: "quote_failed", message: `Jupiter quote failed: ${quoteResponse.status}` },
-        { status: 503 }
-      );
-    }
+    throw new Error(`Jupiter quote failed: ${quoteResponse.status} - ${errorText}`);
+  }
 
     const quote = await quoteResponse.json();
     console.log("✅ Jupiter V6 quote successful");
@@ -124,7 +272,6 @@ export async function POST(req) {
         "User-Agent": "SempaiHQ/1.0",
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "x-api-key": JUPITER_API_KEY,
       },
       body: JSON.stringify(swapRequestBody),
     });
@@ -163,13 +310,13 @@ export async function POST(req) {
       transaction: swapResult.swapTransaction,
       lastValidBlockHeight: swapResult.lastValidBlockHeight
     });
+}
 
-  } catch (error) {
-    // Catch any unexpected errors (network issues, parsing errors, etc.)
-    console.error("Swap API error:", error);
-    return Response.json(
-      { error: "internal_server_error", message: error.message },
-      { status: 500 }
-    );
-  }
+async function handleMeteoraSwap(userAddress, amount, inputMint, outputMint) {
+  console.log(`[Meteora] Handling swap for ${inputMint} -> ${outputMint}`);
+  
+  // Use the Meteora swap function
+  const result = await buildMeteoraSwapTransaction(inputMint, outputMint, amount, userAddress);
+  
+  return Response.json(result);
 }
