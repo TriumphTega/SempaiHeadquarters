@@ -1,9 +1,8 @@
  
-import { Card } from "react-bootstrap";
-import styles from "../../styles/Combat.module.css";
+import styles from "../../styles/KaitoAdventure.module.css";
 
 const GameMessage = ({ message }) => (
-  <Card.Text className="mb-4 text-muted">{message}</Card.Text>
+  <div className={`${styles.kaMessage} ${styles.kaScrollText}`}>{message}</div>
 );
 
 export default GameMessage;

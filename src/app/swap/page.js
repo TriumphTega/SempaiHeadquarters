@@ -3,17 +3,8 @@
 import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  Connection,
-  PublicKey,
-  VersionedTransaction,
-  Keypair,
-  Transaction,
-  SystemProgram,
-  LAMPORTS_PER_SOL,
-  sendAndConfirmTransaction
-} from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, unpackAccount, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
+import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from "next/link";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants";
 import { FaHome, FaBars, FaTimes, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode } from "react-icons/fa";
@@ -48,9 +39,6 @@ export default function SwapPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-  const [showATAConfirmation, setShowATAConfirmation] = useState(false);
-  const [ataCreationCost, setAtaCreationCost] = useState(0);
-  const [pendingSwapTransaction, setPendingSwapTransaction] = useState(null);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const router = useRouter();
@@ -59,30 +47,23 @@ export default function SwapPage() {
     if (!activeWalletAddress) return;
 
     try {
+      const mintAddress = TOKEN_MINTS[coinFrom];
       let balance = 0;
 
       if (coinFrom === "SOL") {
-        balance = (await connection.getBalance(new PublicKey(activeWalletAddress))) / LAMPORTS_PER_SOL;
+        const solBalance = await connection.getBalance(new PublicKey(activeWalletAddress));
+        balance = solBalance / 1_000_000_000; // 9 decimals
       } else {
-        const mintAddress = TOKEN_MINTS[coinFrom];
-        if (!mintAddress) return;
-
         const ataAddress = getAssociatedTokenAddressSync(mintAddress, new PublicKey(activeWalletAddress));
         const ataInfo = await connection.getAccountInfo(ataAddress);
-
         if (ataInfo) {
-          // FIXED: Correct parameters for unpackAccount (PublicKey first, then AccountInfo)
+          // ✅ FIXED: Correct parameters for unpackAccount (PublicKey first, then AccountInfo)
           const ata = unpackAccount(ataAddress, ataInfo);
           balance = Number(ata.amount) / 1_000_000; // 6 decimals (all non-SOL tokens here use 6)
         }
       }
       setBalance(balance);
     } catch (error) {
-      // Ignore 429 rate limit errors - just keep last known balance
-      if (error.message && error.message.includes('429')) {
-        console.log('Rate limited, keeping last balance');
-        return;
-      }
       console.error("Error fetching balance:", error);
       setBalance(0);
     }
@@ -97,165 +78,6 @@ export default function SwapPage() {
     window.addEventListener('openSendModal', handleOpenSendModal);
     return () => window.removeEventListener('openSendModal', handleOpenSendModal);
   }, []);
-
-  const handleATAConfirmation = async () => {
-    setLoading(true);
-    setShowATAConfirmation(false);
-    setError(null);
-
-    try {
-      const swapData = pendingSwapTransaction;
-      if (!swapData) throw new Error("No pending swap transaction");
-
-      console.log("[handleATAConfirmation] Proceeding with swap after ATA creation confirmation");
-
-      // Continue with the original swap logic
-      const response = await fetch("/api/swap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: activeWalletAddress,
-          amount: swapData.amount,
-          inputMint: swapData.inputMint,
-          outputMint: swapData.outputMint,
-        }),
-      }).then((r) => r.json());
-
-      const { transaction, swapTransaction: jupiterSwapTransaction, lastValidBlockHeight: jupiterBlockHeight, error: apiError, message } = response;
-
-      if (apiError) {
-        setError(`${apiError}: ${message || ""}`);
-        return;
-      }
-
-      // Handle both V1 (swapTransaction) and V2 (transaction) response formats
-      const actualTransaction = jupiterSwapTransaction || transaction;
-      
-      if (!actualTransaction) {
-        throw new Error("No transaction received from server");
-      }
-
-      let deserializedTx;
-      try {
-        if (typeof actualTransaction === 'string') {
-          const swapTransactionBuf = Buffer.from(actualTransaction, "base64");
-          deserializedTx = VersionedTransaction.deserialize(swapTransactionBuf);
-        } else {
-          deserializedTx = actualTransaction;
-        }
-      } catch (deserializeError) {
-        console.error("Transaction deserialization error:", deserializeError);
-        throw new Error("Failed to deserialize swap transaction");
-      }
-
-      // Add ATA creation instruction if needed
-      const wallet = new PublicKey(activeWalletAddress);
-      const outputTokenMint = TOKEN_MINTS[swapData.coinTo];
-      const outputATA = getAssociatedTokenAddressSync(outputTokenMint, wallet);
-      
-      // Check if we need to create ATA (this should be true since we're in this flow)
-      const needsATA = !(await checkAtaExists(outputTokenMint, wallet));
-      
-      if (needsATA) {
-        console.log("[handleATAConfirmation] Adding ATA creation to swap transaction");
-        
-        // Convert VersionedTransaction to regular Transaction to add ATA instruction
-        const legacyTx = new Transaction();
-        legacyTx.add(...deserializedTx.message.instructions);
-        legacyTx.recentBlockhash = deserializedTx.message.recentBlockhash;
-        legacyTx.feePayer = deserializedTx.message.staticAccountKeys[0];
-        
-        // Add ATA creation instruction at the beginning
-        const ataInstruction = createAssociatedTokenAccountInstruction(
-          wallet,        // Payer
-          outputATA,      // ATA address
-          wallet,        // Owner
-          outputTokenMint // Mint
-        );
-        
-        legacyTx.instructions.unshift(ataInstruction);
-        deserializedTx = legacyTx;
-      }
-
-      // Rest of the signing and sending logic (same as original)
-      let signature;
-      
-      if (embeddedWallet) {
-        console.log("Using embedded wallet for signing");
-        const secretKey = await getSecretKey();
-        if (!secretKey) throw new Error("Failed to decrypt secret key. Please check your wallet setup.");
-        const keypair = Keypair.fromSecretKey(secretKey);
-        
-        if (keypair.publicKey.toString() !== wallet.toString()) {
-          throw new Error("Wallet address mismatch. Please ensure you're using the correct wallet.");
-        }
-        
-        signature = await sendAndConfirmTransaction(connection, deserializedTx, [keypair], {
-          skipPreflight: false,
-          maxRetries: 2,
-        });
-      } else if (signTransaction && sendTransaction) {
-        console.log("Using external wallet for signing");
-        const signedTransaction = await signTransaction(deserializedTx);
-        signature = await sendTransaction(signedTransaction, connection, {
-          skipPreflight: false,
-          maxRetries: 2,
-        });
-      } else {
-        throw new Error("Wallet signing method not available.");
-      }
-
-      // Get fresh blockhash for confirmation
-      const { blockhash, lastValidBlockHeight: freshBlockHeight } = await connection.getLatestBlockhash();
-      
-      try {
-        await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight: freshBlockHeight,
-          commitment: 'confirmed',
-        });
-      } catch (confirmError) {
-        console.error("Transaction confirmation error:", confirmError);
-        
-        const status = await connection.getSignatureStatus(signature);
-        if (status.value) {
-          if (status.value.err) {
-            throw new Error(`Transaction failed: ${JSON.stringify(status.value.err)}`);
-          } else if (status.value.confirmationStatus) {
-            console.log("Transaction was confirmed despite error:", status.value.confirmationStatus);
-          }
-        } else {
-          throw new Error("Transaction confirmation failed and status is unavailable");
-        }
-      }
-
-      setSuccessMessage(`Swap completed successfully! Signature: ${signature}`);
-      setAmount("");
-      setTimeout(() => setSuccessMessage(""), 5000);
-      await checkBalance();
-    } catch (error) {
-      console.error("Swap error:", error);
-      setError(`Swap failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setPendingSwapTransaction(null);
-    }
-  };
-
-  // Helper to Check if ATA Exists
-  const checkAtaExists = async (mint, owner) => {
-    try {
-      const ata = getAssociatedTokenAddressSync(mint, owner);
-      await getAccount(connection, ata);
-      return true;
-    } catch (e) {
-      if (e.name === "TokenAccountNotFoundError") {
-        return false;
-      }
-      throw e;
-    }
-  };
 
   const handleSwap = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -279,36 +101,6 @@ export default function SwapPage() {
       const inputMint = TOKEN_MINTS[coinFrom].toString();
       const outputMint = TOKEN_MINTS[coinTo].toString();
 
-      // Check if user has ATA for output token (e.g., SMP when swapping to SMP)
-      console.log("[handleSwap] Checking ATA for output token:", coinTo);
-      const wallet = new PublicKey(activeWalletAddress);
-      const outputTokenMint = TOKEN_MINTS[coinTo];
-      
-      const hasOutputATA = await checkAtaExists(outputTokenMint, wallet);
-      if (!hasOutputATA) {
-        console.log("[handleSwap] User needs ATA for", coinTo);
-        
-        // Calculate ATA creation cost
-        const rentExemption = await connection.getMinimumBalanceForRentExemption(165); // ATA size
-        const ataCostSOL = rentExemption / 1_000_000_000;
-        
-        console.log("[handleSwap] ATA creation cost:", ataCostSOL, "SOL");
-        
-        // Store pending swap details and show confirmation
-        setPendingSwapTransaction({
-          inputMint,
-          outputMint,
-          amount: parseFloat(amount),
-          coinFrom,
-          coinTo,
-          ataCost: ataCostSOL
-        });
-        setAtaCreationCost(ataCostSOL);
-        setShowATAConfirmation(true);
-        setLoading(false);
-        return; // Exit here, wait for user confirmation
-      }
-
       const response = await fetch("/api/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -327,7 +119,7 @@ export default function SwapPage() {
         return;
       }
 
-      // Handle both V1 (swapTransaction) and V2 (transaction) response formats
+      // Handle Jupiter V6 response format (swapTransaction) and legacy formats
       const actualTransaction = jupiterSwapTransaction || transaction;
       
       if (!actualTransaction) {
@@ -418,14 +210,15 @@ export default function SwapPage() {
         throw new Error("Wallet signing method not available.");
       }
 
-      // Get fresh blockhash for confirmation
+      // Get fresh blockhash for confirmation (use Jupiter's blockheight if available)
       const { blockhash, lastValidBlockHeight: freshBlockHeight } = await connection.getLatestBlockhash();
+      const validBlockHeight = jupiterBlockHeight || freshBlockHeight;
       
       try {
         await connection.confirmTransaction({
           signature,
           blockhash,
-          lastValidBlockHeight: freshBlockHeight,
+          lastValidBlockHeight: validBlockHeight,
           commitment: 'confirmed',
         });
       } catch (confirmError) {
@@ -557,7 +350,6 @@ export default function SwapPage() {
                   <option value="USDC">USDC</option>
                 </select>
               </div>
-
               
               {/* Your Portfolio */}
               <div className={styles.portfolioSection}>
@@ -584,17 +376,12 @@ export default function SwapPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleSwap}
-                className={styles.swapButton}
-                disabled={loading}
-              >
+              <button onClick={handleSwap} className={styles.swapButton} disabled={loading}>
                 {loading ? (
                   <span className={styles.swirlIcon}></span>
                 ) : (
                   <>
-                    <FaExchangeAlt />
-                    Initiate Swap
+                    <FaExchangeAlt /> Initiate Swap
                   </>
                 )}
               </button>
@@ -605,152 +392,20 @@ export default function SwapPage() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p className={styles.footerText}> 2025 Sempai HQ. All rights reserved.</p>
+        <p className={styles.footerText}>© 2025 Sempai HQ. All rights reserved.</p>
       </footer>
 
-      {/* Balance Modal */}
-      <BalanceModal
-        isOpen={showBalanceModal}
+      {/* Modals */}
+      <BalanceModal 
+        isOpen={showBalanceModal} 
         onClose={() => setShowBalanceModal(false)}
         activeWalletAddress={activeWalletAddress}
       />
-
-      {/* Send Modal */}
-      <SendModal
-        isOpen={showSendModal}
+      <SendModal 
+        isOpen={showSendModal} 
         onClose={() => setShowSendModal(false)}
         activeWalletAddress={activeWalletAddress}
       />
-
-      {/* ATA Creation Confirmation Modal for Swaps */}
-      {showATAConfirmation && (
-        <>
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 99999,
-          }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(20,20,28,0.95), rgba(12,12,18,0.98))',
-              borderRadius: '20px',
-              padding: '32px',
-              maxWidth: '420px',
-              width: '90%',
-              border: '1px solid rgba(243,99,22,0.2)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(243,99,22,0.1)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(243,99,22,0.2), rgba(255,98,0,0.15))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(243,99,22,0.3)',
-                }}>
-                  <FaExchangeAlt size={20} color="#f36316" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '600' }}>
-                    Create Token Account
-                  </h3>
-                  <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '14px' }}>
-                    Required for {pendingSwapTransaction?.coinTo || 'token'} swap
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'rgba(243,99,22,0.1)',
-                border: '1px solid rgba(243,99,22,0.2)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '24px',
-              }}>
-                <p style={{ margin: '0 0 12px', color: '#9ca3af', fontSize: '14px' }}>
-                  You need a token account to receive {pendingSwapTransaction?.coinTo || 'tokens'}.
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#fff', fontSize: '16px', fontWeight: '500' }}>
-                    Account creation cost:
-                  </span>
-                  <span style={{ color: '#f36316', fontSize: '18px', fontWeight: '600' }}>
-                    {ataCreationCost.toFixed(6)} SOL
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => {
-                    setShowATAConfirmation(false);
-                    setPendingSwapTransaction(null);
-                    setLoading(false);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '14px 20px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                    color: '#9ca3af',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleATAConfirmation}
-                  style={{
-                    flex: 1,
-                    padding: '14px 20px',
-                    background: 'linear-gradient(135deg, #f36316, #ff6200)',
-                    border: 'none',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 16px rgba(243,99,22,0.2)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(243,99,22,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(243,99,22,0.2)';
-                  }}
-                >
-                  {loading ? 'Creating...' : 'Create & Swap'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

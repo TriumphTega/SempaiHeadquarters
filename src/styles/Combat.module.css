@@ -1,21 +1,6 @@
 /* Combat.module.css - Premium Combat System */
 
-/* Core Combat Layout */
-.combatCard {
-  border-radius: 0;
-  border: none;
-  box-shadow: 0 0 30px rgba(139, 0, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.1);
-  background: linear-gradient(135deg, #2c1810 0%, #1a0e08 50%, #0f0704 100%);
-  color: #ffd700;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-  overflow: hidden;
-  margin: 0;
-}
+/* Core Combat Layout — now defined in BERSERK JAPANESE DOJO section below */
 
 .arenaHeader {
   background: linear-gradient(90deg, #8b0000 0%, #cd5c5c 50%, #8b0000 100%);
@@ -265,6 +250,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .fightingGame {
@@ -272,6 +259,7 @@
   flex-direction: column;
   height: 100%;
   flex: 1;
+  min-height: 0;
 }
 
 /* Health Bars Container - Top of Screen */
@@ -317,7 +305,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
-  min-height: 300px;
+  min-height: 200px;
   background: linear-gradient(180deg, #1a0e08 0%, #2c1810 50%, #4a2c1a 100%);
 }
 
@@ -401,14 +389,21 @@
 }
 
 @keyframes playerAttackMove {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(80px); }
+  0% { transform: translateX(0) scale(1); }
+  15% { transform: translateX(-8%) scale(1.02); }
+  40% { transform: translateX(35%) scale(1.12); }
+  55% { transform: translateX(30%) scale(1.08); }
+  75% { transform: translateX(10%) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
 }
 
 @keyframes playerSkillMove {
-  0%, 100% { transform: translateX(0) scale(1); }
-  30% { transform: translateX(50px) scale(1.1); }
-  60% { transform: translateX(100px) scale(1.2); }
+  0% { transform: translateX(0) scale(1); }
+  10% { transform: translateX(-10%) scale(1.04); }
+  35% { transform: translateX(40%) scale(1.18); }
+  50% { transform: translateX(45%) scale(1.25); }
+  70% { transform: translateX(20%) scale(1.08); }
+  100% { transform: translateX(0) scale(1); }
 }
 
 @keyframes playerHealMove {
@@ -417,20 +412,28 @@
 }
 
 @keyframes playerHitMove {
-  0%, 100% { transform: translateX(0); filter: brightness(1); }
-  25% { transform: translateX(-20px); filter: brightness(0.5); }
-  75% { transform: translateX(10px); filter: brightness(0.8); }
+  0% { transform: translateX(0); filter: brightness(1); }
+  20% { transform: translateX(-25%); filter: brightness(0.4); }
+  50% { transform: translateX(-15%); filter: brightness(0.7); }
+  80% { transform: translateX(-5%); filter: brightness(0.9); }
+  100% { transform: translateX(0); filter: brightness(1); }
 }
 
 @keyframes enemyAttackMove {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-80px); }
+  0% { transform: translateX(0) scale(1); }
+  15% { transform: translateX(8%) scale(1.02); }
+  40% { transform: translateX(-35%) scale(1.12); }
+  55% { transform: translateX(-30%) scale(1.08); }
+  75% { transform: translateX(-10%) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
 }
 
 @keyframes enemyHitMove {
-  0%, 100% { transform: translateX(0); filter: brightness(1); }
-  25% { transform: translateX(20px); filter: brightness(0.5); }
-  75% { transform: translateX(-10px); filter: brightness(0.8); }
+  0% { transform: translateX(0); filter: brightness(1); }
+  20% { transform: translateX(25%); filter: brightness(0.4); }
+  50% { transform: translateX(15%); filter: brightness(0.7); }
+  80% { transform: translateX(5%); filter: brightness(0.9); }
+  100% { transform: translateX(0); filter: brightness(1); }
 }
 
 /* Equipment Bar */
@@ -521,6 +524,7 @@
 /* Sprite Animations */
 .idleAnimation {
   /* Characters stand still on ground */
+  will-change: transform;
 }
 
 /* Effect Sprites */
@@ -535,6 +539,55 @@
 @keyframes effectPop {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* Enhanced slash trail - glows bright against dark backgrounds */
+.slashEffect {
+  z-index: 25;
+}
+
+.slashImage {
+  filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 0 24px #ff0000) brightness(1.5);
+  transform: translate(-50%, -50%) rotate(-15deg);
+}
+
+/* Motion Slash - CSS line that flies from player to enemy */
+.motionSlash {
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  width: 50%;
+  height: 4px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    #ffffff 10%,
+    #ff0000 30%,
+    #ffffff 50%,
+    #ff0000 70%,
+    #ffffff 90%,
+    transparent 100%
+  );
+  border-radius: 2px;
+  box-shadow: 0 0 15px #ff0000, 0 0 30px #ff6347, 0 0 60px #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  animation: motionSlashFly 0.25s ease-out forwards;
+  transform-origin: left center;
+}
+
+@keyframes motionSlashFly {
+  0% {
+    transform: scaleX(0) rotate(-5deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1) rotate(5deg);
+    opacity: 0;
+  }
 }
 
 .basic_attackAnimation {
@@ -1065,9 +1118,7 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .combatCard {
-    border-radius: 15px;
-  }
+  /* combatCard responsive handled in BERSERK section */
   
   .arenaTitle {
     font-size: 1.5rem;
@@ -1361,5 +1412,1900 @@
 
   .glowButton {
     max-width: 180px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   MORTAL KOMBAT ENHANCEMENT STYLES
+   ════════════════════════════════════════════════════════════ */
+
+/* MK Announcement Overlay */
+.announcementOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+  animation: announcementEntry 0.3s ease-out;
+}
+
+@keyframes announcementEntry {
+  0% { transform: scale(2); opacity: 0; }
+  50% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.announcementText {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: clamp(2rem, 10vw, 5rem);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-align: center;
+  animation: announcementPulse 0.15s ease-in-out infinite alternate,
+             announcementShake 0.3s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+.announcementShadow {
+  position: absolute;
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: clamp(2rem, 10vw, 5rem);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #000;
+  text-shadow: 0 0 40px #000;
+  transform: translate(4px, 4px);
+  z-index: 1;
+  opacity: 0.7;
+}
+
+@keyframes announcementPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@keyframes announcementShake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 2px); }
+  50% { transform: translate(3px, -2px); }
+  75% { transform: translate(-2px, -1px); }
+}
+
+/* MK Blood Splatter */
+.bloodContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.bloodParticle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: bloodSplat 0.6s ease-out forwards;
+}
+
+@keyframes bloodSplat {
+  0% { transform: scale(0); opacity: 1; }
+  30% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1) translate(var(--dx, 20px), var(--dy, 30px)); opacity: 0; }
+}
+
+/* MK Combo Counter */
+.comboCounter {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  z-index: 60;
+  text-align: right;
+  font-family: "Impact", "Arial Black", sans-serif;
+  animation: comboSlide 0.3s ease-out;
+}
+
+@keyframes comboSlide {
+  0% { transform: translateX(100px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.comboHits {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #ffd700;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comboLabel {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ff6347;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+/* MK Special Meter */
+.specialMeterContainer {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: meterSlide 0.3s ease-out;
+}
+
+@keyframes meterSlide {
+  0% { transform: translateX(-100px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.specialMeterLabel {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.specialMeterTrack {
+  width: 100px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #8b0000;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.specialMeterFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd700 0%, #ff8c00 50%, #ff6347 100%);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px #ffd700, 0 0 20px #ff6347;
+  animation: meterPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes meterPulse {
+  0% { box-shadow: 0 0 5px #ffd700; }
+  100% { box-shadow: 0 0 15px #ffd700, 0 0 25px #ff6347; }
+}
+
+/* MK Screen Flash */
+.screenFlash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 90;
+  pointer-events: none;
+  animation: flashFade 0.2s ease-out forwards;
+  mix-blend-mode: overlay;
+}
+
+@keyframes flashFade {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* MK Fatality Prompt */
+.fatalityPrompt {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  animation: fatalityPromptEntry 0.5s ease-out;
+}
+
+@keyframes fatalityPromptEntry {
+  0% { transform: translateX(-50%) translateY(50px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.fatalityPromptText {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ff0000;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 20px #ff0000, 0 0 40px #8b0000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: fatalityTextPulse 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes fatalityTextPulse {
+  0% { transform: scale(1); text-shadow: 0 0 20px #ff0000; }
+  100% { transform: scale(1.05); text-shadow: 0 0 30px #ff0000, 0 0 60px #8b0000; }
+}
+
+.fatalityIcon {
+  font-size: 2.5rem;
+  animation: skullShake 0.2s ease-in-out infinite;
+}
+
+@keyframes skullShake {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.fatalityButtons {
+  display: flex;
+  gap: 15px;
+}
+
+.fatalityButton {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 12px 25px;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fatalityExecute {
+  background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%);
+  border-color: #ff0000;
+  color: #ffd700;
+  text-shadow: 0 0 10px #ffd700;
+  box-shadow: 0 0 20px rgba(139, 0, 0, 0.6);
+}
+
+.fatalityExecute:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(139, 0, 0, 0.6);
+  background: linear-gradient(135deg, #dc143c 0%, #ff0000 100%);
+}
+
+.fatalitySkip {
+  background: linear-gradient(135deg, #2c2c2c 0%, #4a4a4a 100%);
+  border-color: #666;
+  color: #aaa;
+}
+
+.fatalitySkip:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #3c3c3c 0%, #5a5a5a 100%);
+  color: #fff;
+}
+
+/* MK Special Button */
+.specialButton {
+  background: linear-gradient(135deg, #4a0e0e 0%, #2c0808 100%);
+  border-color: #666;
+  color: #aaa;
+  transition: all 0.3s ease;
+}
+
+.specialReady {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ff6347 100%) !important;
+  border-color: #ffd700 !important;
+  color: #000 !important;
+  text-shadow: none !important;
+  box-shadow: 0 0 20px #ffd700, 0 0 40px #ff6347 !important;
+  animation: specialReadyPulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes specialReadyPulse {
+  0% { box-shadow: 0 0 15px #ffd700; }
+  100% { box-shadow: 0 0 30px #ffd700, 0 0 60px #ff6347; }
+}
+
+/* MK Heavy Hit Stage */
+.heavyHitStage {
+  animation: heavyHitShake 0.3s ease-in-out;
+}
+
+/* ════════════════════════════════════════════════════════════
+   JAPANESE DOJO THEME (DARK ORANGE)
+   ════════════════════════════════════════════════════════════ */
+
+.jpDojoStage {
+  position: relative;
+  border: 2px solid rgba(204, 85, 0, 0.35);
+  box-shadow: 0 0 30px rgba(204, 85, 0, 0.12), inset 0 0 40px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+.jpDojoStage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(204, 85, 0, 0.10) 0%, transparent 60%),
+    radial-gradient(circle at 20% 90%, rgba(255, 107, 53, 0.08) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(10, 8, 6, 0.0) 0%, rgba(10, 8, 6, 0.35) 75%, rgba(10, 8, 6, 0.55) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.jpDojoStage::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0px, rgba(255, 255, 255, 0.03) 2px, transparent 2px, transparent 14px);
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: overlay;
+}
+
+.jpStageOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.jpBannerLeft,
+.jpBannerRight {
+  position: absolute;
+  top: 18px;
+  width: 44px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.05em;
+  color: rgba(245, 230, 211, 0.9);
+  text-shadow: 0 0 20px rgba(204, 85, 0, 0.45);
+  background:
+    linear-gradient(180deg, rgba(20, 18, 16, 0.85) 0%, rgba(10, 8, 6, 0.85) 100%);
+  border: 1px solid rgba(204, 85, 0, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  opacity: 0.95;
+}
+
+.jpBannerLeft { left: 14px; }
+.jpBannerRight { right: 14px; }
+
+.jpSigil {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.4em;
+  color: rgba(201, 168, 76, 0.95);
+  text-shadow: 0 0 18px rgba(201, 168, 76, 0.35);
+  padding: 6px 14px 6px 18px;
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  background: rgba(10, 8, 6, 0.55);
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.10);
+}
+
+/* Hit-stop: freeze feeling by reducing motion + punchy contrast */
+.hitStop {
+  filter: contrast(1.1) saturate(1.05) brightness(1.05);
+}
+
+.hitStop * {
+  animation-play-state: paused !important;
+}
+
+/* Fighter motion: lunge and recoil (knockback) — percentage-based for widescreen */
+.playerLunge {
+  animation: playerLungeAnim 0.28s cubic-bezier(0.22, 0.8, 0.18, 1);
+}
+
+@keyframes playerLungeAnim {
+  0% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(30%) scale(1.08); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.enemyLunge {
+  animation: enemyLungeAnim 0.28s cubic-bezier(0.22, 0.8, 0.18, 1);
+}
+
+@keyframes enemyLungeAnim {
+  0% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-30%) scale(1.08); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.playerRecoil {
+  animation: playerRecoilAnim 0.32s ease-out;
+}
+
+@keyframes playerRecoilAnim {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(-20%) scale(0.96); }
+  65% { transform: translateX(5%) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.enemyRecoil {
+  animation: enemyRecoilAnim 0.32s ease-out;
+}
+
+@keyframes enemyRecoilAnim {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(20%) scale(0.96); }
+  65% { transform: translateX(-5%) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes heavyHitShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+/* MK Victory Pose */
+.victoryPose {
+  animation: victoryBounce 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes victoryBounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-15px) scale(1.05); }
+}
+
+/* MK Fatality Target */
+.fatalityTarget {
+  animation: fatalityTargetShake 0.2s ease-in-out infinite;
+  filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(3);
+}
+
+@keyframes fatalityTargetShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* MK Screen Shake (Enhanced) */
+.screenShake {
+  animation: mkScreenShake 0.3s ease-in-out;
+}
+
+@keyframes mkScreenShake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-10px) rotate(-1deg); }
+  30% { transform: translateX(10px) rotate(1deg); }
+  50% { transform: translateX(-8px) rotate(-0.5deg); }
+  70% { transform: translateX(8px) rotate(0.5deg); }
+  90% { transform: translateX(-4px); }
+}
+
+/* MK Enhanced Screen Shake - Heavy */
+.screenShakeHeavy {
+  animation: mkScreenShakeHeavy 0.6s ease-in-out;
+}
+
+@keyframes mkScreenShakeHeavy {
+  0%, 100% { transform: translateX(0) scale(1); }
+  10% { transform: translateX(-15px) rotate(-2deg) scale(1.02); }
+  20% { transform: translateX(15px) rotate(2deg) scale(1.02); }
+  30% { transform: translateX(-12px) rotate(-1.5deg) scale(1.01); }
+  40% { transform: translateX(12px) rotate(1.5deg) scale(1.01); }
+  50% { transform: translateX(-8px) rotate(-1deg); }
+  60% { transform: translateX(8px) rotate(1deg); }
+  70% { transform: translateX(-5px) rotate(-0.5deg); }
+  80% { transform: translateX(5px) rotate(0.5deg); }
+  90% { transform: translateX(-2px); }
+}
+
+/* MK Enhanced Screen Shake - Critical */
+.screenShakeCritical {
+  animation: mkScreenShakeCritical 0.9s ease-in-out;
+}
+
+@keyframes mkScreenShakeCritical {
+  0%, 100% { transform: translateX(0) scale(1); }
+  5% { transform: translateX(-20px) rotate(-3deg) scale(1.03); }
+  15% { transform: translateX(20px) rotate(3deg) scale(1.03); }
+  25% { transform: translateX(-18px) rotate(-2.5deg) scale(1.02); }
+  35% { transform: translateX(18px) rotate(2.5deg) scale(1.02); }
+  45% { transform: translateX(-15px) rotate(-2deg) scale(1.01); }
+  55% { transform: translateX(15px) rotate(2deg) scale(1.01); }
+  65% { transform: translateX(-10px) rotate(-1.5deg); }
+  75% { transform: translateX(10px) rotate(1.5deg); }
+  85% { transform: translateX(-5px) rotate(-0.5deg); }
+  95% { transform: translateX(5px) rotate(0.5deg); }
+}
+
+/* MK Blood Splatter on Screen */
+.bloodScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 55;
+  background: radial-gradient(circle at 70% 50%, rgba(139, 0, 0, 0.3) 0%, transparent 40%),
+              radial-gradient(circle at 30% 60%, rgba(220, 20, 60, 0.2) 0%, transparent 35%);
+  animation: bloodScreenFade 1s ease-out forwards;
+}
+
+@keyframes bloodScreenFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* MK Damage Number Enhancements */
+.damageNumber {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.critNumber {
+  font-family: "Impact", "Arial Black", sans-serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — MK Combat Optimizations
+   ════════════════════════════════════════════════════════════ */
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .announcementText,
+  .announcementShadow {
+    font-size: clamp(1.4rem, 8vw, 3rem);
+    letter-spacing: 0.08em;
+  }
+
+  .comboCounter {
+    top: 8px;
+    right: 8px;
+  }
+
+  .comboHits {
+    font-size: 1.6rem;
+  }
+
+  .comboLabel {
+    font-size: 0.75rem;
+  }
+
+  .specialMeterContainer {
+    top: 8px;
+    left: 8px;
+    gap: 6px;
+  }
+
+  .specialMeterLabel {
+    font-size: 0.75rem;
+  }
+
+  .specialMeterTrack {
+    width: 60px;
+    height: 8px;
+  }
+
+  .fatalityPrompt {
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    gap: 10px;
+  }
+
+  .fatalityPromptText {
+    font-size: 1.3rem;
+  }
+
+  .fatalityButtons {
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fatalityButton {
+    font-size: 0.9rem;
+    padding: 12px 20px;
+    min-height: 44px;
+    flex: 1;
+    max-width: 160px;
+    justify-content: center;
+  }
+
+  /* Reduce blood particles on tablet for performance */
+  .bloodParticle:nth-child(n + 12) {
+    display: none;
+  }
+
+  /* Fighters closer together on smaller stage */
+  .fightersContainer {
+    padding: 0 5%;
+  }
+
+  .playerFighter,
+  .enemyFighter {
+    margin: 0;
+  }
+}
+
+/* Phone (576px and below) */
+@media (max-width: 576px) {
+  .announcementText,
+  .announcementShadow {
+    font-size: clamp(1.1rem, 7vw, 2.2rem);
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+  }
+
+  .announcementOverlay {
+    padding: 0 10px;
+  }
+
+  .comboCounter {
+    top: 4px;
+    right: 6px;
+  }
+
+  .comboHits {
+    font-size: 1.3rem;
+  }
+
+  .comboLabel {
+    font-size: 0.65rem;
+  }
+
+  .specialMeterContainer {
+    top: 4px;
+    left: 6px;
+    gap: 4px;
+  }
+
+  .specialMeterLabel {
+    font-size: 0.65rem;
+  }
+
+  .specialMeterTrack {
+    width: 50px;
+    height: 7px;
+  }
+
+  /* Fatality prompt sits above action buttons on small screens */
+  .fatalityPrompt {
+    bottom: 4px;
+    gap: 8px;
+    z-index: 85;
+  }
+
+  .fatalityPromptText {
+    font-size: 1.1rem;
+  }
+
+  .fatalityIcon {
+    font-size: 1.8rem;
+  }
+
+  .fatalityButtons {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .fatalityButton {
+    font-size: 0.85rem;
+    padding: 14px 20px;
+    min-height: 48px;
+    width: 100%;
+    max-width: none;
+    border-radius: 10px;
+  }
+
+  /* Aggressive blood particle culling for phone performance */
+  .bloodParticle:nth-child(n + 8) {
+    display: none;
+  }
+
+  /* Keep fighters from touching edges */
+  .fightersContainer {
+    padding: 0 3%;
+  }
+
+  .fightingStage {
+    min-height: 220px;
+  }
+
+  /* Screen flash lighter on mobile to prevent eye strain */
+  .screenFlash {
+    opacity: 0.6;
+  }
+
+  /* Reduce shake intensity on mobile to prevent layout thrashing */
+  .heavyHitStage {
+    animation: heavyHitShakeMobile 0.25s ease-in-out;
+  }
+
+  @keyframes heavyHitShakeMobile {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+  }
+}
+
+/* Small phone (375px and below) */
+@media (max-width: 375px) {
+  .announcementText,
+  .announcementShadow {
+    font-size: clamp(1rem, 6vw, 1.8rem);
+  }
+
+  .comboHits {
+    font-size: 1.1rem;
+  }
+
+  .specialMeterTrack {
+    width: 40px;
+  }
+
+  .fatalityPromptText {
+    font-size: 1rem;
+  }
+
+  .fatalityButton {
+    font-size: 0.8rem;
+    padding: 12px 16px;
+  }
+
+  /* Minimal blood for tiny screens */
+  .bloodParticle:nth-child(n + 6) {
+    display: none;
+  }
+}
+
+/* Landscape phone — ensure stage doesn't get too short */
+@media (max-height: 500px) and (orientation: landscape) {
+  .fightingStage {
+    min-height: 160px;
+  }
+
+  .fatalityPrompt {
+    bottom: 2px;
+    gap: 4px;
+  }
+
+  .fatalityPromptText {
+    font-size: 1rem;
+  }
+
+  .fatalityButton {
+    padding: 8px 14px;
+    min-height: 40px;
+    font-size: 0.8rem;
+  }
+
+  .comboCounter,
+  .specialMeterContainer {
+    top: 2px;
+  }
+}
+
+/* Prevent layout shift from screen shake — GPU-accelerated only */
+.screenShake,
+.heavyHitStage,
+.victoryPose,
+.fatalityTarget {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BERSERK JAPANESE DOJO COMBAT OVERHAUL
+   Premium ink-wash aesthetic with dark-orange accents
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── COMBAT CARD WRAPPER ── */
+.combatCard {
+  background: linear-gradient(180deg, #0d0806 0%, #1a0e08 40%, #0d0806 100%);
+  border: 2px solid #c47a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
+  color: #e8d5b7;
+  width: 100%;
+  height: 100%;
+}
+
+.combatCard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(196, 122, 42, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(196, 122, 42, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── DOJO HEADER ── */
+.jpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #1a0e08 0%, #2a1810 50%, #1a0e08 100%);
+  border-bottom: 2px solid #c47a2a;
+  position: relative;
+  z-index: 10;
+}
+
+.jpHeader::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 10%; right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #e8a84c, transparent);
+  opacity: 0.5;
+}
+
+.jpHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jpHeaderIcon {
+  font-size: 1.4rem;
+  color: #e8a84c;
+  filter: drop-shadow(0 0 6px rgba(232, 168, 76, 0.5));
+}
+
+.jpHeaderKanji {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #e8a84c;
+  text-shadow: 0 0 12px rgba(232, 168, 76, 0.6), 0 2px 4px rgba(0,0,0,0.8);
+  line-height: 1;
+  letter-spacing: 4px;
+}
+
+.jpHeaderSub {
+  font-size: 0.65rem;
+  color: #8a6a3a;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.jpHeaderCenter {
+  flex: 1;
+  text-align: center;
+}
+
+.jpTurnPlayer {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+  letter-spacing: 3px;
+  animation: jpTurnPulse 1.5s ease-in-out infinite;
+}
+
+.jpTurnEnemy {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ef4444;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  letter-spacing: 3px;
+  animation: jpTurnPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes jpTurnPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.jpFleeBtn {
+  background: rgba(139, 69, 19, 0.3);
+  border: 1px solid #8a6a3a;
+  border-radius: 4px;
+  padding: 6px 14px;
+  color: #8a6a3a;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jpFleeBtn:hover:not(:disabled) {
+  background: rgba(196, 122, 42, 0.3);
+  color: #e8a84c;
+  border-color: #e8a84c;
+}
+
+.jpFleeBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── LOADING STATE ── */
+.jpLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+}
+
+.jpLoadingKanji {
+  font-size: 4rem;
+  color: #e8a84c;
+  text-shadow: 0 0 30px rgba(232, 168, 76, 0.4);
+  animation: jpKanjiBreath 2s ease-in-out infinite;
+}
+
+@keyframes jpKanjiBreath {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.jpLoadingText {
+  color: #8a6a3a;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+}
+
+.jpLoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(232, 168, 76, 0.2);
+  border-top-color: #e8a84c;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ── PREMIUM HEALTH BARS ── */
+.jpHealthBars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(13, 8, 6, 0.95) 0%, rgba(26, 14, 8, 0.8) 100%);
+  border-bottom: 1px solid rgba(196, 122, 42, 0.3);
+  position: relative;
+  z-index: 10;
+}
+
+.jpHealthSide {
+  flex: 1;
+  min-width: 0;
+}
+
+.jpHealthNameRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.jpNameTag {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #e8a84c;
+  letter-spacing: 3px;
+  text-shadow: 0 0 8px rgba(232, 168, 76, 0.3);
+}
+
+.jpHpText {
+  font-size: 0.75rem;
+  color: #c47a2a;
+  font-variant-numeric: tabular-nums;
+}
+
+.jpHpSep {
+  color: #5a3a1a;
+  margin: 0 1px;
+}
+
+.jpHpTrack {
+  width: 100%;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(196, 122, 42, 0.4);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.jpHpFill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 60%, #86efac 100%);
+  border-right: 2px solid rgba(255,255,255,0.3);
+  transition: width 0.4s ease;
+  z-index: 1;
+}
+
+.jpHpFillEnemy {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, #fca5a5 0%, #ef4444 60%, #dc2626 100%);
+  border-left: 2px solid rgba(255,255,255,0.3);
+  transition: width 0.4s ease;
+  z-index: 1;
+}
+
+.jpHpShine {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.jpHpDanger .jpHpFill {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 60%, #f87171 100%);
+  animation: jpHpPulse 0.6s ease-in-out infinite;
+}
+
+.jpHpDanger .jpHpFillEnemy {
+  background: linear-gradient(90deg, #f87171 0%, #ef4444 60%, #dc2626 100%);
+  animation: jpHpPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes jpHpPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.jpVsDivider {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #c47a2a;
+  text-shadow: 0 0 12px rgba(196, 122, 42, 0.5);
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ── EQUIPMENT STRIP ── */
+.jpEquipStrip {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: linear-gradient(180deg, rgba(26, 14, 8, 0.6) 0%, rgba(13, 8, 6, 0.8) 100%);
+  border-top: 1px solid rgba(196, 122, 42, 0.2);
+}
+
+.jpEquipSlot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #c47a2a;
+  background: rgba(196, 122, 42, 0.08);
+  border: 1px solid rgba(196, 122, 42, 0.25);
+  border-radius: 3px;
+  padding: 3px 10px;
+}
+
+.jpEquipIcon {
+  color: #e8a84c;
+  font-size: 0.8rem;
+}
+
+/* ── JAPANESE ACTION PANEL ── */
+.jpActionPanel {
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(13, 8, 6, 0.9) 0%, rgba(26, 14, 8, 0.95) 100%);
+  border-top: 2px solid rgba(196, 122, 42, 0.4);
+  position: relative;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.jpActionPanel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e8a84c, transparent);
+  opacity: 0.3;
+}
+
+.jpActionGrid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.jpActionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(196, 122, 42, 0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  min-width: 90px;
+  background: rgba(26, 14, 8, 0.8);
+}
+
+.jpActionBtn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(232, 168, 76, 0.1), transparent);
+  transition: left 0.4s;
+}
+
+.jpActionBtn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.jpActionBtn:hover:not(:disabled) {
+  border-color: #e8a84c;
+  box-shadow: 0 0 12px rgba(232, 168, 76, 0.2);
+  transform: translateY(-1px);
+}
+
+.jpActionBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.jpActionBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.jpAttackBtn {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.25) 0%, rgba(26, 14, 8, 0.9) 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.jpAttackBtn:hover:not(:disabled) {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+}
+
+.jpSpecialBtn {
+  background: linear-gradient(135deg, rgba(232, 168, 76, 0.15) 0%, rgba(26, 14, 8, 0.9) 100%);
+  border-color: rgba(196, 122, 42, 0.4);
+}
+
+.jpSpecialReady {
+  border-color: #e8a84c;
+  animation: jpSpecialGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes jpSpecialGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(232, 168, 76, 0.3); }
+  50% { box-shadow: 0 0 24px rgba(232, 168, 76, 0.6), 0 0 48px rgba(232, 168, 76, 0.2); }
+}
+
+.jpActionIcon {
+  font-size: 1.1rem;
+  color: #e8a84c;
+}
+
+.jpAttackBtn .jpActionIcon {
+  color: #ef4444;
+}
+
+.jpActionLabel {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #e8a84c;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(232, 168, 76, 0.4);
+}
+
+.jpAttackBtn .jpActionLabel {
+  color: #ef4444;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.jpActionSub {
+  font-size: 0.6rem;
+  color: #8a6a3a;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ── SELECT DROPDOWNS ── */
+.jpSelectWrap {
+  flex: 1;
+  min-width: 100px;
+}
+
+.jpSelect {
+  width: 100%;
+  height: 100%;
+  min-height: 68px;
+  background: rgba(26, 14, 8, 0.8);
+  border: 1px solid rgba(196, 122, 42, 0.4);
+  border-radius: 4px;
+  color: #c47a2a;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c47a2a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s;
+}
+
+.jpSelect:hover:not(:disabled) {
+  border-color: #e8a84c;
+}
+
+.jpSelect:focus {
+  outline: none;
+  border-color: #e8a84c;
+  box-shadow: 0 0 8px rgba(232, 168, 76, 0.2);
+}
+
+.jpSelect:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.jpSelect option {
+  background: #1a0e08;
+  color: #e8d5b7;
+}
+
+/* ── FLOATING COMBAT LOG (side overlay inside stage) ── */
+.jpLogFloat {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 180px;
+  background: rgba(10, 7, 5, 0.88);
+  border: 1px solid rgba(196, 122, 42, 0.3);
+  border-radius: 4px;
+  z-index: 30;
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.jpLogFloatHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, rgba(196, 122, 42, 0.15) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(196, 122, 42, 0.2);
+  font-size: 0.6rem;
+  color: #c47a2a;
+  letter-spacing: 3px;
+  font-family: 'Noto Serif JP', serif;
+}
+
+.jpLogFloatIcon {
+  color: #e8a84c;
+  font-size: 0.65rem;
+}
+
+.jpLogFloatScroll {
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 4px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #5a3a1a transparent;
+}
+
+.jpLogFloatScroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.jpLogFloatScroll::-webkit-scrollbar-thumb {
+  background: #5a3a1a;
+  border-radius: 2px;
+}
+
+.jpLogFloatScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.jpLogFloatEntry {
+  font-size: 0.55rem;
+  color: #a09080;
+  padding: 1.5px 0;
+  border-bottom: 1px solid rgba(196, 122, 42, 0.06);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jpLogFloatEntry:last-child {
+  border-bottom: none;
+}
+
+/* ── CINEMATIC RESULT SCREEN ── */
+.jpResultScreen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: jpResultFadeIn 0.6s ease-out;
+}
+
+.jpResultWin {
+  background: radial-gradient(ellipse at center, rgba(232, 168, 76, 0.15) 0%, rgba(13, 8, 6, 0.95) 70%);
+}
+
+.jpResultLose {
+  background: radial-gradient(ellipse at center, rgba(220, 38, 38, 0.12) 0%, rgba(13, 8, 6, 0.95) 70%);
+}
+
+@keyframes jpResultFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.jpResultCard {
+  text-align: center;
+  padding: 30px 40px;
+  background: rgba(26, 14, 8, 0.9);
+  border: 2px solid #c47a2a;
+  border-radius: 6px;
+  position: relative;
+  animation: jpResultSlideUp 0.5s ease-out;
+  max-width: 360px;
+  width: 90%;
+}
+
+.jpResultWin .jpResultCard {
+  border-color: #e8a84c;
+  box-shadow: 0 0 40px rgba(232, 168, 76, 0.2), 0 0 80px rgba(232, 168, 76, 0.1);
+}
+
+.jpResultLose .jpResultCard {
+  border-color: #dc2626;
+  box-shadow: 0 0 40px rgba(220, 38, 38, 0.2), 0 0 80px rgba(220, 38, 38, 0.1);
+}
+
+@keyframes jpResultSlideUp {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.jpResultKanji {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 8px;
+  animation: jpKanjiStamp 0.4s ease-out;
+}
+
+.jpResultWin .jpResultKanji {
+  color: #e8a84c;
+  text-shadow: 0 0 30px rgba(232, 168, 76, 0.6), 0 0 60px rgba(232, 168, 76, 0.3);
+}
+
+.jpResultLose .jpResultKanji {
+  color: #dc2626;
+  text-shadow: 0 0 30px rgba(220, 38, 38, 0.6), 0 0 60px rgba(220, 38, 38, 0.3);
+}
+
+@keyframes jpKanjiStamp {
+  0% { transform: scale(3) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(0.9) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.jpResultTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+}
+
+.jpResultWin .jpResultTitle {
+  color: #e8a84c;
+  text-shadow: 0 0 12px rgba(232, 168, 76, 0.4);
+}
+
+.jpResultLose .jpResultTitle {
+  color: #ef4444;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+.jpResultMsg {
+  font-size: 0.85rem;
+  color: #8a7a5a;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.jpRewards {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.jpRewardItem {
+  font-size: 0.85rem;
+  color: #e8a84c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(232, 168, 76, 0.08);
+  border: 1px solid rgba(232, 168, 76, 0.25);
+  border-radius: 3px;
+  padding: 4px 12px;
+}
+
+.jpResultBtn {
+  padding: 10px 28px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border: 2px solid;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.jpResultBtnWin {
+  background: linear-gradient(135deg, rgba(232, 168, 76, 0.2) 0%, rgba(26, 14, 8, 0.9) 100%);
+  border-color: #e8a84c;
+  color: #e8a84c;
+}
+
+.jpResultBtnWin:hover {
+  background: rgba(232, 168, 76, 0.3);
+  box-shadow: 0 0 20px rgba(232, 168, 76, 0.3);
+  transform: translateY(-1px);
+}
+
+.jpResultBtnLose {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(26, 14, 8, 0.9) 100%);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.jpResultBtnLose:hover {
+  background: rgba(220, 38, 38, 0.3);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+  transform: translateY(-1px);
+}
+
+.jpResultBtn:active {
+  transform: translateY(1px);
+}
+
+/* ── COMBAT BODY ── */
+.combatBody {
+  padding: 0;
+  position: relative;
+  min-height: 500px;
+  background: #0d0806;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── RESPONSIVE ADJUSTMENTS ── */
+@media (max-width: 768px) {
+  .jpHeader {
+    padding: 8px 12px;
+  }
+
+  .jpHeaderKanji {
+    font-size: 1.2rem;
+  }
+
+  .jpActionGrid {
+    gap: 6px;
+  }
+
+  .jpActionBtn {
+    padding: 8px 12px;
+    min-width: 70px;
+  }
+
+  .jpActionLabel {
+    font-size: 1.1rem;
+  }
+
+  .jpSelect {
+    min-height: 56px;
+    font-size: 0.7rem;
+  }
+
+  .jpResultKanji {
+    font-size: 3.5rem;
+  }
+
+  .jpResultTitle {
+    font-size: 1.2rem;
+  }
+
+  .jpResultCard {
+    padding: 20px;
+  }
+
+  .jpLogFloat {
+    width: 140px;
+    right: 4px;
+    bottom: 4px;
+  }
+
+  .jpLogFloatHeader {
+    font-size: 0.5rem;
+    padding: 3px 6px;
+  }
+
+  .jpLogFloatScroll {
+    max-height: 60px;
+  }
+
+  .jpLogFloatEntry {
+    font-size: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .jpHeaderKanji {
+    font-size: 1rem;
+  }
+
+  .jpHeaderSub {
+    font-size: 0.5rem;
+  }
+
+  .jpTurnPlayer,
+  .jpTurnEnemy {
+    font-size: 0.7rem;
+  }
+
+  .jpHealthBars {
+    padding: 8px 10px;
+  }
+
+  .jpNameTag {
+    font-size: 0.65rem;
+  }
+
+  .jpHpTrack {
+    height: 10px;
+  }
+
+  .jpVsDivider {
+    font-size: 0.9rem;
+    width: 28px;
+  }
+
+  .jpActionGrid {
+    flex-wrap: wrap;
+  }
+
+  .jpActionBtn {
+    flex: 1;
+    min-width: 60px;
+    padding: 6px 8px;
+  }
+
+  .jpActionLabel {
+    font-size: 1rem;
+  }
+
+  .jpSelectWrap {
+    min-width: 80px;
+  }
+
+  .jpLogFloat {
+    width: 110px;
+    right: 2px;
+    bottom: 2px;
+  }
+
+  .jpLogFloatScroll {
+    max-height: 45px;
+  }
+
+  .jpLogFloatEntry {
+    font-size: 0.45rem;
+  }
+
+  .jpResultKanji {
+    font-size: 2.5rem;
+  }
+
+  .jpResultTitle {
+    font-size: 1rem;
+  }
+
+  .jpRewards {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* ═══ WIDESCREEN (≥1200px) — Full cinematic combat ═══ */
+@media (min-width: 1200px) {
+  .combatCard {
+    border-radius: 0;
+    border: none;
+  }
+
+  .combatBody {
+    min-height: 80vh;
+  }
+
+  .fightingStage {
+    flex: 1;
+    height: auto;
+    min-height: 400px;
+  }
+
+  .jpHeader {
+    padding: 14px 32px;
+  }
+
+  .jpHeaderKanji {
+    font-size: 2.2rem;
+  }
+
+  .jpHeaderSub {
+    font-size: 0.8rem;
+    letter-spacing: 8px;
+  }
+
+  .jpHeaderIcon {
+    font-size: 1.8rem;
+  }
+
+  .jpTurnPlayer,
+  .jpTurnEnemy {
+    font-size: 1.1rem;
+    letter-spacing: 5px;
+  }
+
+  .jpHealthBars {
+    padding: 16px 32px;
+  }
+
+  .jpNameTag {
+    font-size: 1rem;
+    letter-spacing: 5px;
+  }
+
+  .jpHpText {
+    font-size: 0.9rem;
+  }
+
+  .jpHpTrack {
+    height: 20px;
+    border-radius: 3px;
+  }
+
+  .jpVsDivider {
+    font-size: 1.8rem;
+    width: 50px;
+  }
+
+  .jpActionPanel {
+    padding: 16px 32px;
+  }
+
+  .jpActionGrid {
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .jpActionBtn {
+    padding: 14px 28px;
+    min-width: 120px;
+    border-radius: 6px;
+  }
+
+  .jpActionIcon {
+    font-size: 1.4rem;
+  }
+
+  .jpActionLabel {
+    font-size: 1.8rem;
+  }
+
+  .jpActionSub {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+  }
+
+  .jpSelect {
+    min-height: 80px;
+    font-size: 0.9rem;
+    padding: 12px 16px;
+    border-radius: 6px;
+  }
+
+  .jpEquipStrip {
+    padding: 10px 32px;
+    gap: 20px;
+  }
+
+  .jpEquipSlot {
+    font-size: 0.85rem;
+    padding: 5px 16px;
+  }
+
+  .jpLogFloat {
+    width: 220px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .jpLogFloatHeader {
+    font-size: 0.65rem;
+    padding: 5px 10px;
+  }
+
+  .jpLogFloatScroll {
+    max-height: 100px;
+  }
+
+  .jpLogFloatEntry {
+    font-size: 0.6rem;
+  }
+
+  .jpResultCard {
+    max-width: 480px;
+    padding: 40px 60px;
+  }
+
+  .jpResultKanji {
+    font-size: 7rem;
+  }
+
+  .jpResultTitle {
+    font-size: 2rem;
+  }
+
+  .jpResultMsg {
+    font-size: 1rem;
+  }
+
+  .jpRewardItem {
+    font-size: 1rem;
+    padding: 6px 18px;
+  }
+
+  .jpResultBtn {
+    padding: 14px 40px;
+    font-size: 1.1rem;
+  }
+
+  .characterSpriteContainer {
+    height: 280px;
+  }
+
+  .fighter {
+    transform: scale(1.15);
+  }
+}
+
+/* ═══ ULTRAWIDE (≥1600px) — Even more grand ═══ */
+@media (min-width: 1600px) {
+  .fightingStage {
+    min-height: 500px;
+  }
+
+  .jpHeaderKanji {
+    font-size: 2.6rem;
+  }
+
+  .jpHpTrack {
+    height: 24px;
+  }
+
+  .jpActionBtn {
+    padding: 16px 36px;
+    min-width: 140px;
+  }
+
+  .jpActionLabel {
+    font-size: 2.2rem;
+  }
+
+  .jpSelect {
+    min-height: 90px;
+    font-size: 1rem;
+  }
+
+  .jpResultKanji {
+    font-size: 9rem;
+  }
+
+  .jpResultTitle {
+    font-size: 2.4rem;
+  }
+
+  .fighter {
+    transform: scale(1.3);
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .announcementText {
+    animation: none;
+  }
+
+  .bloodParticle {
+    animation-duration: 0.2s;
+  }
+
+  .screenShake,
+  .heavyHitStage {
+    animation: none;
+  }
+
+  .fatalityPrompt {
+    animation: none;
+  }
+
+  .jpKanjiStamp,
+  .jpResultSlideUp,
+  .jpResultFadeIn,
+  .jpSpecialGlow,
+  .jpTurnPulse,
+  .jpKanjiBreath {
+    animation: none;
   }
 }

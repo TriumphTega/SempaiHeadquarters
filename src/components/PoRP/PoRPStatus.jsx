@@ -1,21 +1,45 @@
 /**
- * PoRP Status Indicator - Shows reading session status and provides feedback
+ * PoRP Status Indicator - Premium animated status with stunning UI
  */
 
 import React, { useState, useEffect } from 'react';
-import { FaBook, FaCheckCircle, FaExclamationTriangle, FaClock, FaChartLine } from 'react-icons/fa';
+import { FaBook, FaCheckCircle, FaExclamationTriangle, FaClock, FaChartLine, FaShieldAlt, FaGem, FaEye, FaTimes } from 'react-icons/fa';
 
 export default function PoRPStatus({ isActive, receipt, onDismiss }) {
   const [showDetails, setShowDetails] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  // Function to open dashboard - this will be passed from parent
-  const openDashboard = () => {
-    // Dispatch custom event to parent component
-    window.dispatchEvent(new CustomEvent('openPoRPDashboard'));
+  // Function to toggle details view
+  const toggleDetails = async () => {
+    if (!showDetails && !userStats) {
+      setLoadingStats(true);
+      try {
+        // Mock user stats for now
+        const mockStats = {
+          totalScore: 1250,
+          tier: 'scholar',
+          level: 12,
+          readingSessions: 47,
+          avgEntropyScore: 0.72,
+          currentStreak: 7,
+          withdrawalLimits: { daily: 1000, cooldown: 6 },
+          withdrawalUsedToday: 250
+        };
+        setUserStats(mockStats);
+      } catch (error) {
+        console.error('[PoRPStatus] Error loading stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    }
+    setShowDetails(!showDetails);
   };
 
   useEffect(() => {
+    setMounted(true);
     let interval;
     if (isActive) {
       interval = setInterval(() => {
@@ -36,103 +60,196 @@ export default function PoRPStatus({ isActive, receipt, onDismiss }) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-sm z-50 border border-gray-200">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          {isActive ? (
-            <FaClock className="text-blue-500 animate-pulse" />
-          ) : receipt ? (
-            <FaCheckCircle className="text-green-500" />
-          ) : (
-            <FaExclamationTriangle className="text-yellow-500" />
+    <div 
+      style={{ 
+        position: 'fixed', 
+        bottom: '16px', 
+        right: '16px',
+        zIndex: 9999,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        backdropFilter: 'blur(12px)',
+        borderRadius: showDetails ? '12px' : '8px',
+        boxShadow: '0 4px 20px rgba(6, 182, 212, 0.15)',
+        border: '1px solid rgba(6, 182, 212, 0.3)',
+        padding: showDetails ? '16px' : '12px',
+        display: 'flex',
+        alignItems: showDetails ? 'flex-start' : 'center',
+        gap: '12px',
+        transition: 'all 0.3s ease',
+        minWidth: showDetails ? '320px' : 'auto',
+        maxWidth: showDetails ? '400px' : 'auto'
+      }}
+    >
+      {/* Status icon */}
+      <div style={{ position: 'relative', marginTop: showDetails ? '2px' : '0' }}>
+        {isActive && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            borderRadius: '50%',
+            animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
+          }} />
+        )}
+        {receipt && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+            borderRadius: '50%',
+            animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
+          }} />
+        )}
+        <div style={{ position: 'relative' }}>
+          {isActive && (
+            <FaClock style={{ 
+              color: '#60a5fa', 
+              fontSize: '14px',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            }} />
           )}
-          <span className="font-semibold text-sm">
-            {isActive ? 'Reading Session Active' : 'Session Completed'}
+          {receipt && (
+            <FaCheckCircle style={{ color: '#4ade80', fontSize: '14px' }} />
+          )}
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: showDetails ? '12px' : '0' }}>
+        {/* Status text */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ 
+            color: '#ffffff', 
+            fontSize: '14px', 
+            fontWeight: '500',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+          }}>
+            {isActive ? formatTime(timeElapsed) : 'Completed'}
+          </span>
+          <span style={{ 
+            color: '#67e8f9', 
+            fontSize: '12px',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+          }}>
+            {isActive ? 'Reading' : 'Verified'}
           </span>
         </div>
+        
+        {/* Detailed stats */}
+        {showDetails && (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px',
+            borderTop: '1px solid rgba(6, 182, 212, 0.2)',
+            paddingTop: '12px'
+          }}>
+            {loadingStats ? (
+              <div style={{ textAlign: 'center', padding: '12px' }}>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid #60a5fa',
+                  borderTop: '2px solid transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  margin: '0 auto 8px'
+                }} />
+                <span style={{ color: '#9ca3af', fontSize: '12px' }}>Loading stats...</span>
+              </div>
+            ) : userStats ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Tier</span>
+                  <span style={{ 
+                    color: '#f97316', 
+                    fontSize: '14px', 
+                    fontWeight: '600',
+                    textTransform: 'capitalize'
+                  }}>
+                    {userStats.tier}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Score</span>
+                  <span style={{ color: '#ffffff', fontSize: '14px', fontWeight: '500' }}>
+                    {userStats.totalScore.toLocaleString()}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Sessions</span>
+                  <span style={{ color: '#ffffff', fontSize: '14px', fontWeight: '500' }}>
+                    {userStats.readingSessions}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Streak</span>
+                  <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '500' }}>
+                    {userStats.currentStreak} days
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Daily Limit</span>
+                  <span style={{ color: '#ffffff', fontSize: '14px', fontWeight: '500' }}>
+                    ${userStats.withdrawalLimits.daily}
+                  </span>
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
+      </div>
+      
+      {/* Action buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+        {/* Dashboard toggle button */}
+        <button
+          onClick={toggleDetails}
+          style={{
+            color: '#60a5fa',
+            fontSize: '12px',
+            background: 'none',
+            border: '1px solid #60a5fa',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.color = '#ffffff';
+            e.target.style.backgroundColor = '#60a5fa';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.color = '#60a5fa';
+            e.target.style.backgroundColor = 'transparent';
+          }}
+        >
+          <FaChartLine style={{ fontSize: '12px' }} />
+        </button>
+        
+        {/* Dismiss button */}
         <button
           onClick={onDismiss}
-          className="text-gray-400 hover:text-gray-600 text-sm"
+          style={{
+            color: '#9ca3af',
+            fontSize: '12px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '4px',
+            transition: 'color 0.2s ease'
+          }}
+          onMouseOver={(e) => e.target.style.color = '#ffffff'}
+          onMouseOut={(e) => e.target.style.color = '#9ca3af'}
         >
-          ×
+          <FaTimes style={{ fontSize: '12px' }} />
         </button>
       </div>
-
-      {/* Content */}
-      {isActive && (
-        <div className="space-y-2">
-          <div className="text-xs text-gray-600">
-            <div className="flex justify-between">
-              <span>Time reading:</span>
-              <span className="font-medium">{formatTime(timeElapsed)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Status:</span>
-              <span className="text-green-600 font-medium">Tracking</span>
-            </div>
-          </div>
-          
-          <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-            <FaBook className="inline mr-1" />
-            Your reading behavior is being tracked to earn rewards
-          </div>
-        </div>
-      )}
-
-      {receipt && (
-        <div className="space-y-2">
-          <div className="text-xs text-gray-600">
-            <div className="flex justify-between">
-              <span>Session ID:</span>
-              <span className="font-mono text-xs">{receipt.receipt_id?.substring(0, 8)}...</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Reading time:</span>
-              <span className="font-medium">{formatTime(receipt.top_seconds?.[0] || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Entropy score:</span>
-              <span className="font-medium">{(receipt.entropy_score || 0).toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
-            <FaCheckCircle className="inline mr-1" />
-            Reading session verified! Receipt issued.
-          </div>
-        </div>
-      )}
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mt-2">
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="text-xs text-gray-500 hover:text-gray-700 flex-1"
-        >
-          {showDetails ? 'Hide' : 'Show'} details
-        </button>
-        <button
-          onClick={openDashboard}
-          className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
-        >
-          <FaChartLine size={10} />
-          Dashboard
-        </button>
-      </div>
-
-      {/* Expanded details */}
-      {showDetails && (
-        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-600 space-y-1">
-          <p><strong>Proof-of-Reading Protocol</strong></p>
-          <p>• Behavioral tracking prevents bots</p>
-          <p>• Cryptographic receipts prove genuine reading</p>
-          <p>• Earn reputation and unlock better rewards</p>
-          {receipt && (
-            <p className="text-green-600">• Receipt expires: {new Date(receipt.expires_at).toLocaleString()}</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

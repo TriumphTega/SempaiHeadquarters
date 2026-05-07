@@ -1,0 +1,1142 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   KAITO ADVENTURE — JAPANESE DARK-ORANGE DESIGN SYSTEM
+   Aesthetic: Edo-period ink wash × cyberpunk amber glow
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Color Palette ── */
+:root {
+  --ka-bg-primary: #0c0c0c;
+  --ka-bg-card: #141210;
+  --ka-bg-elevated: #1a1714;
+  --ka-bg-input: #0f0e0d;
+  --ka-orange-primary: #cc5500;
+  --ka-orange-bright: #ff6b35;
+  --ka-orange-soft: #e67e22;
+  --ka-orange-dim: #8b4513;
+  --ka-red-accent: #c41e3a;
+  --ka-red-deep: #8b0000;
+  --ka-gold: #c9a84c;
+  --ka-gold-bright: #ffd700;
+  --ka-ivory: #f5e6d3;
+  --ka-ivory-dim: #c4b5a0;
+  --ka-ink: #2a2520;
+  --ka-border: #2d2418;
+  --ka-border-glow: #cc550040;
+  --ka-text-primary: #f5e6d3;
+  --ka-text-secondary: #a09080;
+  --ka-text-muted: #6b5d4f;
+  --ka-success: #4a7c59;
+  --ka-success-bright: #6ab77a;
+  --ka-danger: #c41e3a;
+  --ka-danger-soft: #8b3a3a;
+}
+
+/* ── App Shell ── */
+.kaApp {
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, #1a0f05 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, #0f0803 0%, transparent 50%),
+    linear-gradient(180deg, #0c0c0c 0%, #0a0806 50%, #0c0c0c 100%);
+  color: var(--ka-ivory);
+  font-family: "Noto Sans JP", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+}
+
+.kaApp::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cc5500' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Floating Ember Particles ── */
+.emberContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.ember {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--ka-orange-primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: emberFloat 8s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--ka-orange-bright), 0 0 12px var(--ka-orange-primary);
+}
+
+@keyframes emberFloat {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+/* ── Main Game Card ── */
+.kaCard {
+  background: linear-gradient(145deg, #141210 0%, #1a1714 50%, #12100e 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px #0a0806,
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(204, 85, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.kaCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-primary) 20%, var(--ka-gold) 50%, var(--ka-orange-primary) 80%, transparent 100%);
+  opacity: 0.6;
+}
+
+.kaCard::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-dim) 30%, var(--ka-orange-dim) 70%, transparent 100%);
+  opacity: 0.3;
+}
+
+/* Corner ornaments */
+.kaCardCorner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--ka-orange-dim);
+  border-style: solid;
+  opacity: 0.4;
+}
+
+.kaCardCornerTL { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+.kaCardCornerTR { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+.kaCardCornerBL { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+.kaCardCornerBR { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+/* ── Section Dividers ── */
+.kaSectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--ka-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.kaSectionDivider::before,
+.kaSectionDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ka-border), transparent);
+}
+
+/* ── Typography ── */
+.kaTitle {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  text-shadow: 0 0 20px rgba(204, 85, 0, 0.3);
+  letter-spacing: 2px;
+}
+
+.kaSubtitle {
+  color: var(--ka-text-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+/* ── Character Stats Panel ── */
+.kaStatsPanel {
+  background: linear-gradient(135deg, rgba(20, 18, 16, 0.9) 0%, rgba(26, 23, 20, 0.9) 100%);
+  border: 1px solid var(--ka-border);
+  border-left: 3px solid var(--ka-orange-primary);
+  padding: 16px 20px;
+  position: relative;
+}
+
+.kaStatsPanel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -3px;
+  width: 3px;
+  height: 30px;
+  background: var(--ka-gold);
+}
+
+.kaAvatarFrame {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--ka-orange-dim);
+  padding: 3px;
+  background: var(--ka-bg-card);
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.2);
+}
+
+.kaAvatarFrame::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--ka-orange-primary);
+  border-right-color: var(--ka-gold);
+  animation: avatarSpin 4s linear infinite;
+}
+
+@keyframes avatarSpin {
+  to { transform: rotate(360deg); }
+}
+
+.kaStatRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.kaStatIcon {
+  color: var(--ka-orange-soft);
+  font-size: 0.9rem;
+}
+
+.kaStatValue {
+  color: var(--ka-ivory);
+  font-weight: 600;
+}
+
+.kaStatLabel {
+  color: var(--ka-text-muted);
+  font-size: 0.75rem;
+}
+
+/* XP Bar */
+.kaXpTrack {
+  height: 6px;
+  background: var(--ka-ink);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.kaXpFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ka-orange-dim), var(--ka-orange-primary), var(--ka-gold));
+  border-radius: 3px;
+  transition: width 0.6s ease;
+  position: relative;
+}
+
+.kaXpFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+  animation: xpShimmer 2s ease-in-out infinite;
+}
+
+@keyframes xpShimmer {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.kaXpText {
+  font-size: 0.7rem;
+  color: var(--ka-text-muted);
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* ── Town Banner ── */
+.kaTownBanner {
+  background: linear-gradient(135deg, rgba(26, 15, 5, 0.9) 0%, rgba(20, 12, 6, 0.95) 100%);
+  border: 1px solid var(--ka-border);
+  border-top: 2px solid var(--ka-orange-dim);
+  padding: 12px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kaTownBanner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 20px;
+  width: 60px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(204, 85, 0, 0.05), transparent);
+}
+
+.kaTownName {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ka-gold);
+  letter-spacing: 2px;
+}
+
+.kaTownLevel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--ka-text-muted);
+  background: var(--ka-ink);
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--ka-border);
+}
+
+.kaWeatherBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--ka-ivory-dim);
+}
+
+.kaWeatherIcon {
+  color: var(--ka-orange-soft);
+}
+
+.kaEventBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(196, 30, 58, 0.15), rgba(196, 30, 58, 0.05));
+  border-left: 2px solid var(--ka-red-accent);
+  font-size: 0.8rem;
+  color: var(--ka-red-accent);
+  margin-top: 8px;
+}
+
+/* ── Game Message ── */
+.kaMessage {
+  background: linear-gradient(135deg, rgba(15, 14, 13, 0.95) 0%, rgba(20, 18, 16, 0.95) 100%);
+  border: 1px solid var(--ka-border);
+  border-left: 3px solid var(--ka-gold);
+  padding: 12px 18px;
+  font-size: 0.9rem;
+  color: var(--ka-ivory-dim);
+  line-height: 1.6;
+  position: relative;
+  font-style: italic;
+}
+
+.kaMessage::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -3px;
+  width: 3px;
+  height: 8px;
+  background: var(--ka-orange-primary);
+  transform: translateY(-50%);
+}
+
+/* ── Inventory Grid ── */
+.kaInventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.kaInventoryGrid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.kaInventoryGrid::-webkit-scrollbar-track {
+  background: var(--ka-bg-input);
+}
+
+.kaInventoryGrid::-webkit-scrollbar-thumb {
+  background: var(--ka-orange-dim);
+  border-radius: 2px;
+}
+
+.kaInventoryItem {
+  background: linear-gradient(145deg, #171512 0%, #1a1714 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 3px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.kaInventoryItem:hover {
+  border-color: var(--ka-orange-dim);
+  box-shadow: 0 0 12px rgba(204, 85, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.kaInventoryItemRare {
+  border-color: var(--ka-gold);
+  background: linear-gradient(145deg, #1a1508 0%, #1e190c 100%);
+}
+
+.kaInventoryItemRare::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ka-gold), transparent);
+  opacity: 0.5;
+}
+
+.kaItemIcon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.kaItemName {
+  font-size: 0.7rem;
+  color: var(--ka-ivory-dim);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.kaItemQty {
+  font-size: 0.7rem;
+  color: var(--ka-orange-soft);
+  font-weight: 600;
+  background: var(--ka-ink);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.kaItemEquipBtn {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid var(--ka-border);
+  color: var(--ka-text-muted);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.kaItemEquipBtn:hover {
+  border-color: var(--ka-orange-primary);
+  color: var(--ka-orange-bright);
+}
+
+.kaInventoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.kaInventoryTitle {
+  font-size: 0.85rem;
+  color: var(--ka-text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kaInventoryActions {
+  display: flex;
+  gap: 6px;
+}
+
+.kaInventoryActionBtn {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  background: var(--ka-ink);
+  border: 1px solid var(--ka-border);
+  color: var(--ka-text-muted);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.kaInventoryActionBtn:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-ivory);
+}
+
+/* ── Equipment Display ── */
+.kaEquipmentBar {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(15, 14, 13, 0.8) 0%, rgba(20, 18, 16, 0.8) 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.kaEquipSlot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ka-text-secondary);
+}
+
+.kaEquipSlotValue {
+  color: var(--ka-gold);
+  font-weight: 600;
+}
+
+.kaEquipSlotEmpty {
+  color: var(--ka-text-muted);
+  font-style: italic;
+}
+
+/* ── Command Bar (Bottom Action Bar) ── */
+.kaCommandBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(12, 12, 12, 0.98) 20%, #0c0c0c 100%);
+  border-top: 1px solid var(--ka-border);
+  padding: 12px 16px 20px;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+
+.kaCommandBar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ka-orange-dim), transparent);
+  opacity: 0.5;
+}
+
+.kaCommandGrid {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── Japanese Buttons ── */
+.kaBtn {
+  position: relative;
+  padding: 10px 18px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  background: linear-gradient(145deg, #1a1714 0%, #141210 100%);
+  color: var(--ka-ivory-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kaBtn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(204, 85, 0, 0.1), transparent);
+  transition: left 0.4s ease;
+}
+
+.kaBtn:hover::before {
+  left: 100%;
+}
+
+.kaBtn:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-ivory);
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.kaBtn:active {
+  transform: translateY(0);
+}
+
+.kaBtnPrimary {
+  border-color: var(--ka-orange-primary);
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+  color: var(--ka-orange-bright);
+}
+
+.kaBtnPrimary:hover {
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.25) 0%, rgba(139, 69, 19, 0.15) 100%);
+  box-shadow: 0 0 24px rgba(204, 85, 0, 0.25);
+}
+
+.kaBtnDanger {
+  border-color: var(--ka-red-accent);
+  background: linear-gradient(145deg, rgba(196, 30, 58, 0.12) 0%, rgba(139, 0, 0, 0.08) 100%);
+  color: #e08a96;
+}
+
+.kaBtnDanger:hover {
+  background: linear-gradient(145deg, rgba(196, 30, 58, 0.2) 0%, rgba(139, 0, 0, 0.12) 100%);
+  box-shadow: 0 0 24px rgba(196, 30, 58, 0.2);
+}
+
+.kaBtnSuccess {
+  border-color: var(--ka-success);
+  background: linear-gradient(145deg, rgba(74, 124, 89, 0.12) 0%, rgba(50, 80, 60, 0.08) 100%);
+  color: var(--ka-success-bright);
+}
+
+.kaBtnIcon {
+  font-size: 1rem;
+}
+
+/* ── Dropdowns ── */
+.kaDropdownMenu {
+  background: var(--ka-bg-elevated);
+  border: 1px solid var(--ka-border);
+  border-radius: 3px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  min-width: 180px;
+}
+
+.kaDropdownItem {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--ka-ivory-dim);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kaDropdownItem:hover {
+  background: rgba(204, 85, 0, 0.1);
+  color: var(--ka-ivory);
+}
+
+.kaDropdownDivider {
+  height: 1px;
+  background: var(--ka-border);
+  margin: 4px 0;
+}
+
+.kaDropdownHeader {
+  padding: 6px 12px;
+  font-size: 0.7rem;
+  color: var(--ka-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ── Modal Styling ── */
+.kaModal :global(.modal-content) {
+  background: linear-gradient(145deg, #141210 0%, #1a1714 50%, #12100e 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 4px;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.8);
+  color: var(--ka-ivory);
+}
+
+.kaModal :global(.modal-header) {
+  border-bottom: 1px solid var(--ka-border);
+  padding: 16px 20px;
+  background: linear-gradient(180deg, rgba(204, 85, 0, 0.05) 0%, transparent 100%);
+}
+
+.kaModal :global(.modal-title) {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ka-gold);
+  letter-spacing: 2px;
+}
+
+.kaModal :global(.modal-body) {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.kaModal :global(.modal-body::-webkit-scrollbar) {
+  width: 6px;
+}
+
+.kaModal :global(.modal-body::-webkit-scrollbar-track) {
+  background: var(--ka-bg-input);
+}
+
+.kaModal :global(.modal-body::-webkit-scrollbar-thumb) {
+  background: var(--ka-orange-dim);
+  border-radius: 3px;
+}
+
+.kaModal :global(.btn-close) {
+  filter: invert(0.8) sepia(1) saturate(5) hue-rotate(10deg);
+  opacity: 0.6;
+}
+
+.kaModal :global(.btn-close:hover) {
+  opacity: 1;
+}
+
+/* ── Fullscreen Combat Modal ── */
+.kaModalFullscreen :global(.modal-dialog) {
+  max-width: 100%;
+  margin: 0;
+  height: 100%;
+}
+
+.kaModalFullscreen :global(.modal-content) {
+  background: #0d0806;
+  border: none;
+  border-radius: 0;
+  height: 100%;
+  min-height: 100vh;
+  color: var(--ka-ivory);
+}
+
+.kaModalFullscreen :global(.modal-header) {
+  display: none;
+}
+
+.kaModalFullscreen :global(.modal-body) {
+  padding: 0;
+  max-height: none;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* ── Form Inputs ── */
+.kaInput,
+.kaSelect {
+  background: var(--ka-bg-input);
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  color: var(--ka-ivory);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.kaInput:focus,
+.kaSelect:focus {
+  outline: none;
+  border-color: var(--ka-orange-dim);
+  box-shadow: 0 0 12px rgba(204, 85, 0, 0.15);
+}
+
+.kaInput::placeholder {
+  color: var(--ka-text-muted);
+}
+
+/* ── Progress / Health Bars ── */
+.kaProgressTrack {
+  height: 8px;
+  background: var(--ka-ink);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.kaProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.kaHealthFill {
+  background: linear-gradient(90deg, var(--ka-red-deep), var(--ka-red-accent), var(--ka-orange-primary));
+}
+
+.kaHealthFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2));
+  animation: healthPulse 2s ease-in-out infinite;
+}
+
+@keyframes healthPulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* ── Leaderboard Button (Floating) ── */
+.kaLeaderboardBtn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+}
+
+/* ── Scroll Text Animation ── */
+.kaScrollText {
+  animation: scrollFadeIn 0.4s ease-out;
+}
+
+@keyframes scrollFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Glow Effects ── */
+.kaGlowOrange {
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.15);
+}
+
+.kaGlowGold {
+  box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
+}
+
+/* ── Rare Item Badge ── */
+.kaRareBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--ka-gold);
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+/* ── Countdown Timer ── */
+.kaCountdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--ka-orange-soft);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+/* ── Quest / Task Items ── */
+.kaTaskItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--ka-bg-elevated);
+  border: 1px solid var(--ka-border);
+  border-radius: 3px;
+  margin-bottom: 6px;
+  transition: all 0.2s;
+}
+
+.kaTaskItem:hover {
+  border-color: var(--ka-orange-dim);
+}
+
+.kaTaskComplete {
+  border-left: 2px solid var(--ka-success);
+}
+
+.kaTaskProgress {
+  flex: 1;
+  height: 4px;
+  background: var(--ka-ink);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.kaTaskProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ka-orange-dim), var(--ka-orange-primary));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Table Styling ── */
+.kaTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.kaTable thead th {
+  background: var(--ka-ink);
+  color: var(--ka-text-secondary);
+  font-weight: 600;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--ka-border);
+}
+
+.kaTable tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ka-border);
+  color: var(--ka-ivory-dim);
+}
+
+.kaTable tbody tr:hover td {
+  background: rgba(204, 85, 0, 0.03);
+}
+
+/* ── Card / Panel Components ── */
+.kaPanel {
+  background: linear-gradient(145deg, #141210 0%, #1a1714 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 3px;
+  padding: 16px;
+  position: relative;
+}
+
+.kaPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ka-border);
+}
+
+.kaPanelTitle {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  letter-spacing: 1px;
+}
+
+/* ── List Group ── */
+.kaListGroup {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.kaListItem {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ka-border);
+  color: var(--ka-ivory-dim);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s;
+}
+
+.kaListItem:hover {
+  background: rgba(204, 85, 0, 0.03);
+}
+
+.kaListItem:last-child {
+  border-bottom: none;
+}
+
+/* ── Alert / Notification ── */
+.kaAlert {
+  padding: 10px 14px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kaAlertInfo {
+  background: rgba(204, 85, 0, 0.08);
+  border-left: 2px solid var(--ka-orange-primary);
+  color: var(--ka-orange-soft);
+}
+
+.kaAlertSuccess {
+  background: rgba(74, 124, 89, 0.08);
+  border-left: 2px solid var(--ka-success);
+  color: var(--ka-success-bright);
+}
+
+.kaAlertDanger {
+  background: rgba(196, 30, 58, 0.08);
+  border-left: 2px solid var(--ka-red-accent);
+  color: #e08a96;
+}
+
+/* ── Tooltip ── */
+.kaTooltip {
+  position: relative;
+}
+
+.kaTooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  background: var(--ka-bg-elevated);
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  font-size: 0.7rem;
+  color: var(--ka-ivory);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.kaTooltip:hover::after {
+  opacity: 1;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .kaCommandGrid {
+    gap: 6px;
+  }
+
+  .kaBtn {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+
+  .kaInventoryGrid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    max-height: 160px;
+  }
+
+  .kaStatsPanel {
+    padding: 12px 14px;
+  }
+
+  .kaTownBanner {
+    padding: 10px 14px;
+  }
+
+  .kaCard {
+    margin: 0 -12px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .kaInventoryGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .kaCommandBar {
+    padding: 8px 10px 16px;
+  }
+
+  .kaBtn {
+    padding: 7px 10px;
+    font-size: 0.65rem;
+  }
+}
+
+/* ── Animations ── */
+@keyframes kaFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kaSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kaFadeIn {
+  animation: kaFadeIn 0.4s ease-out;
+}
+
+.kaSlideUp {
+  animation: kaSlideUp 0.4s ease-out;
+}
+
+/* ── Loading States ── */
+.kaSkeleton {
+  background: linear-gradient(90deg, var(--ka-ink) 25%, var(--ka-bg-elevated) 50%, var(--ka-ink) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  border-radius: 2px;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Scrollbar (Global override for this module) ── */
+:global(::-webkit-scrollbar) {
+  width: 6px;
+}
+
+:global(::-webkit-scrollbar-track) {
+  background: var(--ka-bg-input);
+}
+
+:global(::-webkit-scrollbar-thumb) {
+  background: var(--ka-orange-dim);
+  border-radius: 3px;
+}
+
+:global(::-webkit-scrollbar-thumb:hover) {
+  background: var(--ka-orange-primary);
+}

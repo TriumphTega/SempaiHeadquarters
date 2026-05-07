@@ -6,7 +6,7 @@ import { Container, Row, Col, Button } from "react-bootstrap";
 import { useWallet } from "@solana/wallet-adapter-react";
 import debounce from "lodash/debounce";
 import { supabase } from "../../services/supabase/supabaseClient";
-import styles from "../../styles/Combat.module.css";
+import styles from "../../styles/KaitoAdventure.module.css";
 import Navbar from "./Navbar";
 import PlayerStats from "./PlayerStats";
 import InventoryList from "./InventoryList";
@@ -122,6 +122,16 @@ const towns = [
   },
 ];
 
+const buildEmbers = (count = 18) =>
+  Array.from({ length: count }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 6}s`,
+    duration: `${7 + Math.random() * 6}s`,
+    size: 2 + Math.floor(Math.random() * 3),
+    opacity: 0.3 + Math.random() * 0.6,
+  }));
+
 const allIngredients = ["Water", "Herbs", "Pepper", "Sugar", "Mist Essence", "Shadow Root", "Iron Ore", "Wood", "Golden Herb", "Iron Shard", "Mist Crystal"];
 const rare_items = ["Golden Herb", "Iron Shard", "Mist Crystal"];
 
@@ -154,6 +164,13 @@ const skillTrees = {
 
 // ---- KaitoAdventure Component ----
 const KaitoAdventure = () => {
+  const [isMounted, setIsMounted] = useState(false);
+  const [embers, setEmbers] = useState([]);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setEmbers(buildEmbers(18));
+  }, []);
   const { publicKey, connected } = useWallet();
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
@@ -719,7 +736,6 @@ const KaitoAdventure = () => {
           updateXP(xpGain);
           setGameMessage(`You defeated ${prev.enemy.name} and earned ${prev.enemy.gold} gold!${drop ? " Dropped: " + drop : ""} (+${xpGain} XP)`);
           setCombatResult({ type: "win", message: `Victory! You defeated ${prev.enemy.name}!` });
-          setTimeout(() => setModals(m => ({ ...m, combat: false })), 1500);
           return null;
         }
 
@@ -732,7 +748,6 @@ const KaitoAdventure = () => {
           setPlayer(p => ({ ...p, health: newPlayerHealth }));
           setGameMessage("You were defeated!");
           setCombatResult({ type: "fail", message: `Defeat! ${prev.enemy.name} overpowered you!` });
-          setTimeout(() => setModals(m => ({ ...m, combat: false })), 1500);
           return null;
         }
 
@@ -1165,16 +1180,40 @@ const KaitoAdventure = () => {
 
   // ---- Render ----
   return (
-    <div style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto", background: "url('/background.jpg') center/cover fixed", animation: "backgroundFade 5s infinite" }}>
+    <div className={styles.kaApp}>
       <Head><title>Kaito's Adventure</title></Head>
+      {isMounted ? (
+        <div className={styles.emberContainer}>
+          {embers.map((e) => (
+            <div
+              key={e.id}
+              className={styles.ember}
+              style={{
+                left: e.left,
+                animationDelay: e.delay,
+                animationDuration: e.duration,
+                width: `${e.size}px`,
+                height: `${e.size}px`,
+                opacity: e.opacity,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
       <Navbar menuOpen={menuOpen} toggleMenu={toggleMenu} />
-      <Container fluid className="py-3 py-md-5" style={{ paddingTop: "50px" }}>
-        <Button variant="info" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 1000 }} onClick={() => toggleModal("leaderboard")} className={styles.glowButton}>
-          <FaStar className={styles.iconPulse} /> Leaderboard
-        </Button>
+      <Container fluid className="py-3 py-md-5" style={{ paddingTop: "60px", position: "relative", zIndex: 2 }}>
+        <div className={styles.kaLeaderboardBtn}>
+          <button type="button" className={`${styles.kaBtn} ${styles.kaBtnPrimary}`} onClick={() => toggleModal("leaderboard")}>
+            <FaStar className={styles.kaBtnIcon} /> Leaderboard
+          </button>
+        </div>
         <Row className="justify-content-center">
           <Col md={10}>
-            <Card className={`${styles.gildedCard} ${styles.cardPulse}`} style={{ background: "rgba(255, 255, 255, 0.9)" }}>
+            <Card className={styles.kaCard} style={{ background: "transparent" }}>
+              <div className={`${styles.kaCardCorner} ${styles.kaCardCornerTL}`} />
+              <div className={`${styles.kaCardCorner} ${styles.kaCardCornerTR}`} />
+              <div className={`${styles.kaCardCorner} ${styles.kaCardCornerBL}`} />
+              <div className={`${styles.kaCardCorner} ${styles.kaCardCornerBR}`} />
               <PlayerStats player={player} xpProgress={xpProgress} />
               <TownInfo currentTown={currentTown} townLevels={townLevels} weather={weather} currentEvent={currentEvent} eventTimer={eventTimer} formatCountdown={formatCountdown} />
               <GameMessage message={gameMessage} />
@@ -1233,8 +1272,8 @@ const KaitoAdventure = () => {
           toggleModal={toggleModal} 
         />
       </ModalWrapper>
-      <ModalWrapper show={modals.combat} onHide={() => toggleModal("combat")} title="Combat Arena" centered>
-        <CombatModal 
+      <ModalWrapper show={modals.combat} onHide={() => toggleModal("combat")} title="Combat Arena" fullscreen>
+        <CombatModal
           combatState={combatState} 
           combatResult={combatResult} 
           player={player} 

@@ -25,7 +25,8 @@ const TOKEN_MINTS = {
 };
 
 // Jupiter API key for authenticated requests (higher rate limits and priority routing)
-const JUPITER_API_KEY = "jup_4801d87679ec9083587ffd94be3e3abd233a0057963b63da729dd56ac4b53a3a";
+// IMPORTANT: This should be stored in environment variables, not hardcoded
+const JUPITER_API_KEY = process.env.JUPITER_API_KEY || "";
 
 export async function POST(req) {
   // Parse the incoming request body from the frontend
@@ -68,50 +69,80 @@ export async function POST(req) {
   const rawAmount = new BN(Math.floor(amount * 10 ** decimals)).toString();
 
   try {
-    // === JUPITER SWAP V2 - SINGLE CALL (best routing, works perfectly with SMP) ===
-    // Jupiter V2 automatically finds the best route including:
-    // - Direct pools (Raydium, Orca, Meteora)
-    // - Multi-hop routes for better rates
-    // - Special handling for SMP's Meteora DAMM2 pools
+    // === JUPITER SWAP V6 - TWO-STEP PROCESS (quote + swap) ===
+    // Step 1: Get a quote from Jupiter's routing engine
+    console.log(`[Jupiter V6] Getting quote for ${inputMint} -> ${outputMint}, amount: ${rawAmount}`);
     
-    const orderUrl = `https://api.jup.ag/swap/v2/order?` +
+    const quoteUrl = `https://api.jup.ag/swap/v1/quote?` +
       `inputMint=${inputMint}&` +           // Token being sold
       `outputMint=${outputMint}&` +          // Token being bought
       `amount=${rawAmount}&` +               // Amount in smallest units (lamports)
-      `taker=${user.toString()}&` +          // User's wallet address (for transaction)
       `slippageBps=50&` +                    // 0.5% slippage tolerance (50 basis points)
-      `wrapAndUnwrapSol=true&` +             // Auto-wrap/unwrap SOL for SPL swaps
-      `prioritizationFeeLamports=10000000`;  // 0.01 SOL priority fee for fast inclusion
+      `restrictIntermediateTokens=true&` +   // More reliable routing
+      `instructionVersion=V2`;               // Use V2 instruction format
 
-    console.log(`[Jupiter V2] Requesting order (including SMP): ${orderUrl}`);
-
-    // Make the authenticated request to Jupiter's API
-    const res = await fetch(orderUrl, {
+    // Get the quote
+    const quoteResponse = await fetch(quoteUrl, {
       method: "GET",
       headers: {
-        "User-Agent": "SempaiHQ/1.0",         // Identify our application
-        "Accept": "application/json",         // Expect JSON response
-        "x-api-key": JUPITER_API_KEY,         // Authentication for higher limits
+        "User-Agent": "SempaiHQ/1.0",
+        "Accept": "application/json",
+        "x-api-key": JUPITER_API_KEY,
       },
     });
 
-    // Handle HTTP errors from Jupiter (rate limits, invalid params, etc.)
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`Jupiter V2 failed: ${res.status} - ${errorText}`);
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error(`Jupiter V6 quote failed: ${quoteResponse.status} - ${errorText}`);
       return Response.json(
-        { error: "order_failed", message: `Jupiter order failed: ${res.status}` },
+        { error: "quote_failed", message: `Jupiter quote failed: ${quoteResponse.status}` },
         { status: 503 }
       );
     }
 
-    // Parse Jupiter's response containing the swap transaction
-    const orderResponse = await res.json();
+    const quote = await quoteResponse.json();
+    console.log("✅ Jupiter V6 quote successful");
+    console.log(`Out amount: ${quote.outAmount}`);
+    console.log(`Price impact: ${quote.priceImpactPct}%`);
+
+    // Step 2: Build the swap transaction using the quote
+    console.log("[Jupiter V6] Building swap transaction...");
+    
+    const swapUrl = `https://api.jup.ag/swap/v1/swap`;
+    
+    const swapRequestBody = {
+      quoteResponse: quote,
+      userPublicKey: user.toString(),
+      wrapAndUnwrapSol: true,
+      useSharedAccounts: true,
+      computeUnitPriceMicroLamports: 5000,  // Priority fee
+    };
+
+    const swapResponse = await fetch(swapUrl, {
+      method: "POST",
+      headers: {
+        "User-Agent": "SempaiHQ/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "x-api-key": JUPITER_API_KEY,
+      },
+      body: JSON.stringify(swapRequestBody),
+    });
+
+    if (!swapResponse.ok) {
+      const errorText = await swapResponse.text();
+      console.error(`Jupiter V6 swap failed: ${swapResponse.status} - ${errorText}`);
+      return Response.json(
+        { error: "swap_failed", message: `Jupiter swap failed: ${swapResponse.status}` },
+        { status: 503 }
+      );
+    }
+
+    const swapResult = await swapResponse.json();
 
     // Validate that Jupiter actually returned a transaction
-    // If not, it could mean insufficient liquidity or routing issues
-    if (!orderResponse.transaction) {
-      console.error("No transaction in Jupiter response:", orderResponse);
+    if (!swapResult.swapTransaction) {
+      console.error("No transaction in Jupiter swap response:", swapResult);
       return Response.json(
         { error: "no_transaction", message: "Jupiter could not build transaction (low liquidity?)" },
         { status: 503 }
@@ -119,16 +150,19 @@ export async function POST(req) {
     }
 
     // Success! Log details for debugging and monitoring
-    console.log("✅ Jupiter V2 order successful (SMP supported)");
-    console.log(`Transaction length: ${orderResponse.transaction.length} chars`);
-    console.log(`Router used: ${orderResponse.router || "unknown"}`);
+    console.log("✅ Jupiter V6 swap transaction built successfully");
+    console.log(`Transaction length: ${swapResult.swapTransaction.length} chars`);
+    console.log(`Last valid block height: ${swapResult.lastValidBlockHeight}`);
 
     // Return the transaction to the frontend
     // The transaction is base64-encoded and ready for:
     // 1. Deserialization on the frontend
     // 2. Signing by the user's wallet (embedded or external)
     // 3. Broadcasting to Solana network
-    return Response.json({ transaction: orderResponse.transaction });
+    return Response.json({ 
+      transaction: swapResult.swapTransaction,
+      lastValidBlockHeight: swapResult.lastValidBlockHeight
+    });
 
   } catch (error) {
     // Catch any unexpected errors (network issues, parsing errors, etc.)

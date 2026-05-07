@@ -21,6 +21,12 @@ class ReadingTracker {
    */
   async startSession(novelId, chapterNumber, walletAddress) {
     try {
+      // Prevent multiple sessions
+      if (this.isTracking && this.sessionId) {
+        console.log('[ReadingTracker] Session already active, reusing:', this.sessionId);
+        return this.sessionId;
+      }
+      
       // Validate input parameters
       if (!novelId) {
         throw new Error('novelId is required');
@@ -36,18 +42,13 @@ class ReadingTracker {
       
       // Generate device fingerprint hash
       this.deviceHash = this.generateDeviceHash();
-      console.log('[ReadingTracker] Generated device hash:', this.deviceHash);
       
-      if (!this.deviceHash) {
-        throw new Error('Failed to generate device hash');
-      }
-      
-      // Start session with server
       const requestData = {
         novelId,
         chapterNumber,
-        deviceHash: this.deviceHash,
-        walletAddress
+        walletAddress,
+        deviceHash: this.generateDeviceHash(),
+        startTime: Date.now()
       };
       
       console.log('[ReadingTracker] Sending session request:', requestData);
@@ -101,26 +102,30 @@ class ReadingTracker {
     if (!this.isTracking) return;
 
     // Scroll tracking with debouncing
-    const scrollHandler = this.debounce((event) => {
+    this.scrollHandler = this.debounce((event) => {
       this.handleScroll(event);
     }, 100);
-
-    window.addEventListener('scroll', scrollHandler, { passive: true });
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
     
     // Interaction tracking
-    document.addEventListener('click', this.handleInteraction.bind(this));
-    document.addEventListener('keypress', this.handleInteraction.bind(this));
-    document.addEventListener('touchstart', this.handleInteraction.bind(this));
+    this.interactionHandler = this.handleInteraction.bind(this);
+    document.addEventListener('click', this.interactionHandler);
+    document.addEventListener('keypress', this.interactionHandler);
+    document.addEventListener('touchstart', this.interactionHandler);
     
     // Visibility tracking
-    document.addEventListener('visibilitychange', this.handleVisibility.bind(this));
+    this.visibilityHandler = this.handleVisibility.bind(this);
+    document.addEventListener('visibilitychange', this.visibilityHandler);
     
     // Page unload handling
-    window.addEventListener('beforeunload', this.handlePageUnload.bind(this));
+    this.pageUnloadHandler = this.handlePageUnload.bind(this);
+    window.addEventListener('beforeunload', this.pageUnloadHandler);
     
     // Focus/blur tracking
-    window.addEventListener('focus', this.handleFocus.bind(this));
-    window.addEventListener('blur', this.handleBlur.bind(this));
+    this.focusHandler = this.handleFocus.bind(this);
+    this.blurHandler = this.handleBlur.bind(this);
+    window.addEventListener('focus', this.focusHandler);
+    window.addEventListener('blur', this.blurHandler);
   }
 
   /**
@@ -424,36 +429,6 @@ class ReadingTracker {
       this.cleanup();
     }
   }
-
-  /**
-   * Cleanup event listeners and reset state
-   */
-  cleanup() {
-    this.isTracking = false;
-    this.sessionId = null;
-    this.startTime = null;
-    this.scrollEvents = [];
-    this.interactionEvents = [];
-    this.visibilityEvents = [];
-    
-    // Remove event listeners
-    window.removeEventListener('scroll', this.handleScroll);
-    document.removeEventListener('click', this.handleInteraction);
-    document.removeEventListener('keypress', this.handleInteraction);
-    document.removeEventListener('touchstart', this.handleInteraction);
-    document.removeEventListener('visibilitychange', this.handleVisibility);
-    window.removeEventListener('beforeunload', this.handlePageUnload);
-    window.removeEventListener('focus', this.handleFocus);
-    window.removeEventListener('blur', this.handleBlur);
-    
-    if (this.scrollDebounceTimer) {
-      clearTimeout(this.scrollDebounceTimer);
-    }
-  }
-
-  /**
-   * Utility: Debounce function for scroll events
-   */
   debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -570,6 +545,41 @@ class ReadingTracker {
       console.error('[ReadingTracker] Failed to complete session with challenge:', error);
       throw error;
     }
+  }
+
+  /**
+   * Cleanup event listeners and reset state
+   */
+  cleanup() {
+    console.log('[ReadingTracker] Cleaning up session:', this.sessionId);
+    
+    this.isTracking = false;
+    this.sessionId = null;
+    this.startTime = null;
+    
+    // Remove event listeners
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+    }
+    if (this.interactionHandler) {
+      document.removeEventListener('click', this.interactionHandler);
+      document.removeEventListener('keypress', this.interactionHandler);
+      document.removeEventListener('touchstart', this.interactionHandler);
+    }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+    }
+    if (this.pageUnloadHandler) {
+      window.removeEventListener('beforeunload', this.pageUnloadHandler);
+    }
+    if (this.focusHandler) {
+      window.removeEventListener('focus', this.focusHandler);
+    }
+    if (this.blurHandler) {
+      window.removeEventListener('blur', this.blurHandler);
+    }
+    
+    console.log('[ReadingTracker] Cleanup completed');
   }
 
   /**

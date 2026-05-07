@@ -1,19 +1,18 @@
  
 import { Modal } from "react-bootstrap";
-import styles from "../../styles/Combat.module.css";
+import styles from "../../styles/KaitoAdventure.module.css";
 
-const ModalWrapper = ({ show, onHide, title, children, centered }) => (
+const ModalWrapper = ({ show, onHide, title, children, centered, fullscreen }) => (
   <Modal
     show={show}
     onHide={onHide}
-    className={styles.gildedModal}
-    backdropClassName={styles.lightBackdrop}
+    className={fullscreen ? styles.kaModalFullscreen : styles.kaModal}
     centered={centered}
   >
     <Modal.Header closeButton>
       <Modal.Title>{title}</Modal.Title>
     </Modal.Header>
-    <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>{children}</Modal.Body>
+    <Modal.Body>{children}</Modal.Body>
   </Modal>
 );
 

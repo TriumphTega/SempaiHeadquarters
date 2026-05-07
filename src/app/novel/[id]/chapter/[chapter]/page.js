@@ -289,6 +289,13 @@ export default function ChapterPage() {
 
   // PoRP tracking functions
   const initializePoRPTracking = useCallback(async () => {
+    console.log('[PoRP Debug] initializePoRPTracking called with:', {
+      id,
+      chapter,
+      porpSessionActive,
+      isWalletConnected
+    });
+    
     // Only start PoRP tracking if user has wallet connected (external or embedded)
     if (!id || !chapter || porpSessionActive || !isWalletConnected) {
       console.log('[PoRP] Skipping tracking - wallet not connected or session already active', {
@@ -1769,10 +1776,17 @@ export default function ChapterPage() {
       setShowPoRPDashboard(true);
     };
 
-    window.addEventListener('openPoRPDashboard', handleOpenDashboard);
+    const handleDashboardEvent = (event) => {
+      console.log('[ChapterPage] Received openPoRPDashboard event', event);
+      console.log('[ChapterPage] Setting showPoRPDashboard to true');
+      setShowPoRPDashboard(true);
+      console.log('[ChapterPage] showPoRPDashboard state updated');
+    };
+
+    window.addEventListener('openPoRPDashboard', handleDashboardEvent);
     
     return () => {
-      window.removeEventListener('openPoRPDashboard', handleOpenDashboard);
+      window.removeEventListener('openPoRPDashboard', handleDashboardEvent);
     };
   }, []);
 
@@ -1813,14 +1827,29 @@ export default function ChapterPage() {
   };
 
   useEffect(() => {
+    console.log('[PoRP Debug] Chapter unlock status:', {
+      isLocked,
+      isWalletConnected,
+      userId,
+      chapter,
+      id
+    });
+    
     if (!isLocked) {
       fetchRatings();
       // Initialize PoRP tracking when chapter is unlocked and user is authenticated
       if (isWalletConnected && userId) {
+        console.log('[PoRP Debug] All conditions met, initializing PoRP tracking...');
         initializePoRPTracking();
+      } else {
+        console.log('[PoRP Debug] Chapter unlocked but missing requirements:', {
+          walletConnected: isWalletConnected,
+          hasUserId: !!userId
+        });
       }
     } else {
       // Complete PoRP session when chapter is locked
+      console.log('[PoRP Debug] Chapter is locked, completing any active session');
       completePoRPTracking();
     }
   }, [isLocked, initializePoRPTracking, completePoRPTracking, isWalletConnected, userId]);
@@ -2604,11 +2633,17 @@ export default function ChapterPage() {
 
       {/* PoRP Layer 4 - Dashboard Modal */}
       {showPoRPDashboard && (
-        <PoRPDashboard
-          userAddress={activeWalletAddress}
-          isOpen={showPoRPDashboard}
-          onClose={() => setShowPoRPDashboard(false)}
-        />
+        <>
+          {console.log('[ChapterPage] Rendering PoRPDashboard with showPoRPDashboard:', showPoRPDashboard)}
+          <PoRPDashboard
+            userAddress={activeWalletAddress}
+            isOpen={showPoRPDashboard}
+            onClose={() => {
+              console.log('[ChapterPage] Closing PoRP dashboard');
+              setShowPoRPDashboard(false);
+            }}
+          />
+        </>
       )}
     </div>
   );

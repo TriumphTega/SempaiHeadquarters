@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FaChartLine, FaBrain, FaShieldAlt, FaTrophy, FaBook, FaFire, FaStar, FaClock, FaUsers, FaCog } from 'react-icons/fa';
 import SocialFeatures from './SocialFeatures.jsx';
 
 const PoRPDashboard = ({ userAddress, isOpen, onClose }) => {
+  console.log('[PoRPDashboard] Component rendering with props:', { userAddress, isOpen });
+  
   const [activeSection, setActiveSection] = useState('overview');
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSocial, setShowSocial] = useState(false);
 
   useEffect(() => {
+    console.log('[PoRPDashboard] useEffect triggered with isOpen:', isOpen, 'userAddress:', userAddress);
     if (isOpen && userAddress) {
       loadUserStats();
     }
@@ -81,22 +85,31 @@ const PoRPDashboard = ({ userAddress, isOpen, onClose }) => {
     return colors[rating] || colors.C;
   };
 
-  if (!isOpen) return null;
+  console.log('[PoRPDashboard] Checking isOpen:', isOpen);
+  if (!isOpen) {
+    console.log('[PoRPDashboard] isOpen is false, returning null');
+    return null;
+  }
 
+  console.log('[PoRPDashboard] Checking loading:', loading);
   if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-lg flex items-center justify-center z-50">
+    console.log('[PoRPDashboard] Loading state, showing loading spinner');
+    return createPortal(
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-lg flex items-center justify-center" style={{ zIndex: 99999 }}>
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-400 border-t-transparent mx-auto mb-4"></div>
           <p>Loading PoRP Dashboard...</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-lg flex items-center justify-center z-50">
-      <div className="bg-gray-900/95 rounded-2xl p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden border border-orange-400/20">
+  console.log('[PoRPDashboard] Rendering main dashboard');
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-lg flex items-center justify-center" style={{ zIndex: 99999 }}>
+      <div className="bg-gray-900/95 rounded-2xl p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden border border-orange-400/20" style={{ zIndex: 99999 }}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -577,7 +590,8 @@ const PoRPDashboard = ({ userAddress, isOpen, onClose }) => {
           onClose={() => setShowSocial(false)}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 
