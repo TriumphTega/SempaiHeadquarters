@@ -305,7 +305,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
-  min-height: 200px;
+  min-height: 150px;
   background: linear-gradient(180deg, #1a0e08 0%, #2c1810 50%, #4a2c1a 100%);
 }
 
@@ -3091,7 +3091,7 @@
   .fightingStage {
     flex: 1;
     height: auto;
-    min-height: 400px;
+    min-height: 300px;
   }
 
   .jpHeader {

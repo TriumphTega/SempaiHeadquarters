@@ -661,10 +661,12 @@ const KaitoAdventure = () => {
       enemy: {
         ...enemy,
         health: Math.round(enemy.health * levelScaleHealth * weatherMod),
+        max_health: Math.round(enemy.health * levelScaleHealth * weatherMod),
         damage: Math.round(enemy.damage * levelScaleDamage * weatherMod),
         gold: Math.round(enemy.gold * levelScaleHealth),
       },
       enemyHealth: Math.round(enemy.health * levelScaleHealth * weatherMod),
+      enemyMaxHealth: Math.round(enemy.health * levelScaleHealth * weatherMod),
       isAttacking: false,
       log: player.health <= 0 ? ["You’re at 0 health! Craft a potion quickly!"] : [],
     });
@@ -677,126 +679,119 @@ const KaitoAdventure = () => {
 
   const attackEnemy = useCallback((skillName = "Basic Attack") => {
     if (!combatState || combatState.isAttacking) return;
-    setCombatState(prev => ({ ...prev, isAttacking: true }));
-    setTimeout(() => {
-      setCombatState(prev => {
-        if (!prev) return null;
-        const skill = player.skills.find(s => s.name === skillName) || { name: "Basic Attack", effect: { damage: 10 }, level: 1 };
-        const weaponDamage = player.equipment.weapon ? player.recipes.find(r => r.name === player.equipment.weapon)?.bonus.damage || 0 : 0;
-        const armorDefense = player.equipment.armor ? player.recipes.find(r => r.name === player.equipment.armor)?.bonus.defense || 0 : 0;
-        const traitBonus = player.trait === "warrior" ? 5 : 0;
-        const baseDamage = skill.effect.damage || 10;
-        const doubledDamage = skill.name === "Double Strike" ? baseDamage * 2 : baseDamage;
-        const scaledDamage = doubledDamage * (1 + (skill.level - 1) * 0.05);
-        const cappedDamage = Math.min(scaledDamage, 50);
-        const totalDamage = Math.round(cappedDamage + weaponDamage + traitBonus);
-        const newEnemyHealth = Math.max(prev.enemyHealth - totalDamage, 0);
-        const attackMessage = `Kaito uses ${skill.name} for ${totalDamage} damage (Base: ${baseDamage}, Doubled: ${doubledDamage}, Scaled: ${scaledDamage.toFixed(1)}, Capped: ${cappedDamage}, +Weapon: ${weaponDamage}, +Trait: ${traitBonus})`;
-        let newLog = [...prev.log, attackMessage];
+    setCombatState(prev => {
+      if (!prev) return null;
+      const skill = player.skills.find(s => s.name === skillName) || { name: "Basic Attack", effect: { damage: 10 }, level: 1 };
+      const weaponDamage = player.equipment.weapon ? player.recipes.find(r => r.name === player.equipment.weapon)?.bonus.damage || 0 : 0;
+      const armorDefense = player.equipment.armor ? player.recipes.find(r => r.name === player.equipment.armor)?.bonus.defense || 0 : 0;
+      const traitBonus = player.trait === "warrior" ? 5 : 0;
+      const baseDamage = skill.effect.damage || 10;
+      const doubledDamage = skill.name === "Double Strike" ? baseDamage * 2 : baseDamage;
+      const scaledDamage = doubledDamage * (1 + (skill.level - 1) * 0.05);
+      const cappedDamage = Math.min(scaledDamage, 50);
+      const totalDamage = Math.round(cappedDamage + weaponDamage + traitBonus);
+      const newEnemyHealth = Math.max(prev.enemyHealth - totalDamage, 0);
+      const attackMessage = `Kaito uses ${skill.name} for ${totalDamage} damage (Base: ${baseDamage}, Doubled: ${doubledDamage}, Scaled: ${scaledDamage.toFixed(1)}, Capped: ${cappedDamage}, +Weapon: ${weaponDamage}, +Trait: ${traitBonus})`;
+      let newLog = [...prev.log, attackMessage];
 
-        if (skill.effect.stunChance && Math.random() < skill.effect.stunChance) {
-          newLog.push(`${prev.enemy.name} is stunned!`);
-        }
+      if (skill.effect.stunChance && Math.random() < skill.effect.stunChance) {
+        newLog.push(`${prev.enemy.name} is stunned!`);
+      }
 
-        if (newEnemyHealth <= 0) {
-          const dropChance = Math.random() < prev.enemy.dropChance * (player.skills.some(s => s.name === "Lucky Find") ? 1 + player.skills.find(s => s.name === "Lucky Find").effect.rareChance : 1);
-          const drop = dropChance ? prev.enemy.drop : null;
-          const baseXP = prev.enemy.name === "Bandit" ? 20 : prev.enemy.name === "Shadow Ninja" ? 25 : 30;
-          const xpGain = baseXP + (player.level - 1) * 2;
-          setPlayer(p => {
-            let newInventory = [...p.inventory];
-            let newrare_items = [...p.rare_items];
-            if (drop) {
-              const existingItem = newInventory.find(item => item.name === drop);
-              newInventory = existingItem
-                ? newInventory.map(item => item.name === drop ? { ...item, quantity: Math.min(item.quantity + 1, p.inventory_slots) } : item)
-                : [...newInventory, { name: drop, quantity: 1 }];
-              if (rare_items.includes(drop)) newrare_items.push(drop);
-            }
-            const enemyTask = p.daily_tasks.find(t => t.id === "defeatEnemies");
-            const updatedTasks = enemyTask && !enemyTask.completed
-              ? p.daily_tasks.map(t => t.id === "defeatEnemies" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
-              : p.daily_tasks;
-            if (enemyTask && enemyTask.progress + 1 >= enemyTask.target) completeDailyTask("defeatEnemies");
-            const banditQuest = p.quests.find(q => q.id === "banditQuest" && prev.enemy.name === "Bandit");
-            const updatedQuests = banditQuest
-              ? p.quests.map(q => q.id === "banditQuest" ? { ...q, progress: Math.min(q.progress + 1, q.target) } : q)
-              : p.quests;
-            if (banditQuest && banditQuest.progress + 1 >= banditQuest.target) completeQuest("banditQuest");
-            return {
-              ...p,
-              gold: p.gold + prev.enemy.gold,
-              inventory: newInventory,
-              rare_items: newrare_items,
-              stats: { ...p.stats, enemiesDefeated: p.stats.enemiesDefeated + 1 },
-              daily_tasks: updatedTasks,
-              quests: updatedQuests,
-            };
-          });
-          updateXP(xpGain);
-          setGameMessage(`You defeated ${prev.enemy.name} and earned ${prev.enemy.gold} gold!${drop ? " Dropped: " + drop : ""} (+${xpGain} XP)`);
-          setCombatResult({ type: "win", message: `Victory! You defeated ${prev.enemy.name}!` });
-          return null;
-        }
+      if (newEnemyHealth <= 0) {
+        const dropChance = Math.random() < prev.enemy.dropChance * (player.skills.some(s => s.name === "Lucky Find") ? 1 + player.skills.find(s => s.name === "Lucky Find").effect.rareChance : 1);
+        const drop = dropChance ? prev.enemy.drop : null;
+        const baseXP = prev.enemy.name === "Bandit" ? 20 : prev.enemy.name === "Shadow Ninja" ? 25 : 30;
+        const xpGain = baseXP + (player.level - 1) * 2;
+        setPlayer(p => {
+          let newInventory = [...p.inventory];
+          let newrare_items = [...p.rare_items];
+          if (drop) {
+            const existingItem = newInventory.find(item => item.name === drop);
+            newInventory = existingItem
+              ? newInventory.map(item => item.name === drop ? { ...item, quantity: Math.min(item.quantity + 1, p.inventory_slots) } : item)
+              : [...newInventory, { name: drop, quantity: 1 }];
+            if (rare_items.includes(drop)) newrare_items.push(drop);
+          }
+          const enemyTask = p.daily_tasks.find(t => t.id === "defeatEnemies");
+          const updatedTasks = enemyTask && !enemyTask.completed
+            ? p.daily_tasks.map(t => t.id === "defeatEnemies" ? { ...t, progress: Math.min(t.progress + 1, t.target) } : t)
+            : p.daily_tasks;
+          if (enemyTask && enemyTask.progress + 1 >= enemyTask.target) completeDailyTask("defeatEnemies");
+          const banditQuest = p.quests.find(q => q.id === "banditQuest" && prev.enemy.name === "Bandit");
+          const updatedQuests = banditQuest
+            ? p.quests.map(q => q.id === "banditQuest" ? { ...q, progress: Math.min(q.progress + 1, q.target) } : q)
+            : p.quests;
+          if (banditQuest && banditQuest.progress + 1 >= banditQuest.target) completeQuest("banditQuest");
+          return {
+            ...p,
+            gold: p.gold + prev.enemy.gold,
+            inventory: newInventory,
+            rare_items: newrare_items,
+            stats: { ...p.stats, enemiesDefeated: p.stats.enemiesDefeated + 1 },
+            daily_tasks: updatedTasks,
+            quests: updatedQuests,
+          };
+        });
+        updateXP(xpGain);
+        setGameMessage(`You defeated ${prev.enemy.name} and earned ${prev.enemy.gold} gold!${drop ? " Dropped: " + drop : ""} (+${xpGain} XP)`);
+        setCombatResult({ type: "win", message: `Victory! You defeated ${prev.enemy.name}!` });
+        return null;
+      }
 
-        const rawDamage = skill.effect.stunChance && Math.random() < skill.effect.stunChance ? 0 : prev.enemy.damage;
-        const reducedDamage = Math.max(rawDamage - armorDefense, 0);
-        const newPlayerHealth = Math.max(prev.playerHealth - reducedDamage, 0);
-        newLog.push(`${prev.enemy.name} deals ${reducedDamage} damage to Kaito!`);
+      const rawDamage = skill.effect.stunChance && Math.random() < skill.effect.stunChance ? 0 : prev.enemy.damage;
+      const reducedDamage = Math.max(rawDamage - armorDefense, 0);
+      const newPlayerHealth = Math.max(prev.playerHealth - reducedDamage, 0);
+      newLog.push(`${prev.enemy.name} deals ${reducedDamage} damage to Kaito!`);
 
-        if (newPlayerHealth <= 0) {
-          setPlayer(p => ({ ...p, health: newPlayerHealth }));
-          setGameMessage("You were defeated!");
-          setCombatResult({ type: "fail", message: `Defeat! ${prev.enemy.name} overpowered you!` });
-          return null;
-        }
-
+      if (newPlayerHealth <= 0) {
         setPlayer(p => ({ ...p, health: newPlayerHealth }));
-        updateXP(15);
-        updateSkillLevel(skillName);
-        return { ...prev, playerHealth: newPlayerHealth, enemyHealth: newEnemyHealth, log: newLog, isAttacking: false };
-      });
-    }, 1000);
+        setGameMessage("You were defeated!");
+        setCombatResult({ type: "fail", message: `Defeat! ${prev.enemy.name} overpowered you!` });
+        return null;
+      }
+
+      setPlayer(p => ({ ...p, health: newPlayerHealth }));
+      updateXP(15);
+      updateSkillLevel(skillName);
+      return { ...prev, playerHealth: newPlayerHealth, enemyHealth: newEnemyHealth, log: newLog, isAttacking: false };
+    });
   }, [combatState, player.equipment, player.recipes, player.trait, player.skills, player.inventory, player.max_health, updateXP, updateSkillLevel, completeDailyTask, completeQuest]);
 
   const craftPotionInCombat = useCallback((potionName) => {
     if (!combatState || combatState.isAttacking) return;
-    setCombatState(prev => ({ ...prev, isAttacking: true }));
-    setTimeout(() => {
-      setPlayer(prev => {
-        const recipe = prev.recipes.find(r => r.name === potionName && r.type === "heal");
-        if (!recipe) {
-          setGameMessage("No such healing potion recipe!");
-          setCombatState(prevState => ({ ...prevState, isAttacking: false }));
-          return prev;
-        }
-        const available = getAvailableIngredients;
-        const hasEnough = recipe.ingredients.every(ing => {
-          const item = available.find(i => i.name === ing);
-          return item && item.owned && item.quantity > 0;
-        });
-        if (!hasEnough) {
-          setGameMessage("Not enough ingredients to craft this potion!");
-          setCombatState(prevState => ({ ...prevState, isAttacking: false }));
-          return prev;
-        }
-        const costReduction = prev.skills.some(s => s.name === "Efficient Brewing") ? prev.skills.find(s => s.name === "Efficient Brewing").effect.costReduction : 0;
-        const healBonus = prev.skills.some(s => s.name === "Potent Mix") ? prev.skills.find(s => s.name === "Potent Mix").effect.healBonus : 0;
-        const newInventory = prev.inventory.map(item =>
-          recipe.ingredients.includes(item.name) ? { ...item, quantity: item.quantity - (Math.random() < costReduction ? 0 : 1) } : item
-        ).filter(item => item.quantity > 0);
-        const healAmount = Math.round(prev.max_health * recipe.healPercent) + healBonus;
-        const newHealth = Math.min(prev.health + healAmount, prev.max_health);
-        setGameMessage(`Crafted and used ${potionName} to heal ${healAmount} HP!`);
-        setCombatState(prevState => ({
-          ...prevState,
-          playerHealth: newHealth,
-          log: [...prevState.log, `Kaito crafts and uses ${potionName} to heal ${healAmount} HP`],
-          isAttacking: false,
-        }));
-        return { ...prev, health: newHealth, inventory: newInventory };
-      });
-    }, 1000);
+    const recipe = player.recipes.find(r => r.name === potionName && r.type === "heal");
+    if (!recipe) {
+      setGameMessage("No such healing potion recipe!");
+      return;
+    }
+    const available = getAvailableIngredients;
+    const hasEnough = recipe.ingredients.every(ing => {
+      const item = available.find(i => i.name === ing);
+      return item && item.owned && item.quantity > 0;
+    });
+    if (!hasEnough) {
+      setGameMessage("Not enough ingredients to craft this potion!");
+      return;
+    }
+    const costReduction = player.skills.some(s => s.name === "Efficient Brewing") ? player.skills.find(s => s.name === "Efficient Brewing").effect.costReduction : 0;
+    const healBonus = player.skills.some(s => s.name === "Potent Mix") ? player.skills.find(s => s.name === "Potent Mix").effect.healBonus : 0;
+    const healAmount = Math.round(player.max_health * recipe.healPercent) + healBonus;
+    const newHealth = Math.min(combatState.playerHealth + healAmount, player.max_health);
+    
+    // Update player inventory
+    const newInventory = player.inventory.map(item =>
+      recipe.ingredients.includes(item.name) ? { ...item, quantity: item.quantity - (Math.random() < costReduction ? 0 : 1) } : item
+    ).filter(item => item.quantity > 0);
+    
+    setPlayer(p => ({ ...p, health: newHealth, inventory: newInventory }));
+    setCombatState(prev => ({
+      ...prev,
+      playerHealth: newHealth,
+      log: [...prev.log, `Kaito crafts and uses ${potionName} to heal ${healAmount} HP`],
+      isAttacking: false,
+    }));
+    setGameMessage(`Crafted and used ${potionName} to heal ${healAmount} HP!`);
   }, [combatState, player.recipes, player.skills, player.inventory, player.max_health, getAvailableIngredients]);
 
   useEffect(() => {

@@ -715,9 +715,7 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
       setTimeout(() => {
         setPlayerAnimation("idle");
         setIsPlayerActing(false);
-        if (!combatResult) {
-          setCurrentTurn("enemy");
-        }
+        // Healing does NOT pass turn to enemy — player keeps their turn
       }, 600);
     }, healDuration * 0.5);
   }, [combatState, isPlayerActing, isEnemyActing, combatResult]);
@@ -906,12 +904,12 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
               <div className={styles.jpHealthSide}>
                 <div className={styles.jpHealthNameRow}>
                   <span className={styles.jpNameTag}>KAITO</span>
-                  <span className={styles.jpHpText}>{combatState.playerHealth}<span className={styles.jpHpSep}>/</span>{player.max_health}</span>
+                  <span className={styles.jpHpText}>{combatState?.playerHealth ?? player.health}<span className={styles.jpHpSep}>/</span>{player.max_health}</span>
                 </div>
-                <div className={`${styles.jpHpTrack} ${combatState.playerHealth < player.max_health / 3 ? styles.jpHpDanger : ""}`}>
+                <div className={`${styles.jpHpTrack} ${(combatState?.playerHealth ?? player.health) < player.max_health / 3 ? styles.jpHpDanger : ""}`}>
                   <div
                     className={styles.jpHpFill}
-                    style={{ width: `${Math.max(0, (combatState.playerHealth / player.max_health) * 100)}%` }}
+                    style={{ width: `${Math.max(0, ((combatState?.playerHealth ?? player.health) / player.max_health) * 100)}%` }}
                   />
                   <div className={styles.jpHpShine} />
                 </div>
@@ -924,12 +922,12 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
               <div className={styles.jpHealthSide}>
                 <div className={styles.jpHealthNameRow}>
                   <span className={styles.jpNameTag}>{combatState.enemy.name.toUpperCase()}</span>
-                  <span className={styles.jpHpText}>{combatState.enemyHealth}<span className={styles.jpHpSep}>/</span>{combatState.enemy.max_health}</span>
+                  <span className={styles.jpHpText}>{combatState.enemyHealth}<span className={styles.jpHpSep}>/</span>{combatState.enemyMaxHealth}</span>
                 </div>
-                <div className={`${styles.jpHpTrack} ${combatState.enemyHealth < combatState.enemy.max_health / 3 ? styles.jpHpDanger : ""}`}>
+                <div className={`${styles.jpHpTrack} ${combatState.enemyHealth < combatState.enemyMaxHealth / 3 ? styles.jpHpDanger : ""}`}>
                   <div
                     className={styles.jpHpFillEnemy}
-                    style={{ width: `${Math.max(0, (combatState.enemyHealth / combatState.enemy.max_health) * 100)}%` }}
+                    style={{ width: `${Math.max(0, (combatState.enemyHealth / combatState.enemyMaxHealth) * 100)}%` }}
                   />
                   <div className={styles.jpHpShine} />
                 </div>
