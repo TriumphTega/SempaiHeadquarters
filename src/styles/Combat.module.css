@@ -181,7 +181,7 @@
 /* Combat Arena Layout */
 .combatArena {
   margin-bottom: 30px;
-  min-height: 300px;
+  min-height: 250px; /* Reduced from 300px */
 }
 
 .combatantSide {
@@ -305,7 +305,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
-  min-height: 150px;
+  min-height: 280px; /* Reduced from 300px */
   background: linear-gradient(180deg, #1a0e08 0%, #2c1810 50%, #4a2c1a 100%);
 }
 
@@ -768,10 +768,22 @@
   background: linear-gradient(135deg, rgba(139, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
   border: 2px solid #8b0000;
   border-radius: 15px;
-  padding: 20px;
+  padding: 10px 20px 20px; /* Reduced bottom padding */
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
+}
+
+@media (min-width: 1200px) {
+  .actionPanel {
+    padding: 8px 20px 15px; /* Further reduced on wide screens */
+  }
+}
+
+@media (min-width: 1600px) {
+  .actionPanel {
+    padding: 6px 20px 10px; /* Maximum reduction on ultra-wide */
+  }
 }
 
 .cinematicPanel::before {
@@ -1241,57 +1253,327 @@
   }
 }
 
-/* Canvas Arena */
-.canvasArena {
-  border: 2px solid #fff;
-  background: #2c2c2c;
-  width: 100%;
-  max-width: 800px;
-  display: block;
-  margin: 0 auto;
+/* Distance Meter */
+.distanceMeterContainer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #8b0000;
+  border-radius: 10px;
+  padding: 8px 15px;
+  box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
 }
 
-/* Health Bar (Canvas-based, styled in JS) */
-.healthBar {
-  width: 100%;
-  height: 20px;
-  background: #ccc;
-  border: 1px solid #000;
+.distanceMeter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.distanceLabel {
+  color: #ffd700;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-shadow: 0 0 5px #ffd700;
+}
+
+.distanceBar {
+  width: 100px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #8b0000;
   border-radius: 4px;
   overflow: hidden;
 }
 
-.healthFill {
+.distanceFill {
   height: 100%;
-  background: #f00;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 3px;
 }
 
-/* Attack Buttons */
-.attackButtons {
+.distanceText {
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-shadow: 0 0 3px currentColor;
+}
+
+/* Status Effects */
+.statusEffectsContainer {
   display: flex;
+  gap: 5px;
+  margin-top: 5px;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
 }
 
-.glowButton {
-  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.9rem;
+.statusEffect {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 3px currentColor;
+  animation: statusPulse 2s ease-in-out infinite;
 }
 
-.glowButton:hover {
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
-  transform: scale(1.05);
+.statusEffect.stun {
+  background: linear-gradient(135deg, #00bfff, #0080ff);
+  border: 1px solid #00ffff;
 }
 
-.selected {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+.statusEffect.poison {
+  background: linear-gradient(135deg, #ff6347, #dc143c);
+  border: 1px solid #ff0000;
+}
+
+.statusEffect.buff {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  border: 1px solid #ffff00;
+}
+
+.statusEffect.debuff {
+  background: linear-gradient(135deg, #8b0000, #4b0000);
+  border: 1px solid #ff0000;
+}
+
+.statusDuration {
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+/* Character Facing Directions */
+.facingRight {
+  transform: scaleX(1);
+}
+
+.facingLeft {
+  transform: scaleX(-1);
+}
+
+/* Enhanced Combat Animations */
+.blocking {
+  animation: blockStance 1s ease-in-out infinite;
+}
+
+.dodging {
+  animation: dodgeMovement 0.8s ease-in-out;
+}
+
+@keyframes blockStance {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-5px) scale(0.95); }
+}
+
+@keyframes dodgeMovement {
+  0% { transform: translateX(0) scale(1); }
+  25% { transform: translateX(-20px) scale(0.9); opacity: 0.8; }
+  50% { transform: translateX(-15px) scale(0.95); opacity: 0.6; }
+  75% { transform: translateX(-5px) scale(1.05); opacity: 0.8; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+/* Enhanced Action Buttons */
+.jpMoveBtn {
+  background: linear-gradient(135deg, #4169e1 0%, #1e90ff 100%);
+  border-color: #00bfff;
+  box-shadow: 0 4px 15px rgba(65, 105, 225, 0.4);
+}
+
+.jpMoveBtn:hover {
+  background: linear-gradient(135deg, #1e90ff 0%, #00bfff 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(65, 105, 225, 0.6);
+}
+
+.jpBlockBtn {
+  background: linear-gradient(135deg, #32cd32 0%, #228b22 100%);
+  border-color: #00ff00;
+  box-shadow: 0 4px 15px rgba(50, 205, 50, 0.4);
+}
+
+.jpBlockBtn:hover {
+  background: linear-gradient(135deg, #228b22 0%, #00ff00 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(50, 205, 50, 0.6);
+}
+
+.jpDodgeBtn {
+  background: linear-gradient(135deg, #ff8c00 0%, #ff6347 100%);
+  border-color: #ffa500;
+  box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
+}
+
+.jpDodgeBtn:hover {
+  background: linear-gradient(135deg, #ff6347 0%, #ffa500 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 140, 0, 0.6);
+}
+
+/* Enhanced Damage Numbers */
+.blockNumber {
+  color: #4169e1;
+  text-shadow: 0 0 10px #4169e1;
+  animation: blockFloat 2s ease-out forwards;
+}
+
+.dodgeNumber {
+  color: #32cd32;
+  text-shadow: 0 0 10px #32cd32;
+  animation: dodgeFloat 2s ease-out forwards;
+}
+
+.criticalFloat {
+  animation: critFloatEnhanced 2.5s ease-out forwards;
+}
+
+@keyframes blockFloat {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  20% { transform: translateY(-15px) scale(1.2); opacity: 1; }
+  80% { transform: translateY(-60px) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(0.8); opacity: 0; }
+}
+
+@keyframes dodgeFloat {
+  0% { transform: translateY(0) translateX(0) scale(0.5); opacity: 0; }
+  20% { transform: translateY(-15px) translateX(-10px) scale(1.2); opacity: 1; }
+  80% { transform: translateY(-60px) translateX(5px) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) translateX(0) scale(0.8); opacity: 0; }
+}
+
+@keyframes critFloatEnhanced {
+  0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+  20% { transform: translateY(-20px) scale(1.5) rotate(10deg); opacity: 1; }
+  80% { transform: translateY(-80px) scale(1.2) rotate(-5deg); opacity: 1; }
+  100% { transform: translateY(-120px) scale(1) rotate(0deg); opacity: 0; }
+}
+
+/* Enhanced Effect Sprites */
+.block_spark {
+  filter: drop-shadow(0 0 8px #4169e1) drop-shadow(0 0 16px #00bfff);
+  animation: blockSpark 0.6s ease-out forwards;
+}
+
+.dodge_trail {
+  filter: drop-shadow(0 0 8px #32cd32) drop-shadow(0 0 16px #00ff00);
+  animation: dodgeTrail 0.8s ease-out forwards;
+}
+
+.critical_flash {
+  filter: drop-shadow(0 0 12px #ffd700) drop-shadow(0 0 24px #ff8c00);
+  animation: criticalFlash 0.4s ease-out forwards;
+}
+
+@keyframes blockSpark {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0.8) rotate(360deg); opacity: 0; }
+}
+
+@keyframes dodgeTrail {
+  0% { transform: scale(0) translateX(0); opacity: 0; }
+  25% { transform: scale(1) translateX(-10px); opacity: 0.8; }
+  50% { transform: scale(1.5) translateX(0); opacity: 1; }
+  75% { transform: scale(1) translateX(10px); opacity: 0.6; }
+  100% { transform: scale(0) translateX(20px); opacity: 0; }
+}
+
+@keyframes criticalFlash {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(2); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* Enhanced Fighter Positioning */
+.fightersContainer {
+  position: relative;
+  height: 100%;
+  min-height: 150px; /* Reduced from 200px */
+}
+
+.fighter {
+  position: absolute;
+  bottom: 60px;
+  transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.fighter.moving {
+  transition: left 0.4s ease-out;
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 768px) {
+  .jpCombatStage {
+    min-height: 200px; /* Reduced from 280px */
+    margin-bottom: 10px;
+  }
+  
+  .distanceMeterContainer {
+    top: 0px; /* Moved up */
+    padding: 3px 8px;
+  }
+  
+  .distanceBar {
+    width: 80px;
+    height: 6px;
+  }
+  
+  .distanceLabel,
+  .distanceText {
+    font-size: 0.7rem;
+  }
+  
+  .statusEffect {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+  }
+  
+  .fighter {
+    bottom: 20px; /* Moved up from 40px */
+  }
+  /* Removed jpActionGrid overrides to maintain side-by-side */
+}
+
+@media (max-width: 576px) {
+  .jpCombatStage {
+    min-height: 160px; /* Further reduced for small mobile */
+    margin-bottom: 5px;
+  }
+  
+  .distanceMeterContainer {
+    top: 0px; /* Moved up */
+    padding: 2px 6px;
+  }
+  
+  .distanceBar {
+    width: 60px;
+    height: 4px;
+  }
+  
+  .fighter {
+    bottom: 15px; /* Moved up from 30px */
+  }
+  
+  .jpActionPanel {
+    height: 60px; /* Reduced for mobile */
+    padding: 2px 16px 5px; /* Reduced padding */
+  }
+  
+  .jpActionGrid {
+    bottom: 5px; /* Moved up from 10px */
+  }
+  /* Removed jpActionGrid overrides to maintain side-by-side */
 }
 
 .iconPulse {
@@ -2536,12 +2818,26 @@
 
 /* ── JAPANESE ACTION PANEL ── */
 .jpActionPanel {
-  padding: 12px 16px;
+  padding: 8px 16px 20px;
   background: linear-gradient(180deg, rgba(13, 8, 6, 0.9) 0%, rgba(26, 14, 8, 0.95) 100%);
   border-top: 2px solid rgba(196, 122, 42, 0.4);
   position: relative;
-  flex-shrink: 0;
   z-index: 20;
+  height: 120px; /* Fixed height for absolute positioning */
+}
+
+@media (min-width: 1200px) {
+  .jpActionPanel {
+    padding: 6px 32px 15px;
+    height: 100px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .jpActionPanel {
+    padding: 4px 32px 10px;
+    height: 80px;
+  }
 }
 
 .jpActionPanel::before {
@@ -2554,13 +2850,22 @@
 }
 
 .jpActionGrid {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: stretch;
+  z-index: 25;
+  justify-content: center;
+  max-width: 100%; /* Prevent overflow */
+  overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 .jpActionBtn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2571,10 +2876,10 @@
   border: 1px solid rgba(196, 122, 42, 0.4);
   cursor: pointer;
   transition: all 0.2s;
-  position: relative;
   overflow: hidden;
   min-width: 90px;
   background: rgba(26, 14, 8, 0.8);
+  z-index: 26;
 }
 
 .jpActionBtn::before {
@@ -2662,6 +2967,8 @@
 .jpSelectWrap {
   flex: 1;
   min-width: 100px;
+  position: relative;
+  z-index: 30; /* Higher z-index for dropdown */
 }
 
 .jpSelect {
@@ -2681,6 +2988,8 @@
   background-repeat: no-repeat;
   background-position: right 10px center;
   transition: border-color 0.2s;
+  position: relative;
+  z-index: 31; /* Highest z-index for dropdown */
 }
 
 .jpSelect:hover:not(:disabled) {

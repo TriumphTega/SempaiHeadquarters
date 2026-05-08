@@ -1,45 +1,55 @@
  
 import { useState, useEffect, useRef, useCallback } from "react";
-import { FaRunning, FaShieldAlt, FaHeart, FaBolt, FaFire, FaSnowflake, FaStar, FaCoins, FaSkull, FaFistRaised } from "react-icons/fa";
-import { GiCrossedSwords, GiPotion, GiMagicSwirl, GiBloodySword, GiSpikedHalo, GiSkullCrack, GiBoneGnawer, GiFlatStar } from "react-icons/gi";
+import { FaRunning, FaShieldAlt, FaHeart, FaBolt, FaFire, FaSnowflake, FaStar, FaCoins, FaSkull, FaFistRaised, FaArrowsAltH, FaHandPaper } from "react-icons/fa";
+import { GiCrossedSwords, GiPotion, GiMagicSwirl, GiBloodySword, GiSpikedHalo, GiSkullCrack, GiBoneGnawer, GiFlatStar, GiSwordWound, GiShieldBash, GiBootStomp } from "react-icons/gi";
 import styles from "../../../styles/Combat.module.css";
 
-// Sprite configuration - maps characters and animations to paths and frame counts
+// Enhanced Sprite Configuration with new animations
 const SPRITE_CONFIG = {
   kaito: {
-    idle: { path: "/sprites/kaito/idle/idle_left_", frames: 6, loop: true, speed: 180 },
-    basic_attack: { path: "/sprites/kaito/basic_attack/basic_attack_left_", frames: 9, loop: false, speed: 80 },
-    skill_attack: { path: "/sprites/kaito/skill_attack/skill_attack_right_", frames: 7, loop: false, speed: 90 },
-    healing: { path: "/sprites/kaito/healing/healing_right_", frames: 6, loop: false, speed: 120 },
-    hit: { path: "/sprites/kaito/hit/hit_right_", frames: 4, loop: false, speed: 100 },
-    defeat: { path: "/sprites/kaito/defeat/defeat_right_", frames: 4, loop: false, speed: 150 },
+    idle: { path: "/sprites/kaito/idle/idle_", frames: 6, loop: true, speed: 180 },
+    basic_attack: { path: "/sprites/kaito/basic_attack/basic_attack_", frames: 9, loop: false, speed: 80 },
+    skill_attack: { path: "/sprites/kaito/skill_attack/skill_attack_", frames: 7, loop: false, speed: 90 },
+    healing: { path: "/sprites/kaito/healing/healing_", frames: 6, loop: false, speed: 120 },
+    hit: { path: "/sprites/kaito/hit/hit_", frames: 4, loop: false, speed: 100 },
+    victory: { path: "/sprites/kaito/victory/victory_", frames: 5, loop: true, speed: 150 },
+    defeat: { path: "/sprites/kaito/defeat/defeat_", frames: 4, loop: false, speed: 150 },
+    block: { path: "/sprites/kaito/block/block_", frames: 3, loop: false, speed: 100 },
+    dodge: { path: "/sprites/kaito/dodge/dodge_", frames: 4, loop: false, speed: 80 },
+    move_forward: { path: "/sprites/kaito/move/move_", frames: 8, loop: true, speed: 60 },
   },
   bandit: {
-    idle: { path: "/sprites/enemies/bandit/idle_left_", frames: 4, loop: true, speed: 200 },
-    attack: { path: "/sprites/enemies/bandit/attack_left_", frames: 6, loop: false, speed: 90 },
-    hit: { path: "/sprites/enemies/bandit/hit_left_", frames: 3, loop: false, speed: 100 },
-    defeat: { path: "/sprites/enemies/bandit/defeat_left_", frames: 4, loop: false, speed: 150 },
+    idle: { path: "/sprites/enemies/shadow-ninja/idle_", frames: 4, loop: true, speed: 200 },
+    attack: { path: "/sprites/enemies/shadow-ninja/attack_", frames: 6, loop: false, speed: 90 },
+    hit: { path: "/sprites/enemies/shadow-ninja/hit_", frames: 4, loop: false, speed: 100 },
+    defeat: { path: "/sprites/enemies/shadow-ninja/defeat_", frames: 4, loop: false, speed: 150 },
+    move_forward: { path: "/sprites/enemies/shadow-ninja/move_", frames: 8, loop: true, speed: 50 },
   },
   golem: {
-    idle: { path: "/sprites/enemies/golem/idle_left_", frames: 3, loop: true, speed: 250 },
-    attack: { path: "/sprites/enemies/golem/attack_left_", frames: 8, loop: false, speed: 80 },
-    hit: { path: "/sprites/enemies/golem/hit_left_", frames: 2, loop: false, speed: 120 },
-    defeat: { path: "/sprites/enemies/golem/defeat_left_", frames: 4, loop: false, speed: 150 },
+    idle: { path: "/sprites/enemies/shadow-ninja/idle_", frames: 4, loop: true, speed: 250 },
+    attack: { path: "/sprites/enemies/shadow-ninja/attack_", frames: 6, loop: false, speed: 80 },
+    hit: { path: "/sprites/enemies/shadow-ninja/hit_", frames: 4, loop: false, speed: 120 },
+    defeat: { path: "/sprites/enemies/shadow-ninja/defeat_", frames: 4, loop: false, speed: 150 },
+    move_forward: { path: "/sprites/enemies/shadow-ninja/move_", frames: 8, loop: true, speed: 50 },
   },
   "shadow-ninja": {
-    idle: { path: "/sprites/enemies/shadow-ninja/idle_left_", frames: 4, loop: true, speed: 180 },
-    attack: { path: "/sprites/enemies/shadow-ninja/attack_left_", frames: 6, loop: false, speed: 85 },
-    hit: { path: "/sprites/enemies/shadow-ninja/hit_left_", frames: 3, loop: false, speed: 100 },
-    defeat: { path: "/sprites/enemies/shadow-ninja/defeat_left_", frames: 3, loop: false, speed: 150 },
+    idle: { path: "/sprites/enemies/shadow-ninja/idle_", frames: 4, loop: true, speed: 180 },
+    attack: { path: "/sprites/enemies/shadow-ninja/attack_", frames: 6, loop: false, speed: 85 },
+    hit: { path: "/sprites/enemies/shadow-ninja/hit_", frames: 4, loop: false, speed: 100 },
+    defeat: { path: "/sprites/enemies/shadow-ninja/defeat_", frames: 4, loop: false, speed: 150 },
+    move_forward: { path: "/sprites/enemies/shadow-ninja/move_", frames: 8, loop: true, speed: 50 },
   },
 };
 
-// Effect sprite configuration
+// Enhanced Effect Configuration
 const EFFECT_CONFIG = {
   hit_spark: { path: "/sprites/effects/hit_spark/hit_spark_", frames: 3, speed: 80 },
   slash_trail: { path: "/sprites/effects/slash_trail/slash_trail_", frames: 4, speed: 70 },
   heal_aura: { path: "/sprites/effects/heal_aura/heal_aura_", frames: 6, speed: 100 },
   skill_glow: { path: "/sprites/effects/skill_glow/skill_glow_", frames: 8, speed: 80 },
+  block_spark: { path: "/sprites/effects/block_spark/block_spark_", frames: 4, speed: 60 },
+  dodge_trail: { path: "/sprites/effects/dodge_trail/dodge_trail_", frames: 5, speed: 50 },
+  critical_flash: { path: "/sprites/effects/critical_flash/critical_flash_", frames: 3, speed: 100 },
 };
 
 // Supabase fallback URL
@@ -52,8 +62,8 @@ const getEnemyKey = (name) => {
   return SPRITE_CONFIG[key] ? key : "bandit";
 };
 
-// Animation Sprite Component
-const AnimationSprite = ({ character, animation = "idle", size = 150, freeze = false }) => {
+// Enhanced Sprite Animator Component
+const SpriteAnimator = ({ character, animation = "idle", size = 150, freeze = false }) => {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [imgSrc, setImgSrc] = useState("");
   const [imgError, setImgError] = useState(false);
@@ -75,7 +85,7 @@ const AnimationSprite = ({ character, animation = "idle", size = 150, freeze = f
     }
 
     if (config.loop) {
-      // Looping animation (idle)
+      // Looping animation (idle, move_forward)
       animRef.current = setInterval(() => {
         setCurrentFrame(prev => (prev + 1) % config.frames);
       }, config.speed);
@@ -135,7 +145,7 @@ const AnimationSprite = ({ character, animation = "idle", size = 150, freeze = f
   );
 };
 
-// Effect Sprite Component (hit sparks, slash trails, etc.)
+// Enhanced Effect Sprite Component
 const EffectSprite = ({ effect, x = "50%", y = "50%" }) => {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -160,51 +170,106 @@ const EffectSprite = ({ effect, x = "50%", y = "50%" }) => {
   if (!visible || !config) return null;
 
   const frameNum = String(currentFrame + 1).padStart(3, '0');
-  const isSlash = effect === "slash_trail";
+  const effectClass = `${styles.effectSprite} ${styles[effect]}`;
 
   return (
     <div
-      className={`${styles.effectSprite} ${isSlash ? styles.slashEffect : ""}`}
+      className={effectClass}
       style={{ left: x, top: y }}
     >
       <img
         src={`${config.path}${frameNum}.png`}
         alt={effect}
-        width={isSlash ? 140 : 100}
-        height={isSlash ? 140 : 100}
-        className={isSlash ? styles.slashImage : ""}
+        width={100}
+        height={100}
         onError={(e) => { e.target.style.display = 'none'; }}
       />
     </div>
   );
 };
 
-// Floating Damage Number Component
-const DamageNumber = ({ damage, type = "damage", x, y }) => {
+// Enhanced Floating Damage Number Component
+const FloatingDamage = ({ damage, type = "damage", x, y, isCritical = false }) => {
   const [visible, setVisible] = useState(true);
   
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 1500);
+    const timer = setTimeout(() => setVisible(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
   if (!visible) return null;
 
   const getDamageClass = () => {
+    if (isCritical) return styles.critNumber;
     switch (type) {
       case "damage": return styles.damageNumber;
       case "heal": return styles.healNumber;
-      case "crit": return styles.critNumber;
+      case "block": return styles.blockNumber;
+      case "dodge": return styles.dodgeNumber;
       default: return styles.damageNumber;
     }
   };
 
+  const getDisplayText = () => {
+    if (type === "heal") return `+${damage}`;
+    if (type === "block") return `BLOCK ${damage}`;
+    if (type === "dodge") return "DODGE!";
+    return `-${damage}`;
+  };
+
   return (
     <div 
-      className={`${styles.floatingNumber} ${getDamageClass()}`}
+      className={`${styles.floatingNumber} ${getDamageClass()} ${isCritical ? styles.criticalFloat : ""}`}
       style={{ left: x, top: y }}
     >
-      {type === "heal" ? "+" : "-"}{damage}
+      {getDisplayText()}
+    </div>
+  );
+};
+
+// Distance Meter Component
+const DistanceMeter = ({ distance, maxDistance = 100 }) => {
+  const getDistanceColor = () => {
+    if (distance <= 20) return "#ffd700"; // Close - gold
+    if (distance <= 50) return "#ff6347"; // Medium - orange-red
+    return "#90ee90"; // Far - green
+  };
+
+  return (
+    <div className={styles.distanceMeter}>
+      <div className={styles.distanceLabel}>DISTANCE</div>
+      <div className={styles.distanceBar}>
+        <div 
+          className={styles.distanceFill}
+          style={{ 
+            width: `${(distance / maxDistance) * 100}%`,
+            backgroundColor: getDistanceColor()
+          }}
+        />
+      </div>
+      <div className={styles.distanceText} style={{ color: getDistanceColor() }}>
+        {Math.round(distance)}m
+      </div>
+    </div>
+  );
+};
+
+// Status Effect Component
+const StatusEffect = ({ type, duration }) => {
+  const getEffectIcon = () => {
+    switch (type) {
+      case "stun": return <FaSnowflake />;
+      case "poison": return <FaFire />;
+      case "buff": return <FaBolt />;
+      case "debuff": return <FaSkull />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className={`${styles.statusEffect} ${styles[type]}`}>
+      {getEffectIcon()}
+      <span className={styles.statusDuration}>{duration}</span>
     </div>
   );
 };
@@ -219,21 +284,25 @@ const getAnimDuration = (charKey, animKey) => {
 /* ═══════════════════════════════════════════════
    MORTAL KOMBAT ANNOUNCEMENT SYSTEM
    ═══════════════════════════════════════════════ */
+// Enhanced Combat Announcements
 const ANNOUNCEMENTS = {
-  FIGHT:      { text: "FIGHT!",        color: "#ffd700",  duration: 2000, scale: 2.5 },
-  FINISH_HIM: { text: "FINISH HIM!",   color: "#ff0000",  duration: 3000, scale: 2.0 },
-  FATALITY:   { text: "FATALITY",      color: "#dc143c",  duration: 4000, scale: 2.5 },
-  BRUTALITY:  { text: "BRUTALITY",     color: "#8b0000",  duration: 3500, scale: 2.0 },
-  VICTORY:    { text: "VICTORY",       color: "#ffd700",  duration: 3000, scale: 2.5 },
-  DEFEAT:     { text: "DEFEAT",        color: "#8b0000",  duration: 3000, scale: 2.0 },
-  FLAWLESS:   { text: "FLAWLESS VICTORY", color: "#ffd700", duration: 4000, scale: 2.0 },
-  COMBO_2:    { text: "2 HITS",        color: "#ff8c00",  duration: 1200, scale: 1.5 },
-  COMBO_3:    { text: "3 HITS",        color: "#ff6347",  duration: 1200, scale: 1.6 },
-  COMBO_4:    { text: "4 HITS",        color: "#ff0000",  duration: 1200, scale: 1.7 },
-  COMBO_5:    { text: "5 HITS",        color: "#dc143c",  duration: 1500, scale: 1.8 },
-  COMBO_X:    { text: "COMBO BREAKER", color: "#00bfff",  duration: 1500, scale: 1.8 },
-  PERFECT:    { text: "PERFECT",       color: "#ffd700",  duration: 2000, scale: 1.8 },
-  KNOCKOUT:   { text: "KNOCKOUT",      color: "#ff4500",  duration: 2500, scale: 2.2 },
+  FIGHT: { text: "FIGHT!", color: "#ffd700", duration: 2000, scale: 2.5 },
+  FINISH_HIM: { text: "FINISH HIM!", color: "#ff0000", duration: 3000, scale: 2.0 },
+  FATALITY: { text: "FATALITY", color: "#dc143c", duration: 4000, scale: 2.5 },
+  BRUTALITY: { text: "BRUTALITY", color: "#8b0000", duration: 3500, scale: 2.0 },
+  VICTORY: { text: "VICTORY", color: "#ffd700", duration: 3000, scale: 2.5 },
+  DEFEAT: { text: "DEFEAT", color: "#8b0000", duration: 3000, scale: 2.0 },
+  FLAWLESS: { text: "FLAWLESS VICTORY", color: "#ffd700", duration: 4000, scale: 2.0 },
+  PERFECT: { text: "PERFECT", color: "#ffd700", duration: 2000, scale: 1.8 },
+  CRITICAL: { text: "CRITICAL HIT!", color: "#ff6347", duration: 1500, scale: 1.8 },
+  BLOCK: { text: "BLOCK!", color: "#4169e1", duration: 1000, scale: 1.5 },
+  DODGE: { text: "DODGE!", color: "#32cd32", duration: 1000, scale: 1.5 },
+  CLOSE_COMBAT: { text: "CLOSE COMBAT!", color: "#ff8c00", duration: 1200, scale: 1.6 },
+  COMBO_2: { text: "2 HITS", color: "#ff8c00", duration: 1200, scale: 1.5 },
+  COMBO_3: { text: "3 HITS", color: "#ff6347", duration: 1200, scale: 1.6 },
+  COMBO_4: { text: "4 HITS", color: "#ff0000", duration: 1200, scale: 1.7 },
+  COMBO_5: { text: "5 HITS", color: "#dc143c", duration: 1500, scale: 1.8 },
+  COMBO_X: { text: "COMBO BREAKER", color: "#00bfff", duration: 1500, scale: 1.8 },
 };
 
 const Announcement = ({ type, onComplete }) => {
@@ -264,76 +333,7 @@ const Announcement = ({ type, onComplete }) => {
   );
 };
 
-/* ═══════════════════════════════════════════════
-   BLOOD SPLATTER PARTICLE SYSTEM
-   ═══════════════════════════════════════════════ */
-const BLOOD_COLORS = ["#8b0000", "#dc143c", "#ff0000", "#660000", "#b22222"];
-const BloodParticle = ({ x, y, size, color, delay }) => (
-  <div
-    className={styles.bloodParticle}
-    style={{
-      left: x,
-      top: y,
-      width: size,
-      height: size,
-      backgroundColor: color,
-      animationDelay: `${delay}ms`,
-    }}
-  />
-);
-
-const BloodSplatter = ({ x, y, intensity = "medium" }) => {
-  const count = intensity === "heavy" ? 24 : intensity === "medium" ? 14 : 8;
-  return (
-    <div className={styles.bloodContainer}>
-      {Array.from({ length: count }).map((_, i) => {
-        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
-        const dist = 30 + Math.random() * (intensity === "heavy" ? 120 : 80);
-        const px = `calc(${x} + ${Math.cos(angle) * dist}px)`;
-        const py = `calc(${y} + ${Math.sin(angle) * dist}px)`;
-        const sz = 4 + Math.random() * (intensity === "heavy" ? 14 : 8);
-        const col = BLOOD_COLORS[Math.floor(Math.random() * BLOOD_COLORS.length)];
-        return <BloodParticle key={i} x={px} y={py} size={sz} color={col} delay={i * 30} />;
-      })}
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════
-   COMBO COUNTER DISPLAY
-   ═══════════════════════════════════════════════ */
-const ComboCounter = ({ combo }) => {
-  if (combo < 2) return null;
-  const colors = ["#ff8c00", "#ff6347", "#ff0000", "#dc143c", "#8b0000"];
-  const glow = colors[Math.min(combo - 2, colors.length - 1)];
-  return (
-    <div className={styles.comboCounter} style={{ textShadow: `0 0 20px ${glow}, 0 0 40px ${glow}` }}>
-      <div className={styles.comboHits}>{combo} HITS</div>
-      <div className={styles.comboLabel}>COMBO</div>
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════
-   SPECIAL MOVE METER
-   ═══════════════════════════════════════════════ */
-const SpecialMeter = ({ meter, max = 100 }) => (
-  <div className={styles.specialMeterContainer}>
-    <div className={styles.specialMeterLabel}>
-      <FaBolt /> SPECIAL
-    </div>
-    <div className={styles.specialMeterTrack}>
-      <div
-        className={styles.specialMeterFill}
-        style={{ width: `${(meter / max) * 100}%` }}
-      />
-    </div>
-  </div>
-);
-
-/* ═══════════════════════════════════════════════
-   SCREEN FLASH EFFECT
-   ═══════════════════════════════════════════════ */
+// Screen Flash Effect
 const ScreenFlash = ({ color = "#ffffff", duration = 200 }) => {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
@@ -344,27 +344,8 @@ const ScreenFlash = ({ color = "#ffffff", duration = 200 }) => {
   return <div className={styles.screenFlash} style={{ backgroundColor: color }} />;
 };
 
-/* ═══════════════════════════════════════════════
-   FATALITY PROMPT
-   ═══════════════════════════════════════════════ */
-const FatalityPrompt = ({ onExecute, onSkip }) => (
-  <div className={styles.fatalityPrompt}>
-    <div className={styles.fatalityPromptText}>
-      <GiSkullCrack className={styles.fatalityIcon} />
-      FINISH HIM!
-    </div>
-    <div className={styles.fatalityButtons}>
-      <button onClick={onExecute} className={`${styles.fatalityButton} ${styles.fatalityExecute}`}>
-        <GiBloodySword /> FATALITY
-      </button>
-      <button onClick={onSkip} className={`${styles.fatalityButton} ${styles.fatalitySkip}`}>
-        <FaSkull /> MERCY
-      </button>
-    </div>
-  </div>
-);
-
 const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPotionInCombat, toggleModal }) => {
+  // Core Combat State
   const [currentTurn, setCurrentTurn] = useState("player");
   const [damageNumbers, setDamageNumbers] = useState([]);
   const [effects, setEffects] = useState([]);
@@ -375,29 +356,31 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
   const [isEnemyActing, setIsEnemyActing] = useState(false);
   const enemyTurnTimer = useRef(null);
 
-  const [hitStop, setHitStop] = useState(false);
-  const [playerLunge, setPlayerLunge] = useState(false);
-  const [enemyLunge, setEnemyLunge] = useState(false);
-  const [playerRecoil, setPlayerRecoil] = useState(false);
-  const [enemyRecoil, setEnemyRecoil] = useState(false);
+  // Movement and Positioning System
+  const [playerPosition, setPlayerPosition] = useState(20); // Percentage from left
+  const [enemyPosition, setEnemyPosition] = useState(80); // Percentage from left
+  const [distance, setDistance] = useState(60); // Distance between characters
+  const [isMoving, setIsMoving] = useState(false);
 
-  /* MK System States */
-  const [announcement, setAnnouncement] = useState(null);
-  const [bloodSplatters, setBloodSplatters] = useState([]);
+  // Enhanced Combat Mechanics
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isDodging, setIsDodging] = useState(false);
   const [comboCount, setComboCount] = useState(0);
-  const [comboTimer, setComboTimer] = useState(null);
-  const [specialMeter, setSpecialMeter] = useState(0);
-  const [showFatalityPrompt, setShowFatalityPrompt] = useState(false);
-  const [fatalityActive, setFatalityActive] = useState(false);
+  const [announcement, setAnnouncement] = useState(null);
   const [screenFlash, setScreenFlash] = useState(null);
-  const [heavyHit, setHeavyHit] = useState(false);
   const [victoryPose, setVictoryPose] = useState(false);
   const [perfectWin, setPerfectWin] = useState(false);
   const [roundStart, setRoundStart] = useState(true);
   const [showResultScreen, setShowResultScreen] = useState(false);
-  const [motionSlash, setMotionSlash] = useState(false);
+  const [playerStatusEffects, setPlayerStatusEffects] = useState([]);
+  const [enemyStatusEffects, setEnemyStatusEffects] = useState([]);
 
-  /* Round Start: FIGHT! + Reset MK states for new combat */
+  // Calculate distance between characters
+  useEffect(() => {
+    setDistance(Math.abs(enemyPosition - playerPosition));
+  }, [playerPosition, enemyPosition]);
+
+  // Round Start: FIGHT! + Reset states
   useEffect(() => {
     if (combatState && !combatResult && roundStart) {
       setRoundStart(false);
@@ -406,108 +389,60 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
       setVictoryPose(false);
       setPerfectWin(false);
       setComboCount(0);
-      setSpecialMeter(0);
-      setShowFatalityPrompt(false);
-      setFatalityActive(false);
-      setMotionSlash(false);
-      setHitStop(false);
-      setPlayerLunge(false);
-      setEnemyLunge(false);
-      setPlayerRecoil(false);
-      setEnemyRecoil(false);
+      setPlayerPosition(20);
+      setEnemyPosition(80);
+      setPlayerStatusEffects([]);
+      setEnemyStatusEffects([]);
     }
   }, [combatState, combatResult, roundStart]);
 
-  const triggerHitStop = useCallback((ms = 80) => {
-    setHitStop(true);
-    setTimeout(() => setHitStop(false), ms);
-  }, []);
-
-  /* ═══════════════════════════════════════════════
-     COMBAT RESULT — CINEMATIC VICTORY / DEFEAT
-     ═══════════════════════════════════════════════ */
+  // Combat Result Handler
   useEffect(() => {
     if (!combatResult) return;
 
     if (combatResult.type === "win") {
-      // Show enemy defeat pose
       setEnemyAnimation("defeat");
-      setPlayerAnimation("idle");
+      setPlayerAnimation("victory");
       setVictoryPose(true);
 
-      // Check flawless victory (full health)
       const isFlawless = combatState?.playerHealth >= (player?.max_health || 100);
       if (isFlawless) {
         setPerfectWin(true);
         setAnnouncement("FLAWLESS");
-      } else if (combatState?.enemyHealth <= 0) {
-        setAnnouncement("KNOCKOUT");
       } else {
         setAnnouncement("VICTORY");
       }
 
-      // Victory screen flash + blood splatter on enemy
       setScreenFlash("#ffd700");
       shakeScreen("heavy");
-      addBloodSplatter("75%", "45%", "heavy");
-      addBloodSplatter("70%", "50%", "medium");
 
-      // Clear flash after effect
       setTimeout(() => {
         setScreenFlash(null);
-      }, 800);
-
-      // Delay result screen so defeat pose + announcement play first
-      setTimeout(() => {
         setShowResultScreen(true);
-      }, 2500);
+      }, 2000);
     }
 
     if (combatResult.type === "fail") {
-      // Show player defeat pose
       setPlayerAnimation("defeat");
       setEnemyAnimation("idle");
-      setVictoryPose(false);
-
       setAnnouncement("DEFEAT");
-
-      // Defeat screen flash + heavy blood on player
       setScreenFlash("#8b0000");
       shakeScreen("critical");
-      addBloodSplatter("20%", "45%", "heavy");
-      addBloodSplatter("25%", "50%", "medium");
 
       setTimeout(() => {
         setScreenFlash(null);
-      }, 1000);
-
-      // Delay result screen so defeat pose + announcement play first
-      setTimeout(() => {
         setShowResultScreen(true);
       }, 1500);
     }
   }, [combatResult]);
 
-  /* Combo Reset Timer */
-  useEffect(() => {
-    if (comboCount > 0) {
-      if (comboTimer) clearTimeout(comboTimer);
-      const t = setTimeout(() => {
-        if (comboCount >= 3) setAnnouncement("COMBO_X");
-        setComboCount(0);
-      }, 2500);
-      setComboTimer(t);
-      return () => clearTimeout(t);
-    }
-  }, [comboCount]);
-
   // Add damage number with auto-remove
-  const addDamageNumber = useCallback((damage, type, x, y) => {
+  const addDamageNumber = useCallback((damage, type, x, y, isCritical = false) => {
     const id = Date.now() + Math.random();
-    setDamageNumbers(prev => [...prev, { id, damage, type, x, y }]);
+    setDamageNumbers(prev => [...prev, { id, damage, type, x, y, isCritical }]);
     setTimeout(() => {
       setDamageNumbers(prev => prev.filter(d => d.id !== id));
-    }, 1500);
+    }, 2000);
   }, []);
 
   // Add effect sprite
@@ -519,17 +454,6 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
     }, 1000);
   }, []);
 
-  /* ═══════════════════════════════════════════════
-     BLOOD SPLATTER HELPER
-     ═══════════════════════════════════════════════ */
-  const addBloodSplatter = useCallback((x, y, intensity) => {
-    const id = Date.now() + Math.random();
-    setBloodSplatters(prev => [...prev, { id, x, y, intensity }]);
-    setTimeout(() => {
-      setBloodSplatters(prev => prev.filter(b => b.id !== id));
-    }, 1500);
-  }, []);
-
   // Trigger screen shake
   const shakeScreen = useCallback((intensity = "normal") => {
     setScreenShake(true);
@@ -537,77 +461,69 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
     setTimeout(() => setScreenShake(false), dur);
   }, []);
 
-  /* ═══════════════════════════════════════════════
-     MORTAL KOMBAT ENEMY AI
-     ═══════════════════════════════════════════════ */
-  useEffect(() => {
-    if (currentTurn !== "enemy" || !combatState || combatResult || isEnemyActing || showFatalityPrompt) return;
+  // Movement System
+  const handleMoveForward = useCallback(() => {
+    if (isMoving || isPlayerActing || isEnemyActing || combatResult) return;
+    
+    setIsMoving(true);
+    setIsPlayerActing(true);
+    setPlayerAnimation("move_forward");
 
-    // Random delay 800-1500ms for natural feel
-    const delay = 800 + Math.random() * 700;
+    // Move player closer to enemy
+    const newPosition = Math.min(playerPosition + 15, enemyPosition - 10);
+    setPlayerPosition(newPosition);
 
-    enemyTurnTimer.current = setTimeout(() => {
-      setIsEnemyActing(true);
-      setEnemyAnimation("attack");
-      setEnemyLunge(true);
-      setTimeout(() => setEnemyLunge(false), 260);
+    setTimeout(() => {
+      setPlayerAnimation("idle");
+      setIsMoving(false);
+      setIsPlayerActing(false);
+      
+      // Calculate new distance after movement
+      const newDistance = Math.abs(enemyPosition - newPosition);
+      // Check if close enough for bonus damage
+      if (newDistance <= 30) {
+        setAnnouncement("CLOSE_COMBAT");
+      }
+    }, 800);
+  }, [playerPosition, enemyPosition, distance, isMoving, isPlayerActing, isEnemyActing, combatResult]);
 
-      const enemyKey = getEnemyKey(combatState.enemy?.name);
-      const attackDuration = getAnimDuration(enemyKey, "attack");
+  // Block System
+  const handleBlock = useCallback(() => {
+    if (isPlayerActing || isEnemyActing || combatResult) return;
+    
+    setIsPlayerActing(true);
+    setIsBlocking(true);
+    setPlayerAnimation("block");
 
-      // Enemy attacks after attack animation plays
-      setTimeout(() => {
-        // Trigger the actual game attack
-        attackEnemy("Basic Attack");
+    setTimeout(() => {
+      setPlayerAnimation("idle");
+      setIsBlocking(false);
+      setIsPlayerActing(false);
+      setCurrentTurn("enemy");
+    }, 1000);
+  }, [isPlayerActing, isEnemyActing, combatResult]);
 
-        // MK: Combo break on enemy hit
-        setComboCount(0);
-        if (comboCount >= 2) {
-          setAnnouncement("COMBO_X");
-        }
+  // Dodge System
+  const handleDodge = useCallback(() => {
+    if (isPlayerActing || isEnemyActing || combatResult) return;
+    
+    setIsPlayerActing(true);
+    setIsDodging(true);
+    setPlayerAnimation("dodge");
 
-        // MK: Enemy heavy hit detection
-        const enemyIsCrit = Math.random() > 0.85;
-        const enemyIsHeavy = Math.random() > 0.7;
+    // Quick movement back and forth
+    setPlayerPosition(prev => Math.max(5, prev - 10));
+    
+    setTimeout(() => {
+      setPlayerPosition(prev => Math.min(prev + 10, 90));
+      setPlayerAnimation("idle");
+      setIsDodging(false);
+      setIsPlayerActing(false);
+      setCurrentTurn("enemy");
+    }, 800);
+  }, [isPlayerActing, isEnemyActing, combatResult]);
 
-        if (enemyIsHeavy) {
-          triggerHitStop(enemyIsCrit ? 110 : 80);
-          setScreenFlash(enemyIsCrit ? "#ff0000" : "#ff6347");
-          shakeScreen(enemyIsCrit ? "critical" : "heavy");
-          addBloodSplatter("20%", "45%", enemyIsCrit ? "heavy" : "medium");
-        } else {
-          shakeScreen();
-        }
-
-        addEffect("hit_spark", "20%", "45%");
-        addDamageNumber(
-          combatState.enemy?.damage || 10,
-          enemyIsCrit ? "crit" : "damage",
-          "20%", "35%"
-        );
-        setPlayerAnimation("hit");
-        setPlayerRecoil(true);
-        setTimeout(() => setPlayerRecoil(false), 280);
-
-        const hitDuration = getAnimDuration("kaito", "hit");
-
-        setTimeout(() => {
-          setPlayerAnimation("idle");
-          setEnemyAnimation("idle");
-          setIsEnemyActing(false);
-          setCurrentTurn("player");
-        }, hitDuration);
-      }, attackDuration);
-    }, delay);
-
-    return () => {
-      if (enemyTurnTimer.current) clearTimeout(enemyTurnTimer.current);
-    };
-  }, [currentTurn, combatState, combatResult, isEnemyActing, showFatalityPrompt, comboCount]);
-
-  /* ═══════════════════════════════════════════════
-     MORTAL KOMBAT PLAYER ATTACK
-     ═══════════════════════════════════════════════ */
+  // Enhanced Attack System
   const handleAttack = useCallback((skillName = "Basic Attack") => {
     if (!combatState || isPlayerActing || isEnemyActing || combatResult) return;
 
@@ -617,24 +533,21 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
     const animKey = isBasic ? "basic_attack" : "skill_attack";
     setPlayerAnimation(animKey);
 
-    setPlayerLunge(true);
-    setTimeout(() => setPlayerLunge(false), 260);
-
-    // MK: Motion slash line for basic attacks
-    if (isBasic) setMotionSlash(true);
-
     const attackDuration = getAnimDuration("kaito", animKey);
 
     // Damage happens mid-animation
     setTimeout(() => {
       attackEnemy(skillName);
 
-      // MK: Heavy hit detection
-      const isCrit = Math.random() > 0.8;
-      const isHeavy = isSkill || isCrit;
-      const damage = isBasic ? 15 : 25;
+      // Calculate damage with distance bonus
+      let baseDamage = isBasic ? 15 : 25;
+      const distanceBonus = distance <= 30 ? 1.5 : 1.0;
+      const totalDamage = Math.round(baseDamage * distanceBonus);
+      
+      const isCritical = Math.random() > 0.8;
+      const finalDamage = isCritical ? totalDamage * 2 : totalDamage;
 
-      // MK: Combo system
+      // Combo system
       setComboCount(prev => {
         const newCombo = prev + 1;
         if (newCombo >= 2) {
@@ -644,59 +557,114 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
         return newCombo;
       });
 
-      // MK: Screen effects
-      if (isHeavy) {
-        triggerHitStop(isCrit ? 110 : 80);
-        setHeavyHit(true);
-        setScreenFlash(isCrit ? "#ffd700" : "#ff6347");
-        shakeScreen();
-        setTimeout(() => { setHeavyHit(false); setScreenFlash(null); }, 300);
-        // Heavy blood splatter
-        addBloodSplatter("75%", "45%", "heavy");
+      // Screen effects
+      if (isCritical) {
+        setAnnouncement("CRITICAL");
+        setScreenFlash("#ffd700");
+        shakeScreen("heavy");
       } else {
-        addBloodSplatter("75%", "45%", "medium");
+        shakeScreen();
       }
 
-      // MK: Special meter gain
-      setSpecialMeter(prev => Math.min(prev + (isHeavy ? 15 : 8), 100));
-
       // Effect at enemy position
-      addEffect(isBasic ? "slash_trail" : "skill_glow", "75%", "45%");
+      addEffect(isBasic ? "slash_trail" : "skill_glow", `${enemyPosition}%`, "45%");
 
       // Damage number
-      addDamageNumber(damage, isCrit ? "crit" : "damage", "75%", "35%");
+      addDamageNumber(finalDamage, isCritical ? "crit" : "damage", `${enemyPosition}%`, "35%", isCritical);
 
       setEnemyAnimation("hit");
-      setEnemyRecoil(true);
-      setTimeout(() => setEnemyRecoil(false), 280);
 
       const hitDuration = getAnimDuration(getEnemyKey(combatState.enemy?.name), "hit");
 
       setTimeout(() => {
-        // Clear motion slash
-        setMotionSlash(false);
-
-        // Only reset animations if combat is still ongoing
         if (!combatResult) {
           setEnemyAnimation("idle");
           setPlayerAnimation("idle");
           setIsPlayerActing(false);
-
-          // MK: Check for fatality opportunity
-          const enemyHpPercent = combatState.enemyHealth / combatState.enemy.max_health;
-          if (enemyHpPercent <= 0.15 && enemyHpPercent > 0) {
-            setShowFatalityPrompt(true);
-            setAnnouncement("FINISH_HIM");
-          }
-
-          // Switch to enemy turn if combat not over
-          if (!showFatalityPrompt) {
-            setCurrentTurn("enemy");
-          }
+          setCurrentTurn("enemy");
         }
       }, hitDuration);
     }, attackDuration * 0.6);
-  }, [combatState, isPlayerActing, isEnemyActing, combatResult, showFatalityPrompt]);
+  }, [combatState, isPlayerActing, isEnemyActing, combatResult, distance, addDamageNumber, addEffect]);
+
+  // Enhanced Enemy AI
+  useEffect(() => {
+    if (currentTurn !== "enemy" || !combatState || combatResult || isEnemyActing) return;
+
+    const delay = 1000 + Math.random() * 1000;
+
+    enemyTurnTimer.current = setTimeout(() => {
+      setIsEnemyActing(true);
+      
+      // Enemy decision making based on distance
+      const enemyAction = Math.random();
+      
+      if (distance > 50 && enemyAction < 0.3) {
+        // Move closer
+        setEnemyAnimation("move_forward");
+        const newPosition = Math.max(enemyPosition - 15, playerPosition + 10);
+        setEnemyPosition(newPosition);
+        
+        setTimeout(() => {
+          setEnemyAnimation("idle");
+          setIsEnemyActing(false);
+          setCurrentTurn("player");
+        }, 800);
+      } else {
+        // Attack
+        setEnemyAnimation("attack");
+
+        const enemyKey = getEnemyKey(combatState.enemy?.name);
+        const attackDuration = getAnimDuration(enemyKey, "attack");
+
+        setTimeout(() => {
+          attackEnemy("Basic Attack");
+
+          const enemyIsCrit = Math.random() > 0.85;
+          const damage = combatState.enemy?.damage || 10;
+          const finalDamage = enemyIsCrit ? damage * 2 : damage;
+
+          // Check if player is blocking
+          if (isBlocking) {
+            const blockedDamage = Math.round(finalDamage * 0.3);
+            addDamageNumber(blockedDamage, "block", "20%", "35%");
+            setAnnouncement("BLOCK");
+            addEffect("block_spark", "20%", "45%");
+          } else if (isDodging) {
+            addDamageNumber(0, "dodge", "20%", "35%");
+            setAnnouncement("DODGE");
+            addEffect("dodge_trail", "20%", "45%");
+          } else {
+            addDamageNumber(finalDamage, enemyIsCrit ? "crit" : "damage", "20%", "35%", enemyIsCrit);
+            setPlayerAnimation("hit");
+            
+            if (enemyIsCrit) {
+              setAnnouncement("CRITICAL");
+              setScreenFlash("#ff0000");
+              shakeScreen("critical");
+            } else {
+              shakeScreen();
+            }
+          }
+
+          const hitDuration = getAnimDuration("kaito", "hit");
+
+          setTimeout(() => {
+            setPlayerAnimation("idle");
+            setEnemyAnimation("idle");
+            setIsEnemyActing(false);
+            setCurrentTurn("player");
+            setIsBlocking(false);
+            setIsDodging(false);
+          }, hitDuration);
+        }, attackDuration);
+      }
+    }, delay);
+
+    return () => {
+      if (enemyTurnTimer.current) clearTimeout(enemyTurnTimer.current);
+    };
+  }, [currentTurn, combatState, combatResult, isEnemyActing, distance, isBlocking, isDodging]);
 
   // Healing handler
   const handleCraftPotion = useCallback((potionName) => {
@@ -715,115 +683,9 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
       setTimeout(() => {
         setPlayerAnimation("idle");
         setIsPlayerActing(false);
-        // Healing does NOT pass turn to enemy — player keeps their turn
       }, 600);
     }, healDuration * 0.5);
   }, [combatState, isPlayerActing, isEnemyActing, combatResult]);
-
-  /* ═══════════════════════════════════════════════
-     MORTAL KOMBAT SPECIAL MOVE
-     ═══════════════════════════════════════════════ */
-  const handleSpecialMove = useCallback(() => {
-    if (!combatState || isPlayerActing || isEnemyActing || combatResult || specialMeter < 100) return;
-
-    setIsPlayerActing(true);
-    setSpecialMeter(0);
-    setPlayerAnimation("skill_attack");
-
-    setPlayerLunge(true);
-    setTimeout(() => setPlayerLunge(false), 380);
-
-    const attackDuration = getAnimDuration("kaito", "skill_attack");
-
-    setTimeout(() => {
-      attackEnemy("Special Move");
-      setComboCount(0);
-
-      // MK: Massive screen effects for special
-      triggerHitStop(120);
-      setScreenFlash("#ffd700");
-      shakeScreen("critical");
-      setHeavyHit(true);
-      addBloodSplatter("75%", "45%", "heavy");
-      addBloodSplatter("70%", "40%", "heavy");
-
-      addEffect("skill_glow", "75%", "45%");
-      addEffect("slash_trail", "70%", "40%");
-      addDamageNumber(50, "crit", "75%", "30%");
-      addDamageNumber("SPECIAL!", "crit", "75%", "20%");
-
-      setEnemyAnimation("hit");
-      setEnemyRecoil(true);
-      setTimeout(() => setEnemyRecoil(false), 360);
-
-      const hitDuration = getAnimDuration(getEnemyKey(combatState.enemy?.name), "hit");
-
-      setTimeout(() => {
-        setHeavyHit(false);
-        setScreenFlash(null);
-        setEnemyAnimation("idle");
-        setPlayerAnimation("idle");
-        setIsPlayerActing(false);
-
-        // Check fatality after special
-        const enemyHpPercent = combatState.enemyHealth / combatState.enemy.max_health;
-        if (enemyHpPercent <= 0.15 && enemyHpPercent > 0) {
-          setShowFatalityPrompt(true);
-          setAnnouncement("FINISH_HIM");
-        } else if (!combatResult) {
-          setCurrentTurn("enemy");
-        }
-      }, hitDuration * 1.5);
-    }, attackDuration * 0.5);
-  }, [combatState, isPlayerActing, isEnemyActing, combatResult, specialMeter]);
-
-  /* ═══════════════════════════════════════════════
-     MORTAL KOMBAT FATALITY
-     ═══════════════════════════════════════════════ */
-  const handleFatality = useCallback(() => {
-    setShowFatalityPrompt(false);
-    setFatalityActive(true);
-    setAnnouncement("FATALITY");
-    setPlayerAnimation("skill_attack");
-    setEnemyAnimation("defeat");
-
-    // MK: Epic fatality sequence
-    setScreenFlash("#ff0000");
-    shakeScreen("critical");
-
-    setTimeout(() => {
-      setScreenFlash("#8b0000");
-      addBloodSplatter("75%", "45%", "heavy");
-      addBloodSplatter("70%", "50%", "heavy");
-      addBloodSplatter("80%", "40%", "heavy");
-    }, 400);
-
-    setTimeout(() => {
-      setScreenFlash("#000000");
-      shakeScreen("critical");
-    }, 800);
-
-    setTimeout(() => {
-      setScreenFlash("#ff0000");
-      addBloodSplatter("75%", "45%", "heavy");
-    }, 1200);
-
-    // Kill the enemy after fatality
-    setTimeout(() => {
-      attackEnemy("Fatality");
-      setFatalityActive(false);
-      setScreenFlash(null);
-    }, 2500);
-  }, []);
-
-  /* ═══════════════════════════════════════════════
-     MORTAL KOMBAT MERCY (skip fatality)
-     ═══════════════════════════════════════════════ */
-  const handleMercy = useCallback(() => {
-    setShowFatalityPrompt(false);
-    setAnnouncement(null);
-    setCurrentTurn("enemy");
-  }, []);
 
   // Loading states
   if (!combatState && !combatResult) {
@@ -864,7 +726,7 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
 
   return (
     <div className={`${styles.combatCard} ${screenShake ? styles.screenShake : ""}`}>
-      {/* ═══ JAPANESE DOJO HEADER ═══ */}
+      {/* Japanese Dojo Header */}
       <div className={styles.jpHeader}>
         <div className={styles.jpHeaderLeft}>
           <GiCrossedSwords className={styles.jpHeaderIcon} />
@@ -875,10 +737,8 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
         </div>
 
         <div className={styles.jpHeaderCenter}>
-          {currentTurn === "player" && !isPlayerActing && !isEnemyActing && !showFatalityPrompt ? (
+          {currentTurn === "player" && !isPlayerActing && !isEnemyActing ? (
             <div className={styles.jpTurnPlayer}><FaFistRaised /> YOUR TURN</div>
-          ) : showFatalityPrompt ? (
-            <div className={styles.jpTurnEnemy}><GiSkullCrack /> FINISH HIM!</div>
           ) : (
             <div className={styles.jpTurnEnemy}><FaSkull /> ENEMY TURN</div>
           )}
@@ -894,11 +754,11 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
         </button>
       </div>
 
-      {/* ═══ MAIN COMBAT BODY ═══ */}
+      {/* Main Combat Body */}
       <div className={`${styles.combatBody} ${styles.fightingArena}`}>
         {combatState && (
           <div className={styles.fightingGame}>
-            {/* ═══ PREMIUM HEALTH BARS ═══ */}
+            {/* Premium Health Bars */}
             <div className={styles.jpHealthBars}>
               {/* Player HP */}
               <div className={styles.jpHealthSide}>
@@ -912,6 +772,12 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
                     style={{ width: `${Math.max(0, ((combatState?.playerHealth ?? player.health) / player.max_health) * 100)}%` }}
                   />
                   <div className={styles.jpHpShine} />
+                </div>
+                {/* Status Effects */}
+                <div className={styles.statusEffectsContainer}>
+                  {playerStatusEffects.map((effect, idx) => (
+                    <StatusEffect key={idx} type={effect.type} duration={effect.duration} />
+                  ))}
                 </div>
               </div>
 
@@ -931,26 +797,37 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
                   />
                   <div className={styles.jpHpShine} />
                 </div>
+                {/* Status Effects */}
+                <div className={styles.statusEffectsContainer}>
+                  {enemyStatusEffects.map((effect, idx) => (
+                    <StatusEffect key={idx} type={effect.type} duration={effect.duration} />
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* MK Announcement Overlay */}
+            {/* Distance Meter */}
+            <div className={styles.distanceMeterContainer}>
+              <DistanceMeter distance={distance} maxDistance={100} />
+            </div>
+
+            {/* Announcement Overlay */}
             {announcement && (
               <Announcement
                 type={announcement}
                 onComplete={() => {
-                  if (!["FINISH_HIM", "FATALITY", "VICTORY", "DEFEAT", "FLAWLESS"].includes(announcement)) {
+                  if (!["FINISH_HIM", "FATALITY", "VICTORY", "DEFEAT", "FLAWLESS", "CRITICAL", "BLOCK", "DODGE"].includes(announcement)) {
                     setAnnouncement(null);
                   }
                 }}
               />
             )}
 
-            {/* MK Screen Flash */}
+            {/* Screen Flash */}
             {screenFlash && <ScreenFlash color={screenFlash} duration={200} />}
 
-            {/* ═══ DOJO FIGHTING STAGE ═══ */}
-            <div className={`${styles.fightingStage} ${styles.jpDojoStage} ${heavyHit ? styles.heavyHitStage : ""} ${hitStop ? styles.hitStop : ""}`}>
+            {/* Dojo Fighting Stage */}
+            <div className={`${styles.fightingStage} ${styles.jpDojoStage}`}>
               <div className={styles.stageBackground}>
                 <div className={styles.stageFloor}></div>
                 <div className={styles.stageWall}></div>
@@ -962,41 +839,31 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
                 <div className={styles.jpSigil}>道場</div>
               </div>
 
-              {/* MK Combo Counter */}
-              <ComboCounter combo={comboCount} />
-
-              {/* MK Special Meter */}
-              <SpecialMeter meter={specialMeter} />
-
               <div className={styles.fightersContainer}>
-                {/* Kaito - Left */}
-                <div className={`${styles.fighter} ${styles.playerFighter} ${victoryPose ? styles.victoryPose : ""} ${playerLunge ? styles.playerLunge : ""} ${playerRecoil ? styles.playerRecoil : ""}`}>
-                  <AnimationSprite
+                {/* Kaito - Dynamic Positioning */}
+                <div 
+                  className={`${styles.fighter} ${styles.playerFighter} ${victoryPose ? styles.victoryPose : ""} ${isBlocking ? styles.blocking : ""} ${isDodging ? styles.dodging : ""}`}
+                  style={{ left: `${playerPosition}%` }}
+                >
+                  <SpriteAnimator
                     character="kaito"
                     animation={playerAnimation}
                     size={150}
-                    freeze={hitStop}
                   />
                 </div>
 
-                {/* Enemy - Right */}
-                <div className={`${styles.fighter} ${styles.enemyFighter} ${fatalityActive ? styles.fatalityTarget : ""} ${enemyLunge ? styles.enemyLunge : ""} ${enemyRecoil ? styles.enemyRecoil : ""}`}>
-                  <AnimationSprite
+                {/* Enemy - Dynamic Positioning */}
+                <div 
+                  className={`${styles.fighter} ${styles.enemyFighter}`}
+                  style={{ left: `${enemyPosition}%` }}
+                >
+                  <SpriteAnimator
                     character={combatState.enemy.name}
                     animation={enemyAnimation}
                     size={150}
-                    freeze={hitStop}
                   />
                 </div>
               </div>
-
-              {/* MK Motion Slash */}
-              {motionSlash && <div className={styles.motionSlash} />}
-
-              {/* MK Blood Splatters */}
-              {bloodSplatters.map(b => (
-                <BloodSplatter key={b.id} x={b.x} y={b.y} intensity={b.intensity} />
-              ))}
 
               {/* Effects */}
               {effects.map(e => (
@@ -1005,24 +872,17 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
 
               {/* Damage Numbers */}
               {damageNumbers.map(d => (
-                <DamageNumber
+                <FloatingDamage
                   key={d.id}
                   damage={d.damage}
                   type={d.type}
                   x={d.x}
                   y={d.y}
+                  isCritical={d.isCritical}
                 />
               ))}
 
-              {/* MK Fatality Prompt */}
-              {showFatalityPrompt && (
-                <FatalityPrompt
-                  onExecute={handleFatality}
-                  onSkip={handleMercy}
-                />
-              )}
-
-              {/* ═══ FLOATING COMBAT LOG (side overlay) ═══ */}
+              {/* Combat Log */}
               {combatState.log?.length > 0 && (
                 <div className={styles.jpLogFloat}>
                   <div className={styles.jpLogFloatHeader}>
@@ -1038,7 +898,7 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
               )}
             </div>
 
-            {/* ═══ EQUIPMENT STRIP ═══ */}
+            {/* Equipment Strip */}
             <div className={styles.jpEquipStrip}>
               {player.equipment?.weapon && (
                 <div className={styles.jpEquipSlot}>
@@ -1056,35 +916,62 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
           </div>
         )}
 
-        {/* ═══ JAPANESE ACTION PANEL ═══ */}
+        {/* Enhanced Action Panel */}
         <div className={styles.jpActionPanel}>
           <div className={styles.jpActionGrid}>
+            {/* Basic Attack */}
             <button
               type="button"
               className={`${styles.jpActionBtn} ${styles.jpAttackBtn}`}
               onClick={() => handleAttack("Basic Attack")}
-              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || showFatalityPrompt}
+              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player"}
             >
               <GiCrossedSwords className={styles.jpActionIcon} />
               <span className={styles.jpActionLabel}>斬</span>
               <span className={styles.jpActionSub}>ATTACK</span>
             </button>
 
+            {/* Move Forward */}
             <button
               type="button"
-              className={`${styles.jpActionBtn} ${styles.jpSpecialBtn} ${specialMeter >= 100 ? styles.jpSpecialReady : ""}`}
-              onClick={handleSpecialMove}
-              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || specialMeter < 100 || showFatalityPrompt}
+              className={`${styles.jpActionBtn} ${styles.jpMoveBtn}`}
+              onClick={handleMoveForward}
+              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player" || distance <= 20}
             >
-              <FaBolt className={styles.jpActionIcon} />
-              <span className={styles.jpActionLabel}>奥</span>
-              <span className={styles.jpActionSub}>SPECIAL {specialMeter}%</span>
+              <FaArrowsAltH className={styles.jpActionIcon} />
+              <span className={styles.jpActionLabel}>進</span>
+              <span className={styles.jpActionSub}>MOVE</span>
             </button>
 
+            {/* Block */}
+            <button
+              type="button"
+              className={`${styles.jpActionBtn} ${styles.jpBlockBtn}`}
+              onClick={handleBlock}
+              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player"}
+            >
+              <FaShieldAlt className={styles.jpActionIcon} />
+              <span className={styles.jpActionLabel}>守</span>
+              <span className={styles.jpActionSub}>BLOCK</span>
+            </button>
+
+            {/* Dodge */}
+            <button
+              type="button"
+              className={`${styles.jpActionBtn} ${styles.jpDodgeBtn}`}
+              onClick={handleDodge}
+              disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player"}
+            >
+              <GiBootStomp className={styles.jpActionIcon} />
+              <span className={styles.jpActionLabel}>避</span>
+              <span className={styles.jpActionSub}>DODGE</span>
+            </button>
+
+            {/* Skills */}
             <div className={styles.jpSelectWrap}>
               <select
                 onChange={(e) => { if (e.target.value) handleAttack(e.target.value); }}
-                disabled={!combatState || isPlayerActing || isEnemyActing || combatResult}
+                disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player"}
                 className={styles.jpSelect}
                 defaultValue=""
               >
@@ -1099,10 +986,11 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
               </select>
             </div>
 
+            {/* Potions */}
             <div className={styles.jpSelectWrap}>
               <select
                 onChange={(e) => { if (e.target.value) handleCraftPotion(e.target.value); }}
-                disabled={!combatState || isPlayerActing || isEnemyActing || combatResult}
+                disabled={!combatState || isPlayerActing || isEnemyActing || combatResult || currentTurn !== "player"}
                 className={styles.jpSelect}
                 defaultValue=""
               >
@@ -1119,7 +1007,7 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
           </div>
         </div>
 
-        {/* ═══ CINEMATIC RESULT SCREEN ═══ */}
+        {/* Cinematic Result Screen */}
         {showResultScreen && combatResult && (
           <div className={`${styles.jpResultScreen} ${combatResult.type === "win" ? styles.jpResultWin : styles.jpResultLose}`}>
             <div className={styles.jpResultCard}>
@@ -1143,6 +1031,11 @@ const CombatModal = ({ combatState, combatResult, player, attackEnemy, craftPoti
                   <div className={styles.jpRewardItem}>
                     <FaStar /> +{combatState.enemy.name === "Bandit" ? 20 : combatState.enemy.name === "Shadow Ninja" ? 25 : 30} XP
                   </div>
+                  {perfectWin && (
+                    <div className={styles.jpRewardItem}>
+                      <GiFlatStar /> PERFECT BONUS
+                    </div>
+                  )}
                 </div>
               )}
 
