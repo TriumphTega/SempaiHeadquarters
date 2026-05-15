@@ -15,7 +15,7 @@
     "@irys/sdk": "^0.2.11",
     "@metaplex-foundation/js": "^0.20.1",
     "@meteora-ag/cp-amm-sdk": "^1.4.2",
-    "@meteora-ag/dlmm": "^1.9.7",
+    "@meteora-ag/dlmm": "^1.9.9",
     "@solana/spl-token": "^0.4.12",
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",

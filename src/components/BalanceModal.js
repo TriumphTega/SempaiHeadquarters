@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
-import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants";
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, SKR_MINT_ADDRESS, RPC_URL } from "@/constants";
 import { FaTimes, FaGem, FaCoins, FaDollarSign, FaCopy, FaWallet, FaPaperPlane } from "react-icons/fa";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import QRCode from "qrcode";
@@ -11,11 +11,12 @@ import QRCode from "qrcode";
 const connection = new Connection(RPC_URL);
 
 const TOKEN_MINTS = {
-  SOL: { mint: new PublicKey("So11111111111111111111111111111111111111112"), decimals: 9, symbol: "SOL", icon: <FaCoins /> },
-  JUP: { mint: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"), decimals: 6, symbol: "JUP", icon: <FaGem /> },
-  AMETHYST: { mint: AMETHYST_MINT_ADDRESS, decimals: 6, symbol: "AMETHYST", icon: <FaGem /> },
-  SMP: { mint: SMP_MINT_ADDRESS, decimals: 6, symbol: "SMP", icon: <FaGem /> },
-  USDC: { mint: USDC_MINT_ADDRESS, decimals: 6, symbol: "USDC", icon: <FaDollarSign /> },
+  SOL: { mint: new PublicKey("So11111111111111111111111111111111111111112"), decimals: 9, symbol: "SOL", icon: <FaCoins />, logo: "/images/sol-logo.png" },
+  JUP: { mint: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"), decimals: 6, symbol: "JUP", icon: <FaGem />, logo: "/images/jup-logo.png" },
+  AMETHYST: { mint: AMETHYST_MINT_ADDRESS, decimals: 6, symbol: "AMETHYST", icon: <FaGem />, logo: "/images/amethyst-logo.jpeg" },
+  SMP: { mint: SMP_MINT_ADDRESS, decimals: 6, symbol: "SMP", icon: <FaGem />, logo: "/images/smp-logo.jpeg" },
+  SKR: { mint: SKR_MINT_ADDRESS, decimals: 6, symbol: "SKR", icon: <FaGem />, logo: "/images/skr-logo.png" },
+  USDC: { mint: USDC_MINT_ADDRESS, decimals: 6, symbol: "USDC", icon: <FaDollarSign />, logo: "/images/usdc-logo.png" },
 };
 
 export default function BalanceModal({ isOpen, onClose, activeWalletAddress }) {
@@ -265,9 +266,18 @@ export default function BalanceModal({ isOpen, onClose, activeWalletAddress }) {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 10 }}>
-                    <div style={{ fontSize: '20px', color: 'rgba(243,99,22,0.75)', filter: 'drop-shadow(0 0 6px rgba(243,99,22,0.2))' }}>
-                      {data.icon}
-                    </div>
+                    <img 
+                      src={data.logo} 
+                      alt={data.symbol}
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '50%',
+                        objectFit: 'contain',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                    />
                     <div>
                       <p style={{ color: '#fff', fontWeight: 600, fontSize: '14px', margin: 0 }}>{data.symbol}</p>
                       <p style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)', margin: '2px 0 0 0' }}>

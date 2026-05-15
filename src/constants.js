@@ -52,6 +52,7 @@ export { TREASURY_PRIVATE_KEY, TREASURY_PUBLIC_KEY };
 export const AMETHYST_MINT_ADDRESS = new PublicKey('4TxguLvR4vXwpS4CJXEemZ9DUhVYjhmsaTkqJkYrpump');
 export const SMP_MINT_ADDRESS = new PublicKey('SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor');
 export const USDC_MINT_ADDRESS = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+export const SKR_MINT_ADDRESS = new PublicKey('SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3'); // Replace with actual SKR mint address
 export const DEVNET_RPC_URL = 'https://api.devnet.solana.com';
 export const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=10569fbb-6306-4fd1-868d-ae082d32204a';
 export const TARGET_WALLET = TREASURY_PUBLIC_KEY;

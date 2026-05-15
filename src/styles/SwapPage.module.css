@@ -940,3 +940,139 @@
     color: rgba(243,99,22,0.9);
     filter: drop-shadow(0 0 8px rgba(243,99,22,0.3));
   }
+
+  /* Token Select with Logo */
+  .tokenSelect {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(243, 99, 22, 0.2);
+    border-radius: 14px;
+    transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+  }
+
+  .tokenSelect:focus-within {
+    border-color: rgba(243, 99, 22, 0.55);
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.1), inset 0 1px 0 rgba(255,255,255,0.04);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .tokenLogo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-left: 12px;
+    margin-right: 8px;
+    object-fit: contain;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .tokenSelect .select {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 16px 14px 8px;
+    border-radius: 14px;
+  }
+
+  .tokenSelect .select:focus {
+    box-shadow: none;
+    background: transparent;
+  }
+
+  /* App-like wallet enhancements */
+  .swapCard {
+    background: linear-gradient(180deg, rgba(18, 18, 28, 0.95) 0%, rgba(12, 12, 20, 0.98) 100%);
+  }
+
+  .inputGroup {
+    gap: 10px;
+  }
+
+  .label {
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  .input, .select {
+    padding: 16px;
+    font-size: 1.05rem;
+    border-radius: 16px;
+  }
+
+  .swapButton {
+    padding: 18px 32px;
+    border-radius: 16px;
+    font-size: 1.15rem;
+  }
+
+  .portfolioSection {
+    background: linear-gradient(180deg, rgba(8, 8, 14, 0.6) 0%, rgba(12, 12, 20, 0.7) 100%);
+    border-radius: 18px;
+  }
+
+  .balanceButton, .sendButton, .receiveButton {
+    padding: 16px 12px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+  }
+
+  /* Simple Token Select */
+  .tokenSelectWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(243, 99, 22, 0.2);
+    border-radius: 16px;
+    padding: 4px 16px 4px 12px;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .tokenSelectWrapper:hover {
+    border-color: rgba(243, 99, 22, 0.4);
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .tokenSelectWrapper:focus-within {
+    border-color: rgba(243, 99, 22, 0.55);
+    box-shadow: 0 0 20px rgba(243, 99, 22, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .tokenSelectWrapper .tokenLogo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .tokenSelect {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 500;
+    padding: 12px 0;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23ff6200' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+    padding-right: 24px;
+  }
+
+  .tokenSelect option {
+    background: #0c0c12;
+    color: #fff;
+    padding: 12px;
+  }

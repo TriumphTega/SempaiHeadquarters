@@ -1,11 +1,12 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { RPC_URL } from "@/constants";
+import { RPC_URL, SKR_MINT_ADDRESS } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
+const SKR_MINT_ADDRESS_STRING = SKR_MINT_ADDRESS.toString();
 const connection = new Connection(RPC_URL, "confirmed");
 
 const fetchSolPrice = async () => {
@@ -30,10 +31,21 @@ const fetchSmpPrice = async () => {
   }
 };
 
+const fetchSkrPrice = async () => {
+  try {
+    const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=skr-token-id&vs_currencies=usd");
+    const data = await response.json();
+    return data["skr-token-id"]?.usd || null;
+  } catch (error) {
+    console.error("Error fetching SKR price:", error);
+    return null;
+  }
+};
+
 export async function POST(req) {
   try {
-    const { user_id, novel_id, plan_type, signature, userPublicKey, amount, currency, solPrice, smpPrice } = await req.json();
-    console.log("Request Body:", { user_id, novel_id, plan_type, signature, userPublicKey, amount, currency, solPrice, smpPrice });
+    const { user_id, novel_id, plan_type, signature, userPublicKey, amount, currency, solPrice, smpPrice, skrPrice } = await req.json();
+    console.log("Request Body:", { user_id, novel_id, plan_type, signature, userPublicKey, amount, currency, solPrice, smpPrice, skrPrice });
 
     // Define pricing tiers
     const pricingTiers = {
@@ -49,21 +61,35 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid plan type" }), { status: 400 });
     }
 
-    // For now, we only support SMP in test mode
-    if (currency !== "SMP") {
-      console.log("Validation failed: Only SMP supported in test mode");
-      return new Response(JSON.stringify({ error: "Only SMP supported in test mode" }), { status: 400 });
+    // Support SMP and SKR currencies
+    if (currency !== "SMP" && currency !== "SKR") {
+      console.log("Validation failed: Only SMP and SKR supported");
+      return new Response(JSON.stringify({ error: "Only SMP and SKR supported" }), { status: 400 });
     }
 
-    if (!smpPrice) {
-      console.log("Validation failed: SMP price not provided");
-      return new Response(JSON.stringify({ error: "SMP price not provided" }), { status: 400 });
-    }
+    let expectedAmount, decimals, mint, tokenPrice;
 
-    const expectedAmount = tier.price / smpPrice;
-    const decimals = 9;
-    const mint = SMP_MINT_ADDRESS;
-    console.log("SMP expected amount:", expectedAmount);
+    if (currency === "SMP") {
+      if (!smpPrice) {
+        console.log("Validation failed: SMP price not provided");
+        return new Response(JSON.stringify({ error: "SMP price not provided" }), { status: 400 });
+      }
+      expectedAmount = tier.price / smpPrice;
+      decimals = 9;
+      mint = SMP_MINT_ADDRESS;
+      tokenPrice = smpPrice;
+      console.log("SMP expected amount:", expectedAmount);
+    } else if (currency === "SKR") {
+      if (!skrPrice) {
+        console.log("Validation failed: SKR price not provided");
+        return new Response(JSON.stringify({ error: "SKR price not provided" }), { status: 400 });
+      }
+      expectedAmount = tier.price / skrPrice;
+      decimals = 9;
+      mint = SKR_MINT_ADDRESS_STRING;
+      tokenPrice = skrPrice;
+      console.log("SKR expected amount:", expectedAmount);
+    }
 
     const tolerance = 0.02;
     const minAmount = amount * (1 - tolerance);
@@ -168,7 +194,7 @@ export async function POST(req) {
       chapters_unlocked: tier.chapters,
       chapters_remaining: tier.chapters,
       payment_amount: tier.price,
-      payment_currency: "SMP",
+      payment_currency: currency,
       transaction_id: signature,
       paid_at: new Date().toISOString(),
       expires_at,

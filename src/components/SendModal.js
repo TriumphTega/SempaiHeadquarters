@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Connection, PublicKey, VersionedTransaction, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } from "@solana/web3.js";
 import { getAssociatedTokenAddress, getAssociatedTokenAddressSync, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
-import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, RPC_URL } from "@/constants";
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, SKR_MINT_ADDRESS, RPC_URL } from "@/constants";
 import { FaTimes, FaGem, FaCoins, FaDollarSign, FaPaperPlane, FaShieldAlt, FaChartLine } from "react-icons/fa";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -12,11 +12,12 @@ import WithdrawalReputationService from "@/services/porp/WithdrawalReputationSer
 const connection = new Connection(RPC_URL);
 
 const TOKEN_MINTS = {
-  SOL: { mint: new PublicKey("So11111111111111111111111111111111111111112"), decimals: 9, symbol: "SOL", icon: <FaCoins /> },
-  JUP: { mint: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"), decimals: 6, symbol: "JUP", icon: <FaGem /> },
-  AMETHYST: { mint: AMETHYST_MINT_ADDRESS, decimals: 6, symbol: "AMETHYST", icon: <FaGem /> },
-  SMP: { mint: SMP_MINT_ADDRESS, decimals: 6, symbol: "SMP", icon: <FaGem /> },
-  USDC: { mint: USDC_MINT_ADDRESS, decimals: 6, symbol: "USDC", icon: <FaDollarSign /> },
+  SOL: { mint: new PublicKey("So11111111111111111111111111111111111111112"), decimals: 9, symbol: "SOL", icon: <FaCoins />, logo: "/images/sol-logo.png" },
+  JUP: { mint: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"), decimals: 6, symbol: "JUP", icon: <FaGem />, logo: "/images/jup-logo.png" },
+  AMETHYST: { mint: AMETHYST_MINT_ADDRESS, decimals: 6, symbol: "AMETHYST", icon: <FaGem />, logo: "/images/amethyst-logo.jpeg" },
+  SMP: { mint: SMP_MINT_ADDRESS, decimals: 6, symbol: "SMP", icon: <FaGem />, logo: "/images/smp-logo.jpeg" },
+  SKR: { mint: SKR_MINT_ADDRESS, decimals: 6, symbol: "SKR", icon: <FaGem />, logo: "/images/skr-logo.png" },
+  USDC: { mint: USDC_MINT_ADDRESS, decimals: 6, symbol: "USDC", icon: <FaDollarSign />, logo: "/images/usdc-logo.png" },
 };
 
 export default function SendModal({ isOpen, onClose, activeWalletAddress }) {
@@ -658,31 +659,44 @@ const fetchBalance = async (retryCount = 0) => {
           {/* Token Selection */}
           <div style={{ marginBottom: '16px', position: 'relative', zIndex: 10 }}>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', color: 'rgba(255,255,255,0.35)' }}>Select Token</label>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(243,99,22,0.18)', borderRadius: '12px', transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)' }}>
+              <img 
+                src={TOKEN_MINTS[selectedToken].logo} 
+                alt={selectedToken}
+                style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%',
+                  margin: '8px 0 8px 12px',
+                  objectFit: 'contain',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              />
               <select
                 value={selectedToken}
                 onChange={(e) => setSelectedToken(e.target.value)}
                 style={{
-                  width: '100%',
+                  flex: 1,
                   borderRadius: '12px',
-                  padding: '14px 16px',
+                  padding: '14px 16px 14px 8px',
                   fontSize: '14px',
                   fontWeight: 500,
                   color: '#fff',
                   appearance: 'none',
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(243,99,22,0.18)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
                   transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
                   outline: 'none',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(243,99,22,0.45)';
-                  e.currentTarget.style.boxShadow = '0 0 20px rgba(243,99,22,0.08), inset 0 1px 0 rgba(255,255,255,0.03)';
+                  e.currentTarget.parentElement.style.borderColor = 'rgba(243,99,22,0.45)';
+                  e.currentTarget.parentElement.style.boxShadow = '0 0 20px rgba(243,99,22,0.08), inset 0 1px 0 rgba(255,255,255,0.03)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(243,99,22,0.18)';
-                  e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.03)';
+                  e.currentTarget.parentElement.style.borderColor = 'rgba(243,99,22,0.18)';
+                  e.currentTarget.parentElement.style.boxShadow = 'none';
                 }}
               >
                 {Object.entries(TOKEN_MINTS).map(([symbol, token]) => (
