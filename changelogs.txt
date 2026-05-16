@@ -1,0 +1,55 @@
+CHANGELOG - Week of May 12, 2026
+
+## Swap Functionality Improvements
+
+### Fixed DLMM Import Error
+- Changed `import { DLMM } from '@meteora-ag/dlmm'` to `import DLMM from '@meteora-ag/dlmm'`
+- Resolved build error where DLMM export was not found in target module
+- Package exports DLMM as default export, not named export
+
+### Embedded Wallet Security Enhancement
+- Added professional seed phrase warning message when creating embedded wallet
+- Message: "Important: Save your seed phrase securely. You will need it to connect to an external wallet for SMP swaps (you'll understand when you want to swap)."
+- Styled with gradient background and border for visibility
+- Added to ConnectButton.js and ConnectButton.module.css
+
+### Balance Modal Token Logos
+- Verified balance modal displays token logos correctly
+- Uses TOKEN_MINTS object with logo paths for each token
+- Already implemented, no changes needed
+
+### Swap Dropdown Redesign
+- Replaced native select elements with custom modal-based dropdown
+- Added token logos to each dropdown item
+- Implemented modal overlay with z-index 9999999 for proper layering
+- Added smooth animations and hover effects
+- Styled to match app's design with orange accent colors
+- Fixed z-index issues to prevent dropdown from being blocked by portfolio section and swap button
+- Removed transform effects that caused dropdown movement on hover
+
+### UI/UX Improvements
+- Fixed dropdown z-index from 1000 → 99998 → 999999 for proper layering
+- Removed `transform: translateX(4px)` from dropdown item hover to prevent movement
+- Set swapCard overflow to visible for dropdown display
+- Cleaned up code formatting and removed unnecessary comments
+
+### Technical Details
+- Token selection now uses modal approach instead of inline dropdown
+- Modal states: showFromModal, showToModal
+- Modal overlay with backdrop blur and high z-index
+- Token list with logos, names, and hover effects
+- Cancel button to close modal
+
+## Files Modified
+- src/app/api/swap/route.js
+- src/app/swap/page.js
+- src/components/ConnectButton.js
+- src/components/BalanceModal.js
+- src/styles/ConnectButton.module.css
+- src/styles/SwapPage.module.css
+
+## Testing
+- Verified swap functionality works with external wallet
+- Confirmed embedded wallet logic is properly implemented
+- Tested dropdown z-index and layering
+- Verified token logos display correctly in balance modal and swap dropdown
