@@ -662,6 +662,9 @@ export default function ConnectButton() {
             <p className={styles.securityNote}>
               Guard this well!
             </p>
+            <p className={styles.seedWarning}>
+              <strong>Important:</strong> Save your seed phrase securely. You will need it to connect to an external wallet for SMP swaps (you'll understand when you want to swap).
+            </p>
             <textarea
               readOnly
               value={privateKey}

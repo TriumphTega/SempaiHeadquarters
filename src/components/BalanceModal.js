@@ -57,6 +57,7 @@ export default function BalanceModal({ isOpen, onClose, activeWalletAddress }) {
           symbol: token.symbol,
           icon: token.icon,
           mint: token.mint.toString(),
+          logo: token.logo,
         };
       }
 

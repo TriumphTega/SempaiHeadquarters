@@ -322,18 +322,30 @@
   outline: none;
 }
 
+.seedWarning {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffe6a7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #856404;
+  font-weight: 500;
+}
+
 .privateKeyText {
   width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid rgba(243, 99, 22, 0.3);
-  border-radius: 6px;
-  background: #000;
-  color: #fff;
-  font-family: 'Yoruka', monospace;
-  resize: none;
-  height: 80px;
+  height: 120px;
+  padding: 12px;
+  margin: 16px 0;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-family: 'Courier New', monospace;
   font-size: 12px;
+  resize: none;
+  word-break: break-all;
 }
 
 .securityNote {

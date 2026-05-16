@@ -7,7 +7,7 @@ import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/we
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from "next/link";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, SKR_MINT_ADDRESS, RPC_URL } from "@/constants";
-import { FaHome, FaBars, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode } from "react-icons/fa";
+import { FaHome, FaBars, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode, FaChevronDown } from "react-icons/fa";
 import TreasuryBalance from "../../components/TreasuryBalance";
 import styles from "../../styles/SwapPage.module.css";
 import ConnectButton from "../../components/ConnectButton";
@@ -17,7 +17,7 @@ import SendModal from "../../components/SendModal";
 
 const connection = new Connection(RPC_URL, "confirmed");
 
-// Define allowed tokens (mix of Jupiter and Meteora supported tokens)
+// Define allowed tokens
 const TOKEN_MINTS = {
   SOL: new PublicKey("So11111111111111111111111111111111111111112"),
   JUP: new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"),
@@ -27,7 +27,7 @@ const TOKEN_MINTS = {
   SKR: SKR_MINT_ADDRESS,
 };
 
-// Token logos for display
+// Token logos and names
 const TOKEN_LOGOS = {
   SOL: "/images/sol-logo.png",
   JUP: "/images/jup-logo.png",
@@ -37,7 +37,6 @@ const TOKEN_LOGOS = {
   SKR: "/images/skr-logo.png",
 };
 
-// Token names for display
 const TOKEN_NAMES = {
   SOL: "Solana",
   JUP: "Jupiter",
@@ -49,9 +48,11 @@ const TOKEN_NAMES = {
 
 export default function SwapPage() {
   const { connected, publicKey, sendTransaction, signTransaction } = useWallet();
-  const { wallet: embeddedWallet, getSecretKey, signAndSendTransaction } = useContext(EmbeddedWalletContext);
+  const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
+
   const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
   const isWalletConnected = connected || !!embeddedWallet;
+
   const [amount, setAmount] = useState("");
   const [coinFrom, setCoinFrom] = useState("AMETHYST");
   const [coinTo, setCoinTo] = useState("SMP");
@@ -63,26 +64,15 @@ export default function SwapPage() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
-  const [showFromDropdown, setShowFromDropdown] = useState(false);
-  const [showToDropdown, setShowToDropdown] = useState(false);
+
+  // NEW MODAL STATES
+  const [showFromModal, setShowFromModal] = useState(false);
+  const [showToModal, setShowToModal] = useState(false);
+
   const router = useRouter();
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.tokenDropdown')) {
-        setShowFromDropdown(false);
-        setShowToDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const checkBalance = async () => {
     if (!activeWalletAddress) return;
-
     try {
       const mintAddress = TOKEN_MINTS[coinFrom];
       let balance = 0;
@@ -116,98 +106,95 @@ export default function SwapPage() {
   }, []);
 
   const handleSwap = async () => {
-  if (!amount || parseFloat(amount) <= 0) {
-    setError("Please enter a valid amount.");
-    return;
-  }
-  if (!isWalletConnected) {
-    setError("Please connect your wallet first.");
-    return;
-  }
-  if (coinFrom === coinTo) {
-    setError("Please select different tokens to swap.");
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-  setSuccessMessage("");
-
-  try {
-    const inputMint = TOKEN_MINTS[coinFrom].toString();
-    const outputMint = TOKEN_MINTS[coinTo].toString();
-
-    const response = await fetch("/api/swap", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userAddress: activeWalletAddress,
-        amount: parseFloat(amount),
-        inputMint,
-        outputMint,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `API error: ${response.status}`);
+    // ... (your existing handleSwap logic remains unchanged) ...
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Please enter a valid amount.");
+      return;
     }
-
-    // === SMP SPECIAL HANDLING (the essence of your dApp) ===
-    if (data.type === "jup_redirect") {
-      window.open(data.url, "_blank");
-      setSuccessMessage("Opened Jupiter for SMP swap (best route)");
-      setTimeout(() => setSuccessMessage(""), 4000);
-      setLoading(false);
+    if (!isWalletConnected) {
+      setError("Please connect your wallet first.");
+      return;
+    }
+    if (coinFrom === coinTo) {
+      setError("Please select different tokens to swap.");
       return;
     }
 
-    // Normal on-chain swap (other tokens)
-    if (!data.transaction) {
-      throw new Error("No transaction received from server");
+    setLoading(true);
+    setError(null);
+    setSuccessMessage("");
+
+    try {
+      const inputMint = TOKEN_MINTS[coinFrom].toString();
+      const outputMint = TOKEN_MINTS[coinTo].toString();
+
+      const response = await fetch("/api/swap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userAddress: activeWalletAddress,
+          amount: parseFloat(amount),
+          inputMint,
+          outputMint,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `API error: ${response.status}`);
+      }
+
+      if (data.type === "jup_redirect") {
+        window.open(data.url, "_blank");
+        setSuccessMessage("Opened Jupiter for SMP swap (best route)");
+        setTimeout(() => setSuccessMessage(""), 4000);
+        setLoading(false);
+        return;
+      }
+
+      if (!data.transaction) {
+        throw new Error("No transaction received from server");
+      }
+
+      const swapTransactionBuf = Buffer.from(data.transaction, "base64");
+      const deserializedTx = VersionedTransaction.deserialize(swapTransactionBuf);
+
+      let signature;
+      const isUsingEmbeddedWallet = !connected && embeddedWallet && activeWalletAddress === embeddedWallet.publicKey;
+
+      if (isUsingEmbeddedWallet) {
+        const secretKey = await getSecretKey();
+        if (!secretKey) throw new Error("Failed to decrypt secret key.");
+        const keypair = Keypair.fromSecretKey(secretKey);
+        deserializedTx.sign([keypair]);
+        const serializedTx = deserializedTx.serialize();
+        signature = await connection.sendRawTransaction(serializedTx, { skipPreflight: false, maxRetries: 3 });
+      } else if (signTransaction && sendTransaction) {
+        const signedTransaction = await signTransaction(deserializedTx);
+        signature = await sendTransaction(signedTransaction, connection, { skipPreflight: false, maxRetries: 2 });
+      } else {
+        throw new Error("Wallet signing method not available.");
+      }
+
+      const { blockhash, lastValidBlockHeight: freshBlockHeight } = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight: data.lastValidBlockHeight || freshBlockHeight,
+        commitment: 'confirmed',
+      });
+
+      setSuccessMessage(`Swap successful! Signature: ${signature}`);
+      setTimeout(() => setSuccessMessage(""), 5000);
+      checkBalance();
+    } catch (error) {
+      console.error("Error swapping coins:", error);
+      setError(`Swap failed: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-
-    const swapTransactionBuf = Buffer.from(data.transaction, "base64");
-    const deserializedTx = VersionedTransaction.deserialize(swapTransactionBuf);
-
-    // ... (your existing signing logic stays exactly the same) ...
-    let signature;
-
-    const isUsingEmbeddedWallet = !connected && embeddedWallet && activeWalletAddress === embeddedWallet.publicKey;
-
-    if (isUsingEmbeddedWallet) {
-      const secretKey = await getSecretKey();
-      if (!secretKey) throw new Error("Failed to decrypt secret key.");
-      const keypair = Keypair.fromSecretKey(secretKey);
-      deserializedTx.sign([keypair]);
-      const serializedTx = deserializedTx.serialize();
-      signature = await connection.sendRawTransaction(serializedTx, { skipPreflight: false, maxRetries: 3 });
-    } else if (signTransaction && sendTransaction) {
-      const signedTransaction = await signTransaction(deserializedTx);
-      signature = await sendTransaction(signedTransaction, connection, { skipPreflight: false, maxRetries: 2 });
-    } else {
-      throw new Error("Wallet signing method not available.");
-    }
-
-    const { blockhash, lastValidBlockHeight: freshBlockHeight } = await connection.getLatestBlockhash();
-    await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight: data.lastValidBlockHeight || freshBlockHeight,
-      commitment: 'confirmed',
-    });
-
-    setSuccessMessage(`Swap successful! Signature: ${signature}`);
-    setTimeout(() => setSuccessMessage(""), 5000);
-    checkBalance();
-  } catch (error) {
-    console.error("Error swapping coins:", error);
-    setError(`Swap failed: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
@@ -262,16 +249,10 @@ export default function SwapPage() {
                   <FaSyncAlt />
                 </button>
               </div>
-              {error && (
-                <div className={styles.errorMessage}>
-                  {error}
-                </div>
-              )}
-              {successMessage && (
-                <div className={styles.successMessage}>
-                  <FaGem /> {successMessage}
-                </div>
-              )}
+
+              {error && <div className={styles.errorMessage}>{error}</div>}
+              {successMessage && <div className={styles.successMessage}><FaGem /> {successMessage}</div>}
+
               <div className={styles.inputGroup}>
                 <label className={styles.label}>Amount</label>
                 <input
@@ -284,71 +265,82 @@ export default function SwapPage() {
                   className={styles.input}
                 />
               </div>
+
+              {/* FROM TOKEN - Modal Trigger */}
               <div className={styles.inputGroup}>
                 <label className={styles.label}>From</label>
-                <div className={styles.tokenSelectWrapper}>
+                <div className={styles.selectedToken} onClick={() => setShowFromModal(true)}>
                   <img src={TOKEN_LOGOS[coinFrom]} alt={coinFrom} className={styles.tokenLogo} />
-                  <select 
-                    value={coinFrom} 
-                    onChange={(e) => setCoinFrom(e.target.value)} 
-                    className={styles.tokenSelect}
-                  >
-                    {Object.keys(TOKEN_MINTS).map((token) => (
-                      <option key={token} value={token}>{TOKEN_NAMES[token]}</option>
-                    ))}
-                  </select>
+                  <span>{TOKEN_NAMES[coinFrom]}</span>
+                  <FaChevronDown className={styles.dropdownArrow} />
                 </div>
               </div>
+
+              {/* TO TOKEN - Modal Trigger */}
               <div className={styles.inputGroup}>
                 <label className={styles.label}>To</label>
-                <div className={styles.tokenSelectWrapper}>
+                <div className={styles.selectedToken} onClick={() => setShowToModal(true)}>
                   <img src={TOKEN_LOGOS[coinTo]} alt={coinTo} className={styles.tokenLogo} />
-                  <select 
-                    value={coinTo} 
-                    onChange={(e) => setCoinTo(e.target.value)} 
-                    className={styles.tokenSelect}
-                  >
-                    {Object.keys(TOKEN_MINTS).map((token) => (
-                      <option key={token} value={token}>{TOKEN_NAMES[token]}</option>
-                    ))}
-                  </select>
+                  <span>{TOKEN_NAMES[coinTo]}</span>
+                  <FaChevronDown className={styles.dropdownArrow} />
                 </div>
               </div>
-              
+
               {/* Your Portfolio */}
               <div className={styles.portfolioSection}>
                 <div className={styles.portfolioTitle}>Your Portfolio</div>
                 <div className={styles.actionButtons}>
-                  <button
-                    onClick={() => setShowBalanceModal(true)}
-                    className={styles.balanceButton}
-                  >
+                  <button onClick={() => setShowBalanceModal(true)} className={styles.balanceButton}>
                     <FaWallet /> View Balances
                   </button>
-                  <button
-                    onClick={() => setShowSendModal(true)}
-                    className={styles.sendButton}
-                  >
+                  <button onClick={() => setShowSendModal(true)} className={styles.sendButton}>
                     <FaPaperPlane /> Send
                   </button>
-                  <button
-                    onClick={() => setShowBalanceModal(true)}
-                    className={styles.receiveButton}
-                  >
+                  <button onClick={() => setShowBalanceModal(true)} className={styles.receiveButton}>
                     <FaQrcode /> Receive
                   </button>
                 </div>
               </div>
 
               <button onClick={handleSwap} className={styles.swapButton} disabled={loading}>
-                {loading ? (
-                  <span className={styles.swirlIcon}></span>
-                ) : (
-                  <>
-                    <FaExchangeAlt /> Initiate Swap
-                  </>
-                )}
+                {loading ? <span className={styles.swirlIcon}></span> : <><FaExchangeAlt /> Initiate Swap</>}
               </button>
+
+              {/* ==================== TOKEN SELECTION MODAL ==================== */}
+              {(showFromModal || showToModal) && (
+                <div className={styles.modalOverlay} onClick={() => { setShowFromModal(false); setShowToModal(false); }}>
+                  <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <h3 className={styles.modalTitle}>
+                      {showFromModal ? "Select From Token" : "Select To Token"}
+                    </h3>
+
+                    <div className={styles.modalTokenList}>
+                      {Object.keys(TOKEN_MINTS).map((token) => (
+                        <div
+                          key={token}
+                          className={styles.modalTokenItem}
+                          onClick={() => {
+                            if (showFromModal) setCoinFrom(token);
+                            else setCoinTo(token);
+                            setShowFromModal(false);
+                            setShowToModal(false);
+                          }}
+                        >
+                          <img src={TOKEN_LOGOS[token]} alt={token} className={styles.tokenLogo} />
+                          <span>{TOKEN_NAMES[token]}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      className={styles.modalCloseButton}
+                      onClick={() => { setShowFromModal(false); setShowToModal(false); }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -360,16 +352,8 @@ export default function SwapPage() {
       </footer>
 
       {/* Modals */}
-      <BalanceModal 
-        isOpen={showBalanceModal} 
-        onClose={() => setShowBalanceModal(false)}
-        activeWalletAddress={activeWalletAddress}
-      />
-      <SendModal 
-        isOpen={showSendModal} 
-        onClose={() => setShowSendModal(false)}
-        activeWalletAddress={activeWalletAddress}
-      />
+      <BalanceModal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} activeWalletAddress={activeWalletAddress} />
+      <SendModal isOpen={showSendModal} onClose={() => setShowSendModal(false)} activeWalletAddress={activeWalletAddress} />
     </div>
   );
 }
