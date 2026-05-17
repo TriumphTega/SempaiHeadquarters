@@ -1180,213 +1180,196 @@ export default function ChapterPage() {
     }
   };
 
-  const processSmpPayment = async (smpAmount, novelId) => {
-    try {
-      console.log("[processSmpPayment] Starting benefactor payment process...");
+const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_ADDRESS) => {
+  try {
+    console.log(`[processSmpPayment] Starting payment → Mint: ${paymentMint.toBase58()} | Amount: ${paymentAmount}`);
 
-      if (!activeWalletAddress || !id || !activePublicKey || !signAndSendTransaction) {
-        return { success: false, error: "Please connect your wallet and try again." };
-      }
-
-      // Get novel author wallet
-      const { data: novelData, error: novelError } = await supabase
-        .from("novels")
-        .select("user_id")
-        .eq("id", novelId)
-        .single();
-
-      if (novelError || !novelData) {
-        return { success: false, error: "Could not fetch novel data" };
-      }
-
-      const { data: authorData, error: authorError } = await supabase
-        .from("users")
-        .select("wallet_address")
-        .eq("id", novelData.user_id)
-        .single();
-
-      if (authorError || !authorData?.wallet_address) {
-        return { success: false, error: "Could not fetch author wallet" };
-      }
-
-      const authorPublicKey = new PublicKey(authorData.wallet_address);
-
-      // Calculate payment amount
-      const paymentAmount = Math.floor(smpAmount * 10 ** SMP_DECIMALS);
-      const paymentMint = SMP_MINT_ADDRESS;
-
-      console.log("[processSmpPayment] Payment amount:", paymentAmount, "SMP");
-
-      // Build transaction using the same pattern as chapter payments
-      console.log("[processSmpPayment] Building transaction...");
-      const transaction = await createPaymentTransactionClient({
-        paymentMint,
-        paymentAmount,
-        userPublicKey: activePublicKey,
-        authorPublicKey,
-        smpMintAddress: paymentMint,
-      });
-
-      // Get fresh blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = activePublicKey;
-
-      // Sign and send transaction
-      console.log("[processSmpPayment] Signing and sending transaction...");
-      const signature = await signAndSendTransaction(transaction);
-      console.log("[processSmpPayment] Transaction sent, signature:", signature);
-
-      // Wait for confirmation
-      const start = Date.now();
-      let landed = false;
-      console.log("[processSmpPayment] Starting confirmation poll for signature:", signature);
-
-      while (Date.now() - start < 10000) {
-        const statusResp = await connection.getSignatureStatus(signature);
-        const status = statusResp?.value;
-
-        if (status?.err) {
-          throw new Error("Transaction failed on-chain.");
-        }
-        if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
-          landed = true;
-          break;
-        }
-        await delay(500);
-      }
-
-      if (!landed) {
-        console.log("[processSmpPayment] Transaction not confirmed in 10s, checking status directly...");
-        const finalStatus = await connection.getSignatureStatus(signature, {
-          searchTransactionHistory: true
-        });
-
-        if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
-          landed = true;
-        } else if (finalStatus?.value?.err) {
-          throw new Error(`Transaction failed on-chain: ${JSON.stringify(finalStatus?.value?.err)}`);
-        }
-      }
-
-      if (!landed) {
-        throw new Error("Transaction not confirmed yet. Please try again.");
-      }
-
-      console.log("[processSmpPayment] Transaction confirmed successfully");
-      return { success: true, signature };
-    } catch (error) {
-      console.error("[processSmpPayment] Error:", error);
-      return { success: false, error: error.message };
+    if (!activeWalletAddress || !id || !activePublicKey || !signAndSendTransaction) {
+      return { success: false, error: "Please connect your wallet and try again." };
     }
-  };
 
-  const handleBenefactorUnlock = async (plan) => {
-    if (!activeWalletAddress || !id || !chapter || isProcessing) {
-      setError("Unable to process benefactor unlock. Please try again.");
+    // Get novel author wallet
+    const { data: novelData, error: novelError } = await supabase
+      .from("novels")
+      .select("user_id")
+      .eq("id", novelId)
+      .single();
+
+    if (novelError || !novelData) {
+      return { success: false, error: "Could not fetch novel data" };
+    }
+
+    const { data: authorData, error: authorError } = await supabase
+      .from("users")
+      .select("wallet_address")
+      .eq("id", novelData.user_id)
+      .single();
+
+    if (authorError || !authorData?.wallet_address) {
+      return { success: false, error: "Could not fetch author wallet" };
+    }
+
+    const authorPublicKey = new PublicKey(authorData.wallet_address);
+
+    console.log(`[processSmpPayment] Building transaction for ${paymentAmount} units of ${paymentMint.toBase58()}`);
+
+    // Build transaction (now correctly uses the passed paymentMint)
+    const transaction = await createPaymentTransactionClient({
+      paymentMint,
+      paymentAmount,
+      userPublicKey: activePublicKey,
+      authorPublicKey,
+      smpMintAddress: paymentMint,   // kept for backward compatibility
+    });
+
+    // Get fresh blockhash
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = activePublicKey;
+
+    // Sign and send
+    console.log("[processSmpPayment] Signing and sending transaction...");
+    const signature = await signAndSendTransaction(transaction);
+    console.log("[processSmpPayment] Transaction sent, signature:", signature);
+
+    // Wait for confirmation
+    const start = Date.now();
+    let landed = false;
+
+    while (Date.now() - start < 10000) {
+      const statusResp = await connection.getSignatureStatus(signature);
+      const status = statusResp?.value;
+
+      if (status?.err) throw new Error("Transaction failed on-chain.");
+      if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
+        landed = true;
+        break;
+      }
+      await delay(500);
+    }
+
+    if (!landed) {
+      const finalStatus = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+      if (finalStatus?.value?.confirmationStatus === "confirmed" || finalStatus?.value?.confirmationStatus === "finalized") {
+        landed = true;
+      } else if (finalStatus?.value?.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(finalStatus?.value?.err)}`);
+      }
+    }
+
+    if (!landed) throw new Error("Transaction not confirmed yet. Please try again.");
+
+    console.log("[processSmpPayment] Transaction confirmed successfully");
+    return { success: true, signature };
+
+  } catch (error) {
+    console.error("[processSmpPayment] Error:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+ const handleBenefactorUnlock = async (plan) => {
+  if (!activeWalletAddress || !id || !chapter || isProcessing) {
+    setError("Unable to process benefactor unlock. Please try again.");
+    return;
+  }
+
+  setIsProcessing(true);
+  setError(null);
+  setSuccessMessage("");
+
+  try {
+    const pricingTiers = {
+      blue:  { price: 1,   chapters: 3,   name: "Blue" },
+      iron:  { price: 2,   chapters: 6,   name: "Iron" },
+      silver: { price: 3,   chapters: 10,  name: "Silver" },
+      gold:  { price: 5,   chapters: 999, name: "Gold" },
+    };
+
+    const tier = pricingTiers[plan.id];
+    if (!tier) throw new Error("Invalid plan selected");
+
+    const existingAccess = await checkBenefactorAccess();
+    if (existingAccess) {
+      setError("You already have an active subscription to this writer.");
       return;
     }
 
-    setIsProcessing(true);
-    setError(null);
+    setSuccessMessage(`Processing ${tier.name} writer subscription...`);
 
-    try {
-      const chapterNum = parseInt(chapter, 10);
-      
-      // Define pricing tiers (SMP test mode - small amounts)
-      const pricingTiers = {
-        blue: { price: 0.001, chapters: 3, name: "Blue" },
-        iron: { price: 0.002, chapters: 6, name: "Iron" },
-        silver: { price: 0.003, chapters: 10, name: "Silver" },
-        gold: { price: 0.005, chapters: 999, name: "Gold" }, // 999 = unlimited
-      };
+    // ==================== BENEFACATOR ONLY: USDC / SOL / SKR ====================
+    const currency = "USDC";   // ← Change to "SOL" or "SKR" to test other currencies
 
-      const tier = pricingTiers[plan.id];
-      if (!tier) {
-        throw new Error("Invalid plan selected");
-      }
+    let paymentAmount = 0;
+    let paymentMint = null;
 
-      // Check if user already has writer subscription
-      const existingAccess = await checkBenefactorAccess();
-      if (existingAccess) {
-        setError("You already have an active subscription to this writer.");
-        setIsProcessing(false);
-        return;
-      }
-
-      setSuccessMessage(`Processing ${tier.name} writer subscription...`);
-      
-      // Use existing smpPrice state
-      if (!smpPrice || smpPrice === 0) {
-        throw new Error("Unable to fetch SMP price");
-      }
-
-      // Calculate expected SMP amount
-      const expectedSmpAmount = tier.price / smpPrice;
-
-      // Process SMP payment transaction
-      const paymentResult = await processSmpPayment(expectedSmpAmount, id);
-
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.error || "Payment failed");
-      }
-
-      // Get auth session for token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        throw new Error("You must be signed in to unlock benefactor access.");
-      }
-
-      // Call benefactor payment edge function
-      const response = await fetch("/api/benefactor-payment-proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          novelId: id,
-          planType: plan.id,
-          signature: paymentResult.signature,
-          userPublicKey: activeWalletAddress,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Benefactor payment failed");
-      }
-
-      // Fetch benefactor access from database to get full record
-      const benefactorData = await checkBenefactorAccess();
-      setBenefactorAccess(benefactorData);
-      setShowBenefactorOption(false);
-      
-      // Unlock the current chapter
-      setIsLocked(false);
-      setLocalUnlocked(true);
-      setRecentlyUnlocked(true);
-      
-      const accessMessage = tier.chapters === 999 
-        ? `${tier.name} writer subscription activated! You now have unlimited access to all novels by this writer for 30 days.`
-        : `${tier.name} writer subscription activated! You now have early access to ${tier.chapters} chapters across all novels by this writer for 14 days.`;
-      setSuccessMessage(accessMessage);
-      setTimeout(() => setSuccessMessage(""), 5000);
-      
-      // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
-      setTimeout(() => setRecentlyUnlocked(false), 10000);
-      
-    } catch (error) {
-      console.error("[handleBenefactorUnlock] Error:", error);
-      setError(`Benefactor unlock failed: ${error.message}`);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setIsProcessing(false);
+    if (currency === "USDC") {
+      paymentMint = USDC_MINT_ADDRESS;
+      paymentAmount = Math.floor(tier.price * 1_000_000);
+    } else if (currency === "SOL") {
+      paymentAmount = Math.floor(tier.price * (solPrice || 100) * 1_000_000_000);
+    } else if (currency === "SKR") {
+      paymentMint = SKR_MINT_ADDRESS;
+      paymentAmount = Math.ceil(tier.price * 1_000_000_000);
     }
-  };
+
+    console.log(`[Benefactor] Paying ${tier.price} USD with ${currency} (${paymentAmount} units)`);
+
+    // Pass the correct mint as third parameter
+    const paymentResult = await processSmpPayment(paymentAmount, id, paymentMint);
+
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.error || "Payment failed");
+    }
+
+    // Record subscription
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+
+    if (!token) throw new Error("You must be signed in.");
+
+    const response = await fetch("/api/benefactor-payment-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        novelId: id,
+        planType: plan.id,
+        signature: paymentResult.signature,
+        userPublicKey: activeWalletAddress,
+        currency: currency,
+        amount: tier.price,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) throw new Error(result.error || "Failed to activate subscription");
+
+    // Success
+    const benefactorData = await checkBenefactorAccess();
+    setBenefactorAccess(benefactorData);
+    setShowBenefactorOption(false);
+    
+    setIsLocked(false);
+    setLocalUnlocked(true);
+    setRecentlyUnlocked(true);
+
+    const accessMessage = tier.chapters === 999 
+      ? `${tier.name} writer subscription activated! Unlimited access for 30 days.`
+      : `${tier.name} writer subscription activated! Early access to ${tier.chapters} chapters for 14 days.`;
+    
+    setSuccessMessage(accessMessage);
+    setTimeout(() => setSuccessMessage(""), 6000);
+    setTimeout(() => setRecentlyUnlocked(false), 10000);
+
+  } catch (error) {
+    console.error("[handleBenefactorUnlock] Error:", error);
+    setError(`Benefactor unlock failed: ${error.message}`);
+    setTimeout(() => setError(null), 6000);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleAdBasedUnlock = async () => {
     if (!userId || !id || !chapter || isProcessing) {
