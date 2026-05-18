@@ -10,8 +10,6 @@ import ReadingTracker from "../../../../../services/porp/ReadingTracker";
 import PoRPStatus from "../../../../../components/PoRP/PoRPStatus";
 import ComprehensionChallenge from "../../../../../components/PoRP/ComprehensionChallenge";
 import PoRPDashboard from "../../../../../components/PoRP/PoRPDashboard";
-import { balanceCache } from "../../../../../services/balance/BalanceCache";
-import { balanceUpdater } from "../../../../../services/balance/BalanceUpdater";
 import {
   TOKEN_PROGRAM_ID,
   createTransferInstruction,
@@ -515,19 +513,28 @@ export default function ChapterPage() {
   }, [convertUsdcToSmp, fetchPoolData, calculateSolPriceInUsd]);
 
   const fetchSmpBalanceOnChain = useCallback(async () => {
-    if (!activeWalletAddress) return 0;
+  if (!activeWalletAddress) return 0;
+  
+  try {
+    const smpMintPublicKey = SMP_MINT_ADDRESS;
+    const userPublicKey = new PublicKey(activeWalletAddress);
+
+    const ataAddress = getAssociatedTokenAddressSync(smpMintPublicKey, userPublicKey);
+    const ataInfo = await connection.getAccountInfo(ataAddress);
     
-    try {
-      // Use cached balance instead of direct RPC call
-      const cachedBalance = await balanceCache.getBalance(activeWalletAddress, 'SMP', 'SOL');
-      console.log("SMP balance from cache:", cachedBalance);
-      return cachedBalance;
-    } catch (error) {
-      console.error("Error fetching SMP balance from cache:", error);
-      // Fallback to 0 if cache fails
-      return 0;
+    let blockchainSmpBalance = 0;
+    if (ataInfo) {
+      const ata = unpackAccount(ataAddress, ataInfo);
+      blockchainSmpBalance = Number(ata.amount); // raw base units (6 decimals)
     }
-  }, [activeWalletAddress]);
+
+    console.log("[fetchSmpBalanceOnChain] SMP balance from wallet (on-chain):", blockchainSmpBalance);
+    return blockchainSmpBalance;
+  } catch (err) {
+    console.error("[fetchSmpBalanceOnChain] Error fetching SMP balance from wallet:", err);
+    return 0;
+  }
+}, [activeWalletAddress]);
 
   // $0.025 worth of SMP in base units
   const SMP_READ_COST = useMemo(() => {
@@ -547,9 +554,9 @@ export default function ChapterPage() {
       setUserId(userData.id);
       setWeeklyPoints(userData.weekly_points || 0);
 
-      // Display on-chain balance in UI
-      const onChain = await fetchSmpBalanceOnChain();
-      setSmpBalance(onChain ?? 0);
+            // ✅ SMP balance now fetched directly from wallet (same as Amethyst)
+      const onChainSmp = await fetchSmpBalanceOnChain();
+      setSmpBalance(onChainSmp ?? 0);
       
       // Fetch and cache Amethyst balance from blockchain (using same method as swap page)
       try {
@@ -592,7 +599,8 @@ export default function ChapterPage() {
       
       // Check if user has insufficient SMP for chapter unlock
       const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
-      const insufficientSmp = onChain < requiredSmp;
+            // ✅ Fixed: both values are now in base units (no division needed)
+      const insufficientSmp = onChainSmp < SMP_READ_COST;
       setHasInsufficientSmp(insufficientSmp);
       
       // Check ad unlock eligibility if user has insufficient SMP
@@ -629,361 +637,7 @@ export default function ChapterPage() {
     if (isWalletConnected) fetchUserBalances();
   }, [isWalletConnected, fetchUserBalances]);
 
-  const updateTokenBalance = useCallback(async () => {
-    if (!activeWalletAddress || !novel || !chapter || !id || readingMode !== "paid") {
-      return;
-    }
-    try {
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id, weekly_points")
-        .eq("wallet_address", activeWalletAddress)
-        .single();
-      if (userError || !userData) throw new Error("User not found");
-      const user = userData;
-
-      const chapterNum = parseInt(chapter, 10);
-      const chapterAdvanceInfo =
-        novel.advance_chapters?.find((c) => c.index === chapterNum) || {
-          is_advance: false,
-          free_release_date: null,
-        };
-
-      let hasValidAccess =
-        !chapterAdvanceInfo.is_advance ||
-        (chapterAdvanceInfo.free_release_date &&
-          new Date(chapterAdvanceInfo.free_release_date) <= new Date());
-      if (chapterAdvanceInfo.is_advance && !hasValidAccess) {
-        const { data: unlock, error: unlockError } = await supabase
-          .from("unlocked_story_chapters")
-          .select("chapter_unlocked_till, expires_at, subscription_type")
-          .eq("user_id", user.id)
-          .eq("story_id", id)
-          .single();
-        if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
-
-        hasValidAccess =
-          unlock &&
-          (!unlock.expires_at || new Date(unlock.expires_at) > new Date()) &&
-          (unlock.chapter_unlocked_till === -1 || unlock.chapter_unlocked_till >= chapterNum);
-        if (!hasValidAccess) return;
-      }
-
-      // Check Supabase balance first (source of truth)
-      const { data: walletBalance, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("amount")
-        .eq("wallet_address", activeWalletAddress)
-        .eq("currency", "SMP")
-        .single();
-      if (balanceError || !walletBalance) throw new Error("Wallet balance not found");
-      const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
-      if (walletBalance.amount < requiredSmp)
-        throw new Error("Insufficient SMP balance: " + walletBalance.amount.toLocaleString() + " SMP");
-
-      // Removed on-chain balance verification and sync messaging by request
-
-      const { data: novelOwnerData, error: novelOwnerError } = await supabase
-        .from("novels")
-        .select("user_id")
-        .eq("id", novel.id)
-        .single();
-      if (novelOwnerError || !novelOwnerData) throw new Error("Novel owner not found");
-      const novelOwnerId = novelOwnerData.user_id;
-
-      const { data: novelOwner, error: novelOwnerBalanceError } = await supabase
-        .from("users")
-        .select("id, wallet_address, balance")
-        .eq("id", novelOwnerId)
-        .single();
-      if (novelOwnerBalanceError || !novelOwner) throw new Error("Novel owner balance not found");
-
-      const eventDetails = `${activeWalletAddress}${novel.title || "Untitled"}${chapter}`
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .substring(0, 255);
-      if (!eventDetails) throw new Error("Failed to generate event details");
-
-      const { data: existingEvents, error: eventError } = await supabase
-        .from("wallet_events")
-        .select("id")
-        .eq("event_details", eventDetails)
-        .eq("wallet_address", activeWalletAddress)
-        .limit(1);
-      if (eventError) throw new Error(`Error checking wallet events: ${eventError.message}`);
-      if (existingEvents?.length > 0) {
-        setWarningMessage("⚠️ You've been credited for this chapter before.");
-        setTimeout(() => setWarningMessage(""), 5000);
-        return;
-      }
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      const destATA = await getOrCreateAssociatedTokenAccount(
-        connection,
-        activePublicKey,
-        SMP_MINT_ADDRESS,
-        new PublicKey(TARGET_WALLET)
-      );
-      const transaction = new Transaction({
-        recentBlockhash: blockhash,
-        feePayer: activePublicKey,
-      }).add(
-        createTransferInstruction(
-          sourceATA.address,
-          destATA.address,
-          activePublicKey,
-          SMP_READ_COST,
-          [],
-          TOKEN_PROGRAM_ID
-        )
-      );
-
-      // Debug: Log transaction details before sending
-      console.log("[processChapterPayment] Transaction details:", {
-        instructions: transaction.instructions.length,
-        feePayer: transaction.feePayer?.toBase58(),
-        recentBlockhash: transaction.recentBlockhash,
-        lamports: transaction.instructions.map(i => i.lamports || 0),
-        instructionTypes: transaction.instructions.map(i => {
-          if (i.programId.equals(TOKEN_PROGRAM_ID)) {
-            return "Token";
-          } else if (i.programId.equals(SystemProgram.programId)) {
-            return "System";
-          } else {
-            return "Other";
-          }
-        })
-      });
-
-      // Estimate transaction cost
-      try {
-        const message = transaction.compileMessage();
-        const estimatedFees = await connection.getFeeForMessage(message);
-        console.log("[processChapterPayment] Estimated transaction fees:", estimatedFees?.value?.lamports);
-      } catch (feeError) {
-        console.error("[processChapterPayment] Error estimating fees:", feeError);
-      }
-
-      // Use the unified signAndSendTransaction function for both embedded and external wallets
-      let signature;
-      if (embeddedWallet || signAndSendTransaction) {
-        console.log("[processChapterPayment] Using embedded wallet to sign and send");
-        signature = await signAndSendTransaction(transaction);
-      } else if (connected && sendTransaction) {
-        console.log("[processChapterPayment] Using external wallet to send");
-        signature = await sendTransaction(transaction, connection, {
-          skipPreflight: false,
-          preflightCommitment: "confirmed",
-        });
-      } else {
-        throw new Error("No valid wallet available for signing the transaction.");
-      }
-
-      console.log("[processChapterPayment] Transaction sent with signature:", signature);
-
-      await connection.confirmTransaction(
-        { signature, blockhash, lastValidBlockHeight },
-        "confirmed"
-      );
-
-      // Update Supabase balance after successful transaction
-      const newSmpBalance = walletBalance.amount - requiredSmp;
-      const { error: updateError } = await supabase
-        .from("wallet_balances")
-        .update({ amount: newSmpBalance })
-        .eq("wallet_address", activeWalletAddress)
-        .eq("currency", "SMP");
-      if (updateError) throw new Error(`Error updating Supabase balance: ${updateError.message}`);
-
-      let readerReward = 100;
-      // Revenue split: 50% creator, 30% Sempai HQ, 20% Founder Fund
-      const totalPayment = 1000; // Total SMP tokens for $0.025
-      const creatorReward = Math.floor(totalPayment * 0.5); // 500 tokens (50%)
-      const sempaiHqReward = Math.floor(totalPayment * 0.3); // 300 tokens (30%)
-      const founderFundReward = totalPayment - creatorReward - sempaiHqReward; // 200 tokens (20%)
-      
-      // Fetch Amethyst balance directly from blockchain to ensure accuracy
-      let currentAmethystBalance = 0;
-      try {
-        console.log("[Chapter Unlock] Starting Amethyst balance fetch...");
-        const amethystMintPublicKey = AMETHYST_MINT_ADDRESS;
-        const userPublicKey = new PublicKey(activeWalletAddress);
-        
-        const ataAddress = getAssociatedTokenAddressSync(amethystMintPublicKey, userPublicKey);
-        const ataInfo = await connection.getAccountInfo(ataAddress);
-        
-        if (ataInfo) {
-          const ata = unpackAccount(ataAddress, ataInfo);
-          currentAmethystBalance = Math.floor(Number(ata.amount) / Math.pow(10, 6));
-          console.log(`[Chapter Unlock] Blockchain Amethyst balance: ${currentAmethystBalance}`);
-        } else {
-          console.log("[Chapter Unlock] No ATA found for Amethyst");
-        }
-      } catch (err) {
-        console.error("[Chapter Unlock] Error fetching Amethyst balance:", err);
-        currentAmethystBalance = Number(amethystBalance) || 0; // Fallback to state
-      }
-      
-      const numericBalance = currentAmethystBalance;
-      
-      // Debug logging to see actual values
-      console.log(`[Chapter Unlock] Fetched Amethyst Balance: ${currentAmethystBalance}, Type: ${typeof currentAmethystBalance}, Numeric: ${numericBalance}`);
-      
-      if (numericBalance >= 5000000) readerReward = 250;
-      else if (numericBalance >= 1000000) readerReward = 200;
-      else if (numericBalance >= 500000) readerReward = 170;
-      else if (numericBalance >= 250000) readerReward = 150;
-      else if (numericBalance >= 100000) readerReward = 120;
-      
-      console.log(`[Chapter Unlock] Final Reader Reward: ${readerReward} (for ${numericBalance} Amethyst)`);
-
-      const newReaderBalance = (user.weekly_points || 0) + readerReward;
-      const newAuthorBalance = (novelOwner.balance || 0) + creatorReward;
-
-      const updates = [
-        supabase
-          .from("users")
-          .update({ weekly_points: newReaderBalance })
-          .eq("id", user.id),
-      ];
-      if (novelOwner.id !== user.id) {
-        updates.push(
-          supabase
-            .from("users")
-            .update({ balance: newAuthorBalance })
-            .eq("id", novelOwner.id)
-        );
-      }
-      const results = await Promise.all(updates);
-      for (const { error } of results) {
-        if (error) throw new Error(`Error updating balance: ${error.message}`);
-      }
-
-      const walletBalancesData = [
-        {
-          user_id: novelOwner.id,
-          chain: "SOL",
-          currency: "SMP",
-          amount: newAuthorBalance,
-          decimals: 0,
-          wallet_address: novelOwner.wallet_address,
-        },
-      ];
-      const { error: walletError } = await supabase
-        .from("wallet_balances")
-        .upsert(walletBalancesData);
-      if (walletError) throw new Error(`Error updating wallet balances: ${walletError.message}`);
-
-      const walletEventsData = [
-        // Creator (50%)
-        {
-          destination_user_id: novelOwner.id,
-          event_type: "deposit",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "SMP",
-          amount_change: creatorReward,
-          wallet_address: novelOwner.wallet_address,
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-          destination_chain: "SOL",
-          metadata: { split_type: "creator", percentage: 50 }
-        },
-        // Sempai HQ (30%)
-        {
-          destination_user_id: "sempai-hq-system",
-          event_type: "deposit",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "SMP",
-          amount_change: sempaiHqReward,
-          wallet_address: SEMPAI_HQ_WALLET.toString(),
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-          destination_chain: "SOL",
-          metadata: { split_type: "sempai-hq", percentage: 30 }
-        },
-        // Founder Fund (20%)
-        {
-          destination_user_id: "founder-fund-system",
-          event_type: "deposit",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "SMP",
-          amount_change: founderFundReward,
-          wallet_address: FOUNDER_FUND_WALLET.toString(),
-          source_user_id: "6f859ff9-3557-473c-b8ca-f23fd9f7af27",
-          destination_chain: "SOL",
-          metadata: { split_type: "founder-fund", percentage: 20 }
-        },
-        // User withdrawal
-        {
-          destination_user_id: user.id,
-          event_type: "withdrawal",
-          event_details: eventDetails,
-          source_chain: "SOL",
-          source_currency: "Token",
-          source_currency: "SMP",
-          amount_change: -requiredSmp,
-          wallet_address: activeWalletAddress,
-          source_user_id: user.id,
-          destination_chain: "SOL",
-        },
-      ];
-      const { error: eventInsertError } = await supabase
-        .from("wallet_events")
-        .insert(walletEventsData);
-      if (eventInsertError) throw new Error(`Error inserting wallet events: ${eventInsertError.message}`);
-
-      const { data: interaction, error: interactionError } = await supabase
-        .from("novel_interactions")
-        .select("id, read_count")
-        .eq("user_id", user.id)
-        .eq("novel_id", id)
-        .single();
-      if (interactionError && interactionError.code !== "PGRST116") throw interactionError;
-
-      if (interaction) {
-        await supabase
-          .from("novel_interactions")
-          .update({
-            last_read_at: new Date().toISOString(),
-            read_count: interaction.read_count + 1,
-          })
-          .eq("id", interaction.id);
-      } else {
-        await supabase
-          .from("novel_interactions")
-          .insert({
-            user_id: user.id,
-            novel_id: id,
-            last_read_at: new Date().toISOString(),
-            read_count: 1,
-          });
-      }
-
-      setSuccessMessage(
-        `Payment successful! ${(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP sent on-chain. You earned ${readerReward} points.`
-      );
-      setSmpBalance(newSmpBalance);
-      setWeeklyPoints(newReaderBalance);
-      setTimeout(() => setSuccessMessage(""), 5000);
-    } catch (error) {
-      setError(
-        error.message.includes("insufficient funds") || error.message.includes("Insufficient SMP balance")
-          ? `Not enough SMP tokens in your wallet: ${error.message}`
-          : `Payment failed: ${error.message}`
-      );
-      console.error("Error in updateTokenBalance:", error);
-      setTimeout(() => setError(null), 5000);
-    }
-  }, [
-    activeWalletAddress,
-    novel,
-    chapter,
-    id,
-    readingMode,
-    activePublicKey,
-    amethystBalance,
-  ]);
-
+  
   const handleReadWithSMP = async () => {
     if (!isWalletConnected) {
       setError("Please connect your wallet to read with SMP.");
@@ -1059,23 +713,18 @@ export default function ChapterPage() {
   const checkChapterPayment = async (chapterNum) => {
     if (!activeWalletAddress || !id) return false;
     try {
-      // Get the user's email from auth session (this matches what's stored in DB)
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userEmail = sessionData?.session?.user?.email;
-      
-      if (!userEmail) {
-        console.warn("[checkChapterPayment] No user email found");
-        return false;
-      }
-      
       const { data, error } = await supabase
         .from("chapter_payments")
         .select("id")
-        .eq("wallet_address", userEmail)
+        .eq("wallet_address", activeWalletAddress)
         .eq("novel_id", id)
         .eq("chapter_number", chapterNum)
-        .single();
-      if (error && error.code !== "PGRST116") throw new Error(error.message);
+        .maybeSingle();                    // ← changed to maybeSingle
+
+      if (error && error.code !== "PGRST116") {
+        console.error("[checkChapterPayment] Error:", error);
+        return false;
+      }
       return !!data;
     } catch (error) {
       console.error("[checkChapterPayment] Error:", error.message);
@@ -1164,12 +813,12 @@ export default function ChapterPage() {
       
       // Check if this specific chapter was already unlocked via ad
       const { data: chapterUnlock, error: chapterError } = await supabase
-        .from("ad_based_unlocks")
-        .select("id")
-        .eq("user_id", targetUserId)
-        .eq("novel_id", id)
-        .eq("chapter_number", chapterNum)
-        .single();
+      .from("ad_based_unlocks")
+      .select("id")
+      .eq("user_id", targetUserId)
+      .eq("novel_id", id)
+      .eq("chapter_number", chapterNum)
+      .maybeSingle();   // ← changed
       
       if (chapterError && chapterError.code !== "PGRST116") throw new Error(chapterError.message);
       
@@ -1322,24 +971,19 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
       throw new Error(paymentResult.error || "Payment failed");
     }
 
-    // Record subscription
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-
-    if (!token) throw new Error("You must be signed in.");
-
-    const response = await fetch("/api/benefactor-payment-proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        novelId: id,
-        planType: plan.id,
-        signature: paymentResult.signature,
-        userPublicKey: activeWalletAddress,
-        currency: currency,
-        amount: tier.price,
-      }),
-    });
+    // No auth token required
+const response = await fetch("/api/benefactor-payment-proxy", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },   // ← no Bearer token
+  body: JSON.stringify({
+    novelId: id,
+    planType: plan.id,
+    signature: paymentResult.signature,
+    userPublicKey: activeWalletAddress,
+    currency: currency,
+    amount: tier.price,
+  }),
+});
 
     const result = await response.json();
 
@@ -1395,58 +1039,48 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
 
       // Helper function to complete the unlock process
       const completeAdUnlock = async () => {
-        // Record the ad-based unlock
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userEmail = sessionData?.session?.user?.email;
-        
-        if (!userEmail) {
-          throw new Error("User session not found");
-        }
+  // No email needed anymore
+  const { error: adUnlockError } = await supabase
+    .from("ad_based_unlocks")
+    .insert({
+      user_id: userId,
+      novel_id: id,
+      chapter_number: chapterNum,
+      unlocked_at: new Date().toISOString(),
+      ad_watched_at: new Date().toISOString(),
+    });
 
-        const { error: adUnlockError } = await supabase
-          .from("ad_based_unlocks")
-          .insert({
-            user_id: userId,
-            novel_id: id,
-            chapter_number: chapterNum,
-            unlocked_at: new Date().toISOString(),
-            ad_watched_at: new Date().toISOString(),
-          });
+  if (adUnlockError) throw new Error(`Failed to record ad unlock: ${adUnlockError.message}`);
 
-        if (adUnlockError) throw new Error(`Failed to record ad unlock: ${adUnlockError.message}`);
+  // Record in chapter_payments using wallet_address
+  const { error: paymentError } = await supabase
+    .from("chapter_payments")
+    .insert({
+      wallet_address: activeWalletAddress,
+      novel_id: id,
+      chapter_number: chapterNum,
+      payment_type: "AD_BASED",
+      currency: "FREE",
+      amount: 0,
+      transaction_id: `AD_UNLOCK_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    });
 
-        // Record in chapter_payments as well for consistency
-        const { error: paymentError } = await supabase
-          .from("chapter_payments")
-          .insert({
-            wallet_address: userEmail,
-            novel_id: id,
-            chapter_number: chapterNum,
-            payment_type: "AD_BASED",
-            currency: "FREE",
-            amount: 0,
-            transaction_id: `AD_UNLOCK_${Date.now()}`,
-            created_at: new Date().toISOString(),
-          });
+  if (paymentError) {
+    console.warn("[handleAdBasedUnlock] Failed to record payment entry:", paymentError.message);
+  }
 
-        if (paymentError) {
-          console.warn("[handleAdBasedUnlock] Failed to record payment entry:", paymentError.message);
-        }
-
-        // Unlock the chapter
-        setIsLocked(false);
-        setLocalUnlocked(true);
-        setRecentlyUnlocked(true);
-        
-        setSuccessMessage("Chapter unlocked successfully! You can read it now.");
-        setTimeout(() => setSuccessMessage(""), 5000);
-        
-        // Update eligibility states
-        await checkAdUnlockEligibility();
-        
-        // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
-        setTimeout(() => setRecentlyUnlocked(false), 10000);
-      };
+  // Unlock the chapter
+  setIsLocked(false);
+  setLocalUnlocked(true);
+  setRecentlyUnlocked(true);
+  
+  setSuccessMessage("Chapter unlocked successfully! You can read it now.");
+  setTimeout(() => setSuccessMessage(""), 5000);
+  
+  await checkAdUnlockEligibility();
+  setTimeout(() => setRecentlyUnlocked(false), 10000);
+};
 
       // Play the actual video ad
       setSuccessMessage("Loading video ad...");
@@ -1869,268 +1503,158 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
   // removed corrupted helper; not needed after switching to proxy flow
 
   const processChapterPayment = async (subscriptionType, currency) => {
-    console.log("[processChapterPayment] Starting payment process...");
-    
-    if (!activeWalletAddress || !id || !chapter || !activePublicKey || !signAndSendTransaction) {
-      setError("Please connect your wallet and try again.");
-      setTimeout(() => setError(null), 5000);
-      setIsProcessing(false);
-      return false;
+  console.log("[processChapterPayment] Starting payment process...");
+
+  if (!activeWalletAddress || !id || !chapter || !activePublicKey || !signAndSendTransaction) {
+    setError("Please connect your wallet and try again.");
+    setTimeout(() => setError(null), 5000);
+    setIsProcessing(false);
+    return false;
+  }
+
+  setIsProcessing(true);
+  setError(null);
+  setSuccessMessage("");
+  setWarningMessage("");
+
+  try {
+    const currentChapterNum = parseInt(chapter, 10);
+    if (!Number.isNaN(currentChapterNum) && currentChapterNum <= 2) {
+      setIsLocked(false);
+      return true;
     }
 
-    setIsProcessing(true);
-    setError(null);
-    setSuccessMessage("");
-    setWarningMessage("");
+    // Check if already paid
+    const isPaid = await checkChapterPayment(currentChapterNum);
+    if (isPaid && subscriptionType === "SINGLE") {
+      console.log("[processChapterPayment] Chapter already paid");
+      setIsLocked(false);
+      setIsProcessing(false);
+      return true;
+    }
 
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) {
-        setError("You must be signed in to unlock chapters.");
-        setTimeout(() => setError(null), 5000);
-        setIsProcessing(false);
-        return false;
-      }
+    // Fetch author
+    const { data: novelData, error: novelError } = await supabase
+      .from("novels")
+      .select("user_id")
+      .eq("id", id)
+      .single();
 
-      // Free preview: prevent payment attempt for chapters 0,1,2
-      const currentChapterNum = parseInt(chapter, 10);
-      if (!Number.isNaN(currentChapterNum) && currentChapterNum <= 2) {
-        setIsLocked(false);
-        return true;
-      }
+    if (novelError || !novelData) throw new Error("Could not fetch novel data");
 
-      // Check if already paid
-      const chapterNum = currentChapterNum;
-      const isPaid = await checkChapterPayment(chapterNum);
-      if (isPaid && subscriptionType === "SINGLE") {
-        console.log("[processChapterPayment] Chapter already paid");
-        setIsLocked(false);
-        setIsProcessing(false);
-        return true;
-      }
+    const { data: authorData, error: authorError } = await supabase
+      .from("users")
+      .select("wallet_address")
+      .eq("id", novelData.user_id)
+      .single();
 
-      // Fetch author data for payment
-      const { data: novelData, error: novelError } = await supabase
-        .from("novels")
-        .select("user_id")
-        .eq("id", id)
-        .single();
-      
-      if (novelError || !novelData) {
-        throw new Error("Could not fetch novel data");
-      }
+    if (authorError || !authorData?.wallet_address) throw new Error("Could not fetch author wallet");
 
-      const { data: authorData, error: authorError } = await supabase
-        .from("users")
-        .select("wallet_address")
-        .eq("id", novelData.user_id)
-        .single();
+    const authorPublicKey = new PublicKey(authorData.wallet_address);
 
-      if (authorError || !authorData?.wallet_address) {
-        throw new Error("Could not fetch author wallet");
-      }
+    // Calculate payment amount
+    const usdAmount = 0.0025;
+    let paymentAmount = 0;
+    let paymentMint = null;
 
-      const authorPublicKey = new PublicKey(authorData.wallet_address);
+    if (currency === "USDC") {
+      paymentMint = USDC_MINT_ADDRESS;
+      paymentAmount = Math.floor(usdAmount * 1e6);
+    } else if (currency === "SOL") {
+      paymentAmount = Math.floor(usdAmount * solPrice * 1e9);
+    } else if (currency === "SMP") {
+      paymentMint = SMP_MINT_ADDRESS;
+      paymentAmount = Math.ceil((usdAmount / smpPrice) * 10 ** SMP_DECIMALS);
+    } else {
+      throw new Error(`Invalid currency: ${currency}`);
+    }
 
-      // Calculate payment amount (same as mobile app)
-      const usdAmount = 0.0025;
-      let paymentAmount = 0;
-      let paymentMint = null;
+    console.log("[processChapterPayment] Payment amount:", paymentAmount, currency);
 
-      if (currency === "USDC") {
-        paymentMint = USDC_MINT_ADDRESS;
-        paymentAmount = Math.floor(usdAmount * 1e6);
-      } else if (currency === "SOL") {
-        paymentAmount = Math.floor(usdAmount * solPrice * 1e9);
-      } else if (currency === "SMP") {
-        paymentMint = SMP_MINT_ADDRESS;
-        paymentAmount = Math.ceil((usdAmount / smpPrice) * 10 ** SMP_DECIMALS);
-      } else {
-        throw new Error(`Invalid currency: ${currency}`);
-      }
+    // Build & send transaction
+    const transaction = await createPaymentTransactionClient({
+      paymentMint,
+      paymentAmount,
+      userPublicKey: activePublicKey,
+      authorPublicKey,
+      smpMintAddress: paymentMint,
+    });
 
-      console.log("[processChapterPayment] Payment amount:", paymentAmount, currency);
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = activePublicKey;
 
-      // Build transaction client-side
-      console.log("[processChapterPayment] Building transaction...");
-      const transaction = await createPaymentTransactionClient({
-        paymentMint,
-        paymentAmount,
-        userPublicKey: activePublicKey,
-        authorPublicKey,
-        smpMintAddress: paymentMint,
+    const signature = await signAndSendTransaction(transaction);
+    console.log("[processChapterPayment] Transaction confirmed:", signature);
+
+    // DIRECT INSERT (no proxy, works for both embedded and external wallet)
+    const { error: insertError } = await supabase
+      .from("chapter_payments")
+      .insert({
+        wallet_address: activeWalletAddress,
+        novel_id: id,
+        chapter_number: currentChapterNum,
+        payment_type: subscriptionType,
+        currency: currency,
+        amount: Math.floor(usdAmount * 100),
+        transaction_id: signature,
+        created_at: new Date().toISOString(),
       });
 
-      // Get fresh blockhash RIGHT before calling signAndSendTransaction (like mobile app)
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = activePublicKey;
-
-      // Sign and send transaction (now includes confirmation)
-      console.log("[processChapterPayment] Signing and sending transaction...");
-      const signature = await signAndSendTransaction(transaction);
-      console.log("[processChapterPayment] Transaction sent and confirmed, signature:", signature);
-
-      console.log("[processChapterPayment] Transaction landed, recording payment...");
-
-      // Record payment in database via edge function
-      const requestBody = {
-        novelId: id,
-        chapterId: parseInt(chapter, 10), // Send as number like mobile app
-        paymentType: subscriptionType,
-        currency,
-        signature,
-        transactionId: signature, // Add transactionId field
-      };
-      
-      try {
-        const resp = await fetch("/api/unlock-chapter-proxy", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        console.log("[processChapterPayment] Edge function response status:", resp.status);
-        
-        const result = await resp.json();
-        console.log("[processChapterPayment] Edge function response:", result);
-        
-        if (!resp.ok) {
-          console.error("[processChapterPayment] Edge function error:", result.error || "Unknown error");
-          console.warn("[processChapterPayment] Payment succeeded but database recording failed");
-        } else if (result?.error) {
-          console.error("[processChapterPayment] Edge function returned error:", result.error);
-        }
-      } catch (dbError) {
-        console.error("[processChapterPayment] Database recording error:", dbError.message);
-        console.warn("[processChapterPayment] Payment succeeded but database recording failed");
-      }
-
-      setIsLocked(false);
-      setLocalUnlocked(true);
-      setRecentlyUnlocked(true);
-      
-      // Proactively update cached balance after payment
-      if (currency === 'SMP') {
-        const paymentAmountSmp = paymentAmount / Math.pow(10, SMP_DECIMALS);
-        await balanceUpdater.updateAfterChapterPayment(activeWalletAddress, paymentAmountSmp, 'SMP');
-      }
-      
-      // Fetch updated balance after payment
-      await fetchUserBalances();
-      
-      // Calculate and apply Amethyst multiplier bonus for weekly points
-      try {
-        // Get user data for weekly points update
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userEmail = sessionData?.session?.user?.email;
-        
-        if (userEmail) {
-          const { data: userData } = await supabase
-            .from("users")
-            .select("id, weekly_points")
-            .eq("email", userEmail)
-            .single();
-          
-          if (userData) {
-            // Calculate Amethyst bonus based on current balance
-            let readerReward = 100; // Base reward
-            const numericBalance = Number(amethystBalance) || 0;
-            
-            console.log(`[processChapterPayment] Amethyst Balance for bonus: ${numericBalance}`);
-            
-            if (numericBalance >= 5000000) readerReward = 250;
-            else if (numericBalance >= 1000000) readerReward = 200;
-            else if (numericBalance >= 500000) readerReward = 170;
-            else if (numericBalance >= 250000) readerReward = 150;
-            else if (numericBalance >= 100000) readerReward = 120;
-            
-            console.log(`[processChapterPayment] Final Reader Reward: ${readerReward} (for ${numericBalance} Amethyst)`);
-            
-            // Update weekly points with Amethyst bonus
-            const newReaderBalance = (userData.weekly_points || 0) + readerReward;
-            const { error: updateError } = await supabase
-              .from("users")
-              .update({ weekly_points: newReaderBalance })
-              .eq("id", userData.id);
-            
-            if (updateError) {
-              console.error("[processChapterPayment] Error updating weekly points:", updateError);
-            } else {
-              console.log(`[processChapterPayment] Updated weekly points to: ${newReaderBalance}`);
-              setWeeklyPoints(newReaderBalance);
-              
-              // Show success message with the correct reward
-              setSuccessMessage(
-                `Payment successful! ${(SMP_READ_COST / 10 ** SMP_DECIMALS).toLocaleString()} SMP sent on-chain. You earned ${readerReward} points.`
-              );
-              setTimeout(() => setSuccessMessage(""), 5000);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("[processChapterPayment] Error calculating Amethyst bonus:", err);
-      }
-      
-      // Check if Amethyst balance was updated in the database
-      setTimeout(async () => {
-        try {
-          // Get user data to get user ID
-          const { data: sessionData } = await supabase.auth.getSession();
-          const userEmail = sessionData?.session?.user?.email;
-          
-          if (!userEmail) {
-            console.log("[AmethystCheck] No user session found");
-            return;
-          }
-          
-          // Get user ID from users table
-          const { data: userData } = await supabase
-            .from("users")
-            .select("id")
-            .eq("email", userEmail)
-            .single();
-          
-          if (!userData) {
-            console.log("[AmethystCheck] User not found in database");
-            return;
-          }
-          
-          const { data: amethystData } = await supabase
-            .from("amethyst_balances")
-            .select("amethyst_balance, last_updated")
-            .eq("user_id", userData.id)
-            .single();
-          
-          if (amethystData) {
-            console.log("[AmethystCheck] Database Amethyst balance:", amethystData.amethyst_balance, "Last updated:", amethystData.last_updated);
-          } else {
-            console.log("[AmethystCheck] No Amethyst balance record found for user:", userData.id);
-          }
-        } catch (err) {
-          console.error("[AmethystCheck] Error checking Amethyst balance:", err);
-        }
-      }, 2000); // Check 2 seconds after payment
-      
-      // Keep chapter unlocked for 10 seconds to prevent re-locking during DB replication
-      setTimeout(() => setRecentlyUnlocked(false), 10000);
-      
-      setSuccessMessage("Chapter unlocked successfully.");
-      setTimeout(() => setSuccessMessage(""), 5000);
-      return true;
-    } catch (e) {
-      console.error("[processChapterPayment] Error:", e);
-      setError(e.message || "Failed to process payment.");
-      setTimeout(() => setError(null), 5000);
-      return false;
-    } finally {
-      setIsProcessing(false);
+    if (insertError) {
+      console.error("Direct insert failed:", insertError);
+    } else {
+      console.log("✅ Direct insert to chapter_payments succeeded");
     }
-  };
+
+    // Success
+    setIsLocked(false);
+    setLocalUnlocked(true);
+    setRecentlyUnlocked(true);
+    await fetchUserBalances();
+
+    // Amethyst bonus
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id, weekly_points")
+        .eq("wallet_address", activeWalletAddress)
+        .single();
+
+      if (userData) {
+        let readerReward = 100;
+        const numericBalance = Number(amethystBalance) || 0;
+
+        if (numericBalance >= 5000000) readerReward = 250;
+        else if (numericBalance >= 1000000) readerReward = 200;
+        else if (numericBalance >= 500000) readerReward = 170;
+        else if (numericBalance >= 250000) readerReward = 150;
+        else if (numericBalance >= 100000) readerReward = 120;
+
+        const newReaderBalance = (userData.weekly_points || 0) + readerReward;
+        await supabase.from("users").update({ weekly_points: newReaderBalance }).eq("id", userData.id);
+
+        setWeeklyPoints(newReaderBalance);
+        setSuccessMessage(`Payment successful! You earned ${readerReward} points.`);
+      }
+    } catch (err) {
+      console.error("[processChapterPayment] Amethyst bonus error:", err);
+    }
+
+    setTimeout(() => setRecentlyUnlocked(false), 10000);
+    setTimeout(() => setSuccessMessage(""), 6000);
+
+    return true;
+
+  } catch (e) {
+    console.error("[processChapterPayment] Error:", e);
+    setError(e.message || "Failed to process payment.");
+    setTimeout(() => setError(null), 5000);
+    return false;
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const confirmPayment = async () => {
     if (!transactionDetails) return;
