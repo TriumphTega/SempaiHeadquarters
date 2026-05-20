@@ -3,6 +3,13 @@ import styles from "./BenefactorPricing.module.css";
 
 const BenefactorPricing = ({ onSelectPlan, isProcessing = false, creatorId = null, creatorName = null }) => {
   const [hoveredPlan, setHoveredPlan] = useState(null);
+  const [selectedToken, setSelectedToken] = useState("USDC");
+
+  const tokens = [
+    { id: "USDC", name: "USDC", logo: "/images/usdc-logo.png" },
+    { id: "SOL", name: "SOL", logo: "/images/sol-logo.png" },
+    { id: "SKR", name: "SKR", logo: "/images/skr-logo.png" },
+  ];
 
   const plans = [
     {
@@ -62,6 +69,12 @@ const BenefactorPricing = ({ onSelectPlan, isProcessing = false, creatorId = nul
     },
   ];
 
+  const handlePlanSelect = (plan) => {
+    if (!isProcessing) {
+      onSelectPlan({ ...plan, selectedToken });
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -69,6 +82,23 @@ const BenefactorPricing = ({ onSelectPlan, isProcessing = false, creatorId = nul
         <p className={styles.subtitle}>
           Support creators and unlock exclusive early access to advance chapters
         </p>
+      </div>
+
+      {/* Token Selection */}
+      <div className={styles.tokenSelector}>
+        <h3 className={styles.tokenSelectorTitle}>Select Payment Token</h3>
+        <div className={styles.tokenOptions}>
+          {tokens.map((token) => (
+            <div
+              key={token.id}
+              className={`${styles.tokenOption} ${selectedToken === token.id ? styles.selected : ""}`}
+              onClick={() => setSelectedToken(token.id)}
+            >
+              <img src={token.logo} alt={token.name} className={styles.tokenLogo} />
+              <span className={styles.tokenName}>{token.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className={styles.plansGrid}>
@@ -80,7 +110,7 @@ const BenefactorPricing = ({ onSelectPlan, isProcessing = false, creatorId = nul
             }`}
             onMouseEnter={() => setHoveredPlan(plan.id)}
             onMouseLeave={() => setHoveredPlan(null)}
-            onClick={() => !isProcessing && onSelectPlan(plan)}
+            onClick={() => handlePlanSelect(plan)}
           >
             {plan.featured && <div className={styles.featuredBadge}>RECOMMENDED</div>}
             

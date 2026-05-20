@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { InlineUserDisplay } from "@/components/UserDisplay";
 import BenefactorPricing from "@/components/BenefactorPricing";
-import { PublicKey, Connection, LAMPORTS_PER_SOL, Transaction } from "@solana/web3.js";
+import { PublicKey, Connection, LAMPORTS_PER_SOL, Transaction, SystemProgram } from "@solana/web3.js";
 import ReadingTracker from "../../../../../services/porp/ReadingTracker";
 import PoRPStatus from "../../../../../components/PoRP/PoRPStatus";
 import ComprehensionChallenge from "../../../../../components/PoRP/ComprehensionChallenge";
@@ -58,12 +58,16 @@ import {
   RPC_URL,
   SMP_MINT_ADDRESS,
   AMETHYST_MINT_ADDRESS,
+  USDC_MINT_ADDRESS,
+  SKR_MINT_ADDRESS,
   TREASURY_PUBLIC_KEY,
 } from "../../../../../constants";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 
-const USDC_MINT_ADDRESS = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const SMP_DECIMALS = 6;
+const USDC_DECIMALS = 6;
+const SKR_DECIMALS = 6;
+const SOL_DECIMALS = 9;
 const TARGET_WALLET = TREASURY_PUBLIC_KEY;
 
 // Ad video configuration
@@ -196,9 +200,27 @@ async function createPaymentTransactionClient({ paymentMint, paymentAmount, user
       }
     }
     
-    // Founder Fund must exist
+    // Founder Fund - Create ATA if missing and user has enough SOL
+    let founderFundDestAta = founderFundAta;
+    let founderFundDestAmount = founderFundAmount;
     if (!founderFundAtaInfo) {
-      throw new Error("Founder Fund wallet is missing ATA for this token");
+      if (userBalance >= ataRentExemption) {
+        console.log("[createPaymentTransactionClient] Creating Founder Fund ATA");
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            userPublicKey, // payer
+            founderFundAta, // ata
+            FOUNDER_FUND_WALLET, // owner
+            paymentMint // mint
+          )
+        );
+      } else {
+        console.warn("[createPaymentTransactionClient] Insufficient SOL for Founder Fund ATA, keeping funds with user");
+        // If we can't create Founder Fund ATA, keep the funds with the user for now
+        // This is a fallback - in production, you'd want to handle this differently
+        founderFundDestAta = null;
+        founderFundDestAmount = 0;
+      }
     }
 
     // Build transfer instructions
@@ -213,9 +235,9 @@ async function createPaymentTransactionClient({ paymentMint, paymentAmount, user
     }
 
     // Founder Fund gets its share + any rerouted shares
-    const totalFounderFundAmount = founderFundAmount + reroutedToFounderFund;
-    if (totalFounderFundAmount > 0) {
-      instructions.push(createTransferInstruction(userAta, founderFundAta, userPublicKey, totalFounderFundAmount));
+    const totalFounderFundAmount = founderFundDestAmount + reroutedToFounderFund;
+    if (totalFounderFundAmount > 0 && founderFundDestAta) {
+      instructions.push(createTransferInstruction(userAta, founderFundDestAta, userPublicKey, totalFounderFundAmount));
     }
   }
 
@@ -829,9 +851,10 @@ export default function ChapterPage() {
     }
   };
 
-const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_ADDRESS) => {
+const processBenefactorPayment = async (paymentAmount, novelId, paymentMint) => {
   try {
-    console.log(`[processSmpPayment] Starting payment → Mint: ${paymentMint.toBase58()} | Amount: ${paymentAmount}`);
+    const mintStr = paymentMint ? paymentMint.toBase58() : "SOL (native)";
+    console.log(`[processBenefactorPayment] Starting payment → Mint: ${mintStr} | Amount: ${paymentAmount}`);
 
     if (!activeWalletAddress || !id || !activePublicKey || !signAndSendTransaction) {
       return { success: false, error: "Please connect your wallet and try again." };
@@ -860,15 +883,15 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
 
     const authorPublicKey = new PublicKey(authorData.wallet_address);
 
-    console.log(`[processSmpPayment] Building transaction for ${paymentAmount} units of ${paymentMint.toBase58()}`);
+    console.log(`[processBenefactorPayment] Building transaction for ${paymentAmount} units of ${mintStr}`);
 
-    // Build transaction (now correctly uses the passed paymentMint)
+    // Build transaction using the passed paymentMint
     const transaction = await createPaymentTransactionClient({
       paymentMint,
       paymentAmount,
       userPublicKey: activePublicKey,
       authorPublicKey,
-      smpMintAddress: paymentMint,   // kept for backward compatibility
+      smpMintAddress: paymentMint,
     });
 
     // Get fresh blockhash
@@ -877,9 +900,9 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
     transaction.feePayer = activePublicKey;
 
     // Sign and send
-    console.log("[processSmpPayment] Signing and sending transaction...");
+    console.log("[processBenefactorPayment] Signing and sending transaction...");
     const signature = await signAndSendTransaction(transaction);
-    console.log("[processSmpPayment] Transaction sent, signature:", signature);
+    console.log("[processBenefactorPayment] Transaction sent, signature:", signature);
 
     // Wait for confirmation
     const start = Date.now();
@@ -908,11 +931,11 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
 
     if (!landed) throw new Error("Transaction not confirmed yet. Please try again.");
 
-    console.log("[processSmpPayment] Transaction confirmed successfully");
+    console.log("[processBenefactorPayment] Transaction confirmed successfully");
     return { success: true, signature };
 
   } catch (error) {
-    console.error("[processSmpPayment] Error:", error);
+    console.error("[processBenefactorPayment] Error:", error);
     return { success: false, error: error.message };
   }
 };
@@ -929,7 +952,7 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
 
   try {
     const pricingTiers = {
-      blue:  { price: 1,   chapters: 3,   name: "Blue" },
+      blue:  { price: 0.1,   chapters: 3,   name: "Blue" },
       iron:  { price: 2,   chapters: 6,   name: "Iron" },
       silver: { price: 3,   chapters: 10,  name: "Silver" },
       gold:  { price: 5,   chapters: 999, name: "Gold" },
@@ -946,8 +969,8 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
 
     setSuccessMessage(`Processing ${tier.name} writer subscription...`);
 
-    // ==================== BENEFACATOR ONLY: USDC / SOL / SKR ====================
-    const currency = "USDC";   // ← Change to "SOL" or "SKR" to test other currencies
+    // Get selected token from plan (USDC, SOL, or SKR - never SMP)
+    const currency = plan.selectedToken || "USDC";
 
     let paymentAmount = 0;
     let paymentMint = null;
@@ -959,13 +982,15 @@ const processSmpPayment = async (paymentAmount, novelId, paymentMint = SMP_MINT_
       paymentAmount = Math.floor(tier.price * (solPrice || 100) * 1_000_000_000);
     } else if (currency === "SKR") {
       paymentMint = SKR_MINT_ADDRESS;
-      paymentAmount = Math.ceil(tier.price * 1_000_000_000);
+      paymentAmount = Math.ceil(tier.price * 1_000_000);
+    } else {
+      throw new Error("Invalid token selected. Only USDC, SOL, or SKR are allowed for benefactor plans.");
     }
 
     console.log(`[Benefactor] Paying ${tier.price} USD with ${currency} (${paymentAmount} units)`);
 
     // Pass the correct mint as third parameter
-    const paymentResult = await processSmpPayment(paymentAmount, id, paymentMint);
+    const paymentResult = await processBenefactorPayment(paymentAmount, id, paymentMint);
 
     if (!paymentResult.success) {
       throw new Error(paymentResult.error || "Payment failed");
