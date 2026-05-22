@@ -13,7 +13,7 @@ import {
   FaUpload, 
   FaArrowLeft, 
   FaTag ,
-  FaShoppingCart 
+  FaShoppingCart, FaBars
 } from "react-icons/fa";
 
 import styles from "../Marketplace.module.css";
@@ -32,6 +32,18 @@ export default function HoardPage() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Mobile menu
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Handle window resize for mobile responsiveness
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Modals
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -214,28 +226,120 @@ export default function HoardPage() {
   if (!user) {
     return (
       <div className={styles.marketplace}>
-        <nav className={styles.navbar}>
-          <div className={styles.navContainer}>
-            <div className={styles.navLeft}>
-              <div className={styles.logo} onClick={() => router.push("/marketplace")}>
-                <FaGem className={styles.logoIcon} />
-                <span className={styles.logoText}>Sempai Marketplace</span>
+        {/* Ember Particles */}
+        <div className={kaitoStyles.emberContainer}>
+          {embers.map((ember) => (
+            <div
+              key={ember.id}
+              className={kaitoStyles.ember}
+              style={{
+                left: ember.left,
+                animationDelay: ember.delay,
+                animationDuration: ember.duration,
+                width: ember.size,
+                height: ember.size,
+                opacity: ember.opacity,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Navbar */}
+        <nav style={{
+          position: "sticky",
+          top: 0,
+          background: "linear-gradient(180deg, #0c0c0c 0%, #141210 100%)",
+          borderBottom: "1px solid #2d2418",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 40px rgba(204,85,0,0.04)",
+          padding: "0",
+          zIndex: 1000,
+        }}>
+          <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0 16px", position: "relative" }}>
+            {/* Top amber accent line */}
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "2px",
+              background: "linear-gradient(90deg, transparent, #cc5500, #c9a84c, #cc5500, transparent)",
+              opacity: 0.5,
+            }} />
+
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 0",
+            }}>
+              {/* Brand */}
+              <div 
+                onClick={() => router.push("/")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  color: "#f5e6d3",
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  letterSpacing: "2px",
+                  fontFamily: "'Noto Serif JP', Georgia, serif",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <img 
+                  src="/images/logo.jpeg" 
+                  alt="Sempai HQ" 
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    filter: "drop-shadow(0 0 8px rgba(204,85,0,0.4))",
+                  }}
+                />
+                <span>Sempai HQ</span>
               </div>
+
+              {/* Sign In Button */}
+              <button
+                onClick={signInWithGoogle}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: "#ff6b35",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                  padding: "6px 12px",
+                  borderRadius: "2px",
+                  border: "1px solid rgba(204,85,0,0.3)",
+                  background: "rgba(204,85,0,0.08)",
+                  transition: "all 0.2s",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <FaGoogle size={14} />
+                Sign In
+              </button>
             </div>
-            <button className={styles.profileButton} onClick={signInWithGoogle}>
-              <FaUser />
-            </button>
           </div>
         </nav>
 
-        <div className={styles.landingPage}>
-          <div className={styles.landingContent}>
-            <FaTrophy className={styles.landingIcon} />
-            <h1 className={styles.landingTitle}>My Hoard</h1>
-            <p className={styles.landingSubtitle}>
+        {/* Landing Content */}
+        <div className={`${styles.landingPage} ${kaitoStyles.heroSection}`}>
+          <div className={`${styles.landingContent} ${kaitoStyles.mainContent}`}>
+            <FaTrophy className={`${styles.landingIcon} ${kaitoStyles.emptyIcon}`} />
+            <h1 className={`${styles.landingTitle} ${kaitoStyles.heroTitle}`}>My Hoard</h1>
+            <p className={`${styles.landingSubtitle} ${kaitoStyles.heroSubtitle}`}>
               Sign in to access your personal collection of completed stories
             </p>
-            <button className={styles.landingButton} onClick={signInWithGoogle}>
+            <button 
+              className={`${styles.landingButton} ${kaitoStyles.navButtonPrimary}`}
+              onClick={signInWithGoogle}
+            >
               <FaGoogle /> Sign in with Google
             </button>
           </div>
@@ -322,8 +426,35 @@ export default function HoardPage() {
               <span>Sempai HQ</span>
             </div>
 
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                display: isMobile ? "block" : "none",
+                background: "transparent",
+                border: "none",
+                color: "#a09080",
+                padding: "8px",
+                cursor: "pointer",
+              }}
+            >
+              {menuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+            </button>
+
             {/* Nav Links */}
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={{ 
+              display: isMobile ? (menuOpen ? "flex" : "none") : "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: "8px", 
+              alignItems: "center",
+              position: isMobile ? "absolute" : "static",
+              top: isMobile ? "100%" : "auto",
+              left: isMobile ? "0" : "auto",
+              right: isMobile ? "0" : "auto",
+              background: isMobile ? "linear-gradient(180deg, #0c0c0c 0%, #141210 100%)" : "transparent",
+              padding: isMobile ? "16px" : "0",
+              borderBottom: isMobile ? "1px solid #2d2418" : "none",
+            }}>
               <button
                 onClick={() => router.push("/marketplace")}
                 style={{
@@ -340,6 +471,8 @@ export default function HoardPage() {
                   transition: "all 0.2s",
                   cursor: "pointer",
                   fontFamily: "inherit",
+                  width: isMobile ? "100%" : "auto",
+                  justifyContent: isMobile ? "center" : "flex-start",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#f5e6d3";
@@ -369,6 +502,8 @@ export default function HoardPage() {
                   transition: "all 0.2s",
                   cursor: "pointer",
                   fontFamily: "inherit",
+                  width: isMobile ? "100%" : "auto",
+                  justifyContent: isMobile ? "center" : "flex-start",
                 }}
               >
                 <FaShoppingCart size={14} />
@@ -390,6 +525,8 @@ export default function HoardPage() {
                   transition: "all 0.2s",
                   cursor: "pointer",
                   fontFamily: "inherit",
+                  width: isMobile ? "100%" : "auto",
+                  justifyContent: isMobile ? "center" : "flex-start",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#f5e6d3";
