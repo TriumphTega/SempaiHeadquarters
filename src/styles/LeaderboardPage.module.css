@@ -135,7 +135,7 @@
 
 .leaderboardHeader {
   display: grid;
-  grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+  grid-template-columns: 50px 2fr 90px 80px 90px 90px 60px;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: rgba(243, 99, 22, 0.3);
@@ -147,7 +147,8 @@
 .pointsHeader,
 .amethystHeader,
 .effectiveHeader,
-.totalHeader {
+.totalHeader,
+.shareHeader {
   color: #9ca3af;
   font-weight: 600;
   font-size: 0.65rem;
@@ -164,7 +165,7 @@
 /* Reader Rows */
 .readerRow {
   display: grid;
-  grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+  grid-template-columns: 50px 2fr 90px 80px 90px 90px 60px;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -198,12 +199,32 @@
 .pointsCell,
 .amethystCell,
 .effectiveCell,
-.totalCell {
+.totalCell,
+.shareCell {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.4rem 0.25rem;
   text-align: center;
+}
+
+.shareButton {
+  background: rgba(163, 89, 255, 0.1);
+  border: 1px solid rgba(163, 89, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px;
+  color: #a359ff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shareButton:hover {
+  background: rgba(163, 89, 255, 0.2);
+  border-color: rgba(163, 89, 255, 0.6);
+  transform: scale(1.1);
 }
 
 .readerCell {
@@ -422,16 +443,109 @@
   font-size: 0.9rem;
 }
 
+/* Share Modal */
+.shareModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.shareModalContent {
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  border: 2px solid rgba(163, 89, 255, 0.3);
+  border-radius: 16px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.shareModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shareModalTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.shareModalClose {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shareModalClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.shareModalBody {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.shareModalFooter {
+  padding: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+}
+
+.shareButtonX {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #f36316, #ff6200);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(243, 99, 22, 0.3);
+}
+
+.shareButtonX:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(243, 99, 22, 0.5);
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .leaderboardHeader {
-    grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+    grid-template-columns: 50px 2fr 90px 80px 90px 90px 60px;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
   }
   
   .readerRow {
-    grid-template-columns: 50px 2fr 90px 80px 90px 90px;
+    grid-template-columns: 50px 2fr 90px 80px 90px 90px 60px;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
   }
@@ -465,13 +579,13 @@
   }
   
   .leaderboardHeader {
-    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px;
+    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px 50px;
     gap: 0.3rem;
     padding: 0.4rem;
   }
   
   .readerRow {
-    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px;
+    grid-template-columns: 35px 1.5fr 55px 45px 45px 55px 50px;
     gap: 0.3rem;
     padding: 0.4rem;
     min-height: 40px;
@@ -482,7 +596,8 @@
   .pointsHeader,
   .amethystHeader,
   .effectiveHeader,
-  .totalHeader {
+  .totalHeader,
+  .shareHeader {
     font-size: 0.6rem;
     letter-spacing: 0.2px;
     padding: 0.2rem 0.1rem;
@@ -492,7 +607,8 @@
   .pointsCell,
   .amethystCell,
   .effectiveCell,
-  .totalCell {
+  .totalCell,
+  .shareCell {
     padding: 0.2rem 0.1rem;
   }
   
@@ -539,17 +655,21 @@
     height: 22px;
     font-size: 0.6rem;
   }
+
+  .shareButton {
+    padding: 6px;
+  }
 }
 
 @media (max-width: 480px) {
   .leaderboardHeader {
-    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px;
+    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px 40px;
     gap: 0.2rem;
     padding: 0.3rem 0.4rem;
   }
   
   .readerRow {
-    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px;
+    grid-template-columns: 30px 1.2fr 45px 35px 35px 45px 40px;
     gap: 0.2rem;
     padding: 0.3rem 0.4rem;
     min-height: 35px;
@@ -560,7 +680,8 @@
   .pointsHeader,
   .amethystHeader,
   .effectiveHeader,
-  .totalHeader {
+  .totalHeader,
+  .shareHeader {
     font-size: 0.55rem;
     letter-spacing: 0.1px;
     padding: 0.15rem 0.05rem;
@@ -570,7 +691,8 @@
   .pointsCell,
   .amethystCell,
   .effectiveCell,
-  .totalCell {
+  .totalCell,
+  .shareCell {
     padding: 0.15rem 0.05rem;
   }
   
@@ -617,18 +739,22 @@
     height: 20px;
     font-size: 0.55rem;
   }
+
+  .shareButton {
+    padding: 4px;
+  }
 }
 
 /* Wide Screen Optimizations */
 @media (min-width: 1400px) {
   .leaderboardHeader {
-    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px;
+    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px 80px;
     gap: 1rem;
     padding: 1.5rem 2rem;
   }
   
   .readerRow {
-    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px;
+    grid-template-columns: 80px 2.5fr 120px 100px 100px 120px 80px;
     gap: 1rem;
     padding: 1rem 2rem;
     min-height: 70px;
