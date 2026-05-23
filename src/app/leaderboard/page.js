@@ -8,7 +8,7 @@ export async function generateMetadata({ searchParams }) {
   const points = params.points || '0';
   const timeFrame = params.timeFrame || 'All Time';
   
-  const cardUrl = `https://sempaihq.com/api/leaderboard/card?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`;
+  const cardUrl = `https://www.sempaihq.com/api/leaderboard/card?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`;
   
   console.log('[Leaderboard Metadata] Generating metadata:', { username, rank, points, timeFrame, cardUrl });
   
@@ -26,7 +26,7 @@ export async function generateMetadata({ searchParams }) {
           alt: `${username} leaderboard card`,
         }
       ],
-      url: `https://sempaihq.com/leaderboard?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`,
+      url: `https://www.sempaihq.com/leaderboard?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`,
       type: 'website',
       siteName: 'Sempai HQ',
     },

@@ -162,8 +162,8 @@ export default function LeaderboardClient() {
     if (!selectedReader) return;
     
     const username = selectedReader.email ? selectedReader.email.split('@')[0] : 'Anonymous';
-    const cardUrl = `https://sempaihq.com/api/leaderboard/card?username=${encodeURIComponent(username)}&rank=${selectedReader.rank}&points=${selectedReader.effectivePoints}&timeFrame=${timeFrame === 'week' ? 'Weekly' : timeFrame === 'month' ? 'Monthly' : 'All Time'}`;
-    const shareUrl = `https://sempaihq.com/leaderboard?username=${encodeURIComponent(username)}&rank=${selectedReader.rank}&points=${selectedReader.effectivePoints}&timeFrame=${timeFrame === 'week' ? 'Weekly' : timeFrame === 'month' ? 'Monthly' : 'All Time'}`;
+    const cardUrl = `https://www.sempaihq.com/api/leaderboard/card?username=${encodeURIComponent(username)}&rank=${selectedReader.rank}&points=${selectedReader.effectivePoints}&timeFrame=${timeFrame === 'week' ? 'Weekly' : timeFrame === 'month' ? 'Monthly' : 'All Time'}`;
+    const shareUrl = `https://www.sempaihq.com/leaderboard?username=${encodeURIComponent(username)}&rank=${selectedReader.rank}&points=${selectedReader.effectivePoints}&timeFrame=${timeFrame === 'week' ? 'Weekly' : timeFrame === 'month' ? 'Monthly' : 'All Time'}`;
     const shareText = `🏆 I'm ranked #${selectedReader.rank} on the Sempai HQ Leaderboard with ${selectedReader.effectivePoints.toLocaleString()} points! Check out the full Top 50 leaderboard:`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
     
