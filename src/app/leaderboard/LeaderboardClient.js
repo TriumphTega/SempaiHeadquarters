@@ -167,6 +167,8 @@ export default function LeaderboardClient() {
     const shareText = `🏆 I'm ranked #${selectedReader.rank} on the Sempai HQ Leaderboard with ${selectedReader.effectivePoints.toLocaleString()} points! Check out the full Top 50 leaderboard:`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
     
+    console.log('[Leaderboard Share] Sharing with:', { username, cardUrl, shareUrl, twitterUrl });
+    
     window.open(twitterUrl, '_blank');
     setShowShareModal(false);
   };

@@ -10,23 +10,47 @@ export async function generateMetadata({ searchParams }) {
   
   const cardUrl = `https://sempaihq.com/api/leaderboard/card?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`;
   
-  return {
+  console.log('[Leaderboard Metadata] Generating metadata:', { username, rank, points, timeFrame, cardUrl });
+  
+  const metadata = {
     title: `${username} - Rank #${rank} on Sempai HQ Leaderboard`,
     description: `See ${username}'s achievement on the Sempai HQ Leaderboard. Ranked #${rank} with ${parseInt(points).toLocaleString()} points in ${timeFrame}.`,
     openGraph: {
       title: `${username} - Rank #${rank} on Sempai HQ Leaderboard`,
       description: `See ${username}'s achievement on the Sempai HQ Leaderboard. Ranked #${rank} with ${parseInt(points).toLocaleString()} points in ${timeFrame}.`,
-      images: [cardUrl],
+      images: [
+        {
+          url: cardUrl,
+          width: 1200,
+          height: 630,
+          alt: `${username} leaderboard card`,
+        }
+      ],
       url: `https://sempaihq.com/leaderboard?username=${encodeURIComponent(username)}&rank=${rank}&points=${points}&timeFrame=${encodeURIComponent(timeFrame)}`,
       type: 'website',
+      siteName: 'Sempai HQ',
     },
     twitter: {
       card: 'summary_large_image',
       title: `${username} - Rank #${rank} on Sempai HQ Leaderboard`,
       description: `See ${username}'s achievement on the Sempai HQ Leaderboard. Ranked #${rank} with ${parseInt(points).toLocaleString()} points in ${timeFrame}.`,
-      images: [cardUrl],
+      images: [
+        {
+          url: cardUrl,
+          width: 1200,
+          height: 630,
+          alt: `${username} leaderboard card`,
+        }
+      ],
+      site: '@HomeforSempai',
+    },
+    other: {
+      'twitter:site': '@HomeforSempai',
     },
   };
+  
+  console.log('[Leaderboard Metadata] Generated metadata:', metadata);
+  return metadata;
 }
 
 export default function LeaderboardPage() {

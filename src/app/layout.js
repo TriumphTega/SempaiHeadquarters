@@ -9,6 +9,22 @@ import AppWrapper from "../components/AppWrapper"; // App wrapper for LinkEmailB
 export const metadata = {
   title: "Sempai HQ",
   description: "Explore novels and chapters",
+  openGraph: {
+    title: "Sempai HQ - Explore Novels and Chapters",
+    description: "Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers.",
+    images: ["https://sempaihq.com/images/sempai-social.jpg"],
+    type: "website",
+    url: "https://sempaihq.com",
+    siteName: "Sempai HQ",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sempai HQ - Explore Novels and Chapters",
+    description: "Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers.",
+    images: ["https://sempaihq.com/images/sempai-social.jpg"],
+    site: "@HomeforSempai",
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -17,28 +33,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-       <meta name="google-site-verification" content="OYvDT560V78ZJJvCu6_innth8NB7fhLLWc_b3Wpk3xQ" />
-        <title>{metadata.title}</title>
-        <meta name="description" content={metadata.description} />
-        
-        {/* Twitter/X Card Meta Tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Sempai HQ - Explore Novels and Chapters" />
-        <meta name="twitter:description" content="Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers." />
-        <meta name="twitter:image" content="https://sempaihq.com/images/sempai-social.jpg" />
-        <meta name="twitter:site" content="@HomeforSempai" />
-        
-        {/* Open Graph Meta Tags */}
-        <meta property="og:title" content="Sempai HQ - Explore Novels and Chapters" />
-        <meta property="og:description" content="Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers." />
-        <meta property="og:image" content="https://sempaihq.com/images/sempai-social.jpg" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://sempaihq.com" />
-        
-        {/* WhatsApp-specific meta tag */}
-        <meta property="og:locale" content="en_US" />
-        
-        {/* Add additional head elements like favicon or fonts here */}
+        <meta name="google-site-verification" content="OYvDT560V78ZJJvCu6_innth8NB7fhLLWc_b3Wpk3xQ" />
       </head>
       <body>
         <AuthProvider>
