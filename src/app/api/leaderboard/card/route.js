@@ -349,7 +349,7 @@ export async function GET(request) {
                   style={{
                     fontSize: '16px',
                     color: '#a359ff',
-                    fontWeight: 600',
+                    fontWeight: 600,
                     fontFamily: 'Courier New, monospace',
                   }}
                 >
