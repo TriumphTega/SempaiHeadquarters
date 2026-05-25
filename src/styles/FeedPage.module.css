@@ -1,0 +1,230 @@
+.feedContainer {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #000 0%, #1a1a1a 100%);
+  color: #fff;
+  padding-bottom: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.feedNavbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  border-bottom: 2px solid rgba(243, 99, 22, 0.8);
+  padding: 12px 15px;
+  z-index: 1000;
+}
+
+.navbarContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  border: 2px solid rgba(243, 99, 22, 1);
+  margin-right: 10px;
+}
+
+.logoText {
+  font-size: 1rem;
+  color: rgba(243, 99, 22, 1);
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(243, 99, 22, 0.4);
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  color: rgba(243, 99, 22, 1);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.menuButton:hover {
+  transform: scale(1.2);
+}
+
+.navItems {
+  display: none;
+  align-items: center;
+  gap: 15px;
+}
+
+.navItem {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 20px;
+  background: rgba(243, 99, 22, 0.1);
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.navItem:hover {
+  color: rgba(243, 99, 22, 1);
+  background: rgba(243, 99, 22, 0.3);
+  transform: scale(1.05);
+}
+
+.navItemsOpen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.95);
+  box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
+  gap: 10px;
+}
+
+.feedContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 100px 15px 20px;
+}
+
+.feedMain {
+  width: 100%;
+}
+
+.feedTitle {
+  font-size: 1.8rem;
+  color: rgba(243, 99, 22, 1);
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(243, 99, 22, 0.3);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.feedSubtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+}
+
+.postCreatorContainer {
+  margin-bottom: 20px;
+}
+
+.postsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.noPosts {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  padding: 30px 20px;
+  border: 2px dashed rgba(243, 99, 22, 0.3);
+  border-radius: 10px;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .menuButton {
+    display: none;
+  }
+
+  .navItems {
+    display: flex;
+  }
+
+  .feedContent {
+    padding: 100px 30px 30px;
+  }
+
+  .feedTitle {
+    font-size: 2.2rem;
+  }
+
+  .feedSubtitle {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+  }
+
+  .postCreatorContainer {
+    margin-bottom: 30px;
+  }
+
+  .postsContainer {
+    gap: 20px;
+  }
+
+  .noPosts {
+    font-size: 1.2rem;
+    padding: 40px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .feedNavbar {
+    padding: 15px 30px;
+  }
+
+  .logo {
+    width: 45px;
+    height: 45px;
+  }
+
+  .logoText {
+    font-size: 1.2rem;
+  }
+
+  .feedContent {
+    padding: 120px 40px 40px;
+  }
+
+  .feedTitle {
+    font-size: 2.8rem;
+  }
+
+  .feedSubtitle {
+    font-size: 1.2rem;
+  }
+
+  .navItem {
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+}
+
+/* Widescreen */
+@media (min-width: 1440px) {
+  .feedContent {
+    max-width: 1400px;
+  }
+
+  .feedTitle {
+    font-size: 3rem;
+  }
+
+  .postsContainer {
+    gap: 25px;
+  }
+}

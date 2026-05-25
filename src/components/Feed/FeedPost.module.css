@@ -1,0 +1,262 @@
+.post {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(243, 99, 22, 0.3);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.post:hover {
+  border-color: rgba(243, 99, 22, 0.5);
+  box-shadow: 0 0 20px rgba(243, 99, 22, 0.1);
+}
+
+.postHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.userAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(243, 99, 22, 0.8), rgba(243, 99, 22, 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #000;
+  border: 2px solid rgba(243, 99, 22, 0.4);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.userName {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.postTime {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.postContent {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.postContent p {
+  margin: 0 0 15px 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.postImages {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.postImage {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.postImages .postImage:first-child:nth-last-child(1) {
+  width: 100%;
+  max-height: 500px;
+}
+
+.postImages .postImage:first-child:nth-last-child(2),
+.postImages .postImage:nth-child(2):last-child {
+  width: calc(50% - 5px);
+  max-height: 300px;
+}
+
+.postGif {
+  margin-top: 15px;
+}
+
+.postGifImage {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.postActions {
+  display: flex;
+  gap: 15px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(243, 99, 22, 1);
+}
+
+.actionButton.liked {
+  color: #ff6b6b;
+}
+
+.actionButton.liked:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.actionButton span {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.followButton {
+  background: rgba(243, 99, 22, 0.1);
+  border: 1px solid rgba(243, 99, 22, 0.4);
+  color: rgba(243, 99, 22, 1);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.followButton:hover {
+  background: rgba(243, 99, 22, 0.2);
+  border-color: rgba(243, 99, 22, 0.6);
+  transform: scale(1.05);
+}
+
+.followButton.following {
+  background: rgba(243, 99, 22, 0.8);
+  color: #000;
+  border-color: rgba(243, 99, 22, 1);
+}
+
+.followButton.following:hover {
+  background: rgba(243, 99, 22, 0.7);
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .post {
+    padding: 20px;
+    border-radius: 15px;
+  }
+
+  .postHeader {
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+
+  .userAvatar {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+
+  .userInfo {
+    gap: 4px;
+  }
+
+  .userName {
+    font-size: 1.1rem;
+  }
+
+  .postTime {
+    font-size: 0.85rem;
+  }
+
+  .postContent {
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 10px;
+  }
+
+  .postContent p {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .postActions {
+    gap: 20px;
+    padding-top: 15px;
+  }
+
+  .actionButton {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .actionButton span {
+    font-size: 0.9rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .post {
+    padding: 25px;
+  }
+
+  .postHeader {
+    gap: 18px;
+  }
+
+  .userAvatar {
+    width: 55px;
+    height: 55px;
+    font-size: 1.6rem;
+  }
+
+  .userName {
+    font-size: 1.15rem;
+  }
+
+  .postContent {
+    padding: 18px;
+  }
+
+  .postContent p {
+    font-size: 1.05rem;
+  }
+}

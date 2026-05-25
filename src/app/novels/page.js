@@ -17,12 +17,15 @@ import {
   FaSearch,
   FaClock,
   FaSpinner,
+  FaGem,
+  FaStar,
 } from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
 import LoadingPage from "../../components/LoadingPage";
-import { Connection } from "@solana/web3.js";
-import { RPC_URL } from "@/constants";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
+import { RPC_URL, SMP_MINT_ADDRESS, AMETHYST_MINT_ADDRESS } from "@/constants";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import styles from "../../styles/NovelsPage.module.css";
 
@@ -58,6 +61,8 @@ export default function NovelsPage() {
   const isWalletConnected = connected || !!embeddedWallet;
   const router = useRouter();
   const [balance, setBalance] = useState(0);
+  const [smpBalance, setSmpBalance] = useState(null);
+  const [amethystBalance, setAmethystBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [novels, setNovels] = useState([]);
   const [filteredNovels, setFilteredNovels] = useState([]);
@@ -81,6 +86,40 @@ export default function NovelsPage() {
 
   const handleNavigation = (path) => router.push(path);
 
+  const fetchSmpBalanceOnChain = async () => {
+    if (!activePublicKey) return 0;
+    
+    try {
+      const smpMintPublicKey = SMP_MINT_ADDRESS;
+      const userPublicKey = new PublicKey(activePublicKey);
+
+      console.log("[fetchSmpBalanceOnChain] Fetching SMP balance for:", activePublicKey.toString());
+      console.log("[fetchSmpBalanceOnChain] SMP Mint Address:", smpMintPublicKey.toString());
+
+      const ataAddress = getAssociatedTokenAddressSync(smpMintPublicKey, userPublicKey);
+      console.log("[fetchSmpBalanceOnChain] ATA Address:", ataAddress.toString());
+      
+      const ataInfo = await connection.getAccountInfo(ataAddress);
+      console.log("[fetchSmpBalanceOnChain] ATA Info exists:", !!ataInfo);
+      
+      let blockchainSmpBalance = 0;
+      if (ataInfo) {
+        const ata = unpackAccount(ataAddress, ataInfo);
+        console.log("[fetchSmpBalanceOnChain] Raw amount:", ata.amount.toString());
+        blockchainSmpBalance = Number(ata.amount) / 1_000_000; // Convert from base units to SMP (6 decimals)
+        console.log("[fetchSmpBalanceOnChain] Converted balance:", blockchainSmpBalance);
+      } else {
+        console.log("[fetchSmpBalanceOnChain] No ATA found, balance is 0");
+      }
+
+      console.log("[fetchSmpBalanceOnChain] Final SMP balance:", blockchainSmpBalance);
+      return blockchainSmpBalance;
+    } catch (err) {
+      console.error("[fetchSmpBalanceOnChain] Error fetching SMP balance from wallet:", err);
+      return 0;
+    }
+  };
+
   const checkBalance = async () => {
     if (!isWalletConnected || !activePublicKey) return;
     try {
@@ -93,15 +132,48 @@ export default function NovelsPage() {
       if (error || !user) throw new Error("User not found");
       setWeeklyPoints(user.weekly_points || 0);
 
-      const { data: walletBalance } = await supabase
-        .from("wallet_balances")
-        .select("amount")
-        .eq("user_id", user.id)
-        .eq("currency", "SMP")
-        .eq("chain", "SOL")
-        .single();
+      // SMP balance now fetched directly from wallet (same as Amethyst)
+      const onChainSmp = await fetchSmpBalanceOnChain();
+      setSmpBalance(onChainSmp ?? 0);
+      
+      // Fetch and cache Amethyst balance from blockchain (using same method as swap page)
+      try {
+        const amethystMintPublicKey = AMETHYST_MINT_ADDRESS;
+        const userPublicKey = new PublicKey(activePublicKey);
 
-      setBalance(walletBalance?.amount || 0);
+        // Use the same method as swap page
+        const ataAddress = getAssociatedTokenAddressSync(amethystMintPublicKey, userPublicKey);
+        const ataInfo = await connection.getAccountInfo(ataAddress);
+        
+        let blockchainAmethystBalance = 0;
+        if (ataInfo) {
+          const ata = unpackAccount(ataAddress, ataInfo);
+          blockchainAmethystBalance = Math.floor(Number(ata.amount) / Math.pow(10, 6)); // 6 decimals for Amethyst, convert to integer
+        }
+
+        // Update the cache in database
+        const { error: updateError } = await supabase
+          .from("amethyst_balances")
+          .upsert({
+            user_id: user.id,
+            wallet_address: activePublicKey.toString(),
+            amethyst_balance: blockchainAmethystBalance,
+            last_updated: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (updateError) {
+          console.error("[checkBalance] Error updating Amethyst cache:", updateError);
+        } else {
+          console.log("[checkBalance] Updated Amethyst cache to:", blockchainAmethystBalance);
+        }
+
+        setAmethystBalance(blockchainAmethystBalance);
+      } catch (err) {
+        console.error("[checkBalance] Error fetching Amethyst balance:", err);
+        setAmethystBalance(0);
+      }
 
       const { data: pendingData } = await supabase
         .from("pending_withdrawals")
@@ -406,102 +478,20 @@ export default function NovelsPage() {
       </main>
 
       {isWalletConnected && (
-        <>
-          <div className={`${styles.walletPanel} ${walletPanelOpen ? styles.walletPanelOpen : ""}`}>
-            <button className={styles.walletToggle} onClick={toggleWalletPanel}>
-              <FaWallet />
-              <span className={styles.walletSummary}>{balance.toLocaleString()} SMP | {weeklyPoints.toLocaleString()} Pts</span>
-            </button>
-            <div className={styles.walletCountdown}>
-              <FaClock /> <span>Countdown PAUSED</span>
-            </div>
-            <div className={styles.walletContent}>
-              <div className={styles.walletInfo}>
-                <p><span>Balance:</span> {balance.toLocaleString()} SMP</p>
-                <p><span>Points:</span> {weeklyPoints.toLocaleString()}</p>
-                {pendingWithdrawal > 0 && <p>Pending: {pendingWithdrawal.toLocaleString()} SMP</p>}
-              </div>
-              <div className={styles.withdrawSection}>
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder={`Amount (Min: ${MIN_WITHDRAWAL})`}
-                  className={styles.withdrawInput}
-                  min={MIN_WITHDRAWAL}
-                  step="0.000001"
-                />
-                <div className={styles.withdrawActions}>
-                  <button
-                    onClick={handleWithdraw}
-                    disabled={isWithdrawing}
-                    className={styles.withdrawButton}
-                  >
-                    {isWithdrawing ? (
-                      <FaSpinner className={styles.spinner} />
-                    ) : (
-                      "Withdraw"
-                    )}
-                  </button>
-                  <button onClick={checkBalance} disabled={isWithdrawing}>
-                    Refresh
-                  </button>
-                </div>
-                {errorMessage && (
-                  <p className={styles.errorText}>
-                    {typeof errorMessage === "string" ? errorMessage : errorMessage}
-                  </p>
-                )}
-              </div>
-            </div>
+        <div className={styles.balanceFloat}>
+          <div className={styles.balanceItem}>
+            <FaWallet className={styles.balanceIcon} />
+            <span>SMP: {smpBalance !== null ? smpBalance.toLocaleString() : "Loading..."}</span>
           </div>
-
-          {/* Profile Warning Modal */}
-          {showProfileWarning && (
-            <div className={styles.modalOverlay}>
-              <div className={styles.modal}>
-                <h2>Complete Your Profile</h2>
-                <p>
-                  Please complete your profile with a username, email, and a verified X account before withdrawing.
-                </p>
-                <div className={styles.modalActions}>
-                  <Link href="/editprofile" className={styles.modalButton}>
-                    Update Profile
-                  </Link>
-                  <button
-                    onClick={() => setShowProfileWarning(false)}
-                    className={styles.modalButton}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Success Popup */}
-          {showSuccessPopup && (
-            <div className={styles.successOverlay}>
-              <div className={styles.successModal}>
-                <h2>Withdrawal Successful!</h2>
-                <p>
-                  You have successfully withdrawn {successDetails.amount.toLocaleString()} SMP.
-                </p>
-                <p className={styles.signature}>
-                  Transaction Signature: <span>{successDetails.signature}</span>
-                </p>
-                <div className={styles.modalActions}>
-                  <button
-                    onClick={() => setShowSuccessPopup(false)}
-                    className={styles.modalButton}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+          <div className={styles.balanceItem}>
+            <FaGem className={styles.balanceIcon} />
+            <span>Amethyst: {amethystBalance !== null ? amethystBalance.toLocaleString() : "Loading..."}</span>
+          </div>
+          <div className={styles.balanceItem}>
+            <FaStar className={styles.balanceIcon} />
+            <span>Points: {weeklyPoints !== null ? weeklyPoints.toLocaleString() : "Loading..."}</span>
+          </div>
+        </div>
       )}
     </div>
   );

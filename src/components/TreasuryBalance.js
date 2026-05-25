@@ -1,66 +1,65 @@
 import { useEffect, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAccount, TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
-import { AMETHYST_MINT_ADDRESS, RPC_URL } from '@/constants';
+import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from '@/constants';
 
-const SOLANA_RPC_URL = RPC_URL; // Replace with your RPC URL
-const TREASURY_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58"; // The treasury wallet address
+const SOLANA_RPC_URL = RPC_URL;
+const TREASURY_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 
 const TreasuryBalance = () => {
-  const [balance, setBalance] = useState(null); // Keep balance as BigInt (or string)
+  const [amethystBalance, setAmethystBalance] = useState(null);
+  const [smpBalance, setSmpBalance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBalance = async () => {
+    const fetchBalances = async () => {
       try {
         const connection = new Connection(SOLANA_RPC_URL);
         const treasuryPublicKey = new PublicKey(TREASURY_WALLET);
         const amethystMintPublicKey = new PublicKey(AMETHYST_MINT_ADDRESS);
+        const smpMintPublicKey = new PublicKey(SMP_MINT_ADDRESS);
 
-        // Find the associated token address for the treasury wallet and Amethyst mint
-        const associatedTokenAddress = await getAssociatedTokenAddress(amethystMintPublicKey, treasuryPublicKey);
-
-        console.log("Treasury Wallet Address:", treasuryPublicKey.toString());
-        console.log("Amethyst Mint Address:", amethystMintPublicKey.toString());
-        console.log("Associated Token Address:", associatedTokenAddress.toString());
-
-        // Check if the associated token account exists
-        const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
+        // Fetch Amethyst balance
+        const amethystATA = await getAssociatedTokenAddress(amethystMintPublicKey, treasuryPublicKey);
+        const amethystAccountInfo = await connection.getAccountInfo(amethystATA);
         
-        if (!accountInfo) {
-          console.log("Associated token account not found.");
-          setBalance(0); // No account found, so set balance to 0
-          return;
+        let amethAmount = 0;
+        if (amethystAccountInfo) {
+          const amethystTokenAccount = await getAccount(connection, amethystATA);
+          const tokenAmount = amethystTokenAccount.amount.toString();
+          const tokenAmountFormatted = (BigInt(tokenAmount) / BigInt(10 ** 0)).toString();
+          amethAmount = (parseInt(tokenAmountFormatted) / 1000000).toFixed(6);
         }
+        setAmethystBalance(amethAmount);
 
-        // Get the account info and fetch the balance
-        const tokenAccount = await getAccount(connection, associatedTokenAddress);
+        // Fetch SMP balance
+        const smpATA = await getAssociatedTokenAddress(smpMintPublicKey, treasuryPublicKey);
+        const smpAccountInfo = await connection.getAccountInfo(smpATA);
+        
+        let smpAmount = 0;
+        if (smpAccountInfo) {
+          const smpTokenAccount = await getAccount(connection, smpATA);
+          const tokenAmount = smpTokenAccount.amount.toString();
+          const tokenAmountFormatted = (BigInt(tokenAmount) / BigInt(10 ** 6)).toString();
+          smpAmount = (parseInt(tokenAmountFormatted) / 1000000).toFixed(6);
+        }
+        setSmpBalance(smpAmount);
 
-        // Convert to string and add six decimals
-        const tokenAmount = tokenAccount.amount.toString(); // Token amount as string
-        const decimals = 0; // Assuming the token has 6 decimals
-        const tokenAmountWithDecimals = (BigInt(tokenAmount) / BigInt(10 ** decimals)).toString(); // Divide by 10^6 for 6 decimals
-
-        // Display balance with six decimal places
-        const tokenAmountFormatted = (BigInt(tokenAmount) / BigInt(10 ** decimals)).toString();
-        const finalAmount = (parseInt(tokenAmountFormatted) / 1000000).toFixed(6); // Convert to float and format with 6 decimals
-
-        setBalance(finalAmount); // Set formatted balance
       } catch (error) {
-        // Ignore 429 rate limit errors - just keep last known balance
         if (error.message && error.message.includes('429')) {
           console.log('Treasury balance rate limited, keeping last balance');
           setLoading(false);
           return;
         }
-        console.error("Error fetching balance:", error);
-        setBalance(0); // If an error occurs, set balance to 0
+        console.error("Error fetching balances:", error);
+        setAmethystBalance(0);
+        setSmpBalance(0);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBalance();
+    fetchBalances();
   }, []);
 
   if (loading) {
@@ -87,10 +86,10 @@ const TreasuryBalance = () => {
       background: 'rgba(8, 8, 14, 0.5)',
       backdropFilter: 'blur(16px) saturate(140%)',
       WebkitBackdropFilter: 'blur(16px) saturate(140%)',
-      padding: '20px 28px',
+      padding: '24px 28px',
       borderRadius: '20px',
       textAlign: 'center',
-      maxWidth: '380px',
+      maxWidth: '420px',
       margin: '24px auto 0',
       color: '#fff',
       border: '1px solid rgba(243, 99, 22, 0.12)',
@@ -124,31 +123,94 @@ const TreasuryBalance = () => {
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.15em',
-        margin: '0 0 8px',
+        margin: '0 0 12px',
         color: 'rgba(243, 99, 22, 0.7)',
       }}>
         Treasury
       </p>
-      <h3 style={{
-        fontSize: '1.1rem',
-        margin: '0',
-        fontWeight: 700,
-        letterSpacing: '-0.01em',
-        color: '#fff',
-        textShadow: '0 0 20px rgba(243,99,22,0.15)',
+      
+      {/* Amethyst Balance */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        marginBottom: '16px',
       }}>
-        Amethyst Balance
-      </h3>
-      <p style={{
-        fontSize: '2rem',
-        fontWeight: 800,
-        margin: '10px 0 0',
-        color: '#fff',
-        letterSpacing: '-0.02em',
-        textShadow: '0 0 30px rgba(243,99,22,0.2)',
+        <img 
+          src="/images/amethyst-logo.jpeg" 
+          alt="Amethyst" 
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '2px solid rgba(163, 89, 255, 0.4)',
+          }}
+        />
+        <div style={{ textAlign: 'left' }}>
+          <h3 style={{
+            fontSize: '0.85rem',
+            margin: '0',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            color: 'rgba(255,255,255,0.8)',
+          }}>
+            Amethyst
+          </h3>
+          <p style={{
+            fontSize: '1.4rem',
+            fontWeight: 800,
+            margin: '4px 0 0',
+            color: '#fff',
+            letterSpacing: '-0.02em',
+            textShadow: '0 0 30px rgba(163,89,255,0.2)',
+          }}>
+            {Number(amethystBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+          </p>
+        </div>
+      </div>
+
+      {/* SMP Balance */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        paddingTop: '16px',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
       }}>
-        {Number(balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'rgba(243,99,22,0.7)' }}>AMT</span>
-      </p>
+        <img 
+          src="/images/smp-logo.jpeg" 
+          alt="SMP" 
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '2px solid rgba(243, 99, 22, 0.4)',
+          }}
+        />
+        <div style={{ textAlign: 'left' }}>
+          <h3 style={{
+            fontSize: '0.85rem',
+            margin: '0',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            color: 'rgba(255,255,255,0.8)',
+          }}>
+            SMP
+          </h3>
+          <p style={{
+            fontSize: '1.4rem',
+            fontWeight: 800,
+            margin: '4px 0 0',
+            color: '#fff',
+            letterSpacing: '-0.02em',
+            textShadow: '0 0 30px rgba(243,99,22,0.2)',
+          }}>
+            {Number(smpBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+          </p>
+        </div>
+      </div>
     </div>
   );
   

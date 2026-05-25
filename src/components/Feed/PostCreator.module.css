@@ -1,0 +1,204 @@
+.postCreator {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(243, 99, 22, 0.3);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.postForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.postInput {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(243, 99, 22, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  min-height: 80px;
+}
+
+.postInput:focus {
+  border-color: rgba(243, 99, 22, 0.6);
+  box-shadow: 0 0 10px rgba(243, 99, 22, 0.2);
+}
+
+.postInput::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.postFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.charCount {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.postButton {
+  background: linear-gradient(135deg, rgba(243, 99, 22, 1) 0%, rgba(243, 99, 22, 0.8) 100%);
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.postButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(243, 99, 22, 0.4);
+}
+
+.postButton:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+}
+
+.mediaButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.mediaButton {
+  background: none;
+  border: none;
+  color: rgba(243, 99, 22, 1);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.mediaButton:hover:not(:disabled) {
+  background: rgba(243, 99, 22, 0.2);
+  transform: scale(1.1);
+}
+
+.mediaButton:disabled {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+}
+
+.fileInput {
+  display: none;
+}
+
+.mediaPreview {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.mediaItem {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(243, 99, 22, 0.3);
+}
+
+.previewImage {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.removeButton {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.removeButton:hover {
+  background: rgba(255, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .postCreator {
+    padding: 20px;
+    border-radius: 15px;
+  }
+
+  .postForm {
+    gap: 15px;
+  }
+
+  .postInput {
+    padding: 15px;
+    font-size: 1rem;
+    border-radius: 10px;
+    min-height: 100px;
+  }
+
+  .postFooter {
+    gap: 15px;
+  }
+
+  .charCount {
+    font-size: 0.85rem;
+  }
+
+  .postButton {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    gap: 8px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .postCreator {
+    padding: 25px;
+  }
+
+  .postInput {
+    padding: 18px;
+    font-size: 1.05rem;
+    min-height: 120px;
+  }
+
+  .postButton {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+}

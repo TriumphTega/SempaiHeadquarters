@@ -709,6 +709,7 @@
   padding: 20px;
   max-height: 70vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .kaModal :global(.modal-body::-webkit-scrollbar) {
@@ -731,6 +732,23 @@
 
 .kaModal :global(.btn-close:hover) {
   opacity: 1;
+}
+
+/* Mobile Responsive Modal */
+@media (max-width: 768px) {
+  .kaModal :global(.modal-dialog) {
+    max-width: 95vw;
+    margin: 10px auto;
+  }
+
+  .kaModal :global(.modal-content) {
+    max-width: 95vw;
+  }
+
+  .kaModal :global(.modal-body) {
+    padding: 15px;
+    max-height: 60vh;
+  }
 }
 
 /* ── Fullscreen Combat Modal ── */

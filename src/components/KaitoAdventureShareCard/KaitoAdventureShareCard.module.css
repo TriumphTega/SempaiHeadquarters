@@ -1,0 +1,313 @@
+.shareCard {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  font-family: 'Courier New', monospace;
+}
+
+.cardBackground {
+  position: relative;
+  background: linear-gradient(135deg, rgba(0, 30, 0, 0.95) 0%, rgba(0, 50, 0, 0.9) 100%);
+  border: 4px solid rgba(139, 69, 19, 0.6);
+  border-radius: 0;
+  padding: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(144, 238, 144, 0.2);
+}
+
+.militaryGrid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(144, 238, 144, 0.03) 1px, rgba(144, 238, 144, 0.03) 2px),
+    repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(144, 238, 144, 0.03) 1px, rgba(144, 238, 144, 0.03) 2px);
+  pointer-events: none;
+}
+
+.glowOrb1 {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.glowOrb2 {
+  position: absolute;
+  bottom: -75px;
+  left: -75px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(139, 69, 19, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.militaryBorder1 {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 2px solid rgba(255, 215, 0, 0.2);
+  border-radius: 0;
+  pointer-events: none;
+}
+
+.militaryBorder2 {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  bottom: 15px;
+  border: 1px solid rgba(139, 69, 19, 0.3);
+  border-radius: 0;
+  pointer-events: none;
+}
+
+.cardContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(144, 238, 144, 0.2);
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 215, 0, 0.5);
+}
+
+.logoText {
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.badge {
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.4), rgba(205, 133, 63, 0.3));
+  border: 2px solid rgba(205, 133, 63, 0.5);
+  padding: 8px 16px;
+  clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+}
+
+.badgeText {
+  font-size: 12px;
+  font-weight: 900;
+  color: #cd853f;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px;
+  background: rgba(85, 107, 47, 0.15);
+  border: 1px solid rgba(144, 238, 144, 0.3);
+  clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+}
+
+.rankBadge {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ffd700, #ffed4e, #ffa500);
+  border: 4px solid rgba(139, 69, 19, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.rankNumber {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.rankLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: #1a1a2e;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.avatar {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(85, 107, 47, 0.8), rgba(139, 69, 19, 0.6));
+  border: 2px solid rgba(144, 238, 144, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: #90ee90;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.username {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(144, 238, 144, 0.3);
+}
+
+.timeFrame {
+  font-size: 12px;
+  color: #90ee90;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.statsSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 15px;
+  background: rgba(139, 69, 19, 0.2);
+  border: 1px solid rgba(205, 133, 63, 0.4);
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #cd853f;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.statDivider {
+  width: 2px;
+  height: 40px;
+  background: linear-gradient(180deg, transparent, rgba(144, 238, 144, 0.3), transparent);
+}
+
+.cardFooter {
+  text-align: center;
+  padding-top: 15px;
+  border-top: 2px solid rgba(144, 238, 144, 0.2);
+}
+
+.ctaText {
+  font-size: 14px;
+  color: #90ee90;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.urlDisplay {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(144, 238, 144, 0.3);
+  padding: 8px 12px;
+  display: inline-block;
+  clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+}
+
+.urlText {
+  font-size: 12px;
+  color: #90ee90;
+  font-family: 'Courier New', monospace;
+}
+
+.cornerTopLeft,
+.cornerTopRight,
+.cornerBottomLeft,
+.cornerBottomRight {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  pointer-events: none;
+}
+
+.cornerTopLeft {
+  top: 5px;
+  left: 5px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.cornerTopRight {
+  top: 5px;
+  right: 5px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.cornerBottomLeft {
+  bottom: 5px;
+  left: 5px;
+  border-right: none;
+  border-top: none;
+}
+
+.cornerBottomRight {
+  bottom: 5px;
+  right: 5px;
+  border-left: none;
+  border-top: none;
+}

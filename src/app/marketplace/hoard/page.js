@@ -29,6 +29,8 @@ export default function HoardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [embers, setEmbers] = useState([]);
+  const [isTop50, setIsTop50] = useState(false);
+  const [userRank, setUserRank] = useState(null);
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,6 +78,33 @@ export default function HoardPage() {
       }));
     setEmbers(buildEmbers(18));
   }, []);
+
+  // Check if user is in top 50 leaderboard
+  const checkLeaderboardRank = async () => {
+    if (!user) return;
+
+    try {
+      const token = session?.access_token;
+      const res = await fetch("/api/leaderboard/check-rank", {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      const data = await res.json();
+      if (res.ok && data.rank) {
+        setUserRank(data.rank);
+        setIsTop50(data.rank <= 50);
+      }
+    } catch (err) {
+      console.error("Error checking leaderboard rank:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      checkLeaderboardRank();
+    }
+  }, [user]);
 
   // Fetch Hoard
   const fetchHoard = async () => {
@@ -176,6 +205,12 @@ export default function HoardPage() {
   // List for Sale
   const handleListForSale = async () => {
     if (!selectedListingItem || !listingPrice) return;
+
+    // Check if user is in top 50
+    if (!isTop50) {
+      alert(`Listing on Bazaar is currently restricted to the Top 50 leaderboard users. Your current rank: ${userRank || 'Not ranked'}. Keep reading to climb the leaderboard!`);
+      return;
+    }
 
     try {
       const token = session?.access_token;
@@ -484,7 +519,7 @@ export default function HoardPage() {
                 }}
               >
                 <FaSearch size={14} />
-                Marketplace
+                Bazaar
               </button>
               <button
                 onClick={() => router.push("/marketplace/hoard")}
@@ -551,7 +586,7 @@ export default function HoardPage() {
           className={`${styles.backButton} ${kaitoStyles.navButton}`} 
           onClick={() => router.push("/marketplace")}
         >
-          <FaArrowLeft /> Back to Marketplace
+          <FaArrowLeft /> Back to Bazaar
         </button>
 
         <div className={`${styles.hoardHeaderContent} ${kaitoStyles.mainContent}`}>
@@ -561,9 +596,28 @@ export default function HoardPage() {
           <p className={`${styles.hoardSubtitle} ${kaitoStyles.heroSubtitle}`}>
             私の宝物 — My Treasured Collection
           </p>
+          {userRank && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              background: isTop50 ? 'rgba(255, 215, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+              border: isTop50 ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              display: 'inline-block',
+            }}>
+              <span style={{
+                fontSize: '0.9rem',
+                color: isTop50 ? '#ffd700' : '#9ca3af',
+                fontWeight: isTop50 ? 600 : 400,
+              }}>
+                {isTop50 ? `🏆 Top 50 Leaderboard (Rank #${userRank}) - Can List on Bazaar` : `Leaderboard Rank #${userRank} - Need Top 50 to List on Bazaar`}
+              </span>
+            </div>
+          )}
           <button 
             className={`${styles.uploadButton} ${kaitoStyles.navButtonPrimary}`} 
             onClick={() => setShowUploadModal(true)}
+            style={{ marginTop: '1rem' }}
           >
             <FaUpload /> Upload Completed Book
           </button>
@@ -852,7 +906,7 @@ export default function HoardPage() {
                 className={kaitoStyles.navButtonPrimary}
                 onClick={handleListForSale}
               >
-                List on Marketplace
+                List on Bazaar
               </button>
             </div>
           </div>

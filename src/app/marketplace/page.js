@@ -201,7 +201,7 @@ export default function MarketplacePage() {
         <div className={`${styles.landingPage} ${kaitoStyles.heroSection}`}>
           <div className={`${styles.landingContent} ${kaitoStyles.mainContent}`}>
             <FaShoppingCart className={`${styles.landingIcon} ${kaitoStyles.emptyIcon}`} />
-            <h1 className={`${styles.landingTitle} ${kaitoStyles.heroTitle}`}>Sempai Marketplace</h1>
+            <h1 className={`${styles.landingTitle} ${kaitoStyles.heroTitle}`}>Sempai Bazaar</h1>
             <p className={`${styles.landingSubtitle} ${kaitoStyles.heroSubtitle}`}>
               Sign in with Google to browse and purchase digital treasures
             </p>
@@ -345,7 +345,7 @@ export default function MarketplacePage() {
                 }}
               >
                 <FaSearch size={14} />
-                Marketplace
+                Bazaar
               </button>
               <button
                 onClick={() => router.push("/marketplace/hoard")}
@@ -418,7 +418,7 @@ export default function MarketplacePage() {
       <section className={`${styles.hoardHeader} ${kaitoStyles.heroSection}`}>
         <div className={`${styles.hoardHeaderContent} ${kaitoStyles.mainContent}`}>
           <h1 className={`${styles.hoardTitle} ${kaitoStyles.heroTitle}`}>
-            <FaShoppingCart /> Marketplace
+            <FaShoppingCart /> Bazaar
           </h1>
           <p className={`${styles.hoardSubtitle} ${kaitoStyles.heroSubtitle}`}>
             Discover and collect digital treasures from the community
@@ -448,7 +448,7 @@ export default function MarketplacePage() {
         ) : filteredListings.length === 0 ? (
           <div className={`${styles.hoardEmptyState} ${kaitoStyles.emptyState}`}>
             <FaShoppingCart className={`${styles.hoardEmptyIcon} ${kaitoStyles.emptyIcon}`} />
-            <h2 className={kaitoStyles.emptyTitle}>{searchQuery ? "No items found" : "Marketplace is Empty"}</h2>
+            <h2 className={kaitoStyles.emptyTitle}>{searchQuery ? "No items found" : "Bazaar is Empty"}</h2>
             <p className={kaitoStyles.emptyMessage}>{searchQuery ? "Try a different search term" : "Be the first to list an item for sale"}</p>
             {!searchQuery && (
               <button 

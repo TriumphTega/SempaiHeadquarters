@@ -541,16 +541,26 @@ export default function ChapterPage() {
     const smpMintPublicKey = SMP_MINT_ADDRESS;
     const userPublicKey = new PublicKey(activeWalletAddress);
 
+    console.log("[fetchSmpBalanceOnChain] Fetching SMP balance for:", activeWalletAddress);
+    console.log("[fetchSmpBalanceOnChain] SMP Mint Address:", smpMintPublicKey.toString());
+
     const ataAddress = getAssociatedTokenAddressSync(smpMintPublicKey, userPublicKey);
+    console.log("[fetchSmpBalanceOnChain] ATA Address:", ataAddress.toString());
+    
     const ataInfo = await connection.getAccountInfo(ataAddress);
+    console.log("[fetchSmpBalanceOnChain] ATA Info exists:", !!ataInfo);
     
     let blockchainSmpBalance = 0;
     if (ataInfo) {
       const ata = unpackAccount(ataAddress, ataInfo);
-      blockchainSmpBalance = Number(ata.amount); // raw base units (6 decimals)
+      console.log("[fetchSmpBalanceOnChain] Raw amount:", ata.amount.toString());
+      blockchainSmpBalance = Number(ata.amount) / 1_000_000; // Convert from base units to SMP (6 decimals)
+      console.log("[fetchSmpBalanceOnChain] Converted balance:", blockchainSmpBalance);
+    } else {
+      console.log("[fetchSmpBalanceOnChain] No ATA found, balance is 0");
     }
 
-    console.log("[fetchSmpBalanceOnChain] SMP balance from wallet (on-chain):", blockchainSmpBalance);
+    console.log("[fetchSmpBalanceOnChain] Final SMP balance:", blockchainSmpBalance);
     return blockchainSmpBalance;
   } catch (err) {
     console.error("[fetchSmpBalanceOnChain] Error fetching SMP balance from wallet:", err);
