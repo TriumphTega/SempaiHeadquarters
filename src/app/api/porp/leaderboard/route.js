@@ -8,50 +8,51 @@ const supabase = createClient(
 
 export async function GET(request) {
   try {
-    console.log('[Leaderboard API] Fetching global leaderboard');
-
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit')) || 50;
 
-    // Query weekly_leaderboard and join with users to get names
-    const { data: leaderboardData, error } = await supabase
-      .from('weekly_leaderboard')
-      .select(`
-        user_id,
-        weekly_points,
-        effective_points,
-        rank,
-        users (
-          name,
-          wallet_address
-        )
-      `)
-      .order('effective_points', { ascending: false })
+    console.log('[Leaderboard API] Fetching Kaito Adventure leaderboard with limit:', limit);
+
+    // Query players table for Kaito Adventure leaderboard
+    const { data: playersData, error: playersError } = await supabase
+      .from('players')
+      .select('wallet_address, name, level, gold, xp')
+      .order('gold', { ascending: false, nullsFirst: false })
       .limit(limit);
 
-    if (error) {
-      console.error('[Leaderboard API] Database error:', error);
-      throw error;
+    if (playersError) {
+      console.error('[Leaderboard API] Error fetching players:', playersError);
+      return NextResponse.json(
+        { error: 'Failed to fetch leaderboard data', details: playersError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!playersData || playersData.length === 0) {
+      console.log('[Leaderboard API] No players found');
+      return NextResponse.json([]);
     }
 
     // Transform data to match expected format
-    const leaderboard = leaderboardData.map((entry, index) => ({
-      walletAddress: entry.users?.wallet_address || '',
-      name: entry.users?.name || 'Anonymous',
-      score: entry.effective_points || entry.weekly_points || 0,
-      tier: 'reader', // Default tier since it's not in weekly_leaderboard
-      level: 1, // Default level since it's not in weekly_leaderboard
-      rank: entry.rank || index + 1
-    }));
+    const leaderboard = playersData
+      .filter(player => player.wallet_address)
+      .map((player, index) => ({
+        walletAddress: player.wallet_address,
+        name: player.name || 'Anonymous',
+        score: player.gold || 0,
+        tier: 'player',
+        level: player.level || 1,
+        rank: index + 1
+      }));
 
-    console.log('[Leaderboard API] Leaderboard data prepared:', leaderboard.length, 'entries');
+    console.log('[Leaderboard API] Successfully prepared', leaderboard.length, 'entries');
 
     return NextResponse.json(leaderboard);
 
   } catch (error) {
-    console.error('[Leaderboard API] Error fetching leaderboard:', error);
+    console.error('[Leaderboard API] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch leaderboard' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

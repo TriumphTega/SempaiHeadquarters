@@ -17,15 +17,12 @@ export default function LeaderboardClient() {
   const [showShareModal, setShowShareModal] = useState(false);
 
   const fetchLeaderboard = async () => {
-    if (!user) return;
     setLoading(true);
     setError(null);
 
     try {
-      const token = session?.access_token;
-      const res = await fetch("/api/porp/leaderboard", {
+      const res = await fetch("/api/porp/leaderboard?limit=50", {
         method: "GET",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       const data = await res.json();
@@ -40,8 +37,8 @@ export default function LeaderboardClient() {
   };
 
   useEffect(() => {
-    if (user) fetchLeaderboard();
-  }, [user, timeFrame]);
+    fetchLeaderboard();
+  }, [timeFrame]);
 
   const handleShare = (reader) => {
     setSelectedReader(reader);
