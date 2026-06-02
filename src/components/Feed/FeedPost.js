@@ -40,7 +40,7 @@ export default function FeedPost({ post, currentUserId }) {
       const res = await fetch(`/api/feed/posts/${post.id}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: post.user.id }),
+        body: JSON.stringify({ userId: currentUserId }),
       });
 
       const data = await res.json();
@@ -54,7 +54,7 @@ export default function FeedPost({ post, currentUserId }) {
         await fetch("/api/feed/engagement", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: post.user.id, postId: post.id, engagementType: "like" }),
+          body: JSON.stringify({ userId: currentUserId, postId: post.id, engagementType: "like" }),
         });
       }
     } catch (error) {
@@ -155,7 +155,7 @@ export default function FeedPost({ post, currentUserId }) {
       </div>
 
       {showComments && (
-        <CommentSection postId={post.id} userId={post.user.id} onCommentAdded={handleCommentAdded} />
+        <CommentSection postId={post.id} userId={currentUserId} onCommentAdded={handleCommentAdded} />
       )}
     </div>
   );

@@ -14,7 +14,7 @@ const CraftModal = ({ player, selectedIngredients, setSelectedIngredients, toggl
           label={`${item.name} (${item.owned ? item.quantity : "∞"}) (Selected: ${selectedIngredients.filter(i => i === item.name).length})`}
           checked={selectedIngredients.includes(item.name)}
           onChange={() => toggleIngredient(item.name)}
-          disabled={!item.owned || item.quantity === 0}
+          disabled={item.owned && item.quantity === 0}
         />
       ))}
     </Form>

@@ -517,22 +517,17 @@ const KaitoAdventure = () => {
   }, []);
 
   // ---- Crafting ----
-  const toggleIngredient = useCallback((item) => {
-    setSelectedIngredients(prev => {
-      const countInSelection = prev.filter(i => i === item).length;
-      const ownedItem = player.inventory.find(i => i.name === item);
-      const maxAllowed = ownedItem ? ownedItem.quantity : 0;
-      if (countInSelection < maxAllowed) {
-        return [...prev, item];
-      } else {
-        return prev.filter((i, idx) => i !== item || prev.indexOf(i) !== idx);
-      }
-    });
-  }, [player.inventory]);
-
   const getAvailableIngredients = useMemo(() => {
     return allIngredients.map(name => {
       const item = player.inventory.find(i => i.name === name);
+      // Water, sugar, and shadow root are always available with infinity quantity
+      if (['Water', 'Sugar', 'Shadow Root'].includes(name)) {
+        return {
+          name,
+          quantity: Infinity,
+          owned: true,
+        };
+      }
       return {
         name,
         quantity: item?.quantity ?? 0,
@@ -540,6 +535,25 @@ const KaitoAdventure = () => {
       };
     });
   }, [player.inventory]);
+
+  const toggleIngredient = useCallback((item) => {
+    setSelectedIngredients(prev => {
+      const countInSelection = prev.filter(i => i === item).length;
+      const ownedItem = player.inventory.find(i => i.name === item);
+      const availableItem = getAvailableIngredients.find(i => i.name === item);
+      const maxAllowed = availableItem ? availableItem.quantity : (ownedItem ? ownedItem.quantity : 0);
+      
+      // Toggle behavior: if already selected, remove one; if not selected and under max, add one
+      if (countInSelection > 0) {
+        // Remove one instance
+        return prev.filter((i, idx) => i !== item || prev.indexOf(i) !== idx);
+      } else if (countInSelection < maxAllowed) {
+        // Add one instance
+        return [...prev, item];
+      }
+      return prev;
+    });
+  }, [player.inventory, getAvailableIngredients]);
 
   const craftItem = useCallback((type, onSuccess) => {
     const recipe = player.recipes.find(r =>

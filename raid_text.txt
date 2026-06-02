@@ -1,0 +1,931 @@
+================================================================================
+                    STORY RAIDS: IMPLEMENTATION ROADMAP
+                         Version 1.0 - Strategic Plan
+================================================================================
+
+TABLE OF CONTENTS
+1. Vision & The Beauty of Story Raids
+2. Core Value Proposition
+3. Technical Architecture Overview
+4. MVP (Phase 1) - Foundation
+5. V2 (Phase 2) - Depth & Engagement
+6. V3 (Phase 3) - Ecosystem & Scale
+7. Implementation Strategy
+8. Success Metrics
+9. Risk Mitigation
+
+================================================================================
+1. VISION & THE BEAUTY OF STORY RAIDS
+================================================================================
+
+THE PROBLEM WE'RE SOLVING
+--------------------------
+Reading novels is traditionally a solitary, passive experience. Readers consume
+content alone, with no way to influence the story or connect with others who
+share their passion. Writers create in isolation, unable to see real-time
+community engagement or reward their most dedicated fans.
+
+Even with our read-to-earn model, the engagement loop is:
+  Read → Earn → Leave
+
+We want to transform this into:
+  Read → Engage → Connect → Compete → Earn → Return
+
+THE BEAUTY OF STORY RAIDS
+-------------------------
+Story Raids transforms passive reading into active participation by turning
+story moments into community events. Here's why this is beautiful:
+
+1. READERS BECOME PARTICIPANTS
+   - Instead of just reading about a battle, readers JOIN the battle
+   - Their choices actually matter (even if fictional)
+   - They develop affinity with characters through actions, not just reading
+   - They feel ownership over the story world
+
+2. WRITERS GET REAL-TIME FEEDBACK
+   - See which characters readers love most (via faction choices)
+   - Understand what plot points excite the community
+   - Can adapt future chapters based on raid outcomes
+   - Get instant validation when readers engage deeply
+
+3. COMMUNITY FORMS ORGANICALLY
+   - Factions create natural "teams" and rivalries
+   - Readers discuss strategy, predictions, and lore
+   - Discord/Twitter war rooms emerge naturally
+   - New readers are pulled in by the excitement
+
+4. RETENTION MULTIPLIES
+   - Readers return to check raid progress
+   - They want to see if their faction is winning
+   - They discuss raids with friends
+   - They anticipate the next raid trigger
+
+5. SKILL & LOVE ARE REWARDED
+   - Not pay-to-win - cosmetic rewards only
+   - Deep readers who understand the story have advantage
+   - Engagement matters more than wallet size
+   - Badges and titles showcase dedication
+
+THE EMOTIONAL HOOK
+------------------
+Imagine reading a chapter where the protagonist faces a critical choice:
+  "The Crimson Gate stands before you. Behind it, the enemy prepares their
+   final ritual. You have 48 hours to decide: breach with force, infiltrate
+   stealthily, or negotiate with the gatekeeper?"
+
+Instead of turning the page to find out what happens, YOU get to vote.
+You join thousands of other readers in a real-time event. You choose your
+faction (Hunters, Rebels, or Scholars). You debate strategy in comments.
+You watch the leaderboard shift as more readers join.
+
+When the raid ends, the author writes the NEXT chapter based on what happened.
+If Hunters won, the chapter shows a brutal assault. If Rebels won, it shows
+a cunning infiltration. YOUR choice shaped the story.
+
+That's the beauty of Story Raids.
+
+================================================================================
+2. CORE VALUE PROPOSITION
+================================================================================
+
+FOR READERS
+-----------
+- Transform from consumer to participant
+- Connect with like-minded readers through factions
+- Earn recognition (badges, titles) for engagement
+- Influence story outcomes
+- Experience novels as live events
+
+FOR WRITERS
+-----------
+- Real-time engagement metrics
+- Direct feedback on character/story popularity
+- Ability to create interactive story branches
+- Reward most dedicated readers
+- Build community around their work
+
+FOR THE PLATFORM
+----------------
+- 4x increase in session time (readers stay to engage in raids)
+- Higher retention (readers return to check progress)
+- Organic community growth (factions create social loops)
+- Differentiation from competitors (no one has this)
+- Increased token velocity (rewards drive engagement)
+
+================================================================================
+3. TECHNICAL ARCHITECTURE OVERVIEW
+================================================================================
+
+TECH STACK
+----------
+- Frontend: Next.js 16 (App Router) + React Bootstrap
+- Backend: Supabase (Postgres + Auth + Realtime + Edge Functions)
+- Storage: Supabase Storage (images, assets)
+- Wallet: Existing Solana integration (for reward distribution)
+
+CORE TABLES (MVP)
+-----------------
+1. raids - Raid configuration and status
+2. raid_factions - Faction definitions per raid
+3. raid_participation - User faction membership
+4. raid_leaderboard - Computed faction scores
+
+CORE TABLES (V2+)
+-----------------
+5. user_choices - Individual user actions (missions, predictions)
+6. character_affinity - User-character relationship tracking
+7. raid_rewards - Reward definitions and claims
+8. raid_analytics - Engagement metrics for authors
+
+REALTIME INFRASTRUCTURE
+-----------------------
+- Supabase Realtime subscriptions on:
+  * raids (status updates)
+  * raid_participation (faction counts)
+  * raid_leaderboard (score updates)
+- Optimistic UI updates for responsiveness
+- Periodic sync for data consistency
+
+EDGE FUNCTIONS
+--------------
+- end_raid: Calculate winners, distribute rewards, update analytics
+- calculate_scores: Periodic leaderboard recalculation
+- anti_bot_check: Behavioral analysis for suspicious patterns
+
+================================================================================
+4. MVP (PHASE 1) - FOUNDATION
+================================================================================
+
+TIMELINE: 2-3 weeks
+GOAL: Prove the core concept works
+
+FEATURE SCOPE
+-------------
+
+1. RAID CREATION (Author Dashboard)
+   - Simple form to create a raid
+   - Fields: title, description, start time, end time, chapter trigger
+   - Create 2-3 factions (name, color, description)
+   - Set reward amounts (tokens + badge)
+   - Status: upcoming → active → ended
+
+2. RAID PARTICIPATION (Reader Experience)
+   - Notification on chapter page when raid is available
+   - Faction selection modal (animated cards)
+   - Join faction (one-time choice per raid)
+   - View current raid status from profile
+
+3. LEADERBOARD (Real-time-ish)
+   - Display faction scores (member count × points)
+   - Update every 30 seconds (not true real-time for MVP)
+   - Show top contributors per faction
+   - Progress bars for visual appeal
+
+4. RAID COMPLETION
+   - Automatic end when time expires
+   - Determine winning faction (highest score)
+   - Distribute rewards to winning faction members
+   - Update user profiles with badges
+   - Show results page with statistics
+
+5. BASIC ANTI-BOT
+   - Rate limiting (max 1 action per second per user)
+   - Chapter verification question (must answer to join)
+   - Device fingerprinting (basic)
+   - Manual review flag for suspicious patterns
+
+DATABASE SCHEMA (MVP)
+---------------------
+
+CREATE TABLE raids (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  novel_id UUID REFERENCES novels(id),
+  chapter_trigger INTEGER, -- Which chapter triggers this raid
+  title TEXT NOT NULL,
+  description TEXT,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  status TEXT DEFAULT 'upcoming', -- upcoming, active, ended, archived
+  winning_faction_id UUID,
+  reward_tokens BIGINT DEFAULT 100,
+  reward_badge TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE raid_factions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  raid_id UUID REFERENCES raids(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, -- e.g., "Hunters", "Rebels"
+  color TEXT NOT NULL, -- Hex color for UI
+  description TEXT,
+  member_count INTEGER DEFAULT 0,
+  score BIGINT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE raid_participation (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  raid_id UUID REFERENCES raids(id) ON DELETE CASCADE,
+  faction_id UUID REFERENCES raid_factions(id) ON DELETE CASCADE,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  points_earned INTEGER DEFAULT 0,
+  verification_answer TEXT, -- Anti-bot check
+  UNIQUE(user_id, raid_id)
+);
+
+CREATE INDEX idx_raids_status ON raids(status);
+CREATE INDEX idx_raids_novel ON raids(novel_id);
+CREATE INDEX idx_participation_user ON raid_participation(user_id);
+CREATE INDEX idx_participation_raid ON raid_participation(raid_id);
+
+USER FLOWS (MVP)
+----------------
+
+FLOW 1: AUTHOR CREATES RAID
+1. Author navigates to /author/dashboard
+2. Clicks "Create New Raid"
+3. Fills form: title, description, chapter number, start/end times
+4. Adds 2-3 factions (name, color, description)
+5. Sets reward amounts
+6. Clicks "Create Raid"
+7. Raid saved with status "upcoming"
+
+FLOW 2: READER DISCOVERS RAID
+1. Reader navigates to chapter that triggers raid
+2. HUD appears: "Crimson Gate Invasion starts in 2h!"
+3. Reader clicks "Join Raid"
+4. Faction selection modal appears
+5. Reader answers verification question
+6. Reader selects faction
+7. Reader joins - sees confirmation and current standings
+
+FLOW 3: READER TRACKS RAID
+1. Reader navigates to /raids/[raidId]
+2. Sees leaderboard with faction scores
+3. Sees their faction and contribution
+4. Leaderboard updates every 30s
+5. Reader can share raid link to recruit others
+
+FLOW 4: RAID ENDS
+1. Cron job detects raid end time
+2. Edge function calculates winner
+3. Rewards distributed to winning faction
+4. Badges added to user profiles
+5. Raid status changes to "ended"
+6. Results page available
+
+UI COMPONENTS (MVP)
+-------------------
+
+1. RaidHUD (Chapter page overlay)
+   - Shows active/raids for current chapter
+   - Countdown timer
+   - "Join Raid" button
+   - Faction preview cards
+
+2. FactionPickerModal
+   - Animated faction cards
+   - Faction descriptions
+   - Member counts
+   - Selection confirmation
+
+3. RaidDashboard (/raids/[id])
+   - Leaderboard with progress bars
+   - Faction scores
+   - Time remaining
+   - "Your Faction" card
+   - Share button
+
+4. RaidResults (/raids/[id]/results)
+   - Winning faction announcement
+   - Final scores
+   - Top contributors
+   - Rewards received
+
+5. AuthorRaidCreator (/author/raids/create)
+   - Form with all raid fields
+   - Faction builder
+   - Preview mode
+   - Schedule option
+
+SUCCESS CRITERIA (MVP)
+----------------------
+- Authors can create raids successfully
+- Readers can join raids and select factions
+- Leaderboard displays accurate scores
+- Rewards distribute correctly on raid end
+- No critical bugs in core flows
+- Basic anti-bot measures prevent obvious abuse
+
+================================================================================
+5. V2 (PHASE 2) - DEPTH & ENGAGEMENT
+================================================================================
+
+TIMELINE: 4-6 weeks after MVP
+GOAL: Add strategic depth and more engagement mechanics
+
+NEW FEATURES
+------------
+
+1. CHOICE MISSIONS
+   - During raids, readers make choices that affect faction score
+   - Example: "Send scouts (risk: -10 points, reward: +50 if successful)"
+   - Choices have risk/reward mechanics
+   - Results revealed after raid ends
+   - Adds strategy beyond just joining a faction
+
+2. PREDICTIONS SYSTEM
+   - Readers predict raid outcomes before they happen
+   - Example: "Which faction will win?" "What will the final score be?"
+   - Correct predictions earn bonus points
+   - Confidence slider (higher confidence = more points)
+   - Encourages readers to analyze and discuss
+
+3. CHARACTER AFFINITY
+   - Readers build affinity with characters through actions
+   - Affinity unlocks special content (character POV chapters)
+   - High affinity readers get exclusive rewards
+   - Creates long-term engagement beyond single raids
+
+4. ADVANCED LEADERBOARDS
+   - Individual contributor rankings
+   - Faction vs faction head-to-head stats
+   - Historical raid performance
+   - Achievement badges for consistent performance
+
+5. REAL-TIME CHAT INTEGRATION
+   - Raid-specific chat rooms
+   - Filter comments by #raid hashtag
+   - Strategy discussion
+   - Live reaction to events
+
+6. NOTIFICATIONS
+   - Push notifications when raid starts
+   - Alerts when faction is losing
+   - Reminders before raid ends
+   - Victory/defeat notifications
+
+DATABASE ADDITIONS (V2)
+------------------------
+
+CREATE TABLE user_choices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  raid_id UUID REFERENCES raids(id),
+  choice_type TEXT, -- 'mission', 'prediction'
+  choice_data JSONB, -- {mission: "scout", prediction: "hunters", confidence: 0.8}
+  points_earned INTEGER DEFAULT 0,
+  is_correct BOOLEAN,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE character_affinity (
+  user_id UUID REFERENCES users(id),
+  novel_id UUID REFERENCES novels(id),
+  character_id TEXT, -- Character identifier
+  affinity INTEGER DEFAULT 0, -- 0-1000
+  actions_count INTEGER DEFAULT 0,
+  last_action_at TIMESTAMPTZ,
+  PRIMARY KEY (user_id, novel_id, character_id)
+);
+
+CREATE TABLE raid_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  raid_id UUID REFERENCES raids(id),
+  user_id UUID REFERENCES users(id),
+  type TEXT, -- 'start', 'losing', 'ending', 'result'
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+ENHANCED USER FLOWS (V2)
+-------------------------
+
+FLOW 1: MAKE CHOICES DURING RAID
+1. Reader on raid dashboard sees "Available Missions"
+2. Clicks mission to see details
+3. Selects option (scout/attack/negotiate)
+4. Confirms choice
+5. Choice queued - result revealed at raid end
+6. Points awarded based on outcome
+
+FLOW 2: SUBMIT PREDICTIONS
+1. Reader sees "Make Predictions" section
+2. Selects predicted winner
+3. Sets confidence slider (0-100%)
+4. Submits prediction
+5. Prediction locked - can't change
+6. At raid end, points awarded if correct
+
+FLOW 3: BUILD CHARACTER AFFINITY
+1. Reader completes choices involving specific character
+2. Affinity increases automatically
+3. Reader can view affinity in profile
+4. High affinity unlocks character POV chapter
+5. Reader gets "Character Ally" badge
+
+FLOW 4: RAID CHAT
+1. Reader opens raid dashboard
+2. Chat panel shows faction discussion
+3. Reader sends message
+4. Message tagged with faction color
+5. Other readers see and respond
+
+UI COMPONENTS (V2)
+------------------
+
+1. MissionModal
+   - Mission description
+   - Risk/reward breakdown
+   - Option buttons
+   - Confirmation dialog
+
+2. PredictionPanel
+   - Prediction form
+   - Confidence slider
+   - Historical predictions
+   - Accuracy stats
+
+3. AffinityCard
+   - Character image
+   - Affinity level
+   - Progress bar
+   - Unlocked content preview
+
+4. RaidChat
+   - Real-time messages
+   - Faction color coding
+   - Emoji reactions
+   - Moderation tools
+
+5. NotificationSettings
+   - Toggle notification types
+   - Set quiet hours
+   - Per-raid preferences
+
+SUCCESS CRITERIA (V2)
+----------------------
+- Choice missions increase engagement by 2x
+- Prediction accuracy correlates with reading depth
+- Character affinity drives re-reading of chapters
+- Chat activity shows organic community formation
+- Notifications increase raid participation by 30%
+
+================================================================================
+6. V3 (PHASE 3) - ECOSYSTEM & SCALE
+================================================================================
+
+TIMELINE: 8-12 weeks after V2
+GOAL: Build full ecosystem and prepare for scale
+
+NEW FEATURES
+------------
+
+1. PUZZLE HUNTS
+   - Hidden codes/clues embedded in chapters
+   - Readers solve puzzles to earn points
+   - Cross-chapter puzzles (span multiple chapters)
+   - Community collaboration to solve
+   - Exclusive rewards for first solvers
+
+2. STORY BRANCHING
+   - Authors upload alternative chapter endings
+   - Raid outcome determines which chapter readers see
+   - A/B/C variants based on faction victory
+   - Readers can re-read to see other branches
+   - Creates replay value
+
+3. AI DUNGEON MASTER
+   - AI generates dynamic side missions
+   - Adaptive difficulty based on reader skill
+   - Personalized story elements
+   - Infinite content possibilities
+   - Uses Groq API or local model
+
+4. COLLECTIBLE SCENE CARDS
+   - NFT cards featuring key story moments
+   - Earned through raid participation
+   - Tradable on marketplace
+   - Rarity tiers (common, rare, epic, legendary)
+   - Completionist goals
+
+5. RANK SYSTEM & TITLES
+   - Global ranks across all raids (F-rank to S-rank)
+   - Faction-specific titles
+   - Character relationship titles
+   - Display on profile
+   - Unlock special privileges
+
+6. AUTHOR ANALYTICS DASHBOARD
+   - Per-raid engagement metrics
+   - Faction preference analysis
+   - Character popularity rankings
+   - Retention impact
+   - Revenue attribution
+
+7. CROSS-NOVEL RAIDS
+   - Raids spanning multiple novels
+   - Crossover events
+   - Universe-wide conflicts
+   - Special rewards for participation
+   - Community-wide events
+
+8. MOBILE NATIVE INTEGRATION
+   - Full React Native app support
+   - Push notifications
+   - Offline raid tracking
+   - Native performance
+   - Biometric authentication for rewards
+
+DATABASE ADDITIONS (V3)
+------------------------
+
+CREATE TABLE puzzle_hunts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  raid_id UUID REFERENCES raids(id),
+  chapter_id INTEGER,
+  clue_text TEXT,
+  solution_hash TEXT, -- Hashed solution for verification
+  points_reward INTEGER,
+  solved_by UUID[] DEFAULT '{}', -- Users who solved it
+  first_solved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE chapter_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  novel_id UUID REFERENCES novels(id),
+  chapter_number INTEGER,
+  variant_letter TEXT, -- A, B, C
+  raid_outcome TEXT, -- Which raid outcome triggers this
+  content_path TEXT, -- Storage path
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE scene_cards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  raid_id UUID REFERENCES raids(id),
+  title TEXT,
+  image_path TEXT,
+  description TEXT,
+  rarity TEXT, -- common, rare, epic, legendary
+  minted_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_card_collection (
+  user_id UUID REFERENCES users(id),
+  card_id UUID REFERENCES scene_cards(id),
+  obtained_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, card_id)
+);
+
+CREATE TABLE global_ranks (
+  user_id UUID REFERENCES users(id) PRIMARY KEY,
+  rank_title TEXT DEFAULT 'F-rank Reader',
+  total_raids_participated INTEGER DEFAULT 0,
+  raids_won INTEGER DEFAULT 0,
+  total_points_earned BIGINT DEFAULT 0,
+  accuracy_pct DECIMAL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE raid_analytics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  raid_id UUID REFERENCES raids(id),
+  total_participants INTEGER,
+  faction_distribution JSONB,
+  avg_session_duration_seconds INTEGER,
+  retention_rate DECIMAL,
+  social_shares INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ADVANCED USER FLOWS (V3)
+-------------------------
+
+FLOW 1: SOLVE PUZZLE HUNT
+1. Reader notices hidden clue in chapter text
+2. Decodes clue (cipher, riddle, pattern)
+3. Submits solution via puzzle interface
+4. System verifies solution hash
+5. If correct, awards points and "First Solver" badge
+6. Puzzle marked as solved for user
+7. Can collaborate in chat to solve together
+
+FLOW 2: EXPERIENCE STORY BRANCH
+1. Raid ends with Hunters victory
+2. Reader's next chapter loads variant B
+3. Banner shows: "You're viewing the Hunters Victory ending"
+4. Reader can switch to other variants (read-only)
+5. Re-reading shows different story path
+6. Author sees which variant was most popular
+
+FLOW 3: EARN SCENE CARD
+1. Reader participates in raid
+2. Based on contribution, earns scene card
+3. Card appears in collection
+4. Can view card details and rarity
+5. Can trade on marketplace (if enabled)
+6. Completion progress tracked
+
+FLOW 4: VIEW AUTHOR ANALYTICS
+1. Author opens analytics dashboard
+2. Sees raid participation graph
+3. Sees faction preference breakdown
+4. Sees which characters drove most affinity
+5. Sees retention impact of raids
+6. Can export data for further analysis
+
+UI COMPONENTS (V3)
+------------------
+
+1. PuzzleInterface
+   - Clue display
+   - Solution input
+   - Hint system (costs points)
+   - Progress tracker
+   - Leaderboard for puzzle solvers
+
+2. ChapterVariantSelector
+   - Variant cards (A/B/C)
+   - Preview snippets
+   - "Read this version" button
+   - Comparison view
+   - Author notes
+
+3. CardCollection
+   - Grid of earned cards
+   - Rarity sorting
+   - Card detail modal
+   - Completion progress
+   - Trade interface
+
+4. RankDisplay
+   - Current rank badge
+   - Progress to next rank
+   - Rank benefits
+   - Historical rank changes
+   - Comparison to peers
+
+5. AnalyticsDashboard
+   - Participation charts
+   - Faction heatmaps
+   - Character affinity graphs
+   - Retention cohorts
+   - Export options
+
+6. AIMissionGenerator
+   - Dynamic mission cards
+   - Difficulty indicator
+   - Personalized context
+   - Accept/decline options
+   - Feedback mechanism
+
+AI DUNGEON MASTER (V3)
+----------------------
+The AI Dungeon Master uses LLM to generate personalized content:
+
+INPUTS:
+- User's reading history
+- Character affinity levels
+- Current raid context
+- User's past choices
+
+OUTPUTS:
+- Personalized side missions
+- Character-specific dialogue
+- Adaptive difficulty
+- Unique story elements
+
+EXAMPLE:
+"Based on your high affinity with Kaito and your history of stealth choices,
+here's a mission: Infiltrate the enemy camp disguised as a merchant. Risk:
+High. Reward: Kaito's personal gratitude (+50 affinity)."
+
+SCALING CONSIDERATIONS (V3)
+---------------------------
+
+1. PERFORMANCE
+   - Implement caching for leaderboards
+   - Use CDN for static assets
+   - Optimize database queries with proper indexes
+   - Consider read replicas for analytics queries
+
+2. COST MANAGEMENT
+   - Monitor Supabase Realtime usage
+   - Implement pagination for large datasets
+   - Optimize image sizes in Storage
+   - Set up cost alerts
+
+3. MODERATION
+   - Automated content filtering for chat
+   - Report system for inappropriate behavior
+   - Author moderation tools
+   - Escalation path for serious issues
+
+4. INTERNATIONALIZATION
+   - Multi-language support for raids
+   - Timezone-aware scheduling
+   - Currency localization
+   - Cultural sensitivity in content
+
+SUCCESS CRITERIA (V3)
+----------------------
+- Puzzle hunts increase chapter re-reading by 50%
+- Story branching increases completion rates by 30%
+- AI missions have 70%+ user satisfaction
+- Scene cards drive marketplace activity
+- Author analytics improve content decisions
+- Mobile native app achieves feature parity
+
+================================================================================
+7. IMPLEMENTATION STRATEGY
+================================================================================
+
+DEVELOPMENT APPROACH
+--------------------
+1. Incremental builds - each phase is independently valuable
+2. Feature flags - can roll out features gradually
+3. A/B testing - validate changes before full rollout
+4. User feedback loops - continuous improvement
+5. Monitoring & analytics - data-driven decisions
+
+TEAM STRUCTURE (RECOMMENDED)
+----------------------------
+- 1 Full-stack developer (Next.js + Supabase)
+- 1 Frontend specialist (UI/UX focus)
+- 1 Backend specialist (database + Edge Functions)
+- 1 Designer (UI components + assets)
+- 1 Product manager (coordination + feedback)
+
+PHASE GATING CRITERIA
+----------------------
+MVP → V2:
+- MVP stable for 2+ weeks
+- 70%+ raid participation rate
+- No critical bugs
+- Positive user feedback
+
+V2 → V3:
+- V2 stable for 4+ weeks
+- 2x increase in engagement metrics
+- Choice missions used by 60%+ participants
+- Infrastructure can handle 10x load
+
+TESTING STRATEGY
+----------------
+- Unit tests for core logic (scoring, rewards)
+- Integration tests for user flows
+- Load testing for leaderboards
+- Security testing for anti-bot measures
+- User acceptance testing with beta readers
+
+ROLLBACK PLAN
+-------------
+- Feature flags allow instant disable
+- Database migrations are reversible
+- Edge functions can be rolled back
+- UI components have version control
+- Critical bugs have hotfix process
+
+================================================================================
+8. SUCCESS METRICS
+================================================================================
+
+KPIs FOR MVP (30 DAYS POST-LAUNCH)
+-----------------------------------
+- 40%+ of active readers join at least one raid
+- Average session time on novel pages ↑ 2x
+- Retention D7 for raid participants > 50%
+- <10% of rewards flagged for review
+- Author adoption rate > 30%
+
+KPIs FOR V2 (60 DAYS POST-LAUNCH)
+----------------------------------
+- 60%+ of raid participants make choices
+- Prediction accuracy correlates with reading depth (r > 0.5)
+- Character affinity drives 20%+ chapter re-reads
+- Chat messages per raid > 100
+- Notification opt-in rate > 70%
+
+KPIs FOR V3 (90 DAYS POST-LAUNCH)
+----------------------------------
+- Puzzle hunt solve rate > 30%
+- Story branching increases completion by 30%
+- AI mission satisfaction rate > 70%
+- Scene cards collected by 40%+ users
+- Author analytics used by 80%+ authors
+- Mobile app feature parity achieved
+
+ENGAGEMENT METRICS
+------------------
+- Daily active users (DAU)
+- Raid participation rate
+- Average actions per raid
+- Faction balance (no faction dominates > 70%)
+- Social sharing rate
+- Time spent on raid pages
+
+TECHNICAL METRICS
+-----------------
+- Page load time < 2s
+- Realtime update latency < 5s
+- Database query time < 100ms
+- Edge function success rate > 99%
+- Error rate < 0.1%
+
+BUSINESS METRICS
+----------------
+- Token velocity increase
+- New user acquisition from raids
+- Premium subscription conversion
+- Marketplace transaction volume
+- Author retention rate
+
+================================================================================
+9. RISK MITIGATION
+================================================================================
+
+TECHNICAL RISKS
+---------------
+RISK: Realtime scaling issues
+MITIGATION: Start with polling (30s), upgrade to true realtime after validation
+Fallback: Leaderboard updates every 5 minutes if realtime fails
+
+RISK: Database performance under load
+MITIGATION: Proper indexing, read replicas, caching
+Fallback: Disable non-critical features during peak load
+
+RISK: Edge function failures
+MITIGATION: Retry logic, dead letter queue, manual override
+Fallback: Admin can manually distribute rewards
+
+PRODUCT RISKS
+--------------
+RISK: Low user adoption
+MITIGATION: Start with popular novels, author incentives, promotional raids
+Fallback: Pivot to simpler mechanics or different feature
+
+RISK: Factions become unbalanced
+MITIGATION: Auto-balancing algorithms, faction caps, handicap system
+Fallback: Merge factions or reset raid
+
+RISK: Writers find it too complex
+MITIGATION: Simplified author tools, templates, tutorials
+Fallback: Platform team creates raids for writers
+
+SECURITY RISKS
+--------------
+RISK: Bot farms exploit rewards
+MITIGATION: Behavioral analysis, device fingerprinting, CAPTCHA
+Fallback: Manual review, ban suspicious accounts
+
+RISK: Coordinate cheating (Discord groups)
+MITIGATION: Rate limiting, randomized rewards, delayed results
+Fallback: Disqualify coordinated groups
+
+RISK: Smart contract vulnerabilities (if NFTs used)
+MITIGATION: Audit contracts, start with off-chain only
+Fallback: Keep rewards off-chain until proven secure
+
+OPERATIONAL RISKS
+-----------------
+RISK: Author creates inappropriate content
+MITIGATION: Content review queue, community reporting
+Fallback: Takedown process, account suspension
+
+RISK: Toxic behavior in chat/raids
+MITIGATION: Automated filtering, moderation tools
+Fallback: Disable chat for specific raids/users
+
+RISK: Cost overruns (Supabase, Edge Functions)
+MITIGATION: Monitoring, cost alerts, usage limits
+Fallback: Downgrade features, increase prices
+
+================================================================================
+CONCLUSION
+================================================================================
+
+Story Raids represents a transformative opportunity for Sempai HQ. By turning
+passive reading into active participation, we can:
+
+1. Dramatically increase engagement and retention
+2. Build organic community around content
+3. Give writers powerful new tools
+4. Create a sustainable competitive moat
+5. Align incentives across all stakeholders
+
+The key is to start simple (MVP), validate the core concept, then iterate
+based on real user feedback. Each phase builds on the last, reducing risk
+while increasing value.
+
+The beauty of this feature is that it creates a virtuous cycle:
+  Better raids → More engagement → More writers → More content → More readers
+
+Let's build something that makes every weeb's dream a reality.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
