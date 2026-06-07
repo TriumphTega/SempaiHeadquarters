@@ -18,8 +18,16 @@ export default function WalletProvider({ children }) {
   const endpoint = clusterApiUrl(network); // Uses Mainnet endpoint
   const wallets = useMemo(
     () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
+      new PhantomWalletAdapter({
+        mobile: {
+          redirectLink: typeof window !== 'undefined' ? window.location.href : 'https://sempaihq.com'
+        }
+      }),
+      new SolflareWalletAdapter({
+        mobile: {
+          redirectLink: typeof window !== 'undefined' ? window.location.href : 'https://sempaihq.com'
+        }
+      }),
     ],
     []
   );
