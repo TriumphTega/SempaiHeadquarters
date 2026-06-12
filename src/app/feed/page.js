@@ -9,7 +9,7 @@ import styles from "@/styles/FeedPage.module.css";
 import PostCreator from "@/components/Feed/PostCreator";
 import FeedPost from "@/components/Feed/FeedPost";
 
-export default function FeedPage() {
+export default function CrazyCornerPage() {
   const { user, session } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ export default function FeedPage() {
       <div className={styles.feedContent}>
         <div className={styles.feedMain}>
           <h1 className={styles.feedTitle}>
-            <FaFeather /> SempaiHQ Feed
+            <FaFeather /> Crazy Corner
           </h1>
           <p className={styles.feedSubtitle}>
             Share your thoughts with the community

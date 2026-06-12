@@ -7,6 +7,115 @@
   overflow-x: hidden;
 }
 
+/* Author's Note Section */
+.authorNoteSection {
+  background: rgba(218, 165, 32, 0.1);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.authorNoteTitle {
+  color: #DAA520;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.authorNoteDisplay {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.authorNoteText {
+  color: #d1d5db;
+  line-height: 1.6;
+  margin: 0 0 15px 0;
+  white-space: pre-wrap;
+}
+
+.authorNoteEmpty {
+  color: #888;
+  font-style: italic;
+  margin: 0 0 15px 0;
+}
+
+.editButton {
+  background: #D94F04;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.editButton:hover {
+  background: #c43e00;
+}
+
+.authorNoteEdit {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.authorNoteTextarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #d1d5db;
+  padding: 12px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 15px;
+}
+
+.authorNoteTextarea:focus {
+  outline: none;
+  border-color: #D94F04;
+}
+
+.authorNoteActions {
+  display: flex;
+  gap: 10px;
+}
+
+.saveButton {
+  background: #D94F04;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.saveButton:hover {
+  background: #c43e00;
+}
+
+.cancelButton {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.cancelButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Animated background with gold tints */
 .backgroundAnimation {
   position: fixed;

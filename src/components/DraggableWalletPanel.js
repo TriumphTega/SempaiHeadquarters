@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaWallet } from "react-icons/fa";
+import { FaWallet, FaCreditCard } from "react-icons/fa";
 import styles from "../styles/MangaHome.module.css"; // Adjust path based on your project structure
 
-export default function DraggableWalletPanel({ connected, balance, weeklyPoints, toggleWalletPanel, walletPanelOpen }) {
+export default function Nexus({ connected, balance, weeklyPoints, toggleWalletPanel, walletPanelOpen }) {
   const [position, setPosition] = useState({ x: window.innerWidth - 340, y: window.innerHeight - 100 }); // Default bottom-right
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -70,6 +70,13 @@ export default function DraggableWalletPanel({ connected, balance, weeklyPoints,
           <div className={styles.walletContent}>
             <p><span className={styles.balanceLabel}>Balance:</span> {balance} SMP</p>
             <p><span className={styles.pointsLabel}>Points:</span> {weeklyPoints}</p>
+            <button 
+              className={styles.rampButton}
+              onClick={() => window.open('https://ramp.network', '_blank')}
+              style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#D94F04', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <FaCreditCard /> Buy Crypto
+            </button>
           </div>
         </>
       ) : (

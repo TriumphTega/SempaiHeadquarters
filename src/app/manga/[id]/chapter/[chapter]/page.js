@@ -49,6 +49,9 @@ export default function MangaChapter() {
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
   const [password, setPassword] = useState("");
+  const [authorNote, setAuthorNote] = useState("");
+  const [isEditingAuthorNote, setIsEditingAuthorNote] = useState(false);
+  const [isAuthor, setIsAuthor] = useState(false);
   // Wallet panel state (replicated from RN MangaPageScreen)
   const [walletPanelOpen, setWalletPanelOpen] = useState(false);
   const [offChainSmp, setOffChainSmp] = useState(0);
@@ -190,7 +193,7 @@ export default function MangaChapter() {
   const fetchChapter = async () => {
     const { data: chapterData } = await supabase
       .from("manga_chapters")
-      .select("id, title, is_premium, price, manga_pages (image_url, page_number), manga (user_id)")
+      .select("id, title, is_premium, price, manga_pages (image_url, page_number), manga (user_id), author_note")
       .eq("id", chapterId)
       .eq("manga_id", mangaId)
       .single();
@@ -209,6 +212,12 @@ export default function MangaChapter() {
       setIsFirstChapter(isFirst);
       // No free-bypass: premium chapters always require payment/unlock. Non-premium still require wallet connection.
       setPaymentRequired(!!chapterData.is_premium);
+      setAuthorNote(chapterData.author_note || "");
+      
+      // Check if current user is the author
+      if (userId && chapterData.manga?.user_id === userId) {
+        setIsAuthor(true);
+      }
     }
     setLoading(false);
   };
@@ -252,6 +261,23 @@ export default function MangaChapter() {
   useEffect(() => {
     if (!loading && chapter && (isFirstChapter || paymentConfirmed)) fetchRatings();
   }, [loading, chapter, isFirstChapter, paymentConfirmed]);
+
+  const handleSaveAuthorNote = async () => {
+    try {
+      const { error } = await supabase
+        .from("manga_chapters")
+        .update({ author_note: authorNote })
+        .eq("id", chapterId);
+
+      if (error) throw error;
+      setSuccessMessage("Author's note saved successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+      setIsEditingAuthorNote(false);
+    } catch (error) {
+      setError("Failed to save author's note: " + error.message);
+      setTimeout(() => setError(""), 5000);
+    }
+  };
 
   const handleRating = async (rating) => {
     if (!userId || !isWalletConnected) return;
@@ -819,6 +845,55 @@ export default function MangaChapter() {
                 isWalletConnected={isWalletConnected}
                 activePublicKey={activePublicKey}
               />
+            )}
+
+            {/* Author's Note Section */}
+            {isWalletConnected && (isFirstChapter || paymentConfirmed) && (
+              <div className={styles.authorNoteSection}>
+                <h3 className={styles.authorNoteTitle}>Author's Note</h3>
+                {isAuthor ? (
+                  <>
+                    {isEditingAuthorNote ? (
+                      <div className={styles.authorNoteEdit}>
+                        <textarea
+                          value={authorNote}
+                          onChange={(e) => setAuthorNote(e.target.value)}
+                          placeholder="Add a note for your readers..."
+                          className={styles.authorNoteTextarea}
+                          rows={4}
+                        />
+                        <div className={styles.authorNoteActions}>
+                          <button onClick={handleSaveAuthorNote} className={styles.saveButton}>
+                            Save Note
+                          </button>
+                          <button onClick={() => setIsEditingAuthorNote(false)} className={styles.cancelButton}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.authorNoteDisplay}>
+                        {authorNote ? (
+                          <p className={styles.authorNoteText}>{authorNote}</p>
+                        ) : (
+                          <p className={styles.authorNoteEmpty}>No author's note yet.</p>
+                        )}
+                        <button onClick={() => setIsEditingAuthorNote(true)} className={styles.editButton}>
+                          Edit Note
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className={styles.authorNoteDisplay}>
+                    {authorNote ? (
+                      <p className={styles.authorNoteText}>{authorNote}</p>
+                    ) : (
+                      <p className={styles.authorNoteEmpty}>No author's note for this chapter.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

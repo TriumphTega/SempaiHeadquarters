@@ -5,6 +5,7 @@ import { EmbeddedWalletProvider } from "../components/EmbeddedWalletProvider"; /
 import { AuthProvider } from "../components/AuthProvider"; // Supabase auth provider
 import WalletProvider from "../components/WalletProvider"; // Retained to avoid runtime errors in pages still using useWallet
 import AppWrapper from "../components/AppWrapper"; // App wrapper for LinkEmailBanner
+import MoonPayWrapper from "../components/MoonPayWrapper";
 
 export const metadata = {
   title: "Sempai HQ",
@@ -39,7 +40,9 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <WalletProvider>
             <EmbeddedWalletProvider>
-              <AppWrapper>{children}</AppWrapper>
+              <MoonPayWrapper>
+                <AppWrapper>{children}</AppWrapper>
+              </MoonPayWrapper>
             </EmbeddedWalletProvider>
           </WalletProvider>
         </AuthProvider>
