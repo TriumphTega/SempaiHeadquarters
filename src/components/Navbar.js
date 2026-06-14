@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useState } from "react";
-import { FaHome, FaExchangeAlt, FaUser, FaComments, FaBell } from "react-icons/fa"; // Icons from react-icons
+import { FaHome, FaWallet, FaNewspaper, FaExchangeAlt, FaUser, FaComments, FaBell, FaCreditCard } from "react-icons/fa"; // Icons from react-icons
 import ConnectButton from "../components/ConnectButton";
 import styles from "./comments/Navbar.module.css"; // New CSS module
 
@@ -90,6 +90,21 @@ export default function Navbar({ connected, isWriter, notifications, markAsRead,
             <li className="nav-item">
               <Link href="/" className={styles.navLink}>
                 <FaHome className={styles.icon} /> Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/feed" className={styles.navLink}>
+                <FaNewspaper className={styles.icon} /> Crazy Corner
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/wallet" className={styles.navLink}>
+                <FaWallet className={styles.icon} /> Nexus
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/ramp" className={styles.navLink}>
+                <FaCreditCard className={styles.icon} /> Ramp
               </Link>
             </li>
             <li className="nav-item">

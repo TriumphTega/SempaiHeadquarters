@@ -15,12 +15,6 @@ const MoonPayBuyWidget = dynamic(
   { ssr: false }
 );
 
-// Dynamic import for Transak widget to avoid SSR issues
-const TransakWidget = dynamic(
-  () => import("@/components/TransakWidget"),
-  { ssr: false }
-);
-
 export default function RampPage() {
   const { user } = useAuth();
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
@@ -28,7 +22,6 @@ export default function RampPage() {
   const [selectedProvider, setSelectedProvider] = useState("moonpay");
   const [amount, setAmount] = useState("");
   const [showMoonpayWidget, setShowMoonpayWidget] = useState(false);
-  const [showTransakWidget, setShowTransakWidget] = useState(false);
 
   // Check if wallet is connected (either embedded or external)
   const isWalletConnected = embeddedWallet || (externalConnected && externalPublicKey);
@@ -42,22 +35,6 @@ export default function RampPage() {
       icon: "🌙",
       url: "https://moonpay.com",
       features: ["Fast verification", "High limits", "Mobile-friendly", "In-app widget"]
-    },
-    {
-      id: "ramp",
-      name: "Ramp Network",
-      description: "Buy crypto with credit card, bank transfer, or Apple Pay",
-      icon: "�",
-      url: "https://ramp.network",
-      features: ["Low fees", "Instant transfers", "Multiple payment methods"]
-    },
-    {
-      id: "transak",
-      name: "Transak",
-      description: "Simple and secure way to buy crypto",
-      icon: "💳",
-      url: "https://transak.com",
-      features: ["Global coverage", "KYC verified", "24/7 support", "In-app widget"]
     }
   ];
 
@@ -68,17 +45,6 @@ export default function RampPage() {
         return;
       }
       setShowMoonpayWidget(true);
-    } else if (providerId === "transak") {
-      if (!isWalletConnected) {
-        alert("Please connect your wallet first");
-        return;
-      }
-      setShowTransakWidget(true);
-    } else {
-      const provider = providers.find(p => p.id === providerId);
-      if (provider) {
-        window.open(provider.url, '_blank');
-      }
     }
   };
 
@@ -138,9 +104,7 @@ export default function RampPage() {
                   className={styles.buyButton}
                   onClick={() => handleBuyCrypto(provider.id)}
                 >
-                  {provider.id === "moonpay" ? "Open MoonPay Widget" : 
-                   provider.id === "transak" ? "Open Transak Widget" : 
-                   `Buy with ${provider.name}`}
+                  Open MoonPay Widget
                 </button>
               </div>
             ))}
@@ -205,21 +169,6 @@ export default function RampPage() {
               walletAddress={walletAddress}
               onLogin={async () => console.log("Customer logged in!")}
               visible={showMoonpayWidget}
-            />
-          </div>
-        )}
-
-        {showTransakWidget && (
-          <div className={styles.moonpayOverlay}>
-            <button
-              className={styles.closeOverlay}
-              onClick={() => setShowTransakWidget(false)}
-            >
-              <FaArrowLeft /> Close
-            </button>
-            <TransakWidget 
-              walletAddress={walletAddress}
-              onClose={() => setShowTransakWidget(false)}
             />
           </div>
         )}
