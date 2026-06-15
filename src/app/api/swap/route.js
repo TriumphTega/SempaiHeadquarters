@@ -59,6 +59,16 @@ export async function POST(req) {
     return await handleJupiterSwap(userAddress, amount, inputMint, outputMint);
   } catch (error) {
     console.error("Swap API error:", error);
+    
+    // Check if it's a DNS/network error
+    if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo') || error.message.includes('ECONNREFUSED')) {
+      return Response.json({ 
+        error: "jupiter_api_unavailable", 
+        message: "Jupiter swap API is currently unavailable. This may be due to network issues or Jupiter API maintenance. Please try again later or use the direct Jupiter link for SMP swaps.",
+        fallbackUrl: `https://jup.ag/?sell=${inputMint}&buy=${outputMint}`
+      }, { status: 503 });
+    }
+    
     return Response.json({ error: "internal_server_error", message: error.message }, { status: 500 });
   }
 }
@@ -71,23 +81,74 @@ async function handleJupiterSwap(userAddress, amount, inputMint, outputMint) {
 
   const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=${slippageBps}&restrictIntermediateTokens=false&onlyDirectRoutes=false&instructionVersion=V2`;
 
-  const quoteResponse = await fetch(quoteUrl);
-  if (!quoteResponse.ok) throw new Error(`Jupiter quote failed: ${await quoteResponse.text()}`);
+  // Add retry logic for DNS issues
+  let quoteResponse;
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      quoteResponse = await fetch(quoteUrl);
+      if (quoteResponse.ok) break;
+      
+      // If not ok, wait and retry
+      if (retryCount < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        retryCount++;
+      }
+    } catch (error) {
+      console.error(`Jupiter API fetch attempt ${retryCount + 1} failed:`, error.message);
+      if (retryCount < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        retryCount++;
+      } else {
+        throw new Error(`Jupiter API unavailable after ${maxRetries} attempts: ${error.message}`);
+      }
+    }
+  }
+
+  if (!quoteResponse || !quoteResponse.ok) {
+    throw new Error(`Jupiter quote failed after ${maxRetries} attempts. The Jupiter API may be temporarily unavailable. Please try again later.`);
+  }
 
   const quote = await quoteResponse.json();
 
-  const swapResponse = await fetch("https://api.jup.ag/swap/v1/swap", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      quoteResponse: quote,
-      userPublicKey: userAddress,
-      wrapAndUnwrapSol: true,
-      computeUnitPriceMicroLamports: 8000,
-    }),
-  });
+  let swapResponse;
+  retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      swapResponse = await fetch("https://api.jup.ag/swap/v1/swap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteResponse: quote,
+          userPublicKey: userAddress,
+          wrapAndUnwrapSol: true,
+          computeUnitPriceMicroLamports: 8000,
+        }),
+      });
+      
+      if (swapResponse.ok) break;
+      
+      if (retryCount < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        retryCount++;
+      }
+    } catch (error) {
+      console.error(`Jupiter swap API fetch attempt ${retryCount + 1} failed:`, error.message);
+      if (retryCount < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        retryCount++;
+      } else {
+        throw new Error(`Jupiter swap API unavailable after ${maxRetries} attempts: ${error.message}`);
+      }
+    }
+  }
 
-  if (!swapResponse.ok) throw new Error("Jupiter swap failed");
+  if (!swapResponse || !swapResponse.ok) {
+    throw new Error(`Jupiter swap failed after ${maxRetries} attempts. The Jupiter API may be temporarily unavailable. Please try again later.`);
+  }
 
   const swapResult = await swapResponse.json();
 

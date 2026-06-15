@@ -142,6 +142,14 @@ export default function SwapPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if it's a Jupiter API unavailability error with fallback
+        if (data.error === "jupiter_api_unavailable" && data.fallbackUrl) {
+          window.open(data.fallbackUrl, "_blank");
+          setSuccessMessage("Jupiter API unavailable - opened direct Jupiter swap");
+          setTimeout(() => setSuccessMessage(""), 4000);
+          setLoading(false);
+          return;
+        }
         throw new Error(data.message || `API error: ${response.status}`);
       }
 
