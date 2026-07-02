@@ -81,7 +81,7 @@ const USDC_AMOUNT = 0.0025; // $0.025 per chapter
 
 // Revenue split wallet addresses
 const FOUNDER_FUND_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
-const SEMPAI_HQ_WALLET = new PublicKey("4ZFvgNZygfiCSAS4aKBbQEgwJgBq5fRT9oLAH56GrF6H");
+const SEMPAI_HQ_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
 
 const connection = new Connection(RPC_URL, {
   commitment: "confirmed",
