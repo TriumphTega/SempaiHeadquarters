@@ -3,7 +3,7 @@ import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { RPC_URL, SKR_MINT_ADDRESS } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
+const TARGET_WALLET = "62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
 const SKR_MINT_ADDRESS_STRING = SKR_MINT_ADDRESS.toString();

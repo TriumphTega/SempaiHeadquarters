@@ -104,6 +104,103 @@ function splitAmountWithResidual(amount, ratios) {
   return r;
 }
 
+// Helper: Create benefactor payment transaction with 80/20 split (author/treasury)
+async function createBenefactorPaymentTransaction({ paymentMint, paymentAmount, userPublicKey, authorPublicKey }) {
+  const [authorAmount, treasuryAmount] = splitAmountWithResidual(
+    paymentAmount,
+    [80, 20]
+  );
+  
+  const instructions = [];
+  
+  if (!paymentMint) {
+    // SOL transfer - 80% to author, 20% to treasury
+    instructions.push(
+      SystemProgram.transfer({
+        fromPubkey: userPublicKey,
+        toPubkey: authorPublicKey,
+        lamports: authorAmount,
+      }),
+      SystemProgram.transfer({
+        fromPubkey: userPublicKey,
+        toPubkey: FOUNDER_FUND_WALLET,
+        lamports: treasuryAmount,
+      })
+    );
+  } else {
+    // Token transfer - 80% to author, 20% to treasury
+    const userAta = getAssociatedTokenAddressSync(paymentMint, userPublicKey);
+    const authorAta = getAssociatedTokenAddressSync(paymentMint, authorPublicKey);
+    const treasuryAta = getAssociatedTokenAddressSync(paymentMint, FOUNDER_FUND_WALLET, true);
+
+    let reroutedToTreasury = 0;
+    
+    // Check if ATAs exist and route accordingly
+    const [authorAtaInfo, treasuryAtaInfo] = await connection.getMultipleAccountsInfo([
+      authorAta,
+      treasuryAta,
+    ]);
+
+    // Check user's SOL balance for ATA creation costs
+    const userBalance = await connection.getBalance(userPublicKey);
+    const ataRentExemption = 0.00203928 * LAMPORTS_PER_SOL; // Approximate rent exemption
+
+    // Author - Create ATA if missing and user has enough SOL
+    let authorDestAta = authorAta;
+    let authorDestAmount = authorAmount;
+    if (!authorAtaInfo) {
+      if (userBalance >= ataRentExemption) {
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            userPublicKey,
+            authorAta,
+            authorPublicKey,
+            paymentMint
+          )
+        );
+      } else {
+        reroutedToTreasury += authorAmount;
+        authorDestAta = null;
+        authorDestAmount = 0;
+      }
+    }
+    
+    // Treasury - Create ATA if missing and user has enough SOL
+    let treasuryDestAta = treasuryAta;
+    let treasuryDestAmount = treasuryAmount;
+    if (!treasuryAtaInfo) {
+      if (userBalance >= ataRentExemption) {
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            userPublicKey,
+            treasuryAta,
+            FOUNDER_FUND_WALLET,
+            paymentMint
+          )
+        );
+      } else {
+        treasuryDestAta = null;
+        treasuryDestAmount = 0;
+      }
+    }
+
+    // Build transfer instructions
+    if (authorDestAta && authorDestAmount > 0) {
+      instructions.push(createTransferInstruction(userAta, authorDestAta, userPublicKey, authorDestAmount));
+    }
+
+    // Treasury gets its share + any rerouted shares
+    const totalTreasuryAmount = treasuryDestAmount + reroutedToTreasury;
+    if (totalTreasuryAmount > 0 && treasuryDestAta) {
+      instructions.push(createTransferInstruction(userAta, treasuryDestAta, userPublicKey, totalTreasuryAmount));
+    }
+  }
+
+  const tx = new Transaction();
+  tx.add(...instructions);
+  return tx;
+}
+
 // Helper: Create payment transaction on client side
 async function createPaymentTransactionClient({ paymentMint, paymentAmount, userPublicKey, authorPublicKey, smpMintAddress }) {
   const [creatorAmount, sempaiHqAmount, founderFundAmount] = splitAmountWithResidual(
@@ -895,13 +992,12 @@ const processBenefactorPayment = async (paymentAmount, novelId, paymentMint) => 
 
     console.log(`[processBenefactorPayment] Building transaction for ${paymentAmount} units of ${mintStr}`);
 
-    // Build transaction using the passed paymentMint
-    const transaction = await createPaymentTransactionClient({
+    // Build transaction using the benefactor payment function (80/20 split)
+    const transaction = await createBenefactorPaymentTransaction({
       paymentMint,
       paymentAmount,
       userPublicKey: activePublicKey,
       authorPublicKey,
-      smpMintAddress: paymentMint,
     });
 
     // Get fresh blockhash
