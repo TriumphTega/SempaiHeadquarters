@@ -49,10 +49,10 @@ export async function POST(req) {
 
     // Define pricing tiers
     const pricingTiers = {
-      blue: { price: 0.001, chapters: 3, name: "Blue" },
-      iron: { price: 0.002, chapters: 6, name: "Iron" },
-      silver: { price: 0.003, chapters: 10, name: "Silver" },
-      gold: { price: 0.005, chapters: 999, name: "Gold" }, // 999 = unlimited
+      blue: { price: 1, chapters: 3, name: "Blue" },
+      iron: { price: 2, chapters: 6, name: "Iron" },
+      silver: { price: 3, chapters: 10, name: "Silver" },
+      gold: { price: 5, chapters: 999, name: "Gold" }, // 999 = unlimited
     };
 
     const tier = pricingTiers[plan_type];
