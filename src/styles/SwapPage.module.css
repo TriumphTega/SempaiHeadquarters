@@ -420,6 +420,31 @@
     color: rgba(255, 255, 255, 0.25);
   }
 
+  .conversionDisplay {
+    background: rgba(243, 99, 22, 0.08);
+    border: 1px solid rgba(243, 99, 22, 0.2);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    animation: inputFadeIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
+    animation-delay: 0.8s;
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .conversionRate {
+    font-size: 0.85rem;
+    color: rgba(243, 99, 22, 0.9);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .estimatedOutput {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 600;
+  }
+
   /* ---- Holographic Magma Swap Button ---- */
   .swapButton {
     position: relative;

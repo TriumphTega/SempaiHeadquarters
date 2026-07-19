@@ -12,7 +12,7 @@ import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import styles from "../../../../../styles/MangaChapter.module.css";
-import { RPC_URL, SMP_MINT_ADDRESS } from "@/constants";
+import { RPC_URL, SMP_MINT_ADDRESS, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import MangaCommentSection from "../../../../../components/MangaCommentSection";
 import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
 import ConnectButton from "@/components/ConnectButton";
@@ -70,6 +70,18 @@ export default function MangaChapter() {
     } catch (error) {
       console.error("Error fetching SOL price:", error);
       return 150;
+    }
+  };
+
+  const fetchSmpPrice = async () => {
+    try {
+      const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=smp-token-id&vs_currencies=usd");
+      const data = await response.json();
+      return data["smp-token-id"]?.usd || null;
+    } catch (error) {
+      console.error("Error fetching SMP price from CoinGecko, using fallback from constants:", error);
+      // Fallback to constant from constants.js (convert SMP per USDC to USDC per SMP)
+      return 1 / SMP_FALLBACK_PRICE_USDC;
     }
   };
 

@@ -17,6 +17,27 @@ import SendModal from "../../components/SendModal";
 
 const connection = new Connection(RPC_URL, "confirmed");
 
+// Jupiter Price API configuration
+const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+const PRICE_ENDPOINT = (ids) => `https://lite-api.jup.ag/price/v3?ids=${ids.join(',')}`;
+const QUOTE_ENDPOINT = (inputMint, amountBaseUnits) =>
+  `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${USDC_MINT_ADDRESS.toString()}&amount=${amountBaseUnits}&slippageBps=50`;
+
+// Fetch price from Jupiter Quote API (fallback when v3 drops token)
+async function fetchQuoteDerivedPrice(mint, decimals) {
+  try {
+    const amount = Math.round(10 ** decimals); // 1 whole token, in base units
+    const res = await fetch(QUOTE_ENDPOINT(mint, amount));
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.outAmount) return null;
+    return Number(data.outAmount) / 10 ** 6; // USDC has 6 decimals
+  } catch (err) {
+    console.error('[fetchQuoteDerivedPrice] Error:', err.message);
+    return null;
+  }
+}
+
 // Define allowed tokens
 const TOKEN_MINTS = {
   SOL: new PublicKey("So11111111111111111111111111111111111111112"),
@@ -68,6 +89,8 @@ export default function SwapPage() {
   // NEW MODAL STATES
   const [showFromModal, setShowFromModal] = useState(false);
   const [showToModal, setShowToModal] = useState(false);
+  const [estimatedOutput, setEstimatedOutput] = useState(null);
+  const [conversionRate, setConversionRate] = useState(null);
 
   const router = useRouter();
 
@@ -98,6 +121,91 @@ export default function SwapPage() {
   useEffect(() => {
     if (isWalletConnected) checkBalance();
   }, [isWalletConnected, activeWalletAddress, coinFrom]);
+
+  // Fetch conversion rate when amount or tokens change
+  useEffect(() => {
+    const fetchConversionRate = async () => {
+      if (!amount || parseFloat(amount) <= 0) {
+        setEstimatedOutput(null);
+        setConversionRate(null);
+        return;
+      }
+
+      const inputAmount = parseFloat(amount);
+      const inputMint = TOKEN_MINTS[coinFrom].toString();
+      const outputMint = TOKEN_MINTS[coinTo].toString();
+
+      // If SMP is involved, use fallback from constants.js for display
+      if (coinFrom === "SMP" || coinTo === "SMP") {
+        console.log('[SwapPage] SMP involved, using fallback from constants.js for conversion display');
+        const smpPerUsdc = SMP_FALLBACK_PRICE_USDC;
+        const usdcPerSmp = 1 / smpPerUsdc;
+
+        let outputAmount;
+        if (coinFrom === "SMP") {
+          // SMP to other token
+          const usdcValue = inputAmount * usdcPerSmp;
+          if (coinTo === "USDC") {
+            outputAmount = usdcValue;
+          } else if (coinTo === "SOL") {
+            // Need SOL price - fetch from Jupiter
+            try {
+              const solPrice = await fetchQuoteDerivedPrice(SOL_MINT_ADDRESS, 9) || 150;
+              outputAmount = usdcValue / solPrice;
+            } catch {
+              outputAmount = usdcValue / 150; // Fallback SOL price
+            }
+          } else {
+            // For other tokens, assume 1:1 with USDC for simplicity (can be improved)
+            outputAmount = usdcValue;
+          }
+          setConversionRate(`1 SMP = ${usdcPerSmp.toFixed(8)} USDC`);
+        } else {
+          // Other token to SMP
+          let usdcValue;
+          if (coinFrom === "USDC") {
+            usdcValue = inputAmount;
+          } else if (coinFrom === "SOL") {
+            try {
+              const solPrice = await fetchQuoteDerivedPrice(SOL_MINT_ADDRESS, 9) || 150;
+              usdcValue = inputAmount * solPrice;
+            } catch {
+              usdcValue = inputAmount * 150; // Fallback SOL price
+            }
+          } else {
+            usdcValue = inputAmount; // Assume 1:1 with USDC
+          }
+          outputAmount = usdcValue * smpPerUsdc;
+          setConversionRate(`1 USDC = ${smpPerUsdc.toFixed(2)} SMP`);
+        }
+
+        setEstimatedOutput(outputAmount);
+      } else {
+        // For non-SMP swaps, try Jupiter Quote API for accurate conversion
+        try {
+          const inputDecimals = coinFrom === "SOL" ? 9 : 6;
+          const rawAmount = Math.floor(inputAmount * 10 ** inputDecimals);
+          const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`;
+          const res = await fetch(quoteUrl);
+          if (res.ok) {
+            const data = await res.json();
+            const outputDecimals = coinTo === "SOL" ? 9 : 6;
+            const outputAmount = Number(data.outAmount) / 10 ** outputDecimals;
+            setEstimatedOutput(outputAmount);
+            setConversionRate(`1 ${coinFrom} = ${(outputAmount / inputAmount).toFixed(6)} ${coinTo}`);
+          } else {
+            setEstimatedOutput(null);
+            setConversionRate(null);
+          }
+        } catch {
+          setEstimatedOutput(null);
+          setConversionRate(null);
+        }
+      }
+    };
+
+    fetchConversionRate();
+  }, [amount, coinFrom, coinTo]);
 
   useEffect(() => {
     const handleOpenSendModal = () => setShowSendModal(true);
@@ -293,6 +401,18 @@ export default function SwapPage() {
                   <FaChevronDown className={styles.dropdownArrow} />
                 </div>
               </div>
+
+              {/* Conversion Rate Display */}
+              {estimatedOutput && (
+                <div className={styles.conversionDisplay}>
+                  <div className={styles.conversionRate}>
+                    {conversionRate && <span>{conversionRate}</span>}
+                  </div>
+                  <div className={styles.estimatedOutput}>
+                    Estimated to receive: {estimatedOutput?.toFixed(6)} {coinTo}
+                  </div>
+                </div>
+              )}
 
               {/* Your Portfolio */}
               <div className={styles.portfolioSection}>

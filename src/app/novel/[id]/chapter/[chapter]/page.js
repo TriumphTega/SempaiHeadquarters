@@ -61,6 +61,7 @@ import {
   USDC_MINT_ADDRESS,
   SKR_MINT_ADDRESS,
   TREASURY_PUBLIC_KEY,
+  SMP_FALLBACK_PRICE_USDC,
 } from "../../../../../constants";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 
@@ -75,9 +76,28 @@ const AD_VIDEO_PATH = "/ad_video.mp4"; // Update this with your video filename
 
 const MIN_ATA_SOL = 0.00103928;
 const MIN_USER_SOL = 0.001;
-const poolAddress = "3duTFdX9wrGh3TatuKtorzChL697HpiufZDPnc44Yp33";
-const meteoraApiUrl = `https://amm-v2.meteora.ag/pools?address=${poolAddress}`;
-const USDC_AMOUNT = 0.0025; // $0.025 per chapter
+const USDC_AMOUNT = 0.025; // $0.025 per chapter
+
+// Jupiter Price API configuration (same as mobile SwapScreen)
+const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+const PRICE_ENDPOINT = (ids) => `https://lite-api.jup.ag/price/v3?ids=${ids.join(',')}`;
+const QUOTE_ENDPOINT = (inputMint, amountBaseUnits) =>
+  `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${USDC_MINT_ADDRESS.toString()}&amount=${amountBaseUnits}&slippageBps=50`;
+
+// Fetch price from Jupiter Quote API (fallback when v3 drops token)
+async function fetchQuoteDerivedPrice(mint, decimals) {
+  try {
+    const amount = Math.round(10 ** decimals); // 1 whole token, in base units
+    const res = await fetch(QUOTE_ENDPOINT(mint, amount));
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.outAmount) return null;
+    return Number(data.outAmount) / 10 ** 6; // USDC has 6 decimals
+  } catch (err) {
+    console.error('[fetchQuoteDerivedPrice] Error:', err.message);
+    return null;
+  }
+}
 
 // Revenue split wallet addresses
 const FOUNDER_FUND_WALLET = new PublicKey("62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr");
@@ -536,100 +556,90 @@ export default function ChapterPage() {
     }
   }, [readingTracker, porpSessionActive, completePoRPTracking]);
 
-  // Meteora helpers (mobile parity)
-  const fetchPoolData = useCallback(async () => {
-    try {
-      const resp = await fetch(meteoraApiUrl);
-      if (!resp.ok) throw new Error(`Meteora HTTP ${resp.status}`);
-      const arr = await resp.json();
-      const pool = arr?.[0];
-      if (!pool) {
-        console.warn("[fetchPoolData] No pool data returned");
-        return null;
-      }
-      return pool;
-    } catch (error) {
-      console.error("[fetchPoolData] Error:", error);
-      return null;
-    }
-  }, []);
-
-  const calculateSolPriceInUsd = useCallback((pool) => {
-    if (!pool || !pool.pool_token_amounts || !pool.pool_token_usd_amounts) {
-      console.warn("[calculateSolPriceInUsd] Invalid pool data, using fallback");
-      return 100; // Fallback SOL price
-    }
-    const solAmount = parseFloat(pool.pool_token_amounts[1]);
-    const solUsd = parseFloat(pool.pool_token_usd_amounts[1]);
-    if (solAmount <= 0 || solUsd <= 0 || isNaN(solAmount) || isNaN(solUsd)) {
-      console.warn("[calculateSolPriceInUsd] Invalid pool amounts, using fallback");
-      return 100; // Fallback SOL price
-    }
-    return solUsd / solAmount;
-  }, []);
-
-  const calculateSmpPerSol = useCallback((pool) => {
-    if (!pool || !pool.pool_token_amounts) {
-      console.warn("[calculateSmpPerSol] Invalid pool data, using fallback");
-      return 328861621.646602; // Fallback SMP per SOL
-    }
-    const smpAmount = parseFloat(pool.pool_token_amounts[0]);
-    const solAmount = parseFloat(pool.pool_token_amounts[1]);
-    if (smpAmount <= 0 || solAmount <= 0 || isNaN(smpAmount) || isNaN(solAmount)) {
-      console.warn("[calculateSmpPerSol] Invalid pool amounts, using fallback");
-      return 328861621.646602; // Fallback SMP per SOL
-    }
-    return smpAmount / solAmount;
-  }, []);
-
-  const convertUsdcToSmp = useCallback(async (usdcAmount) => {
-    const pool = await fetchPoolData();
-    const solUsd = calculateSolPriceInUsd(pool);
-    const smpPerSol = calculateSmpPerSol(pool);
-    const solAmount = usdcAmount / solUsd;
-    return solAmount * smpPerSol;
-  }, [fetchPoolData, calculateSolPriceInUsd, calculateSmpPerSol]);
-
-  const fetchPrices = useCallback(async () => {
+  // Jupiter price fetching (same as mobile SwapScreen)
+  const fetchPrices = useCallback(async (forceRefresh = false) => {
+    console.log('[fetchPrices] Starting price fetch...', { forceRefresh });
     try {
       const cacheKey = "priceCacheWeb";
       const cacheExpiry = 5 * 60 * 1000;
       const cached = typeof window !== "undefined" ? localStorage.getItem(cacheKey) : null;
-      if (cached) {
+      if (cached && !forceRefresh) {
         try {
           const { timestamp, solPrice: cSol, smpPrice: cSmp } = JSON.parse(cached);
           if (Date.now() - timestamp < cacheExpiry && cSol > 0 && cSmp > 0) {
+            console.log('[fetchPrices] Using cached prices:', { solPrice: cSol, smpPrice: cSmp, cacheAge: Date.now() - timestamp });
             setSolPrice(cSol);
             setSmpPrice(cSmp);
             return;
           }
+          console.log('[fetchPrices] Cache expired or invalid, fetching fresh prices');
         } catch {
-          // ignore
+          console.log('[fetchPrices] Cache parse error, fetching fresh prices');
         }
+      } else {
+        console.log('[fetchPrices] No cache found or force refresh, fetching fresh prices');
       }
 
-      let sol = 100;
-      let smp = 0.01;
-      const smpAmount = await convertUsdcToSmp(USDC_AMOUNT);
-      if (smpAmount && smpAmount > 0) {
-        smp = USDC_AMOUNT / smpAmount;
-        const pool = await fetchPoolData();
-        sol = calculateSolPriceInUsd(pool);
+      let liveSolPrice = null;
+      let liveSmpPrice = null;
+
+      try {
+        const ids = [SOL_MINT_ADDRESS, SMP_MINT_ADDRESS.toString(), USDC_MINT_ADDRESS.toString()];
+        console.log('[fetchPrices] Fetching from Jupiter Price API v3:', ids);
+        const res = await fetch(PRICE_ENDPOINT(ids));
+        if (!res.ok) throw new Error(`Price API error: ${res.status}`);
+        const json = await res.json();
+        console.log('[fetchPrices] Jupiter v3 response:', json);
+
+        liveSolPrice = json?.[SOL_MINT_ADDRESS]?.usdPrice || null;
+        liveSmpPrice = json?.[SMP_MINT_ADDRESS.toString()]?.usdPrice || null;
+
+        console.log('[fetchPrices] Jupiter v3 prices:', { solPrice: liveSolPrice, smpPrice: liveSmpPrice });
+
+        // v3 silently drops low-liquidity tokens (SMP) — fall back to quote API
+        if (!liveSmpPrice) {
+          console.log('[fetchPrices] SMP not in v3 response (low liquidity), trying Jupiter Quote API...');
+          liveSmpPrice = await fetchQuoteDerivedPrice(SMP_MINT_ADDRESS.toString(), SMP_DECIMALS);
+          console.log('[fetchPrices] Jupiter Quote API returned SMP price:', liveSmpPrice);
+        }
+        if (!liveSolPrice) {
+          console.log('[fetchPrices] SOL not in v3 response, trying Jupiter Quote API...');
+          liveSolPrice = await fetchQuoteDerivedPrice(SOL_MINT_ADDRESS, 9);
+          console.log('[fetchPrices] Jupiter Quote API returned SOL price:', liveSolPrice);
+        }
+      } catch (err) {
+        console.error('[fetchPrices] Jupiter API fetch failed:', err.message);
       }
-      setSolPrice(sol);
-      setSmpPrice(smp);
+
+      // Final fallback: use constant from constants.js
+      if (!liveSmpPrice) {
+        console.log('[fetchPrices] Jupiter Quote API also failed, using fallback from constants.js');
+        console.log('[fetchPrices] SMP_FALLBACK_PRICE_USDC constant:', SMP_FALLBACK_PRICE_USDC);
+        liveSmpPrice = 1 / SMP_FALLBACK_PRICE_USDC;
+        console.log('[fetchPrices] Final fallback SMP price (USDC per SMP):', liveSmpPrice);
+      }
+      if (!liveSolPrice) {
+        console.log('[fetchPrices] Using fallback SOL price: 100');
+        liveSolPrice = 100; // Fallback SOL price
+      }
+
+      console.log('[fetchPrices] Final prices to set:', { solPrice: liveSolPrice, smpPrice: liveSmpPrice });
+      setSolPrice(liveSolPrice);
+      setSmpPrice(liveSmpPrice);
       if (typeof window !== "undefined") {
         localStorage.setItem(
           "priceCacheWeb",
-          JSON.stringify({ timestamp: Date.now(), solPrice: sol, smpPrice: smp })
+          JSON.stringify({ timestamp: Date.now(), solPrice: liveSolPrice, smpPrice: liveSmpPrice })
         );
+        console.log('[fetchPrices] Cached prices for 5 minutes');
       }
     } catch (error) {
-      console.error("[fetchPrices] Error:", error);
+      console.error("[fetchPrices] Fatal error:", error);
+      console.log('[fetchPrices] Using emergency fallback prices');
       setSolPrice(100);
-      setSmpPrice(0.01);
+      setSmpPrice(1 / SMP_FALLBACK_PRICE_USDC);
     }
-  }, [convertUsdcToSmp, fetchPoolData, calculateSolPriceInUsd]);
+  }, [SMP_FALLBACK_PRICE_USDC]);
 
   const fetchSmpBalanceOnChain = useCallback(async () => {
   if (!activeWalletAddress) return 0;
@@ -728,8 +738,9 @@ export default function ChapterPage() {
       
       // Check if user has insufficient SMP for chapter unlock
       const requiredSmp = SMP_READ_COST / 10 ** SMP_DECIMALS;
-            // ✅ Fixed: both values are now in base units (no division needed)
-      const insufficientSmp = onChainSmp < SMP_READ_COST;
+      // onChainSmp is in regular SMP units, SMP_READ_COST is in base units
+      // Convert SMP_READ_COST to regular units for comparison
+      const insufficientSmp = onChainSmp < requiredSmp;
       setHasInsufficientSmp(insufficientSmp);
       
       // Check ad unlock eligibility if user has insufficient SMP

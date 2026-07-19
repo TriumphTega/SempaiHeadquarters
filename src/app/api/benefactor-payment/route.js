@@ -1,6 +1,6 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { RPC_URL, SKR_MINT_ADDRESS } from "@/constants";
+import { RPC_URL, SKR_MINT_ADDRESS, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const TARGET_WALLET = "62PPSRhAk6hdn85MUoYAnUDisswZRfos68Zqf7N1QLkr";
@@ -26,8 +26,9 @@ const fetchSmpPrice = async () => {
     const data = await response.json();
     return data["smp-token-id"]?.usd || null;
   } catch (error) {
-    console.error("Error fetching SMP price:", error);
-    return null;
+    console.error("Error fetching SMP price from CoinGecko, using fallback from constants:", error);
+    // Fallback to constant from constants.js (convert SMP per USDC to USDC per SMP)
+    return 1 / SMP_FALLBACK_PRICE_USDC;
   }
 };
 

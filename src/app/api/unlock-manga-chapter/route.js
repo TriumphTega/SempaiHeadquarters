@@ -5,6 +5,7 @@ import { RPC_URL } from "@/constants";
 
 const MERCHANT_WALLET = "3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SKR_MINT_ADDRESS = "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3";
 const connection = new Connection(RPC_URL, "confirmed");
 
 const fetchSolPrice = async () => {
@@ -31,7 +32,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (!["SOL", "USDC"].includes(currency)) {
+    if (!["SOL", "USDC", "SKR"].includes(currency)) {
       return NextResponse.json({ error: "Unsupported currency" }, { status: 400 });
     }
 
@@ -73,6 +74,11 @@ export async function POST(req) {
       expectedAmount = usdAmount;
       decimals = 6;
       mint = USDC_MINT_ADDRESS;
+    } else if (currency === "SKR") {
+      // Using same pricing as USDC for now (1 SKR = $1)
+      expectedAmount = usdAmount;
+      decimals = 6;
+      mint = SKR_MINT_ADDRESS;
     }
 
     const tolerance = 0.02; // 2% tolerance

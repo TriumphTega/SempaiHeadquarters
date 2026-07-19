@@ -1,11 +1,12 @@
 import { supabase } from "@/services/supabase/supabaseClient";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { RPC_URL } from "@/constants";
+import { RPC_URL, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
+const SKR_MINT_ADDRESS = "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3";
 const connection = new Connection(RPC_URL, "confirmed");
 
 const fetchSolPrice = async () => {
@@ -26,15 +27,16 @@ const fetchSmpPrice = async () => {
     const data = await response.json();
     return data["smp-token-id"]?.usd || null;
   } catch (error) {
-    console.error("Error fetching SMP price:", error);
-    return null;
+    console.error("Error fetching SMP price from CoinGecko, using fallback from constants:", error);
+    // Fallback to constant from constants.js (convert SMP per USDC to USDC per SMP)
+    return 1 / SMP_FALLBACK_PRICE_USDC;
   }
 };
 
 export async function POST(req) {
   try {
-    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency, solPrice, smpPrice } = await req.json();
-    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency, solPrice, smpPrice });
+    const { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency, solPrice, smpPrice, skrPrice } = await req.json();
+    console.log("Request Body:", { user_id, story_id, subscription_type, signature, userPublicKey, current_chapter, amount, currency, solPrice, smpPrice, skrPrice });
 
     if (!["3CHAPTERS", "FULL"].includes(subscription_type)) {
       console.log("Validation failed: Invalid subscription type:", subscription_type);
@@ -66,6 +68,15 @@ export async function POST(req) {
       decimals = 9;
       mint = SMP_MINT_ADDRESS;
       console.log("SMP expected amount:", expectedAmount);
+    } else if (currency === "SKR") {
+      if (!skrPrice) {
+        console.log("Validation failed: SKR price not provided");
+        return new Response(JSON.stringify({ error: "SKR price not provided" }), { status: 400 });
+      }
+      expectedAmount = usdAmount / skrPrice;
+      decimals = 9;
+      mint = SKR_MINT_ADDRESS;
+      console.log("SKR expected amount:", expectedAmount);
     } else {
       console.log("Validation failed: Unsupported currency:", currency);
       return new Response(JSON.stringify({ error: "Unsupported currency" }), { status: 400 });

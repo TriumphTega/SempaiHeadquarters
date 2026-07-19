@@ -59,3 +59,7 @@ export const TARGET_WALLET = TREASURY_PUBLIC_KEY;
 export const SMP_DECIMALS = 6;
 export const AMETHYST_DECIMALS = 6;
 export const LAMPORTS_PER_SOL = 1_000_000_000;
+
+// Fallback SMP price: 1 USDC = 32,847,067.641303 SMP
+// This is used when live price fetching fails due to low liquidity or network issues
+export const SMP_FALLBACK_PRICE_USDC = 32_847_067.641303;
