@@ -9,12 +9,8 @@ export default function MintPage() {
   const [isMinting, setIsMinting] = useState(false);
 
   const handleMint = () => {
-    setIsMinting(true);
-    // Simulate minting process (replace with your actual mint logic)
-    setTimeout(() => {
-      setIsMinting(false);
-      alert("Minting completed successfully!");
-    }, 2000);
+    alert("Minting functionality is currently disabled. Please check back later.");
+    return;
   };
 
   return (
