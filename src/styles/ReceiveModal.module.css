@@ -1,0 +1,138 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modalContent {
+  background: rgba(18, 18, 28, 0.98);
+  border: 1px solid rgba(243, 99, 22, 0.2);
+  border-radius: 20px;
+  padding: 32px 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(243,99,22,0.08);
+  animation: modalSlideUp 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+  position: relative;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.closeButton {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #ff6200;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  transform: scale(1.2);
+  color: #ff8345;
+}
+
+.iconContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.qrIcon {
+  font-size: 2.5rem;
+  color: #ff6200;
+}
+
+.modalTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.modalMessage {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.addressContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.addressText {
+  flex: 1;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.copyButton {
+  background: rgba(243, 99, 22, 0.1);
+  border: 1px solid rgba(243, 99, 22, 0.25);
+  border-radius: 8px;
+  color: #ff6200;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyButton:hover {
+  background: rgba(243, 99, 22, 0.2);
+  border-color: rgba(243, 99, 22, 0.4);
+  transform: scale(1.1);
+}
+
+.doneButton {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(243,99,22,0.9), rgba(255,98,0,0.85));
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+
+.doneButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(243,99,22,0.4);
+}

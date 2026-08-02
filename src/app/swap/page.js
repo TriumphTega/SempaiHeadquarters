@@ -1,24 +1,25 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from "next/link";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, SKR_MINT_ADDRESS, RPC_URL } from "@/constants";
-import { FaHome, FaBars, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode, FaChevronDown } from "react-icons/fa";
+import { FaHome, FaBars, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode, FaChevronDown, FaExclamationCircle, FaCheckCircle, FaWifi, FaCheck, FaExclamationTriangle, FaCreditCard, FaTimes } from "react-icons/fa";
 import TreasuryBalance from "../../components/TreasuryBalance";
 import styles from "../../styles/SwapPage.module.css";
 import ConnectButton from "../../components/ConnectButton";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import BalanceModal from "../../components/BalanceModal";
 import SendModal from "../../components/SendModal";
+import ReceiveModal from "../../components/ReceiveModal";
 
 const connection = new Connection(RPC_URL, "confirmed");
 
 // Jupiter Price API configuration
-const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+const SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111112';
 const PRICE_ENDPOINT = (ids) => `https://lite-api.jup.ag/price/v3?ids=${ids.join(',')}`;
 const QUOTE_ENDPOINT = (inputMint, amountBaseUnits) =>
   `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${USDC_MINT_ADDRESS.toString()}&amount=${amountBaseUnits}&slippageBps=50`;
@@ -36,6 +37,97 @@ async function fetchQuoteDerivedPrice(mint, decimals) {
     console.error('[fetchQuoteDerivedPrice] Error:', err.message);
     return null;
   }
+}
+
+async function fetchSmpFallbackPrice() {
+  try {
+    const res = await fetch('/api/smp-fallback-price');
+    if (!res.ok) {
+      console.warn('[fetchSmpFallbackPrice] Web API unavailable');
+      return null;
+    }
+    const data = await res.json();
+    if (data?.fallbackPrice) return 1 / data.fallbackPrice;
+    return null;
+  } catch (err) {
+    console.error('[fetchSmpFallbackPrice] Error:', err.message);
+    return null;
+  }
+}
+
+// Formatting helpers
+const formatUsd = (value, opts = {}) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--';
+  const { compact = false } = opts;
+  if (compact && value >= 1000) {
+    return `$${Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value)}`;
+  }
+  const digits = value !== 0 && value < 1 ? 4 : 2;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+};
+
+const formatToken = (value, decimals = 4) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '0';
+  return value.toLocaleString('en-US', { maximumFractionDigits: decimals });
+};
+
+// Price hook
+function useTokenPrices() {
+  const [prices, setPrices] = useState({});
+  const [pricesLoading, setPricesLoading] = useState(true);
+  const [pricesError, setPricesError] = useState(null);
+
+  const fetchPrices = useCallback(async () => {
+    try {
+      setPricesError(null);
+      const ids = Object.values(TOKEN_MINTS).map((mint) => mint.toString());
+      const res = await fetch(PRICE_ENDPOINT(ids));
+      if (!res.ok) throw new Error(`Price API error: ${res.status}`);
+      const json = await res.json();
+
+      const usdcUsdPrice = json?.[USDC_MINT_ADDRESS.toString()]?.usdPrice;
+      if (!usdcUsdPrice) throw new Error('USDC price missing from response');
+
+      const next = {};
+      for (const [key, mint] of Object.entries(TOKEN_MINTS)) {
+        const entry = json?.[mint.toString()];
+        next[key] = entry?.usdPrice ? entry.usdPrice / usdcUsdPrice : null;
+      }
+
+      const missing = Object.entries(next).filter(([key, price]) => key !== 'USDC' && !price);
+      if (missing.length) {
+        const fallbacks = await Promise.all(
+          missing.map(([key]) => fetchQuoteDerivedPrice(TOKEN_MINTS[key].toString(), TOKEN_DECIMALS[key]))
+        );
+        missing.forEach(([key], i) => {
+          if (fallbacks[i]) next[key] = fallbacks[i];
+        });
+
+        if (!next.SMP) {
+          const webFallback = await fetchSmpFallbackPrice();
+          if (webFallback) {
+            next.SMP = webFallback;
+            console.log('[useTokenPrices] Using web API fallback for SMP price');
+          }
+        }
+      }
+
+      setPrices(next);
+    } catch (err) {
+      console.error('Error fetching prices:', err);
+      setPricesError('Live prices unavailable');
+    } finally {
+      setPricesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
+
+  return { prices, pricesLoading, pricesError, refreshPrices: fetchPrices };
 }
 
 // Define allowed tokens
@@ -67,12 +159,23 @@ const TOKEN_NAMES = {
   SKR: "SKR",
 };
 
+const TOKEN_DECIMALS = {
+  SOL: 9,
+  JUP: 6,
+  USDC: 6,
+  AMETHYST: 6,
+  SMP: 6,
+  SKR: 6,
+};
+
 export default function SwapPage() {
   const { connected, publicKey, sendTransaction, signTransaction } = useWallet();
   const { wallet: embeddedWallet, getSecretKey } = useContext(EmbeddedWalletContext);
 
   const activeWalletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
   const isWalletConnected = connected || !!embeddedWallet;
+
+  const { prices, pricesLoading, pricesError, refreshPrices } = useTokenPrices();
 
   const [amount, setAmount] = useState("");
   const [coinFrom, setCoinFrom] = useState("AMETHYST");
@@ -85,14 +188,44 @@ export default function SwapPage() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
-
-  // NEW MODAL STATES
   const [showFromModal, setShowFromModal] = useState(false);
   const [showToModal, setShowToModal] = useState(false);
-  const [estimatedOutput, setEstimatedOutput] = useState(null);
-  const [conversionRate, setConversionRate] = useState(null);
+  const [showRampSuggestion, setShowRampSuggestion] = useState(false);
+  const [allBalances, setAllBalances] = useState({});
+  const [receiveAddress, setReceiveAddress] = useState('');
 
   const router = useRouter();
+  const spinAnim = useRef(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const checkAllBalances = useCallback(async () => {
+    if (!activeWalletAddress) {
+      setAllBalances({});
+      return;
+    }
+    try {
+      const balances = {};
+      for (const [tokenKey, mintAddress] of Object.entries(TOKEN_MINTS)) {
+        let bal = 0;
+        if (tokenKey === 'SOL') {
+          const solBalance = await connection.getBalance(new PublicKey(activeWalletAddress));
+          bal = solBalance / 1_000_000_000;
+        } else {
+          const ataAddress = getAssociatedTokenAddressSync(mintAddress, new PublicKey(activeWalletAddress));
+          const ataInfo = await connection.getAccountInfo(ataAddress);
+          if (ataInfo) {
+            const ata = unpackAccount(ataInfo, ataInfo);
+            bal = Number(ata.amount) / 10 ** TOKEN_DECIMALS[tokenKey];
+          }
+        }
+        balances[tokenKey] = bal;
+      }
+      setAllBalances(balances);
+    } catch (err) {
+      console.error('Error fetching all balances:', err);
+      setAllBalances({});
+    }
+  }, [activeWalletAddress]);
 
   const checkBalance = async () => {
     if (!activeWalletAddress) return;
@@ -122,90 +255,55 @@ export default function SwapPage() {
     if (isWalletConnected) checkBalance();
   }, [isWalletConnected, activeWalletAddress, coinFrom]);
 
-  // Fetch conversion rate when amount or tokens change
-  useEffect(() => {
-    const fetchConversionRate = async () => {
-      if (!amount || parseFloat(amount) <= 0) {
-        setEstimatedOutput(null);
-        setConversionRate(null);
-        return;
-      }
+  // Derived pricing values
+  const priceFrom = prices[coinFrom];
+  const priceTo = prices[coinTo];
 
-      const inputAmount = parseFloat(amount);
-      const inputMint = TOKEN_MINTS[coinFrom].toString();
-      const outputMint = TOKEN_MINTS[coinTo].toString();
+  const inputUsdValue = useMemo(() => {
+    const amt = parseFloat(amount);
+    if (!amt || !priceFrom) return null;
+    return amt * priceFrom;
+  }, [amount, priceFrom]);
 
-      // If SMP is involved, use fallback from constants.js for display
-      if (coinFrom === "SMP" || coinTo === "SMP") {
-        console.log('[SwapPage] SMP involved, using fallback from constants.js for conversion display');
-        const smpPerUsdc = SMP_FALLBACK_PRICE_USDC;
-        const usdcPerSmp = 1 / smpPerUsdc;
+  const estimatedOutput = useMemo(() => {
+    const amt = parseFloat(amount);
+    if (!amt || !priceFrom || !priceTo) return null;
+    return (amt * priceFrom) / priceTo;
+  }, [amount, priceFrom, priceTo]);
 
-        let outputAmount;
-        if (coinFrom === "SMP") {
-          // SMP to other token
-          const usdcValue = inputAmount * usdcPerSmp;
-          if (coinTo === "USDC") {
-            outputAmount = usdcValue;
-          } else if (coinTo === "SOL") {
-            // Need SOL price - fetch from Jupiter
-            try {
-              const solPrice = await fetchQuoteDerivedPrice(SOL_MINT_ADDRESS, 9) || 150;
-              outputAmount = usdcValue / solPrice;
-            } catch {
-              outputAmount = usdcValue / 150; // Fallback SOL price
-            }
-          } else {
-            // For other tokens, assume 1:1 with USDC for simplicity (can be improved)
-            outputAmount = usdcValue;
-          }
-          setConversionRate(`1 SMP = ${usdcPerSmp.toFixed(8)} USDC`);
-        } else {
-          // Other token to SMP
-          let usdcValue;
-          if (coinFrom === "USDC") {
-            usdcValue = inputAmount;
-          } else if (coinFrom === "SOL") {
-            try {
-              const solPrice = await fetchQuoteDerivedPrice(SOL_MINT_ADDRESS, 9) || 150;
-              usdcValue = inputAmount * solPrice;
-            } catch {
-              usdcValue = inputAmount * 150; // Fallback SOL price
-            }
-          } else {
-            usdcValue = inputAmount; // Assume 1:1 with USDC
-          }
-          outputAmount = usdcValue * smpPerUsdc;
-          setConversionRate(`1 USDC = ${smpPerUsdc.toFixed(2)} SMP`);
-        }
+  const exchangeRateLabel = useMemo(() => {
+    if (!priceFrom || !priceTo) return null;
+    return `1 ${coinFrom} ≈ ${formatToken(priceFrom / priceTo, 6)} ${coinTo}`;
+  }, [priceFrom, priceTo, coinFrom, coinTo]);
 
-        setEstimatedOutput(outputAmount);
-      } else {
-        // For non-SMP swaps, try Jupiter Quote API for accurate conversion
-        try {
-          const inputDecimals = coinFrom === "SOL" ? 9 : 6;
-          const rawAmount = Math.floor(inputAmount * 10 ** inputDecimals);
-          const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`;
-          const res = await fetch(quoteUrl);
-          if (res.ok) {
-            const data = await res.json();
-            const outputDecimals = coinTo === "SOL" ? 9 : 6;
-            const outputAmount = Number(data.outAmount) / 10 ** outputDecimals;
-            setEstimatedOutput(outputAmount);
-            setConversionRate(`1 ${coinFrom} = ${(outputAmount / inputAmount).toFixed(6)} ${coinTo}`);
-          } else {
-            setEstimatedOutput(null);
-            setConversionRate(null);
-          }
-        } catch {
-          setEstimatedOutput(null);
-          setConversionRate(null);
-        }
-      }
-    };
+  const portfolioUsdTotal = useMemo(() => {
+    return Object.entries(allBalances).reduce((sum, [token, bal]) => {
+      const p = prices[token];
+      if (!p || !bal) return sum;
+      return sum + bal * p;
+    }, 0);
+  }, [allBalances, prices]);
 
-    fetchConversionRate();
-  }, [amount, coinFrom, coinTo]);
+  const handleSwapDirection = () => {
+    setCoinFrom(coinTo);
+    setCoinTo(coinFrom);
+    setAmount('');
+  };
+
+  const handleRefresh = () => {
+    setIsSpinning(true);
+    setTimeout(() => setIsSpinning(false), 500);
+    refreshPrices();
+    if (isWalletConnected) {
+      checkBalance();
+      checkAllBalances();
+    }
+  };
+
+  const handleReceive = () => {
+    setReceiveAddress(activeWalletAddress);
+    setShowReceiveModal(true);
+  };
 
   useEffect(() => {
     const handleOpenSendModal = () => setShowSendModal(true);
@@ -214,102 +312,30 @@ export default function SwapPage() {
   }, []);
 
   const handleSwap = async () => {
-    // ... (your existing handleSwap logic remains unchanged) ...
     if (!amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid amount.");
+      setError('Please enter a valid amount.');
       return;
     }
     if (!isWalletConnected) {
-      setError("Please connect your wallet first.");
+      setError('Please connect your wallet to swap.');
       return;
     }
     if (coinFrom === coinTo) {
-      setError("Please select different tokens to swap.");
+      setError('Please select different tokens to swap.');
+      return;
+    }
+    if (parseFloat(amount) > balance) {
+      setShowRampSuggestion(true);
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setSuccessMessage("");
-
-    try {
-      const inputMint = TOKEN_MINTS[coinFrom].toString();
-      const outputMint = TOKEN_MINTS[coinTo].toString();
-
-      const response = await fetch("/api/swap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: activeWalletAddress,
-          amount: parseFloat(amount),
-          inputMint,
-          outputMint,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Check if it's a Jupiter API unavailability error with fallback
-        if (data.error === "jupiter_api_unavailable" && data.fallbackUrl) {
-          window.open(data.fallbackUrl, "_blank");
-          setSuccessMessage("Jupiter API unavailable - opened direct Jupiter swap");
-          setTimeout(() => setSuccessMessage(""), 4000);
-          setLoading(false);
-          return;
-        }
-        throw new Error(data.message || `API error: ${response.status}`);
-      }
-
-      if (data.type === "jup_redirect") {
-        window.open(data.url, "_blank");
-        setSuccessMessage("Opened Jupiter for SMP swap (best route)");
-        setTimeout(() => setSuccessMessage(""), 4000);
-        setLoading(false);
-        return;
-      }
-
-      if (!data.transaction) {
-        throw new Error("No transaction received from server");
-      }
-
-      const swapTransactionBuf = Buffer.from(data.transaction, "base64");
-      const deserializedTx = VersionedTransaction.deserialize(swapTransactionBuf);
-
-      let signature;
-      const isUsingEmbeddedWallet = !connected && embeddedWallet && activeWalletAddress === embeddedWallet.publicKey;
-
-      if (isUsingEmbeddedWallet) {
-        const secretKey = await getSecretKey();
-        if (!secretKey) throw new Error("Failed to decrypt secret key.");
-        const keypair = Keypair.fromSecretKey(secretKey);
-        deserializedTx.sign([keypair]);
-        const serializedTx = deserializedTx.serialize();
-        signature = await connection.sendRawTransaction(serializedTx, { skipPreflight: false, maxRetries: 3 });
-      } else if (signTransaction && sendTransaction) {
-        const signedTransaction = await signTransaction(deserializedTx);
-        signature = await sendTransaction(signedTransaction, connection, { skipPreflight: false, maxRetries: 2 });
-      } else {
-        throw new Error("Wallet signing method not available.");
-      }
-
-      const { blockhash, lastValidBlockHeight: freshBlockHeight } = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight: data.lastValidBlockHeight || freshBlockHeight,
-        commitment: 'confirmed',
-      });
-
-      setSuccessMessage(`Swap successful! Signature: ${signature}`);
-      setTimeout(() => setSuccessMessage(""), 5000);
-      checkBalance();
-    } catch (error) {
-      console.error("Error swapping coins:", error);
-      setError(`Swap failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+    // Open Jupiter in new tab (jup.ag doesn't allow iframe embedding)
+    const inputMint = TOKEN_MINTS[coinFrom].toString();
+    const outputMint = TOKEN_MINTS[coinTo].toString();
+    const jupUrl = `https://jup.ag/swap/${inputMint}-${outputMint}?in=${amount}`;
+    window.open(jupUrl, '_blank');
+    setSuccessMessage('Opening Jupiter swap in new tab...');
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -340,12 +366,34 @@ export default function SwapPage() {
 
       {/* Header */}
       <header className={styles.header}>
-        <h1 className={styles.headerTitle}>
-          <FaGem /> Coin Swap
-        </h1>
-        <p className={styles.headerSubtitle}>Exchange your assets with precision and elegance.</p>
-        <TreasuryBalance />
+        <div className={styles.screenHeader}>
+          <h1 className={styles.headerTitle}>Swap</h1>
+          <button onClick={handleRefresh} className={styles.headerIconButton} title="Refresh">
+            <FaSyncAlt className={isSpinning ? styles.spinning : ''} />
+          </button>
+        </div>
       </header>
+
+      {/* Messages */}
+      {error && (
+        <div className={styles.messageBanner}>
+          <FaExclamationCircle />
+          <span>{error}</span>
+          <button onClick={() => setError(null)}><FaTimes /></button>
+        </div>
+      )}
+      {successMessage && (
+        <div className={`${styles.messageBanner} ${styles.successBanner}`}>
+          <FaCheckCircle />
+          <span>{successMessage}</span>
+        </div>
+      )}
+      {pricesError && (
+        <div className={`${styles.messageBanner} ${styles.warnBanner}`}>
+          <FaWifi />
+          <span>{pricesError || 'Live prices unavailable'} — showing last known values</span>
+        </div>
+      )}
 
       {/* Swap Form */}
       <main className={styles.main}>
@@ -358,117 +406,161 @@ export default function SwapPage() {
             </div>
           ) : (
             <div className={styles.swapForm}>
-              <h2 className={styles.formTitle}>Swap Interface</h2>
-              <div className={styles.balanceDisplay}>
-                <FaGem /> Balance: {balance.toFixed(2)} {coinFrom}
-                <button onClick={checkBalance} className={styles.refreshButton} title="Refresh Balance">
-                  <FaSyncAlt />
+              {/* From */}
+              <div className={styles.tokenPanel}>
+                <div className={styles.tokenPanelTopRow}>
+                  <span className={styles.label}>You pay</span>
+                  <button onClick={checkBalance} className={styles.balancePill}>
+                    <FaWallet />
+                    <span className={styles.balancePillText}>{formatToken(balance)} {coinFrom}</span>
+                  </button>
+                </div>
+
+                <div className={styles.tokenPanelRow}>
+                  <input
+                    className={styles.amountInput}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                    placeholder="0.00"
+                  />
+                  <div className={styles.tokenPicker} onClick={() => setShowFromModal(true)}>
+                    <img src={TOKEN_LOGOS[coinFrom]} alt={coinFrom} className={styles.tokenLogoSm} />
+                    <span className={styles.tokenPickerText}>{coinFrom}</span>
+                    <FaChevronDown />
+                  </div>
+                </div>
+
+                <div className={styles.tokenPanelBottomRow}>
+                  <span className={styles.usdValueText}>{inputUsdValue !== null ? formatUsd(inputUsdValue) : '$0.00'}</span>
+                  <button onClick={() => setAmount(String(balance))} className={styles.maxText}>MAX</button>
+                </div>
+              </div>
+
+              {/* Swap direction button */}
+              <div className={styles.swapDirectionWrap}>
+                <div className={styles.swapDirectionLine} />
+                <button className={styles.swapDirectionButton} onClick={handleSwapDirection}>
+                  <FaExchangeAlt style={{ transform: 'rotate(90deg)' }} />
                 </button>
               </div>
 
-              {error && <div className={styles.errorMessage}>{error}</div>}
-              {successMessage && <div className={styles.successMessage}><FaGem /> {successMessage}</div>}
-
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>Amount</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  placeholder="Enter amount"
-                  className={styles.input}
-                />
-              </div>
-
-              {/* FROM TOKEN - Modal Trigger */}
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>From</label>
-                <div className={styles.selectedToken} onClick={() => setShowFromModal(true)}>
-                  <img src={TOKEN_LOGOS[coinFrom]} alt={coinFrom} className={styles.tokenLogo} />
-                  <span>{TOKEN_NAMES[coinFrom]}</span>
-                  <FaChevronDown className={styles.dropdownArrow} />
+              {/* To */}
+              <div className={styles.tokenPanel}>
+                <div className={styles.tokenPanelTopRow}>
+                  <span className={styles.label}>You receive (est.)</span>
+                  <span className={styles.priceTag}>
+                    {pricesLoading ? 'Loading...' : priceTo ? formatUsd(priceTo) : '--'}
+                  </span>
                 </div>
-              </div>
 
-              {/* TO TOKEN - Modal Trigger */}
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>To</label>
-                <div className={styles.selectedToken} onClick={() => setShowToModal(true)}>
-                  <img src={TOKEN_LOGOS[coinTo]} alt={coinTo} className={styles.tokenLogo} />
-                  <span>{TOKEN_NAMES[coinTo]}</span>
-                  <FaChevronDown className={styles.dropdownArrow} />
-                </div>
-              </div>
-
-              {/* Conversion Rate Display */}
-              {estimatedOutput && (
-                <div className={styles.conversionDisplay}>
-                  <div className={styles.conversionRate}>
-                    {conversionRate && <span>{conversionRate}</span>}
-                  </div>
-                  <div className={styles.estimatedOutput}>
-                    Estimated to receive: {estimatedOutput?.toFixed(6)} {coinTo}
+                <div className={styles.tokenPanelRow}>
+                  <span className={`${styles.amountInput} ${styles.amountOutput}`}>
+                    {estimatedOutput !== null ? formatToken(estimatedOutput, 6) : '0.00'}
+                  </span>
+                  <div className={styles.tokenPicker} onClick={() => setShowToModal(true)}>
+                    <img src={TOKEN_LOGOS[coinTo]} alt={coinTo} className={styles.tokenLogoSm} />
+                    <span className={styles.tokenPickerText}>{coinTo}</span>
+                    <FaChevronDown />
                   </div>
                 </div>
-              )}
 
-              {/* Your Portfolio */}
-              <div className={styles.portfolioSection}>
-                <div className={styles.portfolioTitle}>Your Portfolio</div>
-                <div className={styles.actionButtons}>
-                  <button onClick={() => setShowBalanceModal(true)} className={styles.balanceButton}>
-                    <FaWallet /> View Balances
-                  </button>
-                  <button onClick={() => setShowSendModal(true)} className={styles.sendButton}>
-                    <FaPaperPlane /> Send
-                  </button>
-                  <button onClick={() => setShowBalanceModal(true)} className={styles.receiveButton}>
-                    <FaQrcode /> Receive
-                  </button>
-                </div>
+                {exchangeRateLabel && (
+                  <div className={styles.tokenPanelBottomRow}>
+                    <span className={styles.rateText}>{exchangeRateLabel}</span>
+                  </div>
+                )}
               </div>
 
-              <button onClick={handleSwap} className={styles.swapButton} disabled={loading}>
-                {loading ? <span className={styles.swirlIcon}></span> : <><FaExchangeAlt /> Initiate Swap</>}
+              {/* Swap button */}
+              <button
+                className={`${styles.swapButton} ${loading ? styles.disabledButton : ''}`}
+                onClick={handleSwap}
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className={styles.loadingSpinner}></span>
+                ) : (
+                  <>
+                    <FaExchangeAlt />
+                    <span>
+                      {!amount ? 'Enter an amount' : coinFrom === coinTo ? 'Select different tokens' : 'Swap'}
+                    </span>
+                  </>
+                )}
               </button>
 
-              {/* ==================== TOKEN SELECTION MODAL ==================== */}
-              {(showFromModal || showToModal) && (
-                <div className={styles.modalOverlay} onClick={() => { setShowFromModal(false); setShowToModal(false); }}>
-                  <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                    <h3 className={styles.modalTitle}>
-                      {showFromModal ? "Select From Token" : "Select To Token"}
-                    </h3>
-
-                    <div className={styles.modalTokenList}>
-                      {Object.keys(TOKEN_MINTS).map((token) => (
-                        <div
-                          key={token}
-                          className={styles.modalTokenItem}
-                          onClick={() => {
-                            if (showFromModal) setCoinFrom(token);
-                            else setCoinTo(token);
-                            setShowFromModal(false);
-                            setShowToModal(false);
-                          }}
-                        >
-                          <img src={TOKEN_LOGOS[token]} alt={token} className={styles.tokenLogo} />
-                          <span>{TOKEN_NAMES[token]}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      className={styles.modalCloseButton}
-                      onClick={() => { setShowFromModal(false); setShowToModal(false); }}
-                    >
-                      Cancel
+              {/* Portfolio quick actions */}
+              <div className={styles.portfolioSection}>
+                <div className={styles.portfolioHeaderRow}>
+                  <span className={styles.portfolioTitle}>Portfolio</span>
+                  <span className={styles.portfolioTotal}>
+                    {pricesLoading ? 'Loading…' : formatUsd(portfolioUsdTotal, { compact: true })}
+                  </span>
+                </div>
+                <div className={styles.actionButtons}>
+                  <div className={styles.portfolioButton}>
+                    <button onClick={() => { checkAllBalances(); setShowBalanceModal(true); }} className={styles.portfolioButtonInner}>
+                      <FaWallet />
+                      <span>Balances</span>
+                    </button>
+                  </div>
+                  <div className={styles.portfolioButton}>
+                    <button onClick={() => setShowSendModal(true)} className={styles.portfolioButtonInner}>
+                      <FaPaperPlane />
+                      <span>Send</span>
+                    </button>
+                  </div>
+                  <div className={styles.portfolioButton}>
+                    <button onClick={handleReceive} className={styles.portfolioButtonInner}>
+                      <FaQrcode />
+                      <span>Receive</span>
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
+
+          {/* Token Selection Modal */}
+          {(showFromModal || showToModal) && (
+            <div className={styles.modalOverlay} onClick={() => { setShowFromModal(false); setShowToModal(false); }}>
+              <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                <button className={styles.closeButton} onClick={() => { setShowFromModal(false); setShowToModal(false); }}>
+                  <FaTimes />
+                </button>
+                <h3 className={styles.modalTitle}>
+                  {showFromModal ? 'Select token to pay with' : 'Select token to receive'}
+                </h3>
+                <div className={styles.modalTokenList}>
+                  {Object.keys(TOKEN_MINTS).map((token) => {
+                    const isSelected = showFromModal ? token === coinFrom : token === coinTo;
+                    const isDisabled = showFromModal ? token === coinTo : token === coinFrom;
+                    return (
+                      <div
+                        key={token}
+                        className={`${styles.modalTokenItem} ${isSelected ? styles.tokenItemSelected : ''}`}
+                        onClick={() => {
+                          if (showFromModal) setCoinFrom(token);
+                          else setCoinTo(token);
+                          setShowFromModal(false);
+                          setShowToModal(false);
+                        }}
+                        style={isDisabled ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+                      >
+                        <img src={TOKEN_LOGOS[token]} alt={token} className={styles.tokenLogo} />
+                        <div className={styles.tokenInfo}>
+                          <span className={styles.tokenName}>{TOKEN_NAMES[token]}</span>
+                          <span className={styles.tokenSymbolMuted}>{token}</span>
+                        </div>
+                        <span className={styles.priceTag}>
+                          {pricesLoading ? '...' : prices[token] ? formatUsd(prices[token]) : '--'}
+                        </span>
+                        {isSelected && <FaCheck className={styles.checkIcon} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -482,6 +574,33 @@ export default function SwapPage() {
       {/* Modals */}
       <BalanceModal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} activeWalletAddress={activeWalletAddress} />
       <SendModal isOpen={showSendModal} onClose={() => setShowSendModal(false)} activeWalletAddress={activeWalletAddress} />
+      <ReceiveModal isOpen={showReceiveModal} onClose={() => setShowReceiveModal(false)} address={receiveAddress} />
+
+      {/* Ramp Suggestion Modal */}
+      {showRampSuggestion && (
+        <div className={styles.modalOverlay} onClick={() => setShowRampSuggestion(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.closeButton} onClick={() => setShowRampSuggestion(false)}>
+              <FaTimes />
+            </button>
+            <FaExclamationTriangle className={styles.warningIcon} />
+            <h3 className={styles.modalTitle}>Insufficient Balance</h3>
+            <p className={styles.modalMessage}>
+              You don't have enough {coinFrom} to complete this swap. Would you like to buy more crypto using Ramp?
+            </p>
+            <button
+              className={styles.submitButton}
+              onClick={() => { setShowRampSuggestion(false); window.open('https://ramp.network', '_blank'); }}
+            >
+              <FaCreditCard />
+              <span>Buy Crypto with Ramp</span>
+            </button>
+            <button className={styles.cancelButton} onClick={() => setShowRampSuggestion(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

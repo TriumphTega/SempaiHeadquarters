@@ -331,6 +331,57 @@ export const EmbeddedWalletProvider = ({ children }) => {
     }
   };
 
+  // Sign a message (for authentication and other SIWS flows)
+  const signMessage = async (message) => {
+    try {
+      let privateKeyBase58;
+      
+      if (user && user.id) {
+        // Authenticated user - get from user_wallets table
+        const { data: walletData, error: walletError } = await supabase
+          .from("user_wallets")
+          .select("private_key")
+          .eq("user_id", user.id)
+          .eq("address", wallet.publicKey)
+          .single();
+        
+        if (walletError || !walletData) {
+          privateKeyBase58 = cachedPrivateKeyBase58;
+          if (!privateKeyBase58) {
+            throw new Error("Wallet not found in database and no cached key available");
+          }
+        } else {
+          privateKeyBase58 = await edgeDecrypt(walletData.private_key);
+        }
+      } else {
+        // Non-authenticated user - use cached key
+        privateKeyBase58 = cachedPrivateKeyBase58;
+        if (!privateKeyBase58) {
+          throw new Error("No wallet found and no cached key available");
+        }
+      }
+
+      if (!privateKeyBase58) {
+        throw new Error("Failed to decrypt private key");
+      }
+
+      const secretKey = bs58.decode(privateKeyBase58);
+      const keypair = Keypair.fromSecretKey(secretKey);
+      
+      // Sign the message
+      const messageBytes = typeof message === 'string' 
+        ? new TextEncoder().encode(message) 
+        : message;
+      const signature = keypair.sign(messageBytes);
+      
+      // Return as base64 or Uint8Array depending on what the caller expects
+      return Buffer.from(signature).toString('base64');
+    } catch (error) {
+      console.error("[EmbeddedWallet] Message signing error:", error);
+      throw error;
+    }
+  };
+
   // Sign and send transaction - supports both embedded and external wallets
   const signAndSendTransaction = async (transaction) => {
     // Check if external wallet is connected
@@ -641,7 +692,8 @@ export const EmbeddedWalletProvider = ({ children }) => {
         createEmbeddedWallet, 
         retrieveEmbeddedWallet, 
         getSecretKey, 
-        signAndSendTransaction, 
+        signAndSendTransaction,
+        signMessage,
         isLoading, 
         error,
         isExternalWallet,

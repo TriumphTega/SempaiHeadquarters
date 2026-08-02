@@ -118,7 +118,7 @@ export default function Navbar({ connected, isWriter, notifications, markAsRead,
               </Link>
             </li>
             <li className="nav-item">
-              <Link href="/chat" className={styles.navLink}>
+              <Link href="/chat/rooms" className={styles.navLink}>
                 <FaComments className={styles.icon} /> Chat
               </Link>
             </li>

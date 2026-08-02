@@ -16,6 +16,7 @@
     "@metaplex-foundation/js": "^0.20.1",
     "@meteora-ag/cp-amm-sdk": "^1.4.2",
     "@meteora-ag/dlmm": "^1.9.9",
+    "@moonpay/moonpay-react": "^1.10.6",
     "@solana/spl-token": "^0.4.12",
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
@@ -23,6 +24,7 @@
     "@solana/web3.js": "^1.98.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.48.1",
+    "@transak/ui-js-sdk": "^1.0.0",
     "@vercel/og": "^0.11.1",
     "axios": "^1.8.4",
     "bip39": "^3.1.0",
@@ -62,9 +64,7 @@
     "react-toastify": "^11.0.5",
     "slick-carousel": "^1.8.1",
     "tweetnacl": "^1.0.3",
-    "vercel": "^39.3.0",
-    "@moonpay/moonpay-react": "^1.10.6",
-    "@transak/ui-js-sdk": "^1.0.0"
+    "vercel": "^39.3.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

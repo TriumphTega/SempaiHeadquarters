@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaPaintBrush, FaUser, FaBell, FaSun, FaMoon } from "react-icons/fa";
+import { FaHome, FaBars, FaTimes, FaBookOpen, FaPaintBrush, FaUser, FaBell, FaSun, FaMoon, FaComments } from "react-icons/fa";
 import ConnectButton from "./ConnectButton";
 import styles from "../styles/UnifiedNavbar.module.css";
 
@@ -35,6 +35,9 @@ export default function UnifiedNavbar({
           </Link>
           <Link href="/manga" className={styles.navLink}>
             <FaPaintBrush /> Manga
+          </Link>
+          <Link href="/chat/rooms" className={styles.navLink}>
+            <FaComments /> Chat
           </Link>
           
           {/* Creator Links */}
@@ -94,6 +97,9 @@ export default function UnifiedNavbar({
           </Link>
           <Link href="/manga" className={styles.mobileLink} onClick={toggleMenu}>
             <FaPaintBrush /> Manga
+          </Link>
+          <Link href="/chat/rooms" className={styles.mobileLink} onClick={toggleMenu}>
+            <FaComments /> Chat
           </Link>
           
           {userRole === 'writer' || userRole === 'superuser' ? (

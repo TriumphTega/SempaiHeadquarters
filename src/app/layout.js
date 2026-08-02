@@ -13,7 +13,7 @@ export const metadata = {
   openGraph: {
     title: "Sempai HQ - Explore Novels and Chapters",
     description: "Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers.",
-    images: ["https://sempaihq.com/images/sempai-social.jpg"],
+    images: ["/images/sempaiCard.png"],
     type: "website",
     url: "https://sempaihq.com",
     siteName: "Sempai HQ",
@@ -23,7 +23,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Sempai HQ - Explore Novels and Chapters",
     description: "Discover amazing novels and chapters on Sempai HQ. Join our community of readers and writers.",
-    images: ["https://sempaihq.com/images/sempai-social.jpg"],
+    images: ["/images/sempaiCard.png"],
     site: "@HomeforSempai",
   },
 };
