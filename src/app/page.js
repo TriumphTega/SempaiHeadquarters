@@ -330,12 +330,12 @@ export default function Home() {
   const fetchNovels = useCallback(async () => {
     setContentLoading(true);
     try {
-      // Fetch all novels initially without limit to allow sorting
+      // Fetch featured novels for the carousel
       const { data: novelsData, error } = await supabase
         .from("novels")
         .select("id, title, image, summary, user_id, tags, viewers_count")
         .eq("is_visible", true)
-        .eq("show_in_home", true);
+        .eq("featured", true);
 
       if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
       if (!novelsData || novelsData.length === 0) {
@@ -381,16 +381,8 @@ export default function Home() {
         };
       });
 
-      // Sort by a combined score of viewers_count and averageRating, then take top 6
-      const sortedNovels = enrichedNovels
-        .sort((a, b) => {
-          const scoreA = (a.viewers_count * 0.6) + (a.averageRating * 0.4); // Weight: 60% views, 40% rating
-          const scoreB = (b.viewers_count * 0.6) + (b.averageRating * 0.4);
-          return scoreB - scoreA; // Descending order
-        })
-        .slice(0, 5); // Limit to 5 novels
-
-      setNovels(sortedNovels);
+      // Featured novels are manually curated, no sorting needed
+      setNovels(enrichedNovels);
     } catch (err) {
       setError(err.message);
       setNovels([]); // Clear on error
@@ -402,13 +394,13 @@ export default function Home() {
   const fetchManga = useCallback(async () => {
     setContentLoading(true);
     try {
+      // Fetch featured manga for the carousel
       const { data: mangaData, error } = await supabase
         .from("manga")
         .select("id, title, cover_image, summary, user_id, status, tags")
         .eq("is_visible", true)
-        .eq("show_in_home", true)
-        .in("status", ["ongoing", "completed"])
-        .limit(5);
+        .eq("featured", true)
+        .in("status", ["ongoing", "completed"]);
 
       if (error) throw new Error(`Failed to fetch manga: ${error.message}`);
       if (!mangaData || mangaData.length === 0) {
@@ -807,7 +799,7 @@ export default function Home() {
               <FaHome className={styles.navIcon} /> Home
             </Link>
             <Link href="/novels" onClick={() => handleNavigation("/novels")} className={styles.navLink}>
-              <FaBookOpen className={styles.navIcon} /> Library
+              <FaBookOpen className={styles.navIcon} /> Hoard
             </Link>
             <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
               <FaComments className={styles.navIcon} /> Chat
@@ -826,6 +818,12 @@ export default function Home() {
                 <div className={styles.moreMenu} role="menu">
                   <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup()); }}>
                     <FaExchangeAlt className={styles.navIcon} /> Swap
+                  </button>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/badges") : toggleConnectPopup()); }}>
+                    <FaStar className={styles.navIcon} /> Badges
+                  </button>
+                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/notifications") : toggleConnectPopup()); }}>
+                    <FaBell className={styles.navIcon} /> Notifications
                   </button>
                   <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); handleNavigation("/download"); }}>
                     <FaDownload className={styles.navIcon} /> Download App

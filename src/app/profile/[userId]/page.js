@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
+import AutopaySettings from "@/components/AutopaySettings";
 import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import ConnectButton from "@/components/ConnectButton";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
@@ -445,6 +446,14 @@ export default function CreatorsProfilePage() {
                 </div>
                 <p className={styles.walletInfo}><FaWallet /> {creatorData?.wallet_address.slice(0, 8)}...</p>
               </section>
+
+              {/* Autopay Settings - only show for own profile */}
+              {isOwnProfile && (
+                <section className={styles.settingsSection}>
+                  <AutopaySettings walletAddress={creatorData?.wallet_address} />
+                </section>
+              )}
+
               <section className={styles.novelsSection}>
                 <h2 className={styles.sectionTitle}><FaBook /> Creations</h2>
                 {novels.length > 0 ? (

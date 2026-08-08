@@ -246,7 +246,7 @@ export default function MangaChapter() {
         .eq("content_type", "manga")
         .eq("content_id", mangaId)
         .eq("chapter_number", chapterNum)
-        .single();
+        .maybeSingle();
       if (userError && userError.code !== "PGRST116") {
         console.error("Error fetching user rating:", userError);
       } else {

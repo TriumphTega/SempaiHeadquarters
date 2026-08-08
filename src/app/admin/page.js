@@ -8,7 +8,7 @@ import { Table, Pagination, Form, FormControl, Nav, Button } from "react-bootstr
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { FaUser, FaBook, FaImage, FaComment, FaClock, FaGift } from "react-icons/fa";
+import { FaUser, FaBook, FaImage, FaComment, FaClock, FaGift, FaStar, FaEdit, FaTrash, FaCheck, FaTimes, FaEye, FaEyeSlash } from "react-icons/fa";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import debounce from "lodash/debounce"; // Add lodash for debouncing
 import styles from "../../styles/AdminPage.module.css";
@@ -25,6 +25,9 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [editModal, setEditModal] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const itemsPerPage = 10;
 
   // Fetch data for the selected table with pagination and search
@@ -140,6 +143,89 @@ export default function AdminPage() {
   const handlePageChange = (page) => setCurrentPage(page);
   const toggleRow = (id) => setExpandedRow(expandedRow === id ? null : id);
 
+  const getColSpan = (table) => {
+    switch (table) {
+      case "novels":
+      case "manga":
+        return 7;
+      case "creator_applications":
+      case "announcements":
+      case "banned_devices":
+      case "support_requests":
+        return 5;
+      case "chapter_queue":
+        return 5;
+      default:
+        return 4;
+    }
+  };
+
+  const toggleFeatured = async (table, id, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .update({ featured: !currentStatus })
+        .eq("id", id);
+      
+      if (error) throw error;
+      toast.success(`${table.slice(0, -1)} featured status updated`);
+      fetchTableData(selectedTable, currentPage, searchQuery);
+    } catch (err) {
+      toast.error(`Failed to update featured status: ${err.message}`);
+    }
+  };
+
+  const toggleVisibility = async (table, id, currentStatus) => {
+    try {
+      const column = table === "novels" ? "is_visible" : "is_visible";
+      const { error } = await supabase
+        .from(table)
+        .update({ [column]: !currentStatus })
+        .eq("id", id);
+      
+      if (error) throw error;
+      toast.success(`${table.slice(0, -1)} visibility updated`);
+      fetchTableData(selectedTable, currentPage, searchQuery);
+    } catch (err) {
+      toast.error(`Failed to update visibility: ${err.message}`);
+    }
+  };
+
+  const handleEdit = (row) => {
+    setEditData(row);
+    setEditModal(selectedTable);
+  };
+
+  const handleDelete = async (table, id) => {
+    try {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+      toast.success(`${table.slice(0, -1)} deleted successfully`);
+      setDeleteConfirm(null);
+      fetchTableData(selectedTable, currentPage, searchQuery);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err.message}`);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const { id, ...updateData } = editData;
+      const { error } = await supabase
+        .from(editModal)
+        .update(updateData)
+        .eq("id", id);
+      
+      if (error) throw error;
+      toast.success(`${editModal.slice(0, -1)} updated successfully`);
+      setEditModal(null);
+      setEditData({});
+      fetchTableData(selectedTable, currentPage, searchQuery);
+    } catch (err) {
+      toast.error(`Failed to update: ${err.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -188,6 +274,9 @@ export default function AdminPage() {
             { name: "comments", icon: <FaComment /> },
             { name: "chapter_queue", icon: <FaClock /> },
             { name: "gifs", icon: <FaGift /> },
+            { name: "announcements", icon: <FaComment /> },
+            { name: "banned_devices", icon: <FaUser /> },
+            { name: "support_requests", icon: <FaComment /> },
           ].map((item) => (
             <Nav.Link
               key={item.name}
@@ -237,6 +326,9 @@ export default function AdminPage() {
                   <th>Title</th>
                   <th>Author</th>
                   <th>Summary</th>
+                  <th>Featured</th>
+                  <th>Visible</th>
+                  <th>Actions</th>
                 </>
               )}
               {selectedTable === "manga" && (
@@ -245,6 +337,9 @@ export default function AdminPage() {
                   <th>Title</th>
                   <th>Author</th>
                   <th>Status</th>
+                  <th>Featured</th>
+                  <th>Visible</th>
+                  <th>Actions</th>
                 </>
               )}
               {selectedTable === "creator_applications" && (
@@ -253,6 +348,7 @@ export default function AdminPage() {
                   <th>User</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </>
               )}
               {selectedTable === "comments" && (
@@ -277,6 +373,33 @@ export default function AdminPage() {
                   <th>ID</th>
                   <th>Title</th>
                   <th>URL</th>
+                </>
+              )}
+              {selectedTable === "announcements" && (
+                <>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Message</th>
+                  <th>Release Date</th>
+                  <th>Actions</th>
+                </>
+              )}
+              {selectedTable === "banned_devices" && (
+                <>
+                  <th>ID</th>
+                  <th>Device Hash</th>
+                  <th>Reason</th>
+                  <th>Banned At</th>
+                  <th>Actions</th>
+                </>
+              )}
+              {selectedTable === "support_requests" && (
+                <>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Subject</th>
+                  <th>Actions</th>
                 </>
               )}
             </tr>
@@ -304,6 +427,30 @@ export default function AdminPage() {
                         <td>{row.title}</td>
                         <td>{row.users?.name || "Unknown"}</td>
                         <td>{row.summary?.slice(0, 50)}...</td>
+                        <td>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFeatured("novels", row.id, row.featured); }}
+                            className={`btn btn-sm ${row.featured ? "btn-warning" : "btn-outline-warning"}`}
+                          >
+                            <FaStar /> {row.featured ? "Featured" : "Feature"}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleVisibility("novels", row.id, row.is_visible); }}
+                            className={`btn btn-sm ${row.is_visible ? "btn-success" : "btn-outline-secondary"}`}
+                          >
+                            {row.is_visible ? <FaEye /> : <FaEyeSlash />}
+                          </button>
+                        </td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "novels", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
                       </>
                     )}
                     {selectedTable === "manga" && (
@@ -312,6 +459,30 @@ export default function AdminPage() {
                         <td>{row.title}</td>
                         <td>{row.users?.name || "Unknown"}</td>
                         <td>{row.status}</td>
+                        <td>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFeatured("manga", row.id, row.featured); }}
+                            className={`btn btn-sm ${row.featured ? "btn-warning" : "btn-outline-warning"}`}
+                          >
+                            <FaStar /> {row.featured ? "Featured" : "Feature"}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleVisibility("manga", row.id, row.is_visible); }}
+                            className={`btn btn-sm ${row.is_visible ? "btn-success" : "btn-outline-secondary"}`}
+                          >
+                            {row.is_visible ? <FaEye /> : <FaEyeSlash />}
+                          </button>
+                        </td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "manga", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
                       </>
                     )}
                     {selectedTable === "creator_applications" && (
@@ -320,6 +491,14 @@ export default function AdminPage() {
                         <td>{row.users?.name || "Unknown"}</td>
                         <td>{row.role}</td>
                         <td>{row.application_status}</td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "creator_applications", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
                       </>
                     )}
                     {selectedTable === "comments" && (
@@ -350,16 +529,75 @@ export default function AdminPage() {
                         </td>
                       </>
                     )}
+                    {selectedTable === "announcements" && (
+                      <>
+                        <td>{row.id}</td>
+                        <td>{row.title}</td>
+                        <td>{row.message?.slice(0, 50)}...</td>
+                        <td>{new Date(row.release_date).toLocaleString()}</td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "announcements", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </>
+                    )}
+                    {selectedTable === "banned_devices" && (
+                      <>
+                        <td>{row.id}</td>
+                        <td>{row.device_hash?.slice(0, 20)}...</td>
+                        <td>{row.reason}</td>
+                        <td>{new Date(row.banned_at).toLocaleString()}</td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "banned_devices", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </>
+                    )}
+                    {selectedTable === "support_requests" && (
+                      <>
+                        <td>{row.id}</td>
+                        <td>{row.name}</td>
+                        <td>{row.email}</td>
+                        <td>{row.subject}</td>
+                        <td>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="btn btn-sm btn-primary me-1">
+                            <FaEdit />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ table: "support_requests", id: row.id }); }} className="btn btn-sm btn-danger">
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                   {expandedRow === row.id && (
                     <tr className={styles.expandedRow}>
-                      <td colSpan={selectedTable === "chapter_queue" ? 5 : 4}>
+                      <td colSpan={getColSpan(selectedTable)}>
                         <div className={styles.expandedContent}>
                           {selectedTable === "users" && (
                             <>
                               <p><strong>Wallet Address:</strong> {row.wallet_address}</p>
+                              <p><strong>Email:</strong> {row.email || "N/A"}</p>
                               <p><strong>Balance:</strong> {row.balance || 0}</p>
                               <p><strong>Weekly Points:</strong> {row.weekly_points || 0}</p>
+                              <p><strong>Total Points Read:</strong> {row.total_points_read || 0}</p>
+                              <p><strong>Amethyst Count:</strong> {row.amethyst_count || 0}</p>
+                              <div className="mt-3">
+                                <button onClick={() => handleEdit(row)} className="btn btn-sm btn-primary me-2">
+                                  <FaEdit /> Edit User
+                                </button>
+                                <button onClick={() => setDeleteConfirm({ table: "users", id: row.id })} className="btn btn-sm btn-danger">
+                                  <FaTrash /> Delete User
+                                </button>
+                              </div>
                             </>
                           )}
                           {selectedTable === "novels" && (
@@ -405,6 +643,29 @@ export default function AdminPage() {
                               <p><strong>Created At:</strong> {new Date(row.created_at).toLocaleString()}</p>
                             </>
                           )}
+                          {selectedTable === "announcements" && (
+                            <>
+                              <p><strong>Full Message:</strong> {row.message}</p>
+                              <p><strong>Audience:</strong> {row.audience}</p>
+                              <p><strong>User ID:</strong> {row.user_id}</p>
+                              <p><strong>Is Superuser Announcement:</strong> {row.is_superuser_announcement ? "Yes" : "No"}</p>
+                              <p><strong>Created At:</strong> {new Date(row.created_at).toLocaleString()}</p>
+                            </>
+                          )}
+                          {selectedTable === "banned_devices" && (
+                            <>
+                              <p><strong>Full Device Hash:</strong> {row.device_hash}</p>
+                              <p><strong>Reason:</strong> {row.reason}</p>
+                              <p><strong>Banned At:</strong> {new Date(row.banned_at).toLocaleString()}</p>
+                            </>
+                          )}
+                          {selectedTable === "support_requests" && (
+                            <>
+                              <p><strong>Full Message:</strong> {row.message}</p>
+                              <p><strong>Email:</strong> {row.email}</p>
+                              <p><strong>Created At:</strong> {new Date(row.created_at).toLocaleString()}</p>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -420,6 +681,94 @@ export default function AdminPage() {
             )}
           </tbody>
         </Table>
+
+        {/* Edit Modal */}
+        {editModal && (
+          <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog">
+              <div className="modal-content" style={{ background: '#2c2c2c', color: '#e0e0e0' }}>
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit {editModal.slice(0, -1)}</h5>
+                  <button type="button" className="btn-close" onClick={() => setEditModal(null)}></button>
+                </div>
+                <div className="modal-body">
+                  {Object.keys(editData).filter(key => key !== 'id' && key !== 'users' && key !== 'novels').map(key => (
+                    <div key={key} className="mb-3">
+                      <label className="form-label text-capitalize">{key.replace(/_/g, ' ')}</label>
+                      {typeof editData[key] === 'boolean' ? (
+                        <select
+                          className="form-control"
+                          style={{ background: '#3d3d3d', color: '#e0e0e0', border: '1px solid #ff9900' }}
+                          value={editData[key]}
+                          onChange={(e) => setEditData({ ...editData, [key]: e.target.value === 'true' })}
+                        >
+                          <option value="true">True</option>
+                          <option value="false">False</option>
+                        </select>
+                      ) : key.includes('date') || key.includes('_at') ? (
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          style={{ background: '#3d3d3d', color: '#e0e0e0', border: '1px solid #ff9900' }}
+                          value={editData[key] ? new Date(editData[key]).toISOString().slice(0, 16) : ''}
+                          onChange={(e) => setEditData({ ...editData, [key]: e.target.value })}
+                        />
+                      ) : Array.isArray(editData[key]) ? (
+                        <input
+                          type="text"
+                          className="form-control"
+                          style={{ background: '#3d3d3d', color: '#e0e0e0', border: '1px solid #ff9900' }}
+                          value={JSON.stringify(editData[key])}
+                          onChange={(e) => setEditData({ ...editData, [key]: JSON.parse(e.target.value) })}
+                        />
+                      ) : typeof editData[key] === 'object' ? (
+                        <textarea
+                          className="form-control"
+                          style={{ background: '#3d3d3d', color: '#e0e0e0', border: '1px solid #ff9900', minHeight: '100px' }}
+                          value={JSON.stringify(editData[key], null, 2)}
+                          onChange={(e) => setEditData({ ...editData, [key]: JSON.parse(e.target.value) })}
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          className="form-control"
+                          style={{ background: '#3d3d3d', color: '#e0e0e0', border: '1px solid #ff9900' }}
+                          value={editData[key] || ''}
+                          onChange={(e) => setEditData({ ...editData, [key]: e.target.value })}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditModal(null)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveEdit}>Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog">
+              <div className="modal-content" style={{ background: '#2c2c2c', color: '#e0e0e0' }}>
+                <div className="modal-header">
+                  <h5 className="modal-title">Confirm Delete</h5>
+                  <button type="button" className="btn-close" onClick={() => setDeleteConfirm(null)}></button>
+                </div>
+                <div className="modal-body">
+                  <p>Are you sure you want to delete this {deleteConfirm.table.slice(0, -1)}? This action cannot be undone.</p>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Cancel</button>
+                  <button type="button" className="btn btn-danger" onClick={() => handleDelete(deleteConfirm.table, deleteConfirm.id)}>Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pagination */}
         <Pagination className={styles.pagination}>

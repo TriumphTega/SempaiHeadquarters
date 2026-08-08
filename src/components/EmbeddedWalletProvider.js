@@ -384,8 +384,11 @@ export const EmbeddedWalletProvider = ({ children }) => {
 
   // Sign and send transaction - supports both embedded and external wallets
   const signAndSendTransaction = async (transaction) => {
-    // Check if external wallet is connected
-    if (externalConnected && externalPublicKey) {
+    // Check which wallet type the user selected
+    const walletType = localStorage.getItem('walletType');
+
+    // Only use external wallet if user explicitly selected it
+    if (walletType === 'external' && externalConnected && externalPublicKey) {
       try {
         // Use external wallet (Phantom, etc.)
         if (externalSendTransaction) {

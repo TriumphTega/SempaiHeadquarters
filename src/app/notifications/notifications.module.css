@@ -1,0 +1,548 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   NOTIFICATIONS PAGE — KAITO ADVENTURE DESIGN SYSTEM
+   Aesthetic: Edo-period ink wash × cyberpunk amber glow
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Color Palette ── */
+:root {
+  --ka-bg-primary: #0c0c0c;
+  --ka-bg-card: #141210;
+  --ka-bg-elevated: #1a1714;
+  --ka-bg-input: #0f0e0d;
+  --ka-orange-primary: #cc5500;
+  --ka-orange-bright: #ff6b35;
+  --ka-orange-soft: #e67e22;
+  --ka-orange-dim: #8b4513;
+  --ka-red-accent: #c41e3a;
+  --ka-red-deep: #8b0000;
+  --ka-gold: #c9a84c;
+  --ka-gold-bright: #ffd700;
+  --ka-ivory: #f5e6d3;
+  --ka-ivory-dim: #c4b5a0;
+  --ka-ink: #2a2520;
+  --ka-border: #2d2418;
+  --ka-border-glow: #cc550040;
+  --ka-text-primary: #f5e6d3;
+  --ka-text-secondary: #a09080;
+  --ka-text-muted: #6b5d4f;
+  --ka-success: #4a7c59;
+  --ka-success-bright: #6ab77a;
+  --ka-danger: #c41e3a;
+  --ka-danger-soft: #8b3a3a;
+}
+
+/* ── App Shell ── */
+.container {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, #1a0f05 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, #0f0803 0%, transparent 50%),
+    linear-gradient(180deg, #0c0c0c 0%, #0a0806 50%, #0c0c0c 100%);
+  color: var(--ka-ivory);
+  font-family: "Noto Sans JP", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  padding: 2rem 1rem;
+}
+
+.container::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cc5500' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Floating Ember Particles ── */
+.emberContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.ember {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--ka-orange-primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: emberFloat 8s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--ka-orange-bright), 0 0 12px var(--ka-orange-primary);
+}
+
+@keyframes emberFloat {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+/* ── Header ── */
+.header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ka-orange-soft);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  background: linear-gradient(145deg, #1a1714 0%, #141210 100%);
+  transition: all 0.3s ease;
+}
+
+.backButton:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-ivory);
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.title {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ka-gold);
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.badge {
+  background: var(--ka-red-accent);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  border: 1px solid var(--ka-red-deep);
+  box-shadow: 0 0 10px rgba(196, 30, 58, 0.3);
+}
+
+/* ── Filters ── */
+.filters {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
+}
+
+.filterButton {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  background: linear-gradient(145deg, #1a1714 0%, #141210 100%);
+  color: var(--ka-ivory-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.filterButton:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-ivory);
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.filterButton.active {
+  border-color: var(--ka-orange-primary);
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+  color: var(--ka-orange-bright);
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.2);
+}
+
+/* ── Mark All Read Button ── */
+.markAllRead {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 10px 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1px solid var(--ka-success);
+  border-radius: 2px;
+  background: linear-gradient(145deg, rgba(74, 124, 89, 0.12) 0%, rgba(50, 80, 60, 0.08) 100%);
+  color: var(--ka-success-bright);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+  width: fit-content;
+}
+
+.markAllRead:hover {
+  background: linear-gradient(145deg, rgba(74, 124, 89, 0.2) 0%, rgba(50, 80, 60, 0.12) 100%);
+  box-shadow: 0 0 24px rgba(74, 124, 89, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ── Notifications List ── */
+.notificationsList {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Notification Item ── */
+.notificationItem {
+  background: linear-gradient(145deg, #141210 0%, #1a1714 50%, #12100e 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px #0a0806,
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(204, 85, 0, 0.05);
+  padding: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.notificationItem::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-primary) 20%, var(--ka-gold) 50%, var(--ka-orange-primary) 80%, transparent 100%);
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.notificationItem::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-dim) 30%, var(--ka-orange-dim) 70%, transparent 100%);
+  opacity: 0.3;
+}
+
+.notificationItem:hover {
+  transform: translateX(8px) scale(1.01);
+  box-shadow:
+    0 0 0 1px #0a0806,
+    0 16px 48px rgba(0, 0, 0, 0.8),
+    0 0 80px rgba(204, 85, 0, 0.15);
+}
+
+.notificationItem:hover::before {
+  opacity: 1;
+}
+
+.notificationItem.unread {
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.08) 0%, rgba(139, 69, 19, 0.05) 50%, rgba(204, 85, 0, 0.08) 100%);
+  border-color: var(--ka-orange-primary);
+}
+
+.notificationItem.unread::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--ka-orange-primary), var(--ka-gold));
+  height: auto;
+  opacity: 1;
+}
+
+/* Corner ornaments */
+.notificationCorner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--ka-orange-dim);
+  border-style: solid;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.notificationCornerTL { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+.notificationCornerTR { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+.notificationCornerBL { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+.notificationCornerBR { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+
+.notificationItem:hover .notificationCorner {
+  opacity: 0.8;
+}
+
+/* ── Notification Icon ── */
+.notificationIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(204, 85, 0, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+  border: 2px solid var(--ka-orange-dim);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.notificationItem:hover .notificationIcon {
+  border-color: var(--ka-orange-primary);
+  box-shadow: 0 0 25px rgba(204, 85, 0, 0.3);
+  transform: scale(1.1) rotate(5deg);
+}
+
+.iconNovel {
+  color: var(--ka-orange-primary);
+}
+
+.iconManga {
+  color: var(--ka-red-accent);
+}
+
+.iconComment {
+  color: var(--ka-success);
+}
+
+.iconDefault {
+  color: var(--ka-gold);
+}
+
+/* ── Notification Content ── */
+.notificationContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationTitle {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ka-orange-bright);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 1px;
+}
+
+.notificationMessage {
+  font-size: 0.9rem;
+  color: var(--ka-text-secondary);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
+}
+
+.notificationTime {
+  font-size: 0.8rem;
+  color: var(--ka-text-muted);
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+/* ── Notification Actions ── */
+.notificationActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #1a1714 0%, #141210 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  color: var(--ka-text-muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.actionButton:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-orange-bright);
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.15);
+  transform: scale(1.1);
+}
+
+/* ── Empty State ── */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ka-text-muted);
+  position: relative;
+  z-index: 2;
+}
+
+.emptyIcon {
+  margin-bottom: 1.5rem;
+  opacity: 0.5;
+  color: var(--ka-orange-dim);
+}
+
+.emptyState h3 {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--ka-ivory);
+  letter-spacing: 2px;
+}
+
+.emptyState p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ── Connect Prompt ── */
+.connectPrompt {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ka-text-muted);
+  position: relative;
+  z-index: 2;
+}
+
+.bellIcon {
+  margin-bottom: 1.5rem;
+  color: var(--ka-orange-dim);
+  opacity: 0.5;
+}
+
+.connectPrompt h2 {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--ka-ivory);
+  letter-spacing: 2px;
+}
+
+.connectPrompt p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ── Loading ── */
+.loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ka-text-muted);
+  position: relative;
+  z-index: 2;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ka-border);
+  border-top-color: var(--ka-orange-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1.5rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading p {
+  font-size: 1rem;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 0.75rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .filters {
+    gap: 0.5rem;
+  }
+
+  .filterButton {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .notificationItem {
+    padding: 1rem;
+  }
+
+  .notificationIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .notificationTitle {
+    font-size: 0.9rem;
+  }
+
+  .notificationMessage {
+    font-size: 0.85rem;
+  }
+
+  .notificationActions {
+    flex-direction: row;
+  }
+
+  .actionButton {
+    width: 32px;
+    height: 32px;
+  }
+}

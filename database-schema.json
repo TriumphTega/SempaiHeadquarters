@@ -1,0 +1,314 @@
+[
+  {
+    "table_name": "ad_based_unlocks",
+    "columns": "{ user_id (uuid), ad_watched_at (timestamp with time zone), unlocked_at (timestamp with time zone), chapter_number (integer), novel_id (uuid), id (uuid), ad_watched_date (date) }"
+  },
+  {
+    "table_name": "airdrop_transactions",
+    "columns": "{ transaction_signature (text), id (uuid), user_id (uuid), amount (numeric), created_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "amethyst_balances",
+    "columns": "{ amethyst_balance (bigint), wallet_address (text), created_at (timestamp with time zone), last_updated (timestamp with time zone), id (uuid), user_id (uuid) }"
+  },
+  {
+    "table_name": "amethyst_inventory",
+    "columns": "{ metadata (jsonb), acquired_at (timestamp with time zone), quantity (bigint), source (character varying), user_id (uuid), id (uuid), amethyst_type (character varying) }"
+  },
+  {
+    "table_name": "android_downloads",
+    "columns": "{ created_at (timestamp with time zone), version (text), download_url (text), id (uuid) }"
+  },
+  {
+    "table_name": "announcements",
+    "columns": "{ title (text), audience (text), message (text), created_at (timestamp with time zone), is_superuser_announcement (boolean), release_date (timestamp with time zone), user_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "banned_devices",
+    "columns": "{ device_hash (text), reason (text), banned_at (timestamp with time zone), id (uuid) }"
+  },
+  {
+    "table_name": "badges",
+    "columns": "{ name (text), description (text), price (numeric), image_url (text), created_at (timestamp with time zone), id (uuid), type (text), chapters (integer), duration_days (integer) }"
+  },
+  {
+    "table_name": "user_badges",
+    "columns": "{ user_id (uuid), badge_id (uuid), acquired_at (timestamp with time zone), id (uuid) }"
+  },
+  {
+    "table_name": "benefactor_announcements",
+    "columns": "{ announcement_type (text), id (uuid), novel_id (uuid), creator_id (uuid), is_pinned (boolean), expires_at (timestamp with time zone), created_at (timestamp with time zone), title (text), message (text), target_audience (text) }"
+  },
+  {
+    "table_name": "challenge_attempts",
+    "columns": "{ response_time_ms (integer), id (uuid), session_id (uuid), challenge_id (uuid), user_answer (integer), is_correct (boolean), attempted_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "chapter_payments",
+    "columns": "{ decimals (integer), chapter_number (integer), id (uuid), amount (bigint), currency (text), wallet_address (text), updated_at (timestamp with time zone), created_at (timestamp with time zone), paid_at (timestamp with time zone), payment_type (text), novel_id (uuid), transaction_id (text) }"
+  },
+  {
+    "table_name": "chapter_queue",
+    "columns": "{ id (uuid), is_advance (boolean), created_at (timestamp with time zone), status (text), release_date (timestamp with time zone), chapter_number (integer), novel_id (uuid) }"
+  },
+  {
+    "table_name": "chapter_ratings",
+    "columns": "{ rating (integer), chapter_number (integer), id (uuid), created_at (timestamp with time zone), content_id (uuid), content_type (text), user_id (uuid) }"
+  },
+  {
+    "table_name": "comments",
+    "columns": "{ content (text), author (text), chapter_id (text), user_id (uuid), username (text), novel_id (uuid), parent_id (uuid), created_at (timestamp with time zone), is_rewarded (boolean), id (uuid), chapter (text) }"
+  },
+  {
+    "table_name": "comprehension_challenges",
+    "columns": "{ novel_id (uuid), difficulty (character varying), options (ARRAY), question (text), created_at (timestamp with time zone), correct_answer (integer), chapter_number (integer), id (uuid) }"
+  },
+  {
+    "table_name": "creator_applications",
+    "columns": "{ name (text), user_id (uuid), created_at (timestamp with time zone), email (text), role (text), submission_link (text), application_status (text), id (uuid), reason (text) }"
+  },
+  {
+    "table_name": "creator_schedule_tracking",
+    "columns": "{ creator_id (uuid), id (uuid), novel_id (uuid), scheduled_release_date (timestamp with time zone), actual_release_date (timestamp with time zone), chapter_number (integer), created_at (timestamp with time zone), updated_at (timestamp with time zone), status (text), delay_reason (text) }"
+  },
+  {
+    "table_name": "feed_comment_likes",
+    "columns": "{ comment_id (uuid), created_at (timestamp with time zone), id (uuid), user_id (uuid) }"
+  },
+  {
+    "table_name": "feed_comments",
+    "columns": "{ post_id (uuid), content (text), id (uuid), updated_at (timestamp with time zone), created_at (timestamp with time zone), likes_count (integer), user_id (uuid) }"
+  },
+  {
+    "table_name": "feed_follows",
+    "columns": "{ created_at (timestamp with time zone), id (uuid), following_id (uuid), follower_id (uuid) }"
+  },
+  {
+    "table_name": "feed_likes",
+    "columns": "{ id (uuid), user_id (uuid), created_at (timestamp with time zone), post_id (uuid) }"
+  },
+  {
+    "table_name": "feed_post_likes",
+    "columns": "{ post_id (uuid), id (uuid), created_at (timestamp with time zone), user_id (uuid) }"
+  },
+  {
+    "table_name": "feed_post_views",
+    "columns": "{ created_at (timestamp with time zone), id (uuid), user_id (uuid), post_id (uuid) }"
+  },
+  {
+    "table_name": "feed_posts",
+    "columns": "{ created_at (timestamp with time zone), updated_at (timestamp with time zone), likes_count (integer), user_id (uuid), shares_count (integer), image_url (text), gif_url (text), image_urls (ARRAY), content (text), id (uuid), comments_count (integer) }"
+  },
+  {
+    "table_name": "feed_shares",
+    "columns": "{ created_at (timestamp with time zone), id (uuid), post_id (uuid), user_id (uuid) }"
+  },
+  {
+    "table_name": "feed_user_engagement",
+    "columns": "{ id (uuid), engagement_type (character varying), created_at (timestamp with time zone), post_id (uuid), user_id (uuid) }"
+  },
+  {
+    "table_name": "gifs",
+    "columns": "{ id (bigint), created_at (timestamp with time zone), title (character varying), url (text), tags (ARRAY) }"
+  },
+  {
+    "table_name": "hoard_items",
+    "columns": "{ notes (text), content_type (character varying), updated_at (timestamp with time zone), added_at (timestamp with time zone), manga_id (uuid), novel_id (uuid), user_id (uuid), id (uuid), status (character varying) }"
+  },
+  {
+    "table_name": "kaito_leaderboard_rewards",
+    "columns": "{ players_rewarded (integer), top_players_count (integer), created_at (timestamp with time zone), distributed_at (timestamp with time zone), distribution_details (jsonb), total_amount_distributed (bigint), id (bigint) }"
+  },
+  {
+    "table_name": "manga",
+    "columns": "{ user_id (uuid), created_at (timestamp with time zone), id (uuid), author (text), tags (ARRAY), status (text), cover_image (text), summary (text), title (text), show_in_home (boolean), is_visible (boolean), viewers_count (integer), featured (boolean) }"
+  },
+  {
+    "table_name": "manga_chapters",
+    "columns": "{ id (uuid), title (text), created_at (timestamp with time zone), is_premium (boolean), chapter_number (integer), ratings_count (integer), average_rating (numeric), price (numeric), manga_id (uuid) }"
+  },
+  {
+    "table_name": "manga_comments",
+    "columns": "{ content (text), username (text), is_rewarded (boolean), created_at (timestamp with time zone), parent_id (uuid), user_id (uuid), chapter_id (uuid), manga_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "manga_detail_comments",
+    "columns": "{ manga_id (uuid), id (uuid), content (text), username (text), is_rewarded (boolean), created_at (timestamp with time zone), parent_id (uuid), user_id (uuid) }"
+  },
+  {
+    "table_name": "manga_interactions",
+    "columns": "{ read_count (integer), user_id (uuid), id (uuid), last_read_at (timestamp without time zone), manga_id (uuid) }"
+  },
+  {
+    "table_name": "manga_pages",
+    "columns": "{ id (uuid), image_url (text), page_number (integer), chapter_id (uuid) }"
+  },
+  {
+    "table_name": "marketplace_listings",
+    "columns": "{ description (text), sold_at (timestamp with time zone), listed_at (timestamp with time zone), price (numeric), seller_id (uuid), hoard_item_id (uuid), id (uuid), currency (character varying), status (character varying) }"
+  },
+  {
+    "table_name": "messages",
+    "columns": "{ content (text), parent_id (uuid), id (uuid), user_id (uuid), wallet_address (text), created_at (timestamp with time zone), media_url (text), recipient_wallet_address (text) }"
+  },
+  {
+    "table_name": "nfts",
+    "columns": "{ name (text), url (text), keypair (text), minted (boolean), price (bigint), id (smallint), symbol (text) }"
+  },
+  {
+    "table_name": "notifications",
+    "columns": "{ id (uuid), user_id (uuid), novel_id (uuid), is_read (boolean), created_at (timestamp with time zone), comment_id (uuid), chat_id (uuid), manga_id (uuid), chapter (text), message (text), type (text), novel_title (text), recipient_wallet_address (text), sender_wallet_address (text) }"
+  },
+  {
+    "table_name": "novel_interactions",
+    "columns": "{ user_id (uuid), read_count (integer), last_read_at (timestamp without time zone), novel_id (uuid), id (uuid), wallet_address (text) }"
+  },
+  {
+    "table_name": "novels",
+    "columns": "{ chaptercontents (jsonb), chaptertitles (jsonb), tags (ARRAY), image (text), summary (text), title (text), show_in_home (boolean), is_visible (boolean), viewers_count (integer), advance_chapters (jsonb), id (uuid), user_id (uuid), featured (boolean) }"
+  },
+  {
+    "table_name": "pending_withdrawals",
+    "columns": "{ user_id (uuid), amount (numeric), createdat (timestamp with time zone), idempotence_key (text), last_valid_blockheight (bigint), id (uuid), transaction_id (text), status (text) }"
+  },
+  {
+    "table_name": "platform_settings",
+    "columns": "{ value (text), updated_at (timestamp with time zone), key (text) }"
+  },
+  {
+    "table_name": "players",
+    "columns": "{ quests (jsonb), stats (jsonb), rare_items (jsonb), trait (text), avatar (text), inventory_slots (integer), id (uuid), level (integer), gold (integer), wallet_address (text), name (text), updated_at (timestamp with time zone), created_at (timestamp with time zone), guild (jsonb), recipes (jsonb), inventory (jsonb), max_health (integer), health (integer), xp (integer), weekly_tasks (jsonb), daily_tasks (jsonb), last_login (timestamp with time zone), equipment (jsonb), skills (jsonb) }"
+  },
+  {
+    "table_name": "points_history",
+    "columns": "{ metadata (jsonb), id (uuid), user_id (uuid), created_at (timestamp with time zone), points_awarded (bigint), points_type (character varying), reference_id (character varying) }"
+  },
+  {
+    "table_name": "polls",
+    "columns": "{ user_id (uuid), id (uuid), question (text), expires_at (timestamp with time zone), options (ARRAY), created_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "private_messages",
+    "columns": "{ created_at (timestamp with time zone), parent_id (uuid), content (text), recipient_wallet (text), id (uuid), status (text), sender_wallet (text), media_url (text) }"
+  },
+  {
+    "table_name": "rate_limits",
+    "columns": "{ last_reset (timestamp with time zone), count (integer), ip (text) }"
+  },
+  {
+    "table_name": "reading_reputation",
+    "columns": "{ challenges_attempted (integer), total_reading_time_seconds (bigint), total_pages_read (integer), current_tier (character varying), challenges_passed (integer), updated_at (timestamp with time zone), reward_multiplier (numeric), flagged_for_review (boolean), consecutive_failed_challenges (integer), last_withdrawal_at (timestamp with time zone), reputation_score (integer), user_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "reading_sessions",
+    "columns": "{ status (character varying), time_on_page_seconds (integer), created_at (timestamp with time zone), completed_at (timestamp with time zone), session_data (jsonb), chapter_number (integer), novel_id (uuid), user_id (uuid), id (uuid), entropy_score (numeric), device_hash (character varying) }"
+  },
+  {
+    "table_name": "referrals",
+    "columns": "{ reward_claimed (boolean), created_at (timestamp without time zone), invitee_id (uuid), inviter_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "reputation_stakes",
+    "columns": "{ slash_reason (text), id (uuid), user_id (uuid), amount_smp (bigint), staked_at (timestamp with time zone), slashed_at (timestamp with time zone), is_active (boolean), multiplier_applied (numeric) }"
+  },
+  {
+    "table_name": "rewards_log",
+    "columns": "{ distributed_at (timestamp with time zone), id (uuid), amount_distributed (double precision), total_points (integer), reward_per_point (double precision) }"
+  },
+  {
+    "table_name": "rock_paper_scissors",
+    "columns": "{ player2_wallet (text), id (uuid), player2_choice (text), winner (text), player1_wallet (text), stake_amount (numeric), player1_choice (text), status (text) }"
+  },
+  {
+    "table_name": "session_receipts",
+    "columns": "{ user_id (uuid), id (uuid), expires_at (timestamp with time zone), used_for_claim (boolean), pages_read (ARRAY), time_on_pages (ARRAY), server_signature (text), device_hash (character varying), entropy_score (numeric), session_id (uuid), issued_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "settings",
+    "columns": "{ key (text), value (text) }"
+  },
+  {
+    "table_name": "slash_events",
+    "columns": "{ reason (text), created_at (timestamp with time zone), user_id (uuid), amount_slashed (bigint), id (uuid), amount_burned (bigint), amount_redistributed (bigint) }"
+  },
+  {
+    "table_name": "subscriptions",
+    "columns": "{ transaction_signature (text), user_id (uuid), plan (text), id (uuid), created_at (timestamp without time zone), expires_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "support_requests",
+    "columns": "{ message (text), subject (text), email (text), name (text), created_at (timestamp with time zone), id (uuid) }"
+  },
+  {
+    "table_name": "token_burns",
+    "columns": "{ reason (text), amount (bigint), id (uuid), created_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "unlocked_manga_chapters",
+    "columns": "{ chapter_id (uuid), unlocked_at (timestamp with time zone), id (uuid), user_id (uuid), manga_id (uuid), payment_amount (numeric), created_at (timestamp with time zone), expires_at (timestamp with time zone), payment_currency (text), transaction_id (text) }"
+  },
+  {
+    "table_name": "unlocked_story_chapters",
+    "columns": "{ purchase_start_chapter (integer), user_id (uuid), chapters_unlocked_count (integer), created_at (timestamp without time zone), id (uuid), transaction_id (text), subscription_type (text), payment_amount (numeric), chapter_unlocked_till (integer), story_id (uuid), chapters_purchased (integer), payment_currency (text), expires_at (timestamp without time zone) }"
+  },
+  {
+    "table_name": "user_activity",
+    "columns": "{ has_claimed_airdrop (boolean), user_id (uuid), created_at (timestamp with time zone), last_claim_timestamp (timestamp with time zone) }"
+  },
+  {
+    "table_name": "user_payments",
+    "columns": "{ paid_at (timestamp with time zone), id (uuid), payment_amount (double precision), user_wallet (text), manga_id (text), chapter_id (text), transaction_id (text), payment_currency (text) }"
+  },
+  {
+    "table_name": "user_wallets",
+    "columns": "{ id (uuid), user_id (uuid), address (text), private_key (text), created_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "users",
+    "columns": "{ last_reward_time (timestamp without time zone), x_oauth_token (text), x_account (text), image (text), weekly_points (numeric), balance (numeric), isSuperuser (boolean), isWriter (boolean), email_verified (timestamp without time zone), id (uuid), benefactor_level (text), referred_by (text), benefactor_since (timestamp with time zone), is_benefactor (boolean), x_verified_at (timestamp with time zone), name (text), email (text), total_benefactor_payments (numeric), current_writer_subscription (text), wallet_address (text), current_writer_subscription_expires (timestamp with time zone), total_points_read (bigint), amethyst_count (bigint), weekly_points_reset (timestamp with time zone), has_updated_profile (boolean), referral_code (text), isArtist (boolean) }"
+  },
+  {
+    "table_name": "votes",
+    "columns": "{ poll_id (uuid), id (uuid), choice (text), user_id (uuid) }"
+  },
+  {
+    "table_name": "wallet_balances",
+    "columns": "{ wallet_address (text), amount (numeric), created_at (timestamp with time zone), updated_at (timestamp with time zone), currency (text), staked_amount (bigint), decimals (integer), chain (text), user_id (uuid) }"
+  },
+  {
+    "table_name": "wallet_events",
+    "columns": "{ destination_user_id (uuid), destination_currency (text), destination_chain (text), source_transaction_signature (text), source_currency (text), source_chain (text), wallet_address (text), event_details (text), event_type (text), destination_transaction_signature (text), timestamp (timestamp without time zone), source_user_id (uuid), amount_change (integer), id (uuid) }"
+  },
+  {
+    "table_name": "weekly_leaderboard",
+    "columns": "{ weekly_points (bigint), user_id (uuid), updated_at (timestamp with time zone), id (uuid), amethyst_count (bigint), week_start (date), rank (integer), effective_points (bigint) }"
+  },
+  {
+    "table_name": "withdrawal_requests",
+    "columns": "{ receipt_ids (ARRAY), processed_at (timestamp with time zone), transaction_signature (text), requested_at (timestamp with time zone), amount_smp (bigint), tier_at_request (character varying), status (character varying), user_id (uuid), id (uuid), cooldown_end_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "writer_access_log",
+    "columns": "{ chapter_number (integer), accessed_at (timestamp with time zone), novel_id (uuid), subscription_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "writer_announcements",
+    "columns": "{ writer_id (uuid), novel_id (uuid), release_date (timestamp without time zone), created_at (timestamp without time zone), title (text), message (text), id (uuid) }"
+  },
+  {
+    "table_name": "writer_applications",
+    "columns": "{ reason (text), name (text), application_status (text), submission_link (text), email (text), submitted_at (timestamp with time zone), user_id (uuid), id (uuid) }"
+  },
+  {
+    "table_name": "writer_profiles",
+    "columns": "{ discord (text), created_at (timestamp with time zone), twitter (text), user_id (uuid), website (text), bio (text), updated_at (timestamp with time zone) }"
+  },
+  {
+    "table_name": "writer_subscription_stats",
+    "columns": "{ benefactor_wallet (text), id (uuid), writer_id (uuid), is_active (boolean), expires_at (timestamp with time zone), chapters_remaining (integer), chapters_unlocked (integer), plan_type (text), writer_name (text), total_chapters_read (bigint), novels_accessed (bigint) }"
+  },
+  {
+    "table_name": "writer_subscriptions",
+    "columns": "{ is_active (boolean), payment_amount (numeric), chapters_remaining (integer), chapters_unlocked (integer), writer_id (uuid), expires_at (timestamp with time zone), id (uuid), paid_at (timestamp with time zone), transaction_id (text), payment_currency (text), plan_type (text), benefactor_wallet (text) }"
+  }
+]

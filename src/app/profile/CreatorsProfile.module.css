@@ -7,6 +7,10 @@
   overflow: hidden;
 }
 
+.settingsSection {
+  margin: 30px 0;
+}
+
 .navbar {
   position: fixed;
   top: 0;

@@ -5,6 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
+import AutopaySettings from "@/components/AutopaySettings";
 import { FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "./CreatorsProfile.module.css"; // Updated to CreatorsProfile.module.css
@@ -144,6 +145,9 @@ export default function CreatorsProfilePage() {
                 )}
               </div>
               <p className={styles.walletInfo}><FaWallet /> {publicKey.toString().slice(0, 8)}...</p>
+            </section>
+            <section className={styles.settingsSection}>
+              <AutopaySettings />
             </section>
             <section className={styles.novelsSection}>
               <h2 className={styles.sectionTitle}><FaRocket /> My Creations</h2>

@@ -426,7 +426,7 @@ export default function NovelsPage() {
       </nav>
 
       <header className={styles.libraryHeader}>
-        <h1 className={styles.headerTitle}>SempaiHQ Library</h1>
+        <h1 className={styles.headerTitle}>SempaiHQ Hoard</h1>
         <p className={styles.headerTagline}>Unlock the Nexus of Imagination</p>
         <div className={styles.searchBar}>
           <FaSearch className={styles.searchIcon} />

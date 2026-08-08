@@ -1,0 +1,272 @@
+/* ── Kaito Adventure Color Palette ── */
+:root {
+  --ka-orange-primary: #cc5500;
+  --ka-orange-secondary: #ff6200;
+  --ka-gold: #c9a84c;
+  --ka-ivory: #f5f0e1;
+  --ka-ink: #0a0a0a;
+  --ka-charcoal: #1a1a1a;
+  --ka-mist: #2a2a2a;
+}
+
+/* ── Autopay Settings Container ── */
+.autopaySettings {
+  position: relative;
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%);
+  border: 2px solid rgba(204, 85, 0, 0.4);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(204, 85, 0, 0.2);
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* ── Ember Particles ── */
+.emberContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.ember {
+  position: absolute;
+  background: radial-gradient(circle, var(--ka-orange-primary) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: floatEmber linear infinite;
+  pointer-events: none;
+}
+
+@keyframes floatEmber {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--ka-orange-primary);
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(50px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* ── Corner Ornaments ── */
+.cornerTL,
+.cornerTR,
+.cornerBL,
+.cornerBR {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ka-orange-primary);
+  z-index: 2;
+  opacity: 0.6;
+}
+
+.cornerTL {
+  top: 8px;
+  left: 8px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.cornerTR {
+  top: 8px;
+  right: 8px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.cornerBL {
+  bottom: 8px;
+  left: 8px;
+  border-right: none;
+  border-top: none;
+}
+
+.cornerBR {
+  bottom: 8px;
+  right: 8px;
+  border-left: none;
+  border-top: none;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 3;
+}
+
+.icon {
+  font-size: 1.8rem;
+  color: var(--ka-orange-primary);
+  filter: drop-shadow(0 0 10px rgba(204, 85, 0, 0.5));
+}
+
+.title {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Content ── */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  z-index: 3;
+}
+
+.description {
+  font-size: 0.95rem;
+  color: rgba(245, 240, 225, 0.8);
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* ── Toggle Container ── */
+.toggleContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(42, 42, 42, 0.8);
+  border: 2px solid rgba(204, 85, 0, 0.4);
+  border-radius: 30px;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  color: var(--ka-ivory);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.toggleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggleButton.enabled {
+  background: linear-gradient(135deg, var(--ka-orange-primary) 0%, var(--ka-orange-secondary) 100%);
+  border-color: var(--ka-orange-primary);
+  color: var(--ka-ivory);
+  box-shadow: 0 4px 20px rgba(204, 85, 0, 0.4);
+}
+
+.toggleButton.disabled {
+  background: rgba(42, 42, 42, 0.8);
+  border-color: rgba(204, 85, 0, 0.4);
+  color: rgba(245, 240, 225, 0.6);
+}
+
+.toggleButton.enabled:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(204, 85, 0, 0.6);
+}
+
+.toggleButton.disabled:hover {
+  border-color: rgba(204, 85, 0, 0.6);
+  transform: scale(1.02);
+}
+
+.toggleIcon {
+  font-size: 1.6rem;
+}
+
+.toggleText {
+  font-weight: 700;
+}
+
+/* ── Benefits ── */
+.benefits {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(204, 85, 0, 0.1);
+  border: 1px solid rgba(204, 85, 0, 0.3);
+  border-radius: 12px;
+  margin-top: 8px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.benefitIcon {
+  color: var(--ka-gold);
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.5));
+}
+
+.benefitText {
+  font-size: 0.9rem;
+  color: var(--ka-gold);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .autopaySettings {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .toggleButton {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+  }
+
+  .toggleIcon {
+    font-size: 1.4rem;
+  }
+}

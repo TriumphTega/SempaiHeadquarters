@@ -1,0 +1,523 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BADGES PAGE — KAITO ADVENTURE DESIGN SYSTEM
+   Aesthetic: Edo-period ink wash × cyberpunk amber glow
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Color Palette ── */
+:root {
+  --ka-bg-primary: #0c0c0c;
+  --ka-bg-card: #141210;
+  --ka-bg-elevated: #1a1714;
+  --ka-bg-input: #0f0e0d;
+  --ka-orange-primary: #cc5500;
+  --ka-orange-bright: #ff6b35;
+  --ka-orange-soft: #e67e22;
+  --ka-orange-dim: #8b4513;
+  --ka-red-accent: #c41e3a;
+  --ka-red-deep: #8b0000;
+  --ka-gold: #c9a84c;
+  --ka-gold-bright: #ffd700;
+  --ka-ivory: #f5e6d3;
+  --ka-ivory-dim: #c4b5a0;
+  --ka-ink: #2a2520;
+  --ka-border: #2d2418;
+  --ka-border-glow: #cc550040;
+  --ka-text-primary: #f5e6d3;
+  --ka-text-secondary: #a09080;
+  --ka-text-muted: #6b5d4f;
+  --ka-success: #4a7c59;
+  --ka-success-bright: #6ab77a;
+  --ka-danger: #c41e3a;
+  --ka-danger-soft: #8b3a3a;
+}
+
+/* ── App Shell ── */
+.container {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, #1a0f05 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, #0f0803 0%, transparent 50%),
+    linear-gradient(180deg, #0c0c0c 0%, #0a0806 50%, #0c0c0c 100%);
+  color: var(--ka-ivory);
+  font-family: "Noto Sans JP", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  padding: 2rem 1rem;
+}
+
+.container::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cc5500' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Floating Ember Particles ── */
+.emberContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.ember {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--ka-orange-primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: emberFloat 8s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--ka-orange-bright), 0 0 12px var(--ka-orange-primary);
+}
+
+@keyframes emberFloat {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+/* ── Header ── */
+.header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ka-orange-soft);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  background: linear-gradient(145deg, #1a1714 0%, #141210 100%);
+  transition: all 0.3s ease;
+}
+
+.backButton:hover {
+  border-color: var(--ka-orange-dim);
+  color: var(--ka-ivory);
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.title {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ka-gold);
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+}
+
+/* ── Loading ── */
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--ka-text-muted);
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ka-border);
+  border-top-color: var(--ka-orange-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error ── */
+.error {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  background: rgba(196, 30, 58, 0.08);
+  border-left: 2px solid var(--ka-red-accent);
+  border-radius: 3px;
+  padding: 12px 16px;
+  color: #e08a96;
+  font-size: 0.9rem;
+}
+
+/* ── Section ── */
+.section {
+  max-width: 1200px;
+  margin: 0 auto 3rem;
+  position: relative;
+  z-index: 2;
+}
+
+.sectionTitle {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  letter-spacing: 2px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ka-border);
+  position: relative;
+}
+
+.sectionTitle::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ka-orange-primary), var(--ka-gold));
+}
+
+/* ── Empty State ── */
+.emptyMessage {
+  text-align: center;
+  padding: 3rem;
+  color: var(--ka-text-muted);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* ── Badge Grid ── */
+.badgeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .badgeGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* ── Badge Card ── */
+.badgeCard {
+  background: linear-gradient(145deg, #141210 0%, #1a1714 50%, #12100e 100%);
+  border: 1px solid var(--ka-border);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px #0a0806,
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(204, 85, 0, 0.05);
+  padding: 1.5rem;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.badgeCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-primary) 20%, var(--ka-gold) 50%, var(--ka-orange-primary) 80%, transparent 100%);
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.badgeCard::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--ka-orange-dim) 30%, var(--ka-orange-dim) 70%, transparent 100%);
+  opacity: 0.3;
+}
+
+.badgeCard:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow:
+    0 0 0 1px #0a0806,
+    0 16px 48px rgba(0, 0, 0, 0.8),
+    0 0 80px rgba(204, 85, 0, 0.15);
+}
+
+.badgeCard:hover::before {
+  opacity: 1;
+}
+
+/* Corner ornaments */
+.badgeCardCorner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--ka-orange-dim);
+  border-style: solid;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.badgeCardCornerTL { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+.badgeCardCornerTR { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+.badgeCardCornerBL { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+.badgeCardCornerBR { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+
+.badgeCard:hover .badgeCardCorner {
+  opacity: 0.8;
+}
+
+/* ── Badge Icon ── */
+.badgeIcon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(204, 85, 0, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+  border: 2px solid var(--ka-orange-dim);
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  font-size: 1.75rem;
+  color: var(--ka-gold);
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.badgeCard:hover .badgeIcon {
+  border-color: var(--ka-orange-primary);
+  box-shadow: 0 0 30px rgba(204, 85, 0, 0.4);
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* ── Badge Image ── */
+.badgeImage {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 15px rgba(204, 85, 0, 0.3));
+  transition: all 0.3s ease;
+}
+
+.badgeCard:hover .badgeImage {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 0 25px rgba(204, 85, 0, 0.5));
+}
+
+/* ── Token Selector ── */
+.tokenSelector {
+  margin-bottom: 2rem;
+  text-align: center;
+  animation: fadeInDown 0.6s ease-out;
+}
+
+.tokenSelectorTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.tokenOptions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tokenOption {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(20, 20, 20, 0.95);
+  border: 2px solid rgba(204, 85, 0, 0.4);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  justify-content: flex-start;
+}
+
+.tokenOption:hover {
+  border-color: rgba(204, 85, 0, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(204, 85, 0, 0.3);
+}
+
+.tokenOption.selected {
+  border-color: var(--ka-orange-primary);
+  background: rgba(204, 85, 0, 0.1);
+  box-shadow: 0 0 20px rgba(204, 85, 0, 0.4);
+}
+
+.tokenLogo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tokenName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tokenBalance {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ka-gold);
+}
+
+/* ── Badge Name ── */
+.badgeName {
+  font-family: "Noto Serif JP", "Georgia", serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ka-ivory);
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+}
+
+/* ── Badge Description ── */
+.badgeDescription {
+  font-size: 0.85rem;
+  color: var(--ka-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* ── Badge Price ── */
+.badgePrice {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ka-orange-bright);
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  background: rgba(204, 85, 0, 0.1);
+  border: 1px solid var(--ka-orange-dim);
+  border-radius: 2px;
+}
+
+/* ── Purchase Button ── */
+.purchaseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 10px 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1px solid var(--ka-orange-primary);
+  border-radius: 2px;
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+  color: var(--ka-orange-bright);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.purchaseButton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(204, 85, 0, 0.2), transparent);
+  transition: left 0.4s ease;
+}
+
+.purchaseButton:hover::before {
+  left: 100%;
+}
+
+.purchaseButton:hover {
+  background: linear-gradient(145deg, rgba(204, 85, 0, 0.25) 0%, rgba(139, 69, 19, 0.15) 100%);
+  box-shadow: 0 0 24px rgba(204, 85, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.purchaseButton:active {
+  transform: translateY(0);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 0.75rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.1rem;
+  }
+
+  .badgeCard {
+    padding: 1.25rem;
+  }
+
+  .badgeIcon {
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+  }
+
+  .badgeName {
+    font-size: 1rem;
+  }
+
+  .badgeDescription {
+    font-size: 0.8rem;
+  }
+}

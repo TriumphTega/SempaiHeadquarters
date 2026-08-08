@@ -1,10 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Head from "next/head";
 import { useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { InlineUserDisplay } from "@/components/UserDisplay";
 import BenefactorPricing from "@/components/BenefactorPricing";
+import AutopaySettings from "@/components/AutopaySettings";
 import { PublicKey, Connection, LAMPORTS_PER_SOL, Transaction, SystemProgram } from "@solana/web3.js";
 import ReadingTracker from "../../../../../services/porp/ReadingTracker";
 import PoRPStatus from "../../../../../components/PoRP/PoRPStatus";
@@ -21,7 +23,6 @@ import {
   unpackAccount,
 } from "@solana/spl-token";
 import DOMPurify from "dompurify";
-import Head from "next/head";
 import Link from "next/link";
 import {
   FaHome,
@@ -50,10 +51,13 @@ import {
   FaChevronRight,
   FaWallet,
   FaSpinner,
+  FaShareAlt,
+  FaBookReader,
 } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import styles from "../../../../../styles/ChapterPage.module.css";
+import autopayStyles from "../../../../../styles/AutopaySettings.module.css";
 import {
   RPC_URL,
   SMP_MINT_ADDRESS,
@@ -395,6 +399,8 @@ export default function ChapterPage() {
   const [averageRating, setAverageRating] = useState(null);
   const [showTransactionPopup, setShowTransactionPopup] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState(null);
+  const [autopayEnabled, setAutopayEnabled] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [readingMode, setReadingMode] = useState("free");
   const [smpBalance, setSmpBalance] = useState(null);
   const [weeklyPoints, setWeeklyPoints] = useState(null);
@@ -762,6 +768,16 @@ export default function ChapterPage() {
       } else {
         setShowBenefactorOption(false);
       }
+
+      // Fetch autopay preference
+      if (userData.id) {
+        const { data: autopayData } = await supabase
+          .from("users")
+          .select("autopay_enabled")
+          .eq("id", userData.id)
+          .single();
+        setAutopayEnabled(autopayData?.autopay_enabled || false);
+      }
     } catch (error) {
       console.error("Error fetching user balances:", error);
       setError("Unable to load wallet balances.");
@@ -785,6 +801,53 @@ export default function ChapterPage() {
     }
     setReadingMode("paid");
     await processChapterPayment("SINGLE", "SMP");
+  };
+
+  const handleAutopayUnlock = async () => {
+    if (!isWalletConnected || !autopayEnabled || hasInsufficientSmp) return;
+
+    try {
+      setIsProcessing(true);
+      await processChapterPayment("SINGLE", "SMP");
+    } catch (error) {
+      console.error("[Autopay] Error:", error);
+      setError(`Autopay failed: ${error.message}`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLocked && autopayEnabled && !hasInsufficientSmp && !isProcessing && userId) {
+      handleAutopayUnlock();
+    }
+  }, [isLocked, autopayEnabled, hasInsufficientSmp, userId]);
+
+  const handleShare = async () => {
+    const shareUrl = `https://sempaihq.com/novel/${id}/chapter/${chapter}`;
+    const shareText = `Read ${chapterTitle} of ${novel.title} on Sempai HQ!`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${novel.title} - ${chapterTitle}`,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error('[Share] Error sharing:', error);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setSuccessMessage('Link copied to clipboard!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }).catch(() => {
+        setError('Failed to copy link');
+        setTimeout(() => setError(null), 3000);
+      });
+    }
   };
 
   useEffect(() => {
@@ -897,7 +960,7 @@ export default function ChapterPage() {
         .eq("benefactor_wallet", activeWalletAddress)
         .eq("writer_id", writerId)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
       
       if (subscriptionError && subscriptionError.code !== "PGRST116") {
         console.error("[checkBenefactorAccess] Error:", subscriptionError.message);
@@ -1380,7 +1443,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
             .select("chapter_unlocked_till, expires_at")
             .eq("user_id", userId)
             .eq("story_id", id)
-            .single();
+            .maybeSingle();
           if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
 
           const hasUnlock =
@@ -1412,7 +1475,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
           .eq("user_id", userId)
           .eq("novel_id", id)
           .eq("chapter_number", chapterNum)
-          .single();
+          .maybeSingle();
         
         if (!adError && adUnlock) {
           setIsLocked(false);
@@ -1480,7 +1543,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
           .select("chapter_unlocked_till, expires_at, subscription_type")
           .eq("user_id", userId)
           .eq("story_id", id)
-          .single();
+          .maybeSingle();
         if (unlockError && unlockError.code !== "PGRST116") throw unlockError;
 
         if (unlock) {
@@ -1561,7 +1624,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
         .eq("content_type", "novel")
         .eq("content_id", id)
         .eq("chapter_number", chapterNum)
-        .single();
+        .maybeSingle();
       if (userError && userError.code !== "PGRST116") {
         console.error("Error fetching user rating:", userError);
       } else {
@@ -1944,6 +2007,18 @@ const response = await fetch("/api/benefactor-payment-proxy", {
     <div className={`${styles.page} ${styles.dark}`}>
       <Head>
         <title>{`${novel.title} - ${chapterTitle}`}</title>
+        <meta name="description" content={`Read ${chapterTitle} of ${novel.title} on Sempai HQ. Join our community of readers and writers.`} />
+        <meta property="og:title" content={`${novel.title} - ${chapterTitle}`} />
+        <meta property="og:description" content={`Read ${chapterTitle} of ${novel.title} on Sempai HQ. Join our community of readers and writers.`} />
+        <meta property="og:image" content={`https://sempaihq.com/images/sempaiCard.png?v=${chapter}`} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://sempaihq.com/novel/${id}/chapter/${chapter}`} />
+        <meta property="og:site_name" content="Sempai HQ" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${novel.title} - ${chapterTitle}`} />
+        <meta name="twitter:description" content={`Read ${chapterTitle} of ${novel.title} on Sempai HQ. Join our community of readers and writers.`} />
+        <meta name="twitter:image" content={`https://sempaihq.com/images/sempaiCard.png?v=${chapter}`} />
+        <meta name="twitter:site" content="@HomeforSempai" />
       </Head>
 
       {isWalletConnected && (
@@ -1986,22 +2061,27 @@ const response = await fetch("/api/benefactor-payment-proxy", {
       <div className={styles.chapterContainer}>
         <div className={styles.headerSection}>
           <h1 className={styles.chapterTitle}>{chapterTitle}</h1>
-          {!isLocked && (
-            <div className={styles.audioControls}>
-              <button onClick={() => readText(chapterData)} className={styles.audioButton}>
-                <FaVolumeUp /> Read Aloud
-              </button>
-              <button onClick={pauseText} className={styles.audioButton}>
-                <FaPause /> Pause
-              </button>
-              <button onClick={resumeText} className={styles.audioButton}>
-                <FaPlay /> Resume
-              </button>
-              <button onClick={stopText} className={styles.audioButton}>
-                <FaStop /> Stop
-              </button>
-            </div>
-          )}
+          <div className={styles.headerActions}>
+            <button onClick={handleShare} className={styles.shareButton} title="Share this chapter">
+              <FaShareAlt /> Share
+            </button>
+            {!isLocked && (
+              <div className={styles.audioControls}>
+                <button onClick={() => readText(chapterData)} className={styles.audioButton}>
+                  <FaVolumeUp /> Read Aloud
+                </button>
+                <button onClick={pauseText} className={styles.audioButton}>
+                  <FaPause /> Pause
+                </button>
+                <button onClick={resumeText} className={styles.audioButton}>
+                  <FaPlay /> Resume
+                </button>
+                <button onClick={stopText} className={styles.audioButton}>
+                  <FaStop /> Stop
+                </button>
+              </div>
+            )}
+          </div>
           {successMessage && (
             <div className={styles.successMessage}>
               <FaGem /> {successMessage}
@@ -2096,7 +2176,14 @@ const response = await fetch("/api/benefactor-payment-proxy", {
                 )}
                 
                 {showBenefactorOption && !benefactorAccess && (
-                  <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
+                  <>
+                    <AutopaySettings walletAddress={activePublicKey} onAutopayToggle={(enabled) => setAutopayEnabled(enabled)} />
+                    <Link href="/badges" onClick={() => router.push("/badges")} className={styles.badgesButton}>
+                      <FaCrown className={styles.buttonIcon} />
+                      <span className={styles.buttonText}>Buy Badges</span>
+                    </Link>
+                    <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
+                  </>
                 )}
                 
                 {benefactorAccess && (
@@ -2119,7 +2206,14 @@ const response = await fetch("/api/benefactor-payment-proxy", {
             ) : (
               <>
                 {showBenefactorOption && !benefactorAccess && (
-                  <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
+                  <>
+                    <AutopaySettings walletAddress={activePublicKey} onAutopayToggle={(enabled) => setAutopayEnabled(enabled)} />
+                    <Link href="/badges" onClick={() => router.push("/badges")} className={styles.badgesButton}>
+                      <FaCrown className={styles.buttonIcon} />
+                      <span className={styles.buttonText}>Buy Badges</span>
+                    </Link>
+                    <BenefactorPricing onSelectPlan={handleBenefactorUnlock} isProcessing={isProcessing} />
+                  </>
                 )}
                 {benefactorAccess && (
                   <div className={styles.benefactorStatus}>
@@ -2144,6 +2238,31 @@ const response = await fetch("/api/benefactor-payment-proxy", {
           <>
             <div className={styles.chapterContent}>
               <div dangerouslySetInnerHTML={{ __html: paragraphs }} className={styles.contentText}></div>
+            </div>
+
+            {/* Chapter Carousel Preview */}
+            <div className={styles.chapterCarousel}>
+              <h3 className={styles.carouselTitle}>More Chapters</h3>
+              <div className={styles.carouselContainer}>
+                {chapterKeys.slice(Math.max(0, currentChapterIndex - 2), Math.min(chapterKeys.length, currentChapterIndex + 3)).map((chapterKey, index) => {
+                  const chapterIndexInArray = Math.max(0, currentChapterIndex - 2) + index;
+                  const isCurrentChapter = chapterKey === chapter;
+                  const isLocked = chapterIndexInArray > currentChapterIndex && chapterIndexInArray > 2;
+                  return (
+                    <Link
+                      key={chapterKey}
+                      href={`/novel/${id}/chapter/${chapterKey}`}
+                      onClick={() => router.push(`/novel/${id}/chapter/${chapterKey}`)}
+                      className={`${styles.carouselCard} ${isCurrentChapter ? styles.currentCard : ''} ${isLocked ? styles.lockedCard : ''}`}
+                    >
+                      <div className={styles.cardNumber}>Chapter {parseInt(chapterKey) + 1}</div>
+                      <div className={styles.cardTitle}>{novel.chaptertitles?.[chapterKey] || `Chapter ${parseInt(chapterKey) + 1}`}</div>
+                      {isLocked && <FaLock className={styles.lockIcon} />}
+                      {isCurrentChapter && <FaBookReader className={styles.currentIcon} />}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
             <div className={styles.navigation}>

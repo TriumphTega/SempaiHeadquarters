@@ -253,7 +253,7 @@ export default function MangaPage() {
         <div className={styles.navbarContent}>
           <Link href="/" className={styles.mangaLogo}>
             <img src="/images/logo.jpeg" alt="SempaiHQ" className={styles.logoImage} />
-            <span className={styles.logoText}>SempaiHQ Manga</span>
+            <span className={styles.logoText}>SempaiHQ Manga Hoard</span>
           </Link>
           <button className={styles.menuButton} onClick={toggleMenu}>
             {menuOpen ? <FaTimes /> : <FaBars />}
@@ -280,7 +280,7 @@ export default function MangaPage() {
 
       {/* Header with Search */}
       <header className={styles.mangaHeader}>
-        <h1 className={styles.headerTitle}>SempaiHQ Manga</h1>
+        <h1 className={styles.headerTitle}>SempaiHQ Manga Hoard</h1>
         <p className={styles.headerTagline}>Journey Through Infinite Panels</p>
         <div className={styles.searchBar}>
           <FaSearch className={styles.searchIcon} />
