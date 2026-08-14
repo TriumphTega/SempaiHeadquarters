@@ -805,6 +805,9 @@ export default function ChapterPage() {
 
   const handleAutopayUnlock = async () => {
     if (!isWalletConnected || !autopayEnabled || hasInsufficientSmp) return;
+    
+    // Autopay should not work on advance chapters
+    if (advanceInfo?.is_advance) return;
 
     try {
       setIsProcessing(true);
