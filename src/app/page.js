@@ -914,7 +914,7 @@ export default function Home() {
       </nav>
 
       <div className={styles.banner}>
-        <p className={styles.bannerText}>we will keep building, if you keep writing</p>
+        <p className={styles.bannerText}>And there's a hope burning in our chests, so we build.</p>
       </div>
 
       <header className={styles.hero}>
@@ -1121,7 +1121,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
           <div className={styles.footerTop}>
-            <p>© 2025 Sempai HQ. All rights reserved.</p>
+            <p>© 2025 - 2026 Sempai HQ. All rights reserved.</p>
           </div>
           <div className={styles.footerLinks}>
             <Link href="/privacy-policy">Privacy Policy</Link>
