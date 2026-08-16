@@ -21,15 +21,15 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
-  --nav-bg-1: #ffffff;
-  --nav-bg-2: #f1f5f9;
+  --nav-bg-1: #FDFBD4;
+  --nav-bg-2: #f5f0d0;
   --nav-text: #1e293b;
   --nav-text-dim: rgba(30, 41, 59, 0.65);
   --nav-orange: #3b82f6;
   --nav-orange-dark: #2563eb;
   --nav-danger: #ef4444;
   --nav-danger-dark: #dc2626;
-  --nav-connect-bg: #f8fafc;
+  --nav-connect-bg: #f5f0d0;
   --nav-connect-text: #1e293b;
   --nav-shadow: rgba(0, 0, 0, 0.08);
   --nav-popup-line: rgba(59, 130, 246, 0.12);
@@ -267,8 +267,8 @@ html[data-theme="light"] {
   top: 100%;
   right: 0;
   margin-top: 0.5rem;
-  background: #fff;
-  color: #333;
+  background: var(--nav-bg-1);
+  color: var(--nav-text);
   border-radius: 8px;
   box-shadow: 0 4px 12px var(--nav-shadow);
   width: 300px;
@@ -377,8 +377,8 @@ html[data-theme="light"] {
 
 .referralDropdown {
   position: fixed;
-  background: #fff;
-  color: #333;
+  background: var(--nav-bg-1);
+  color: var(--nav-text);
   border-radius: 10px;
   padding: 0.85rem;
   width: 190px;
@@ -529,4 +529,66 @@ html[data-theme="light"] {
 
   .creatorChoicePopup { width: 85%; padding: 1.2rem; }
   .choiceButton { padding: 0.55rem 0.9rem; font-size: 0.85rem; }
+}
+
+@media (max-width: 400px) {
+  .navbar { padding: 0.4rem 0.6rem; }
+  .navContainer { gap: 0.5rem; }
+  .leftSide { gap: 0.4rem; }
+  .rightSide { gap: 0.35rem; }
+  
+  .logo { width: 24px; height: 24px; }
+  .logoText { font-size: 0.8rem; }
+  .themeToggleButton { width: 26px; height: 26px; font-size: 0.75rem; padding: 0.3rem; }
+  
+  .connectButton { padding: 0.3rem 0.6rem; font-size: 0.65rem; }
+  .notificationButton { padding: 0.2rem; width: 32px; height: 32px; font-size: 0.8rem; }
+  .referralToggle { width: 32px; height: 32px; font-size: 0.9rem; }
+  
+  .menuToggle { font-size: 1.1rem; padding: 0.35rem; }
+  
+  .notificationDropdown { 
+    position: fixed; 
+    top: 55px; 
+    right: 0.6rem; 
+    width: calc(100vw - 1.2rem); 
+    max-width: 280px;
+    max-height: 60vh; 
+    overflow-y: auto; 
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar { padding: 0.35rem 0.5rem; }
+  .navContainer { gap: 0.4rem; }
+  .leftSide { gap: 0.35rem; }
+  .rightSide { gap: 0.3rem; }
+  
+  .logo { width: 22px; height: 22px; }
+  .logoText { font-size: 0.75rem; }
+  .themeToggleButton { width: 24px; height: 24px; font-size: 0.7rem; padding: 0.25rem; }
+  
+  .connectButton { padding: 0.25rem 0.5rem; font-size: 0.6rem; }
+  .notificationButton { padding: 0.15rem; width: 30px; height: 30px; font-size: 0.75rem; }
+  .referralToggle { width: 30px; height: 30px; font-size: 0.85rem; }
+  
+  .menuToggle { font-size: 1rem; padding: 0.3rem; }
+  
+  /* Hide referral toggle on very small screens to save space */
+  .referralToggle { display: none; }
+  
+  .notificationDropdown { 
+    position: fixed; 
+    top: 50px; 
+    right: 0.5rem; 
+    width: calc(100vw - 1rem); 
+    max-width: 260px;
+    max-height: 55vh; 
+    overflow-y: auto; 
+  }
+  
+  .creatorChoicePopup { width: 90%; padding: 1rem; }
+  .popupTitle { font-size: 1.1rem; }
+  .popupMessage { font-size: 0.85rem; }
+  .choiceButton { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
 }

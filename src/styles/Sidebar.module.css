@@ -18,8 +18,8 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
-  --sb-bg-1: #ffffff;
-  --sb-bg-2: #f2f2f2;
+  --sb-bg-1: #FDFBD4;
+  --sb-bg-2: #f5f0d0;
   --sb-text: #1a1a1a;
   --sb-text-dim: #555555;
   --sb-line: rgba(0, 0, 0, 0.1);

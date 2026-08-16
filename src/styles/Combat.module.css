@@ -1611,7 +1611,7 @@
   border-radius: 10px;
   border: 2px solid #ffd700;
   box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
-  background: linear-gradient(to bottom, #fff4d1, #fbe2a5);
+  background: linear-gradient(to bottom, #FDFBD4, #f5f0d0);
   color: #4b2900;
   animation: popIn 0.5s ease;
 }

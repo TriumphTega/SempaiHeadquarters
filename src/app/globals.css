@@ -45,10 +45,10 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
-  --background: #f8fafc;
+  --background: #FDFBD4;
   --foreground: #1e293b;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f1f5f9;
+  --bg-primary: #FDFBD4;
+  --bg-secondary: #f5f0d0;
   --text-primary: #1e293b;
   --text-secondary: rgba(30, 41, 59, 0.7);
   --accent-primary: #3b82f6;
@@ -57,14 +57,14 @@ html[data-theme="light"] {
   --accent-tertiary: #2563eb;
   --accent-quaternary: #93c5fd;
   --border-color: rgba(59, 130, 246, 0.15);
-  --input-bg: #f8fafc;
+  --input-bg: #f5f0d0;
   --subtle-blue: rgba(59, 130, 246, 0.08);
   --glow-blue: rgba(59, 130, 246, 0.25);
   
   /* Chapter page specific variables */
-  --ink-950: #f8fafc;
-  --ink-900: #ffffff;
-  --ink-800: #f1f5f9;
+  --ink-950: #FDFBD4;
+  --ink-900: #FDFBD4;
+  --ink-800: #f5f0d0;
   --ink-line: rgba(59, 130, 246, 0.15);
   --text: #1e293b;
   --text-dim: rgba(30, 41, 59, 0.65);
