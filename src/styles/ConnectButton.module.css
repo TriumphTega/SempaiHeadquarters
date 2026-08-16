@@ -1,4 +1,9 @@
-/* styles/ConnectButton.module.css */
+/* styles/ConnectButton.module.css
+   Redesigned trigger: a fixed-size circular avatar button (not a pill that
+   grows with content), so it never needs an external wrapper to cap its
+   width. All connected-wallet detail (full address, email, actions) lives
+   in the dropdown menu instead of being crammed into the trigger itself. */
+
 .connectButtonWrapper {
   position: relative;
   display: inline-flex;
@@ -8,29 +13,109 @@
   background: transparent;
 }
 
+.walletInfo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Disconnected state trigger */
 .singleButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(120% 120% at 10% 10%, rgba(243, 99, 22, 0.9), #1a1a1a 60%);
+  background: radial-gradient(120% 120% at 30% 20%, rgba(243, 99, 22, 0.95), #1a1a1a 65%);
   color: #fff;
-  padding: 8px 10px;
-  min-height: 32px;
-  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid rgba(243, 99, 22, 1);
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 32px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.3s ease;
 }
 
 .singleButton:hover {
-  background: radial-gradient(120% 120% at 10% 10%, rgba(243, 99, 22, 1), #1a1a1a 60%);
+  background: radial-gradient(120% 120% at 30% 20%, rgba(243, 99, 22, 1), #1a1a1a 65%);
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 8px 18px rgba(243, 99, 22, 0.35);
+}
+
+.singleButton:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* Connected state trigger — same circular footprint as the disconnected
+   button, so nothing shifts in the navbar when the wallet connects. */
+.walletAvatarButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1f1f1f, #141414);
+  border: 1px solid rgba(243, 99, 22, 0.55);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.walletAvatarButton:hover {
+  border-color: rgba(243, 99, 22, 1);
   transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(243, 99, 22, 0.25);
+  box-shadow: 0 8px 18px rgba(243, 99, 22, 0.3);
+}
+
+.walletAvatarButton:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.walletAvatarButton[aria-expanded="true"] {
+  border-color: rgba(243, 99, 22, 1);
+  box-shadow: 0 0 0 3px rgba(243, 99, 22, 0.18);
 }
 
 .buttonIcon {
-  font-size: 16px;
+  font-size: 15px;
+}
+
+/* Small connected-status dot anchored to the avatar button */
+.statusDot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2ecc71;
+  border: 2px solid #141414;
+  animation: pulse 1.8s infinite;
+}
+
+/* External-wallet indicator, anchored opposite the status dot */
+.externalBadge {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  border: 1.5px solid rgba(243, 99, 22, 0.8);
+  color: rgba(243, 99, 22, 1);
+  font-size: 8px;
 }
 
 /* Overlay styles for all popups */
@@ -64,6 +149,7 @@
 .embeddedForm,
 .privateKeyBox,
 .referralPrompt {
+  position: relative;
   background: #1a1a1a;
   padding: 20px;
   border-radius: 12px;
@@ -195,35 +281,6 @@
   transform: scale(1.05);
 }
 
-.walletInfo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #fff;
-  background: rgba(51, 51, 51, 0.7);
-  padding: 4px;
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-/* Button variant used when showing the address; keep compact and truncate text */
-.addressButton {
-  max-width: 200px;
-  width: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(243, 99, 22, 0.3);
-  background: #1a1a1a;
-  color: #fff;
-}
-
 .disconnectButton {
   background: #1a1a1a;
   color: rgba(243, 99, 22, 1);
@@ -239,13 +296,18 @@
 .loadingContainer {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  color: #fff;
-  font-size: 12px;
+  color: rgba(243, 99, 22, 1);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(243, 99, 22, 0.4);
+  background: #1a1a1a;
 }
 
 .spinner {
-  font-size: 16px;
+  font-size: 15px;
   animation: spin 1s linear infinite;
 }
 
@@ -255,47 +317,35 @@
 }
 
 .errorContainer {
-  color: rgba(243, 99, 22, 1);
-  text-align: center;
-  background: #1a1a1a;
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(243, 99, 22, 0.3);
+  display: inline-flex;
 }
 
 .retryButton {
   background: rgba(243, 99, 22, 0.9);
   color: #1a1a1a;
-  margin-top: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 999px;
 }
 
 .retryButton:hover {
   background: rgba(243, 99, 22, 1);
 }
 
-.connectedStatus {
-  width: 8px;
-  height: 8px;
-  background: rgba(243, 99, 22, 0.8);
-  border-radius: 50%;
-  border: 1px solid #1a1a1a;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 .successMessage {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: rgba(243, 99, 22, 0.8);
-  font-size: 12px;
-  margin-top: 6px;
-  text-align: center;
+  color: rgba(243, 99, 22, 0.9);
+  background: #1a1a1a;
+  border: 1px solid rgba(243, 99, 22, 0.4);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
   animation: slideIn 0.5s ease-out;
 }
 
@@ -314,6 +364,7 @@
   color: #fff;
   font-size: 14px;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .input:focus {
@@ -346,6 +397,7 @@
   font-size: 12px;
   resize: none;
   word-break: break-all;
+  box-sizing: border-box;
 }
 
 .securityNote {
@@ -376,11 +428,10 @@
 
 .dropdownMenu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 10px);
   right: 0;
-  margin-top: 8px;
   min-width: 220px;
-  background: rgba(15, 15, 20, 0.8);
+  background: rgba(15, 15, 20, 0.92);
   border: 1px solid rgba(243, 99, 22, 0.25);
   border-radius: 12px;
   box-shadow: 0 20px 34px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(243, 99, 22, 0.18);
@@ -388,6 +439,7 @@
   padding: 10px;
   z-index: 1001;
   animation: menuReveal 160ms ease-out;
+  transform-origin: top right;
   overflow: hidden;
   font-family: inherit;
   color: #f5f5f7;
@@ -395,44 +447,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Hard reset any buttons inside dropdown to avoid global overrides */
-.dropdownMenu :where(button) {
-  all: unset;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: transparent;
-  color: #f5f5f5;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  text-transform: none !important;
-  letter-spacing: 0.1px;
-}
-.dropdownMenu :where(button):hover {
-  background: linear-gradient(90deg, rgba(243, 99, 22, 0.18), rgba(243, 99, 22, 0.07));
-  color: #ffffff;
-}
-.dropdownMenu :where(button):focus-visible {
-  outline: 2px solid rgba(243, 99, 22, 0.5);
-  outline-offset: 2px;
-}
-.dropdownMenu :where(button) svg {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  opacity: 0.9;
-  margin-top: 1px;
-}
-
 .menuItem {
   all: unset;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   padding: 10px 12px;
   background: transparent;
   color: #f5f5f5;
@@ -494,25 +515,27 @@
   word-break: break-all;
 }
 
-.tooltip {
-  margin: 6px 12px 4px;
-  font-size: 11px;
-  color: #a0ffa0;
-}
-
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .connectButtonWrapper {
-    padding: 6px;
+    gap: 4px;
   }
 
-  .singleButton {
-    min-width: 32px;
-    padding: 8px 10px;
+  .singleButton,
+  .walletAvatarButton,
+  .loadingContainer {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
   }
 
   .buttonIcon {
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  .dropdownMenu {
+    min-width: 200px;
   }
 
   .popup,
@@ -534,15 +557,6 @@
     font-size: 12px;
   }
 
-  .walletInfo {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-
-  .disconnectButton {
-    padding: 4px;
-  }
-
   .input,
   .privateKeyText {
     padding: 8px;
@@ -559,14 +573,13 @@
   }
 }
 
-/* External wallet styles */
-.externalBadge {
-  margin-left: 4px;
-  font-size: 12px;
-  opacity: 0.9;
-  font-family: 'Yoruka', inherit;
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
+/* External wallet styles */
 .externalWalletWrapper {
   width: 100%;
   display: flex;
@@ -616,10 +629,10 @@
 @keyframes menuReveal {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }

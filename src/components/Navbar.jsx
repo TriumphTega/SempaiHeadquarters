@@ -53,6 +53,7 @@ export default function Navbar() {
   const [referralCode, setReferralCode] = useState("");
   const [theme, setTheme] = useState("dark");
   const [error, setError] = useState("");
+  const [scrolled, setScrolled] = useState(false);
 
   const referralRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -81,6 +82,16 @@ export default function Navbar() {
       return next;
     });
   };
+
+  // ---------------------------------------------------------------------
+  // Sticky-bar elevation on scroll (visual only, no layout impact)
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // ---------------------------------------------------------------------
   // Panel toggles - closing every other panel keeps only one open at a time
@@ -352,23 +363,25 @@ export default function Navbar() {
   const notificationLabel = (notif) => {
     switch (notif.type) {
       case "reply":
-        return { text: `📩 Someone replied: "${notif.message}"`, path: `/novel/${notif.novel_id}/chapter/${notif.comment_id}` };
+        return { text: `Reply: "${notif.message}"`, path: `/novel/${notif.novel_id}/chapter/${notif.comment_id}` };
       case "new_chapter":
-        return { text: `📖 ${notif.message}`, path: `/novel/${notif.novel_id}` };
+        return { text: notif.message, path: `/novel/${notif.novel_id}` };
       case "reward":
-        return { text: "🎉 Weekly reward received!", path: "/profile" };
+        return { text: "Weekly reward received", path: "/profile" };
       default:
         return null;
     }
   };
 
+  const creatorLabel = isWriter || isArtist || isSuperuser ? "Creator Dashboard" : "Become a Creator";
+
   return (
     <>
       <Sidebar isVisible={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <nav className={styles.navbar}>
+      <nav className={`${styles.navbar} ${scrolled ? styles.scrolled : ""}`}>
         <div className={styles.navContainer}>
-          {/* Left side: Theme toggle + Brand */}
+          {/* Section 1: theme + brand ------------------------------------ */}
           <div className={styles.leftSide}>
             <button
               onClick={toggleTheme}
@@ -376,27 +389,44 @@ export default function Navbar() {
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {theme === "dark" ? <FaSun /> : <FaMoon />}
+              <span className={styles.themeIconTrack} data-theme={theme}>
+                <FaSun className={styles.themeIconSun} />
+                <FaMoon className={styles.themeIconMoon} />
+              </span>
             </button>
+
             <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-              <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-              <span className={styles.logoText}>Sempai HQ</span>
+              <span className={styles.logoMarkWrap}>
+                <img src="/images/logo.jpeg" alt="" className={styles.logo} />
+              </span>
+              <span className={styles.logoText}>
+                Sempai <span className={styles.logoTextAccent}>HQ</span>
+              </span>
             </Link>
           </div>
 
-          {/* Center: Primary links - desktop only */}
-          <div className={styles.navLinks}>
-            {NAV_LINKS.map(({ name, path, icon: Icon }) => (
-              <Link key={path} href={path} onClick={() => handleNavigation(path)} className={styles.navLink}>
-                <Icon className={styles.navIcon} /> {name}
+          {/* Section 2: primary destinations - desktop only --------------- */}
+          <div className={styles.navLinks} role="navigation" aria-label="Primary">
+            {NAV_LINKS.map(({ name, path, icon: Icon }, i) => (
+              <Link
+                key={path}
+                href={path}
+                onClick={() => handleNavigation(path)}
+                className={styles.navLink}
+                style={{ "--i": i }}
+              >
+                <Icon className={styles.navIcon} />
+                <span>{name}</span>
               </Link>
             ))}
             <Link
               href="/chat"
               onClick={() => handleProtectedNavigation("/chat")}
               className={styles.navLink}
+              style={{ "--i": NAV_LINKS.length }}
             >
-              <FaComments className={styles.navIcon} /> Chat
+              <FaComments className={styles.navIcon} />
+              <span>Chat</span>
             </Link>
             <Link
               href={isWalletConnected && (isWriter || isArtist) ? `/profile/${userId}` : "/editprofile"}
@@ -404,12 +434,14 @@ export default function Navbar() {
                 handleProtectedNavigation(isWriter || isArtist ? `/profile/${userId}` : "/editprofile")
               }
               className={styles.navLink}
+              style={{ "--i": NAV_LINKS.length + 1 }}
             >
-              <FaUser className={styles.navIcon} /> Profile
+              <FaUser className={styles.navIcon} />
+              <span>Profile</span>
             </Link>
           </div>
 
-          {/* Right side: Controls + Hamburger */}
+          {/* Section 3: actions -------------------------------------------- */}
           <div className={styles.rightSide}>
             {isWalletConnected && (
               <div className={styles.notificationWrapper}>
@@ -417,62 +449,71 @@ export default function Navbar() {
                   onClick={toggleNotifications}
                   className={styles.notificationButton}
                   aria-label="Notifications"
+                  aria-expanded={notificationsOpen}
                 >
                   <FaBell className={styles.bellIcon} />
                   {notifications.length > 0 && (
-                    <span className={styles.notificationBadge}>{notifications.length}</span>
+                    <span className={styles.notificationBadge}>
+                      {notifications.length > 9 ? "9+" : notifications.length}
+                    </span>
                   )}
                 </button>
                 {notificationsOpen && (
                   <div className={`${styles.notificationDropdown} ${styles.open}`}>
+                    <p className={styles.dropdownHeader}>Notifications</p>
                     {notifications.length > 0 ? (
                       <>
-                        {notifications.map((notif) => {
-                          if (notif.type === "chat_reply") {
+                        <div className={styles.notificationList}>
+                          {notifications.map((notif) => {
+                            if (notif.type === "chat_reply") {
+                              return (
+                                <div key={notif.id} className={styles.notificationItem}>
+                                  <Link
+                                    href={`/chat?messageId=${notif.chat_id}`}
+                                    onClick={() => handleChatNavigation("chat_reply", notif.chat_id)}
+                                  >
+                                    <FaComments className={styles.notifItemIcon} />
+                                    {notif.message}
+                                  </Link>
+                                </div>
+                              );
+                            }
+                            if (notif.type === "private_message") {
+                              return (
+                                <div key={notif.id} className={styles.notificationItem}>
+                                  <Link
+                                    href={`/chat?recipient=${notif.recipient_wallet_address}&messageId=${notif.chat_id}`}
+                                    onClick={() =>
+                                      handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)
+                                    }
+                                  >
+                                    <FaComments className={styles.notifItemIcon} />
+                                    {notif.message}
+                                  </Link>
+                                </div>
+                              );
+                            }
+                            const label = notificationLabel(notif);
                             return (
                               <div key={notif.id} className={styles.notificationItem}>
-                                <Link
-                                  href={`/chat?messageId=${notif.chat_id}`}
-                                  onClick={() => handleChatNavigation("chat_reply", notif.chat_id)}
-                                >
-                                  💬 {notif.message}
-                                </Link>
+                                {label ? (
+                                  <Link href={label.path} onClick={() => handleNavigation(label.path)}>
+                                    <FaBell className={styles.notifItemIcon} />
+                                    {label.text}
+                                  </Link>
+                                ) : (
+                                  <span>{notif.message || "New notification"}</span>
+                                )}
                               </div>
                             );
-                          }
-                          if (notif.type === "private_message") {
-                            return (
-                              <div key={notif.id} className={styles.notificationItem}>
-                                <Link
-                                  href={`/chat?recipient=${notif.recipient_wallet_address}&messageId=${notif.chat_id}`}
-                                  onClick={() =>
-                                    handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)
-                                  }
-                                >
-                                  💬 {notif.message}
-                                </Link>
-                              </div>
-                            );
-                          }
-                          const label = notificationLabel(notif);
-                          return (
-                            <div key={notif.id} className={styles.notificationItem}>
-                              {label ? (
-                                <Link href={label.path} onClick={() => handleNavigation(label.path)}>
-                                  {label.text}
-                                </Link>
-                              ) : (
-                                <span>{notif.message || "New notification"}</span>
-                              )}
-                            </div>
-                          );
-                        })}
+                          })}
+                        </div>
                         <button onClick={markAsRead} className={styles.markReadButton}>
-                          Mark All as Read
+                          Mark all as read
                         </button>
                       </>
                     ) : (
-                      <div className={styles.noNotifications}>No new notifications</div>
+                      <div className={styles.noNotifications}>You're all caught up</div>
                     )}
                   </div>
                 )}
@@ -480,26 +521,37 @@ export default function Navbar() {
             )}
 
             {isWalletConnected && (
-              <button
-                onClick={handleCreatorAccess}
-                className={styles.actionButton}
-              >
-                {isWriter || isArtist || isSuperuser ? "Creator Dashboard" : "Become a Creator"}
+              <button onClick={handleCreatorAccess} className={styles.actionButton}>
+                <FaBookOpen className={styles.actionButtonIcon} />
+                <span className={styles.actionButtonLabel}>{creatorLabel}</span>
               </button>
             )}
+
             {isWalletConnected && (
-              <button onClick={toggleReferral} className={styles.referralToggle} aria-label="Referral link">
+              <button
+                onClick={toggleReferral}
+                className={styles.referralToggle}
+                aria-label="Referral link"
+                aria-expanded={isReferralOpen}
+              >
                 <FaShareAlt className={styles.referralIcon} />
               </button>
             )}
-            <ConnectButton className={styles.connectButton} />
+
+            <div className={styles.connectSlot}>
+              <ConnectButton className={styles.connectButton} />
+            </div>
 
             <button
-              className={styles.menuToggle}
+              className={`${styles.menuToggle} ${sidebarOpen ? styles.menuToggleActive : ""}`}
               onClick={toggleSidebar}
               aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+              aria-expanded={sidebarOpen}
             >
-              {sidebarOpen ? <FaTimes /> : <FaBars />}
+              <span className={styles.menuIconTrack}>
+                <FaBars className={styles.menuIconBars} />
+                <FaTimes className={styles.menuIconTimes} />
+              </span>
             </button>
           </div>
         </div>
@@ -514,11 +566,12 @@ export default function Navbar() {
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
+          <div className={styles.referralDragHandle} aria-hidden="true" />
           <div className={styles.referralContent}>
-            <p className={styles.referralHeader}>Your Referral Code</p>
+            <p className={styles.referralHeader}>Your referral code</p>
             <p className={styles.referralCode}>{referralCode || "—"}</p>
             <button onClick={copyReferralLink} className={styles.referralButton} disabled={!referralCode}>
-              Copy Link
+              Copy link
             </button>
           </div>
         </div>
@@ -539,10 +592,10 @@ export default function Navbar() {
 
       {/* Creator dashboard chooser */}
       {showCreatorChoice && (
-        <div className={styles.creatorChoiceOverlay}>
-          <div className={styles.creatorChoicePopup}>
-            <h3 className={styles.popupTitle}>Choose Dashboard</h3>
-            <p className={styles.popupMessage}>You have access to both Novel and Manga creator dashboards.</p>
+        <div className={styles.creatorChoiceOverlay} onClick={() => setShowCreatorChoice(false)}>
+          <div className={styles.creatorChoicePopup} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.popupTitle}>Choose a dashboard</h3>
+            <p className={styles.popupMessage}>You have access to both the Novel and Manga creator dashboards.</p>
             <div className={styles.choiceButtons}>
               <button onClick={() => handleCreatorChoice("/novel-creators-dashboard")} className={styles.choiceButton}>
                 <FaBookOpen /> Novel Dashboard

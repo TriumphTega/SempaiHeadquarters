@@ -10,7 +10,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "../styles/ConnectButton.module.css";
 import { FaWallet, FaRocket, FaKey, FaCopy, FaCheckCircle, FaSpinner, FaTimes, FaGoogle, FaPlug } from "react-icons/fa";
 
-export default function ConnectButton() {
+export default function ConnectButton({ className = "" }) {
   const { wallet: embeddedWallet, createEmbeddedWallet, retrieveEmbeddedWallet, isLoading: embeddedLoading, error: embeddedError } = useContext(EmbeddedWalletContext);
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
   const { publicKey: externalPublicKey, connected: externalConnected, disconnect: externalDisconnect } = useWallet();
@@ -400,18 +400,16 @@ export default function ConnectButton() {
 
   if (isLoading || embeddedLoading || authLoading) {
     return (
-      <div className={styles.loadingContainer}>
+      <div className={`${styles.loadingContainer} ${className}`}>
         <FaSpinner className={styles.spinner} />
-        <span>Warping...</span>
       </div>
     );
   }
 
   if (error || embeddedError) {
     return (
-      <div className={styles.errorContainer}>
-        <p>Error: {error || embeddedError}</p>
-        <button className={styles.retryButton} onClick={() => setError(null)}>
+      <div className={`${styles.errorContainer} ${className}`}>
+        <button className={styles.retryButton} onClick={() => setError(null)} title={error || embeddedError}>
           <FaRocket /> Retry
         </button>
       </div>
@@ -423,15 +421,27 @@ export default function ConnectButton() {
   const isExternal = walletType === 'external' || (externalConnected && !embeddedWallet);
 
   return (
-    <div className={styles.connectButtonWrapper} ref={wrapperRef}>
+    <div className={`${styles.connectButtonWrapper} ${className}`} ref={wrapperRef}>
       {activeWallet ? (
         <div className={styles.walletInfo}>
-          <button className={`${styles.singleButton} ${styles.addressButton}`} onClick={() => setShowMenu((m) => !m)} aria-haspopup="menu" aria-expanded={showMenu}>
-            <FaWallet className={styles.buttonIcon} /> {activeWallet.publicKey.slice(0, 4)}...{activeWallet.publicKey.slice(-4)}
-            {isExternal && <span className={styles.externalBadge}>🔌</span>}
+          <button
+            className={styles.walletAvatarButton}
+            onClick={() => setShowMenu((m) => !m)}
+            aria-haspopup="menu"
+            aria-expanded={showMenu}
+            aria-label={`Wallet ${activeWallet.publicKey.slice(0, 4)}...${activeWallet.publicKey.slice(-4)}, open menu`}
+            title={`${activeWallet.publicKey.slice(0, 4)}...${activeWallet.publicKey.slice(-4)}`}
+          >
+            <FaWallet className={styles.buttonIcon} />
+            <span className={styles.statusDot} aria-hidden="true" />
+            {isExternal && (
+              <span className={styles.externalBadge} aria-hidden="true">
+                <FaPlug />
+              </span>
+            )}
           </button>
           {showMenu && (
-            <div className={styles.dropdownMenu}>
+            <div className={styles.dropdownMenu} role="menu">
               <div className={styles.menuHeader}>
                 <div className={styles.menuHeaderTitle}>{isExternal ? 'External Wallet' : 'Embedded Wallet'}</div>
                 <div className={styles.menuHeaderSub}>{activeWallet.publicKey.slice(0, 6)}...{activeWallet.publicKey.slice(-6)}</div>
@@ -441,9 +451,8 @@ export default function ConnectButton() {
               </div>
               <div className={styles.menuDivider} />
               <button className={styles.menuItem} onClick={handleCopyAddress}>
-                <FaCopy /> Copy Address
+                <FaCopy /> {copied ? "Copied!" : "Copy Address"}
               </button>
-              {copied && <div className={styles.tooltip}>Copied!</div>}
               <div className={styles.menuDivider} />
               {!user ? (
                 <button className={styles.menuItem} onClick={signInWithGoogle}>
@@ -461,11 +470,10 @@ export default function ConnectButton() {
           )}
         </div>
       ) : (
-        <button className={styles.singleButton} onClick={() => setShowPopup(true)}>
+        <button className={styles.singleButton} onClick={() => setShowPopup(true)} aria-label="Connect wallet">
           <FaWallet className={styles.buttonIcon} />
         </button>
       )}
-      {activeWallet && <span className={styles.connectedStatus}></span>}
       {userCreated && (
         <p className={styles.successMessage}>
           <FaCheckCircle /> Welcome!

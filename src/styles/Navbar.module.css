@@ -1,7 +1,9 @@
 /* ==========================================================================
-   Navbar Styles
-   Based on legacy Navbar.js, adapted for modern React with sidebar support
-   Theme-aware with CSS variables for dark/light modes
+   Navbar — "Panel Gutter" redesign
+   A floating panel bar with thin comic-panel gutters between its three
+   sections and small corner trim-marks, nodding to the manga/novel subject
+   without leaning on anime cliché. Fully icon-first on small screens so the
+   bar never breaks, no matter how narrow the viewport gets.
    ========================================================================== */
 
 :root,
@@ -16,12 +18,16 @@ html[data-theme="dark"] {
   --nav-danger-dark: #dc2626;
   --nav-connect-bg: #1a1a1a;
   --nav-connect-text: #f5f5f5;
-  --nav-shadow: rgba(0, 0, 0, 0.3);
+  --nav-shadow: rgba(0, 0, 0, 0.45);
   --nav-popup-line: rgba(255, 107, 53, 0.12);
+  --nav-surface: rgba(19, 19, 19, 0.82);
+  --nav-surface-solid: #141414;
+  --nav-gutter: rgba(255, 255, 255, 0.08);
+  --nav-item-hover: rgba(255, 107, 53, 0.12);
 }
 
 html[data-theme="light"] {
-  --nav-bg-1: #FDFBD4;
+  --nav-bg-1: #fdfbd4;
   --nav-bg-2: #f5f0d0;
   --nav-text: #1e293b;
   --nav-text-dim: rgba(30, 41, 59, 0.65);
@@ -31,43 +37,145 @@ html[data-theme="light"] {
   --nav-danger-dark: #dc2626;
   --nav-connect-bg: #f5f0d0;
   --nav-connect-text: #1e293b;
-  --nav-shadow: rgba(0, 0, 0, 0.08);
-  --nav-popup-line: rgba(59, 130, 246, 0.12);
+  --nav-shadow: rgba(30, 41, 59, 0.14);
+  --nav-popup-line: rgba(59, 130, 246, 0.16);
+  --nav-surface: rgba(253, 251, 212, 0.86);
+  --nav-surface-solid: #fdfbd4;
+  --nav-gutter: rgba(30, 41, 59, 0.1);
+  --nav-item-hover: rgba(59, 130, 246, 0.1);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Navbar container                                                       */
+/* Bar shell                                                               */
 /* ---------------------------------------------------------------------- */
 .navbar {
-  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2));
-  padding: 0.6rem 1.25rem;
   position: sticky;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 1000;
+  background: var(--nav-surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border-bottom: 1px solid var(--nav-popup-line);
-  transition: background 0.35s ease, box-shadow 0.3s ease, border-color 0.35s ease;
+  box-shadow: 0 8px 24px -14px var(--nav-shadow);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
 }
 
-.navbar:hover {
-  box-shadow: 0 4px 16px rgba(255, 98, 0, 0.3);
+.navbar.scrolled {
+  box-shadow: 0 14px 34px -14px var(--nav-shadow);
+  border-color: color-mix(in srgb, var(--nav-orange) 35%, var(--nav-popup-line));
+}
+
+/* Corner trim-marks — a quiet nod to manga panel corner registration marks */
+.navbar::before,
+.navbar::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.navbar::before {
+  top: 6px;
+  left: 6px;
+  border-top: 2px solid var(--nav-orange);
+  border-left: 2px solid var(--nav-orange);
+  border-top-left-radius: 4px;
+}
+.navbar::after {
+  bottom: 6px;
+  right: 6px;
+  border-bottom: 2px solid var(--nav-orange);
+  border-right: 2px solid var(--nav-orange);
+  border-bottom-right-radius: 4px;
+}
+.navbar.scrolled::before,
+.navbar.scrolled::after {
+  opacity: 0.9;
 }
 
 .navContainer {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+  gap: clamp(0.35rem, 1.5vw, 1rem);
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0.5rem clamp(0.6rem, 2vw, 1.1rem);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* ---------------------------------------------------------------------- */
-/* Left side: Theme toggle + Brand                                        */
+/* Section 1 — theme toggle + brand                                       */
 /* ---------------------------------------------------------------------- */
 .leftSide {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-shrink: 0;
+  padding-right: clamp(0.35rem, 1.5vw, 1rem);
+  border-right: 1px solid var(--nav-gutter);
+}
+
+.themeToggleButton {
+  background: var(--nav-item-hover);
+  border: 1px solid var(--nav-popup-line);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  color: var(--nav-orange);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: border-color 0.25s, transform 0.25s, background-color 0.3s;
+}
+.themeToggleButton:hover {
+  transform: scale(1.08);
+  border-color: var(--nav-orange);
+}
+.themeToggleButton:active {
+  transform: scale(0.94);
+}
+
+.themeIconTrack {
+  position: relative;
+  width: 0.95em;
+  height: 0.95em;
+  font-size: 0.95rem;
+  display: inline-block;
+}
+.themeIconSun,
+.themeIconMoon {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+.themeIconTrack[data-theme="dark"] .themeIconSun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+.themeIconTrack[data-theme="dark"] .themeIconMoon {
+  opacity: 0;
+  transform: rotate(-70deg) scale(0.4);
+}
+.themeIconTrack[data-theme="light"] .themeIconSun {
+  opacity: 0;
+  transform: rotate(70deg) scale(0.4);
+}
+.themeIconTrack[data-theme="light"] .themeIconMoon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
 }
 
 .logoLink {
@@ -75,122 +183,190 @@ html[data-theme="light"] {
   align-items: center;
   gap: 0.5rem;
   text-decoration: none;
+  min-width: 0;
+}
+
+.logoMarkWrap {
   position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  isolation: isolate;
+}
+.logoMarkWrap::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nav-orange);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: -1;
+}
+.logoLink:hover .logoMarkWrap::after {
+  opacity: 0.7;
+  transform: scale(1);
 }
 
 .logo {
-  width: 36px;
-  height: 36px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
 }
-
 .logoLink:hover .logo {
-  transform: rotate(360deg) scale(1.1);
-  box-shadow: 0 0 10px var(--nav-orange);
+  transform: scale(1.05);
 }
 
 .logoText {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--nav-text);
   white-space: nowrap;
-  transition: color 0.35s ease;
+  transition: color 0.3s ease;
 }
-
-/* Theme toggle */
-.themeToggleButton {
-  background: rgba(var(--ink-900-rgb), 0.5);
-  border: 1px solid var(--ink-line);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  color: var(--gold);
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: border-color 0.25s, transform 0.35s, background-color 0.4s;
-}
-
-.themeToggleButton:hover {
-  border-color: var(--vermillion-soft);
-  transform: rotate(-14deg) scale(1.06);
+.logoTextAccent {
+  color: var(--nav-orange);
 }
 
 /* ---------------------------------------------------------------------- */
-/* Center: Primary links (desktop only)                                  */
+/* Section 2 — primary destinations (desktop only)                        */
 /* ---------------------------------------------------------------------- */
 .navLinks {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1.4rem;
+  gap: 0.15rem;
   flex: 1;
   min-width: 0;
 }
 
 .navLink {
-  color: var(--nav-text);
+  position: relative;
+  color: var(--nav-text-dim);
   text-decoration: none;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 0.45rem;
+  font-size: 0.85rem;
   white-space: nowrap;
-  position: relative;
-  padding-bottom: 2px;
-  transition: color 0.25s;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  isolation: isolate;
+  opacity: 0;
+  animation: navItemIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 55ms + 60ms);
 }
 
-.navLink:hover {
-  color: var(--nav-orange);
-}
-
-.navLink::after {
-  content: '';
+.navLink::before {
+  content: "";
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--nav-orange);
-  transition: width 0.25s ease;
+  inset: 0;
+  border-radius: 10px;
+  background: var(--nav-item-hover);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: -1;
 }
 
-.navLink:hover::after { width: 100%; }
+.navLink:hover,
+.navLink:focus-visible {
+  color: var(--nav-text);
+}
+.navLink:hover::before,
+.navLink:focus-visible::before {
+  transform: scaleX(1);
+}
 
-.navIcon { font-size: 0.95rem; color: var(--nav-orange); }
+.navIcon {
+  font-size: 0.9rem;
+  color: var(--nav-orange);
+  flex-shrink: 0;
+}
+
+@keyframes navItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* ---------------------------------------------------------------------- */
-/* Right side: Controls + Hamburger                                      */
+/* Section 3 — actions                                                    */
 /* ---------------------------------------------------------------------- */
 .rightSide {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: clamp(0.3rem, 1.2vw, 0.55rem);
   flex-shrink: 0;
+  padding-left: clamp(0.35rem, 1.5vw, 1rem);
+  border-left: 1px solid var(--nav-gutter);
 }
 
 .menuToggle {
-  display: none;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid var(--nav-popup-line);
   color: var(--nav-text);
-  font-size: 1.3rem;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
   cursor: pointer;
-  padding: 0.4rem;
-  line-height: 1;
-  border-radius: 8px;
-  transition: background 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.25s, border-color 0.25s, transform 0.2s;
+}
+.menuToggle:hover {
+  background: var(--nav-item-hover);
+  border-color: var(--nav-orange);
+}
+.menuToggle:active {
+  transform: scale(0.92);
 }
 
-.menuToggle:hover {
-  background: var(--nav-popup-line);
+.menuIconTrack {
+  position: relative;
+  width: 0.9em;
+  height: 0.9em;
+  font-size: 0.95rem;
+  display: inline-block;
+}
+.menuIconBars,
+.menuIconTimes {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+.menuToggle .menuIconBars {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+.menuToggle .menuIconTimes {
+  opacity: 0;
+  transform: rotate(-40deg) scale(0.6);
+}
+.menuToggleActive .menuIconBars {
+  opacity: 0;
+  transform: rotate(40deg) scale(0.6);
+}
+.menuToggleActive .menuIconTimes {
+  opacity: 1;
+  transform: rotate(0deg);
+  color: var(--nav-orange);
 }
 
 /* "Become a Creator" / "Creator Dashboard" */
@@ -199,49 +375,74 @@ html[data-theme="light"] {
   color: #fff;
   border: none;
   border-radius: 20px;
-  padding: 0.5rem 1.1rem;
-  font-weight: bold;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.95rem;
+  font-weight: 700;
+  font-size: 0.8rem;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  min-height: 32px;
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
 }
-
 .actionButton:hover {
   background: var(--nav-orange-dark);
-  transform: scale(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -6px var(--nav-orange);
+}
+.actionButton:active {
+  transform: translateY(0);
+}
+.actionButtonIcon {
+  font-size: 0.85rem;
 }
 
 /* Notifications */
-.notificationWrapper { position: relative; display: flex; align-items: center; }
+.notificationWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
 
 .notificationButton {
-  background: var(--nav-orange);
-  border: none;
-  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--nav-popup-line);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: 50%;
-  font-size: 18px;
-  color: #fff;
+  color: var(--nav-text-dim);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: transform 0.3s ease, background 0.3s ease;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s, color 0.25s;
 }
-
 .notificationButton:hover {
-  transform: scale(1.15);
-  background: var(--nav-orange-dark);
+  transform: translateY(-1px);
+  background: var(--nav-item-hover);
+  border-color: var(--nav-orange);
+  color: var(--nav-orange);
 }
 
-.bellIcon { transition: transform 0.3s; color: var(--nav-text-dim); }
-.notificationButton:hover .bellIcon { transform: rotate(15deg); }
+.bellIcon {
+  font-size: 0.85rem;
+  transition: transform 0.3s;
+}
+.notificationButton:hover .bellIcon {
+  transform: rotate(-12deg);
+}
 
 .notificationBadge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -4px;
+  right: -4px;
   background: var(--nav-danger);
   color: #fff;
   border-radius: 50%;
@@ -251,161 +452,211 @@ html[data-theme="light"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  animation: pulse 1.5s infinite;
+  border: 2px solid var(--nav-surface-solid);
+  animation: badgePulse 2s infinite;
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+@keyframes badgePulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 .notificationDropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 10px);
   right: 0;
-  margin-top: 0.5rem;
-  background: var(--nav-bg-1);
+  background: var(--nav-surface-solid);
   color: var(--nav-text);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px var(--nav-shadow);
+  border: 1px solid var(--nav-popup-line);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px -14px var(--nav-shadow);
   width: 300px;
   max-height: 400px;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   z-index: 2000;
-  padding: 10px;
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top right;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
-
 .notificationDropdown.open {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   pointer-events: auto;
-  animation: slideDown 0.25s ease-out;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.dropdownHeader {
+  margin: 0;
+  padding: 0.85rem 1rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nav-text-dim);
+  border-bottom: 1px solid var(--nav-gutter);
+}
+
+.notificationList {
+  overflow-y: auto;
+  padding: 0.35rem;
 }
 
 .notificationItem {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-  font-size: 14px;
-  color: #333;
-  transition: background 0.2s ease;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  color: var(--nav-text);
+  transition: background 0.18s ease;
 }
-.notificationItem:last-of-type { border-bottom: none; }
-
-.notificationItem:hover { background: #f8f9fa; }
-
-.notificationItem a { color: var(--nav-orange); text-decoration: none; }
-.notificationItem a:hover { text-decoration: underline; }
+.notificationItem:hover {
+  background: var(--nav-item-hover);
+}
+.notificationItem a {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.35;
+}
+.notifItemIcon {
+  color: var(--nav-orange);
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
 
 .markReadButton {
-  background: var(--nav-danger);
-  color: #fff;
+  background: transparent;
+  color: var(--nav-orange);
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  border-top: 1px solid var(--nav-gutter);
+  padding: 0.7rem;
   width: 100%;
-  margin-top: 10px;
   cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.3s ease;
+  font-weight: 700;
+  font-size: 0.82rem;
+  transition: background 0.2s ease;
 }
-
 .markReadButton:hover {
-  background: var(--nav-danger-dark);
-  transform: scale(1.03);
+  background: var(--nav-item-hover);
 }
 
 .noNotifications {
-  padding: 12px;
+  padding: 1.4rem 1rem;
   text-align: center;
-  color: #666;
+  color: var(--nav-text-dim);
   font-size: 0.85rem;
+}
+
+/* Connect button — now a fixed-size circular control (see
+   ConnectButton.module.css), so it just needs to sit inline at its
+   natural size rather than being width-capped or truncated. */
+.connectSlot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .connectButton {
-  background: var(--nav-connect-bg);
-  color: var(--nav-connect-text);
-  border-radius: 20px;
-  padding: 0.5rem 1rem;
-  font-weight: bold;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
-}
-
-.connectButton:hover {
-  background: var(--nav-orange);
-  color: #fff;
-  transform: scale(1.05);
+  flex-shrink: 0;
 }
 
 /* Referral */
 .referralToggle {
-  background: var(--nav-orange);
-  border: none;
+  background: transparent;
+  border: 1px solid var(--nav-popup-line);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  color: #fff;
-  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  color: var(--nav-text-dim);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.3s ease, background 0.3s ease;
+  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s, color 0.25s;
 }
-
 .referralToggle:hover {
-  background: var(--nav-orange-dark);
-  transform: scale(1.1);
+  background: var(--nav-item-hover);
+  border-color: var(--nav-orange);
+  color: var(--nav-orange);
+  transform: translateY(-1px);
 }
-
-.referralIcon { transition: transform 0.3s ease; }
-.referralToggle:hover .referralIcon { transform: scale(1.15); }
+.referralIcon {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+.referralToggle:hover .referralIcon {
+  transform: scale(1.12);
+}
 
 .referralDropdown {
   position: fixed;
-  background: var(--nav-bg-1);
+  background: var(--nav-surface-solid);
   color: var(--nav-text);
-  border-radius: 10px;
-  padding: 0.85rem;
-  width: 190px;
-  box-shadow: 0 12px 26px var(--nav-shadow);
+  border: 1px solid var(--nav-popup-line);
+  border-radius: 14px;
+  padding: 0;
+  width: 200px;
+  box-shadow: 0 18px 40px -14px var(--nav-shadow);
   z-index: 2000;
   user-select: none;
+  overflow: hidden;
+  animation: popIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.referralDragHandle {
+  height: 16px;
   cursor: move;
+  background: var(--nav-gutter);
+  position: relative;
+}
+.referralDragHandle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--nav-text-dim);
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+}
+
+.referralContent {
+  padding: 0.9rem;
 }
 
 .referralHeader {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--nav-orange);
   text-align: center;
   margin: 0 0 0.4rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid #eee;
 }
 
 .referralCode {
-  margin: 0.3rem 0;
-  font-size: 0.85rem;
+  margin: 0.3rem 0 0.7rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: #222;
+  color: var(--nav-text);
   text-align: center;
   word-break: break-all;
 }
@@ -414,17 +665,23 @@ html[data-theme="light"] {
   background: var(--nav-orange);
   color: #fff;
   border: none;
-  padding: 0.4rem 0.5rem;
+  padding: 0.5rem;
   width: 100%;
-  margin-top: 0.4rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 600;
-  transition: background 0.3s ease, transform 0.25s ease, opacity 0.25s ease;
+  font-weight: 700;
+  transition: background 0.25s ease, transform 0.2s ease, opacity 0.2s ease;
 }
-.referralButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
-.referralButton:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.referralButton:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.02);
+}
+.referralButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* ---------------------------------------------------------------------- */
 /* Modal popups (creator choice / connect prompt)                         */
@@ -432,51 +689,57 @@ html[data-theme="light"] {
 .creatorChoiceOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 3000;
   animation: fadeIn 0.2s ease;
+  padding: 1rem;
 }
 
 .creatorChoicePopup {
   position: relative;
-  width: 90%;
+  width: 100%;
   max-width: 400px;
-  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2));
-  border: 1px solid rgba(255, 98, 0, 0.3);
-  border-radius: 14px;
+  background: var(--nav-surface-solid);
+  border: 1px solid var(--nav-popup-line);
+  border-radius: 18px;
   padding: 1.75rem;
-  box-shadow: 0 24px 60px var(--nav-shadow);
-  animation: slideIn 0.3s ease-in-out;
-  transition: background 0.35s ease;
+  box-shadow: 0 24px 60px -14px var(--nav-shadow);
+  animation: popIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .popupTitle {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin: 0 0 0.6rem;
-  color: var(--nav-orange);
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: var(--nav-text);
 }
 
 .popupMessage {
   margin: 0 0 1.1rem;
   color: var(--nav-text-dim);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
-.choiceButtons { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 1rem; }
+.choiceButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
 
 .choiceButton {
   background: var(--nav-orange);
   color: #fff;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.4rem;
   border: none;
-  border-radius: 20px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   transition: transform 0.2s ease, background 0.2s ease;
   display: flex;
@@ -484,111 +747,162 @@ html[data-theme="light"] {
   justify-content: center;
   gap: 0.5rem;
 }
-
-.choiceButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideIn { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* ---------------------------------------------------------------------- */
-/* Responsive - Single breakpoint at 1024px to avoid dead zone              */
-/* ---------------------------------------------------------------------- */
-@media (max-width: 1024px) {
-  .navLinks { display: none; }
-  .actionButton { display: none; }
-  .menuToggle { display: block; }
-  .navContainer { gap: 0.75rem; }
-  .leftSide { gap: 0.5rem; }
-  .rightSide { gap: 0.5rem; }
+.choiceButton:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.02);
 }
 
-@media (max-width: 768px) {
-  .navbar { padding: 0.5rem 0.85rem; }
-  .logo { width: 28px; height: 28px; }
-  .logoText { font-size: 0.9rem; }
-  .themeToggleButton { width: 30px; height: 30px; font-size: 0.85rem; }
-  .connectButton { padding: 0.4rem 0.75rem; font-size: 0.75rem; }
-  .notificationButton { padding: 0.3rem; }
-  .rightSide { gap: 0.4rem; }
-
-  .notificationDropdown { position: fixed; top: 60px; right: 0.75rem; width: min(300px, calc(100vw - 1.5rem)); max-height: 70vh; overflow-y: auto; }
-
-  .creatorChoiceOverlay { align-items: flex-start; padding-top: 70px; }
-  .creatorChoicePopup { margin-top: 10px; }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes popIn {
+  from {
+    transform: translateY(-10px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
+/* ---------------------------------------------------------------------- */
+/* Focus visibility                                                       */
+/* ---------------------------------------------------------------------- */
+.navbar a:focus-visible,
+.navbar button:focus-visible {
+  outline: 2px solid var(--nav-orange);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive — icon-first collapse, never breaks below 320px             */
+/* ---------------------------------------------------------------------- */
+
+/* Below this width there isn't room for center links + full actions;
+   drop to the icon rail and rely on the hamburger sidebar for the rest. */
+@media (max-width: 1180px) {
+  .navLinks {
+    display: none;
+  }
+}
+
+/* Creator button loses its label, becomes a circular icon button
+   matching the notification / referral treatment. */
+@media (max-width: 680px) {
+  .actionButtonLabel {
+    display: none;
+  }
+  .actionButton {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+  }
+  .actionButtonIcon {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .navContainer {
+    padding: 0.45rem 0.7rem;
+    gap: 0.4rem;
+  }
+  .leftSide,
+  .rightSide {
+    gap: 0.4rem;
+    padding-inline: 0.4rem;
+  }
+}
+
+/* Wordmark drops, logo mark alone carries the brand. */
 @media (max-width: 480px) {
-  .navbar { padding: 0.45rem 0.7rem; }
-  .logo { width: 26px; height: 26px; }
-  .logoText { font-size: 0.85rem; }
-  .themeToggleButton { width: 28px; height: 28px; font-size: 0.8rem; }
-  .connectButton { padding: 0.35rem 0.65rem; font-size: 0.7rem; }
-  .notificationButton { padding: 0.25rem; }
-  .bellIcon { font-size: 0.85rem; }
-  .notificationBadge { font-size: 0.65rem; min-width: 14px; height: 14px; }
-
-  .creatorChoicePopup { width: 85%; padding: 1.2rem; }
-  .choiceButton { padding: 0.55rem 0.9rem; font-size: 0.85rem; }
+  .logoText {
+    display: none;
+  }
 }
 
-@media (max-width: 400px) {
-  .navbar { padding: 0.4rem 0.6rem; }
-  .navContainer { gap: 0.5rem; }
-  .leftSide { gap: 0.4rem; }
-  .rightSide { gap: 0.35rem; }
-  
-  .logo { width: 24px; height: 24px; }
-  .logoText { font-size: 0.8rem; }
-  .themeToggleButton { width: 26px; height: 26px; font-size: 0.75rem; padding: 0.3rem; }
-  
-  .connectButton { padding: 0.3rem 0.6rem; font-size: 0.65rem; }
-  .notificationButton { padding: 0.2rem; width: 32px; height: 32px; font-size: 0.8rem; }
-  .referralToggle { width: 32px; height: 32px; font-size: 0.9rem; }
-  
-  .menuToggle { font-size: 1.1rem; padding: 0.35rem; }
-  
-  .notificationDropdown { 
-    position: fixed; 
-    top: 55px; 
-    right: 0.6rem; 
-    width: calc(100vw - 1.2rem); 
-    max-width: 280px;
-    max-height: 60vh; 
-    overflow-y: auto; 
+/* Creator action moves fully into the sidebar menu at this width. */
+@media (max-width: 420px) {
+  .actionButton {
+    display: none;
+  }
+  .navbar::before,
+  .navbar::after {
+    width: 9px;
+    height: 9px;
   }
 }
 
 @media (max-width: 360px) {
-  .navbar { padding: 0.35rem 0.5rem; }
-  .navContainer { gap: 0.4rem; }
-  .leftSide { gap: 0.35rem; }
-  .rightSide { gap: 0.3rem; }
-  
-  .logo { width: 22px; height: 22px; }
-  .logoText { font-size: 0.75rem; }
-  .themeToggleButton { width: 24px; height: 24px; font-size: 0.7rem; padding: 0.25rem; }
-  
-  .connectButton { padding: 0.25rem 0.5rem; font-size: 0.6rem; }
-  .notificationButton { padding: 0.15rem; width: 30px; height: 30px; font-size: 0.75rem; }
-  .referralToggle { width: 30px; height: 30px; font-size: 0.85rem; }
-  
-  .menuToggle { font-size: 1rem; padding: 0.3rem; }
-  
-  /* Hide referral toggle on very small screens to save space */
-  .referralToggle { display: none; }
-  
-  .notificationDropdown { 
-    position: fixed; 
-    top: 50px; 
-    right: 0.5rem; 
-    width: calc(100vw - 1rem); 
-    max-width: 260px;
-    max-height: 55vh; 
-    overflow-y: auto; 
+  .referralToggle {
+    display: none;
   }
-  
-  .creatorChoicePopup { width: 90%; padding: 1rem; }
-  .popupTitle { font-size: 1.1rem; }
-  .popupMessage { font-size: 0.85rem; }
-  .choiceButton { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+  .themeToggleButton,
+  .menuToggle,
+  .notificationButton {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+  }
+  .logoMarkWrap {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 320px) {
+  .navContainer {
+    padding: 0.4rem 0.55rem;
+    gap: 0.3rem;
+  }
+  .leftSide,
+  .rightSide {
+    gap: 0.3rem;
+    padding-inline: 0.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .notificationDropdown {
+    position: fixed;
+    top: 64px;
+    right: 0.6rem;
+    left: 0.6rem;
+    width: auto;
+    max-width: none;
+    max-height: 70vh;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion                                                          */
+/* ---------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .navLink,
+  .navbar,
+  .navbar.scrolled,
+  .themeIconSun,
+  .themeIconMoon,
+  .menuIconBars,
+  .menuIconTimes,
+  .notificationBadge,
+  .creatorChoicePopup,
+  .referralDropdown,
+  .creatorChoiceOverlay {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  .navLink {
+    opacity: 1;
+  }
 }
