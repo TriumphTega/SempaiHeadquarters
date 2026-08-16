@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { supabase } from "../../../../../services/supabase/supabaseClient";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { FaHome, FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
+import { FaBookOpen, FaLock, FaGem, FaDownload, FaStar } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
+import Navbar from "../../../../../components/Navbar";
 import UseAmethystBalance from "../../../../../components/UseAmethystBalance";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -15,7 +16,6 @@ import styles from "../../../../../styles/MangaChapter.module.css";
 import { RPC_URL, SMP_MINT_ADDRESS, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import MangaCommentSection from "../../../../../components/MangaCommentSection";
 import { EmbeddedWalletContext } from "../../../../../components/EmbeddedWalletProvider";
-import ConnectButton from "@/components/ConnectButton";
 
 const MERCHANT_WALLET = new PublicKey("4EeY4iDCp36yvLFvwhFhBrurKGJwNqLDzvM3PVsxrPdR");
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -694,15 +694,7 @@ export default function MangaChapter() {
   return (
     <div className={styles.page}>
       <div className={styles.backgroundAnimation}></div>
-      <nav className={styles.navbar}>
-        <Link href="/" className={styles.navLink}>
-          <FaHome /> Home
-        </Link>
-        <Link href={`/manga/${mangaId}`} className={styles.navLink}>
-          <FaBookOpen /> Manga Hub
-        </Link>
-        <ConnectButton className={styles.walletButton} />
-      </nav>
+      <Navbar />
 
       {isWalletConnected && (
         <div className={styles.walletPanel}>

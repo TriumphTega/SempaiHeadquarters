@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
 import AutopaySettings from "@/components/AutopaySettings";
-import { FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
+import { FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet } from "react-icons/fa";
+import Navbar from "@/components/Navbar";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import styles from "./CreatorsProfile.module.css"; // Updated to CreatorsProfile.module.css
 import Link from "next/link";
@@ -20,9 +21,6 @@ export default function CreatorsProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [walletReady, setWalletReady] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   useEffect(() => {
     if (connected && publicKey) setWalletReady(true);
@@ -83,22 +81,8 @@ export default function CreatorsProfilePage() {
   const handleNavigation = (path) => router.push(path);
 
   return (
-    <div className={`${styles.page} ${styles[userRole]} ${menuOpen ? styles.menuActive : ""}`}>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
-            <Link href="/editprofile" className={styles.navLink}><FaExchangeAlt /> Edit Profile</Link>
-          </div>
-        </div>
-      </nav>
+    <div className={`${styles.page} ${styles[userRole]}`}>
+      <Navbar />
 
       <main className={styles.main}>
         {loading || !walletReady ? (

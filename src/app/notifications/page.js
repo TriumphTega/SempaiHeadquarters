@@ -4,8 +4,9 @@ import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
-import { FaBell, FaBook, FaImage, FaComment, FaCheck, FaTrash, FaArrowLeft } from "react-icons/fa";
+import { FaBell, FaBook, FaImage, FaComment, FaCheck, FaTrash } from "react-icons/fa";
 import Link from "next/link";
+import Navbar from "../../components/Navbar";
 import styles from "./notifications.module.css";
 
 export default function NotificationsPage() {
@@ -282,6 +283,8 @@ export default function NotificationsPage() {
 
   return (
     <div className={styles.container}>
+      <Navbar />
+
       {/* Ember Particles */}
       <div className={styles.emberContainer}>
         {embers.map((ember) => (
@@ -301,9 +304,6 @@ export default function NotificationsPage() {
       </div>
 
       <div className={styles.header}>
-        <Link href="/" className={styles.backButton}>
-          <FaArrowLeft /> Back
-        </Link>
         <h1 className={styles.title}>
           <FaBell /> Notifications
           {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}

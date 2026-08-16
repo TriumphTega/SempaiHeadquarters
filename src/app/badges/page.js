@@ -4,8 +4,9 @@ import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
-import { FaGem, FaLock, FaShoppingCart, FaArrowLeft } from "react-icons/fa";
+import { FaGem, FaLock, FaShoppingCart } from "react-icons/fa";
 import Link from "next/link";
+import Navbar from "../../components/Navbar";
 import { PublicKey, Connection, Transaction, SystemProgram } from "@solana/web3.js";
 import {
   createTransferInstruction,
@@ -437,6 +438,8 @@ export default function BadgesPage() {
 
   return (
     <div className={styles.container}>
+      <Navbar />
+
       {/* Ember Particles */}
       <div className={styles.emberContainer}>
         {embers.map((ember) => (
@@ -456,9 +459,6 @@ export default function BadgesPage() {
       </div>
 
       <div className={styles.header}>
-        <Link href="/" className={styles.backButton}>
-          <FaArrowLeft /> Back
-        </Link>
         <h1 className={styles.title}>Badges</h1>
       </div>
 

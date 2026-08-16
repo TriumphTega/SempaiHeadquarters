@@ -1,16 +1,16 @@
 /* Leaderboard Page Styles */
 .page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Header */
 .header {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-secondary);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
   padding: 1rem 0;
   position: sticky;
   top: 0;
@@ -30,14 +30,14 @@
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 1.2rem;
   transition: color 0.3s ease;
 }
 
 .logoLink:hover {
-  color: #f36316;
+  color: var(--accent-primary);
 }
 
 .logo {
@@ -48,11 +48,11 @@
 }
 
 .logoText {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .pageTitle {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
@@ -64,16 +64,16 @@
   justify-content: center;
   gap: 1rem;
   padding: 1rem 0;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .timeButton {
   padding: 0.75rem 1.5rem;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -81,13 +81,13 @@
 
 .timeButton:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .timeButton.active {
-  background: linear-gradient(135deg, #f36316, #ff6200);
+  background: linear-gradient(135deg, var(--accent-primary), #ff6200);
   color: #ffffff;
-  border-color: #f36316;
+  border-color: var(--accent-primary);
 }
 
 /* Main Content */
@@ -102,12 +102,12 @@
 .noResults {
   text-align: center;
   padding: 4rem 2rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .noResultsIcon {
   font-size: 4rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 
@@ -115,18 +115,18 @@
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .noResults p {
   font-size: 1rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 /* Leaderboard */
 .leaderboard {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-secondary);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -139,7 +139,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: rgba(243, 99, 22, 0.3);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .rankHeader,
@@ -149,7 +149,7 @@
 .effectiveHeader,
 .totalHeader,
 .shareHeader {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -168,7 +168,7 @@
   grid-template-columns: 50px 2fr 90px 80px 90px 90px 60px;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
   transition: all 0.3s ease;
   align-items: center;
   min-height: 45px;
@@ -244,7 +244,7 @@
 .readerName {
   font-weight: 600;
   font-size: 0.85rem;
-  color: #ffffff;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -253,7 +253,7 @@
 
 .walletAddress {
   font-size: 0.65rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-family: 'Courier New', monospace;
   background: rgba(255, 255, 255, 0.05);
   padding: 0.15rem 0.3rem;
@@ -267,11 +267,11 @@
 .pointsCell {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #f36316;
+  color: var(--accent-primary);
 }
 
 .pointsValue {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 /* Amethyst Display */
@@ -314,18 +314,18 @@
 }
 
 .effectivePoints {
-  color: #ffffff;
+  color: var(--text-primary);
   text-shadow: 0 2px 4px rgba(255, 98, 0, 0.3);
 }
 
 /* Total Points */
 .totalCell {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .totalValue {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -349,7 +349,7 @@
 }
 
 .starIcon {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   text-shadow: 0 2px 4px rgba(156, 163, 125, 0.3);
 }
@@ -388,7 +388,7 @@
 .rankBadge.default {
   background: rgba(156, 163, 125, 0.9);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-color);
 }
 
 /* Error States */
@@ -411,7 +411,7 @@
 
 .errorMessage {
   font-size: 1rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin: 0 0 2rem 0;
 }
 
@@ -420,7 +420,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #f36316, #ff6200);
+  background: linear-gradient(135deg, var(--accent-primary), #ff6200);
   color: #ffffff;
   text-decoration: none;
   border-radius: 8px;
@@ -430,16 +430,16 @@
 
 .backHomeButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(243, 99, 22, 0.3);
+  box-shadow: 0 4px 12px var(--accent-primary);
 }
 
 /* Footer */
 .footer {
   text-align: center;
   padding: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
-  color: #6b7280;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -459,7 +459,7 @@
 }
 
 .shareModalContent {
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   border: 2px solid rgba(163, 89, 255, 0.3);
   border-radius: 16px;
   max-width: 90vw;
@@ -473,13 +473,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .shareModalTitle {
   font-size: 24px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -488,7 +488,7 @@
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
-  color: #ffffff;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -510,7 +510,7 @@
 
 .shareModalFooter {
   padding: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
 }
@@ -520,7 +520,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #f36316, #ff6200);
+  background: linear-gradient(135deg, var(--accent-primary), #ff6200);
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -528,12 +528,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(243, 99, 22, 0.3);
+  box-shadow: 0 4px 16px var(--accent-primary);
 }
 
 .shareButtonX:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(243, 99, 22, 0.5);
+  box-shadow: 0 6px 24px var(--accent-primary);
 }
 
 /* Responsive Design */

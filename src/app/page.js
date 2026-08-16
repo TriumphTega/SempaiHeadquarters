@@ -5,33 +5,20 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
 import {
-  FaHome,
-  FaExchangeAlt,
-  FaUser,
-  FaComments,
-  FaBell,
   FaBookOpen,
-  FaSun,
-  FaMoon,
   FaChevronLeft,
   FaChevronRight,
-  FaBars,
-  FaTimes,
-  FaGamepad,
   FaBullhorn,
   FaFeatherAlt,
-  FaShareAlt,
   FaEye,
   FaStar,
-  FaWallet,
-  FaChartBar,
-  FaDownload,
-  FaTrophy,
-  FaRss
+  FaTimes,
+  FaRss,
 } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
+import Navbar from "../components/Navbar";
 import ZenCarousel from "../components/ZenCarousel/ZenCarousel";
 import styles from "./page.module.css";
 
@@ -82,40 +69,24 @@ const LoadingSpinner = () => (
 export default function Home() {
   const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
   const router = useRouter();
-  const [isCreatorLoggedIn, setIsCreatorLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
   const [isArtist, setIsArtist] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
-  const [userId, setUserId] = useState(null);
   const [novels, setNovels] = useState([]);
   const [manga, setManga] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true); // Initial full page load
   const [pageLoading, setPageLoading] = useState(false); // Navigation load
   const [contentLoading, setContentLoading] = useState(true); // Novels/Manga spinner
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState("dark");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
-  const [referralCode, setReferralCode] = useState("");
-  const [amount, setAmount] = useState(0);
-  const [isReferralOpen, setIsReferralOpen] = useState(false);
-  const [referralPosition, setReferralPosition] = useState({ x: 50, y: 50 });
-  const [showCreatorChoice, setShowCreatorChoice] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [petalsCount, setPetalsCount] = useState(30);
 
-  const referralRef = useRef(null);
-  const dragStartPos = useRef({ x: 0, y: 0 });
   const hasLoadedInitialData = useRef(false); // Prevent reload on wallet change
 
   const isWalletConnected = !!embeddedWallet;
   const walletPublicKey = embeddedWallet?.publicKey || null;
-
-  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   // Adjust sakura density based on viewport width for better mobile performance
   useEffect(() => {
@@ -132,200 +103,31 @@ export default function Home() {
     return () => window.removeEventListener('resize', apply);
   }, []);
 
-  const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-    setMoreOpen(false);
-  };
+  const toggleConnectPopup = () => setShowConnectPopup((prev) => !prev);
 
-  const toggleNotifications = (e) => {
-    e.stopPropagation();
-    if (toggleNotifications.lastToggle && Date.now() - toggleNotifications.lastToggle < 100) return;
-    toggleNotifications.lastToggle = Date.now();
-    setNotificationsOpen((prev) => !prev);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-  };
-  toggleNotifications.lastToggle = 0;
+  const toggleAnnouncements = () => setAnnouncementsOpen((prev) => !prev);
 
-  const toggleConnectPopup = () => {
-    setShowConnectPopup((prev) => !prev);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-  };
-
-  const toggleAnnouncements = () => {
-    setAnnouncementsOpen((prev) => !prev);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-    setMoreOpen(false);
-  };
-
-  const toggleReferral = () => {
-    setIsReferralOpen((prev) => !prev);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setShowCreatorChoice(false);
-    setMoreOpen(false);
-  };
-
-  const toggleMore = (e) => {
-    e?.stopPropagation?.();
-    setMoreOpen((prev) => !prev);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-  };
-
-  const handleMouseDown = (e) => {
-    dragStartPos.current = { x: e.clientX - referralPosition.x, y: e.clientY - referralPosition.y };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleMouseMove = (e) => {
-    const newX = e.clientX - dragStartPos.current.x;
-    const newY = e.clientY - dragStartPos.current.y;
-    const boundedX = Math.max(0, Math.min(newX, window.innerWidth - (referralRef.current?.offsetWidth || 200)));
-    const boundedY = Math.max(0, Math.min(newY, window.innerHeight - (referralRef.current?.offsetHeight || 100)));
-    setReferralPosition({ x: boundedX, y: boundedY });
-  };
-
-  const handleMouseUp = () => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    dragStartPos.current = { x: touch.clientX - referralPosition.x, y: touch.clientY - referralPosition.y };
-    document.addEventListener("touchmove", handleTouchMove);
-    document.addEventListener("touchend", handleTouchEnd);
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    const newX = touch.clientX - dragStartPos.current.x;
-    const newY = touch.clientY - dragStartPos.current.y;
-    const boundedX = Math.max(0, Math.min(newX, window.innerWidth - (referralRef.current?.offsetWidth || 200)));
-    const boundedY = Math.max(0, Math.min(newY, window.innerHeight - (referralRef.current?.offsetHeight || 100)));
-    setReferralPosition({ x: boundedX, y: boundedY });
-  };
-
-  const handleTouchEnd = () => {
-    document.removeEventListener("touchmove", handleTouchMove);
-    document.removeEventListener("touchend", handleTouchEnd);
-  };
-
-  const fetchNotifications = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) {
-      setNotifications([]); // Clear if no wallet
-      return;
-    }
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    const fetchWithRetry = async () => {
-      try {
-        const { data: user, error: userError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("wallet_address", walletPublicKey)
-          .single();
-        if (userError || !user) {
-          setNotifications([]);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("notifications")
-          .select("id, user_id, novel_id, message, type, is_read, created_at, novel_title, comment_id, chat_id, recipient_wallet_address")
-          .eq("user_id", user.id)
-          .eq("is_read", false)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (error) throw error;
-        setNotifications(data || []);
-      } catch (err) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          await new Promise((res) => setTimeout(res, 1000 * retryCount));
-          return fetchWithRetry();
-        }
-        setError("Failed to load notifications.");
-        setNotifications([]);
-      }
-    };
-
-    await fetchWithRetry();
-  }, [isWalletConnected, walletPublicKey]);
-
-  const markAsRead = useCallback(async () => {
+  // Only used to gate the "Create Announcement" button in the dropdown
+  // below. The navbar's own creator-role state (for the dashboard button,
+  // profile link, etc.) lives entirely in <Navbar /> now.
+  const fetchCreatorFlags = useCallback(async () => {
     if (!isWalletConnected || !walletPublicKey) return;
-    try {
-      const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("wallet_address", walletPublicKey)
-        .single();
-      if (!user) throw new Error("User not found");
-
-      await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("user_id", user.id);
-      setNotifications([]);
-      setNotificationsOpen(false);
-    } catch (err) {
-      setError("Failed to update notifications.");
-    }
-  }, [isWalletConnected, walletPublicKey]);
-
-  const fetchUserDetails = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) return;
-
     try {
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, isWriter, isArtist, isSuperuser, referral_code, weekly_points")
+        .select("isWriter, isArtist, isSuperuser")
         .eq("wallet_address", walletPublicKey)
         .single();
-
       if (error && error.code !== "PGRST116") throw error;
-
       if (user) {
         setIsWriter(user.isWriter || false);
         setIsArtist(user.isArtist || false);
         setIsSuperuser(user.isSuperuser || false);
-        setUserId(user.id);
-        setReferralCode(user.referral_code || "");
-        setAmount(user.weekly_points || 0);
       }
     } catch (err) {
-      setError(`Failed to fetch user details: ${err.message}`);
+      // Non-critical — the button just stays hidden if this fails.
     }
   }, [isWalletConnected, walletPublicKey]);
-
-  const checkCreatorLogin = useCallback(() => {
-    setIsCreatorLoggedIn(isWalletConnected);
-  }, [isWalletConnected]);
 
   const fetchNovels = useCallback(async () => {
     setContentLoading(true);
@@ -510,108 +312,21 @@ export default function Home() {
     }
   }, [isWalletConnected, walletPublicKey]);
 
-  const handleCreatorAccess = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) {
-      setShowConnectPopup(true);
-      return;
-    }
-    try {
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("isWriter, isArtist, isSuperuser")
-        .eq("wallet_address", walletPublicKey)
-        .single();
-
-      if (error || !user) throw new Error("User not found");
-
-      const { isWriter, isArtist, isSuperuser } = user;
-
-      if (!isWriter && !isArtist && !isSuperuser) {
-        setPageLoading(true);
-        router.push("/apply");
-      } else if (isSuperuser || (isWriter && isArtist)) {
-        setShowCreatorChoice(true);
-        setMenuOpen(false);
-      } else if (isWriter) {
-        setPageLoading(true);
-        router.push("/novel-creators-dashboard");
-      } else if (isArtist) {
-        setPageLoading(true);
-        router.push("/manga-creators-dashboard");
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [isWalletConnected, walletPublicKey, router]);
-
-  const handleCreatorChoice = (path) => {
-    setShowCreatorChoice(false);
-    setPageLoading(true);
-    router.push(path);
-  };
-
   const handleNavigation = (path) => {
     setPageLoading(true);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
     setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
+    setShowConnectPopup(false);
     router.push(path);
   };
 
-  const handleNovelNavigation = (id) => {
-    setPageLoading(true);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-    router.push(`/novel/${id}`);
-  };
-
-  const handleMangaNavigation = (id) => {
-    setPageLoading(true);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-    router.push(`/manga/${id}`);
-  };
-
-  const handleChatNavigation = (type, chatId, recipientWallet) => {
-    setPageLoading(true);
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-    const path = type === "chat_reply" ? `/chat?messageId=${chatId}` : `/chat?messageId=${chatId}&recipient=${recipientWallet}`;
-    router.push(path);
-  };
-
-  const handleWalletImport = () => {
-    setPageLoading(true); // Add LoadingPage
-    router.push("/wallet-import");
-  };
-
-  const copyReferralLink = () => {
-    const link = `${window.location.origin}/?ref=${referralCode}`;
-    navigator.clipboard.writeText(link);
-    alert("Referral link copied to clipboard!");
-  };
+  const handleNovelNavigation = (id) => handleNavigation(`/novel/${id}`);
+  const handleMangaNavigation = (id) => handleNavigation(`/manga/${id}`);
 
   useEffect(() => {
     if (hasLoadedInitialData.current) return; // Skip if already loaded
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        await checkCreatorLogin(); // Quick check first
         setLoading(false); // Show UI with swirls
         await Promise.all([fetchNovels(), fetchManga()]); // Load content after UI
         hasLoadedInitialData.current = true;
@@ -621,85 +336,21 @@ export default function Home() {
       }
     };
     loadInitialData();
-  }, [checkCreatorLogin, fetchNovels, fetchManga]);
+  }, [fetchNovels, fetchManga]);
 
   useEffect(() => {
-    const handleWalletState = async () => {
-      if (!isWalletConnected) {
-        // Reset wallet-dependent state without reloading
-        setNotifications([]);
-        setAnnouncements([]);
-        setIsWriter(false);
-        setIsArtist(false);
-        setIsSuperuser(false);
-        setUserId(null);
-        setReferralCode("");
-        setAmount(0);
-        setIsCreatorLoggedIn(false);
-      } else if (walletPublicKey) {
-        fetchUserDetails();
-        fetchNotifications();
-        fetchAnnouncements();
-      }
-    };
-    handleWalletState();
-  }, [isWalletConnected, walletPublicKey, fetchUserDetails, fetchNotifications, fetchAnnouncements]);
-
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      const notificationButton = document.querySelector(`.${styles.notificationButton}`);
-      const notificationDropdown = document.querySelector(`.${styles.notificationDropdown}`);
-      const referralButton = document.querySelector(`.${styles.referralToggle}`);
-      const referralDropdown = document.querySelector(`.${styles.referralDropdown}`);
-      const moreWrapper = document.querySelector(`.${styles.moreWrapper}`);
-      const choicePopup = document.querySelector(`.${styles.creatorChoicePopup}`);
-      if (
-        notificationsOpen &&
-        !notificationButton?.contains(e.target) &&
-        !notificationDropdown?.contains(e.target)
-      ) {
-        setNotificationsOpen(false);
-      }
-      if (
-        isReferralOpen &&
-        !referralButton?.contains(e.target) &&
-        !referralDropdown?.contains(e.target)
-      ) {
-        setIsReferralOpen(false);
-      }
-      if (
-        showCreatorChoice &&
-        !choicePopup?.contains(e.target)
-      ) {
-        setShowCreatorChoice(false);
-      }
-      if (moreOpen && !moreWrapper?.contains(e.target)) {
-        setMoreOpen(false);
-      }
-    };
-    document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
-  }, [notificationsOpen, isReferralOpen, showCreatorChoice, moreOpen]);
-
-  const carouselSettings = (itemCount) => ({
-    dots: itemCount > 1,
-    infinite: itemCount > 1,
-    speed: 700,
-    slidesToShow: Math.min(itemCount, 3),
-    slidesToScroll: 1,
-    autoplay: itemCount > 1,
-    autoplaySpeed: 2500,
-    arrows: itemCount > 1,
-    prevArrow: <PrevArrow />,
-    nextArrow: <NextArrow />,
-    centerMode: itemCount > 1,
-    centerPadding: itemCount > 1 ? "20px" : "0px",
-    responsive: [
-      { breakpoint: 1024, settings: { slidesToShow: Math.min(itemCount, 2), centerPadding: itemCount > 1 ? "30px" : "0px" } },
-      { breakpoint: 768, settings: { slidesToShow: Math.min(itemCount, 2), centerPadding: itemCount > 1 ? "20px" : "0px" } },
-      { breakpoint: 480, settings: { slidesToShow: 1, centerPadding: "0px" } },
-    ],
-  });
+    if (!isWalletConnected) {
+      setAnnouncements([]);
+      setIsWriter(false);
+      setIsArtist(false);
+      setIsSuperuser(false);
+      return;
+    }
+    if (walletPublicKey) {
+      fetchCreatorFlags();
+      fetchAnnouncements();
+    }
+  }, [isWalletConnected, walletPublicKey, fetchCreatorFlags, fetchAnnouncements]);
 
   const announcementCarouselSettings = {
     dots: true,
@@ -721,14 +372,15 @@ export default function Home() {
   if (loading || pageLoading) return <LoadingPage />;
 
   return (
-    <div className={`${styles.page} ${theme === "light" ? styles.light : styles.dark}`}>
+    <div className={styles.page}>
       <div className={styles.backgroundAnimation}></div>
       {/* Sakura petals overlay */}
       <div className={styles.sakura} aria-hidden>
         {Array.from({ length: petalsCount }).map((_, i) => (
-          <span key={i}></span>
+          <span key={i} style={{ "--i": i }}></span>
         ))}
       </div>
+
       <div className={styles.announcementToggleWrapper}>
         {announcementsOpen && (
           <div className={styles.announcementDropdown}>
@@ -785,133 +437,8 @@ export default function Home() {
           </div>
         )}
       </div>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href="/novels" onClick={() => handleNavigation("/novels")} className={styles.navLink}>
-              <FaBookOpen className={styles.navIcon} /> Hoard
-            </Link>
-            <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
-              <FaComments className={styles.navIcon} /> Chat
-            </Link>
-            <Link href="/feed" onClick={() => handleNavigation("/feed")} className={styles.navLink}>
-              <FaRss className={styles.navIcon} /> Feed
-            </Link>
-            <Link href="/leaderboard" onClick={() => handleNavigation("/leaderboard")} className={styles.navLink}>
-              <FaTrophy className={styles.navIcon} /> Leaderboard
-            </Link>
-            <div className={styles.moreWrapper}>
-              <button className={styles.moreToggle} onClick={toggleMore} aria-expanded={moreOpen} aria-haspopup="menu">
-                <FaBars className={styles.navIcon} /> More
-              </button>
-              {moreOpen && (
-                <div className={styles.moreMenu} role="menu">
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup()); }}>
-                    <FaExchangeAlt className={styles.navIcon} /> Swap
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/badges") : toggleConnectPopup()); }}>
-                    <FaStar className={styles.navIcon} /> Badges
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/notifications") : toggleConnectPopup()); }}>
-                    <FaBell className={styles.navIcon} /> Notifications
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); handleNavigation("/download"); }}>
-                    <FaDownload className={styles.navIcon} /> Download App
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/stat-page") : toggleConnectPopup()); }}>
-                    <FaChartBar className={styles.navIcon} /> Stats
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); return (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup()); }}>
-                    <FaGamepad className={styles.navIcon} /> Kaito's Adventure
-                  </button>
-                  <button className={styles.moreItem} onClick={() => { setMoreOpen(false); setMenuOpen(false); handleWalletImport(); }}>
-                    <FaWallet className={styles.navIcon} /> Import Wallet
-                  </button>
-                </div>
-              )}
-            </div>
-            <Link
-              href={isWalletConnected && (isWriter || isArtist) ? `/profile/${userId}` : "/editprofile"}
-              onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/profile/${userId}` : "/editprofile") : toggleConnectPopup())}
-              className={styles.navLink}
-            >
-              <FaUser className={styles.navIcon} /> Profile
-            </Link>
-            <button onClick={handleCreatorAccess} className={styles.actionButton}>
-              {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
-            </button>
-            {isWalletConnected && (
-              <div className={styles.notificationWrapper}>
-                <button onClick={toggleNotifications} className={styles.notificationButton}>
-                  <FaBell className={styles.bellIcon} />
-                  {notifications.length > 0 && (
-                    <span className={styles.notificationBadge}>{notifications.length}</span>
-                  )}
-                </button>
-                {notificationsOpen && (
-                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
-                    {notifications.length > 0 ? (
-                      <>
-                        {notifications.map((notif) => (
-                          <div key={notif.id} className={styles.notificationItem}>
-                            {notif.type === "reply" && notif.comment_id ? (
-                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                                📩 Someone replied: "{notif.message}"
-                              </Link>
-                            ) : notif.type === "new_chapter" ? (
-                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                                📖 {notif.message}
-                              </Link>
-                            ) : notif.type === "reward" ? (
-                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                                🎉 Weekly reward received!
-                              </Link>
-                            ) : notif.type === "chat_reply" ? (
-                              <Link href={`/chat?messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("chat_reply", notif.chat_id)}>
-                                💬 {notif.message}
-                              </Link>
-                            ) : notif.type === "private_message" ? (
-                              <Link href={`/chat?recipient=${notif.recipient_wallet_address}&messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
-                                💬 {notif.message}
-                              </Link>
-                            ) : (
-                              <span>{notif.message || "New notification"}</span>
-                            )}
-                          </div>
-                        ))}
-                        <button onClick={markAsRead} className={styles.markReadButton}>
-                          Mark All as Read
-                        </button>
-                      </>
-                    ) : (
-                      <div className={styles.noNotifications}>No new notifications</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {isWalletConnected && (
-              <button onClick={toggleReferral} className={styles.referralToggle}>
-                <FaShareAlt className={styles.referralIcon} />
-              </button>
-            )}
-            {/* <button onClick={toggleTheme} className={styles.themeToggle}>
-              {theme === "dark" ? <FaSun /> : <FaMoon />}
-            </button> */}
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
+
+      <Navbar onNavigate={() => setPageLoading(true)} />
 
       <div className={styles.banner}>
         <p className={styles.bannerText}>And there's a hope burning in our chests, so we build.</p>
@@ -939,45 +466,6 @@ export default function Home() {
       </header>
 
       <main className={styles.mainContent}>
-        {isWalletConnected && isReferralOpen && (
-          <div
-            ref={referralRef}
-            className={styles.referralDropdown}
-            style={{ left: `${referralPosition.x}px`, top: `${referralPosition.y}px` }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-          >
-            <div className={styles.referralHeader}>Referral</div>
-            <p>Code: <strong>{referralCode || "N/A"}</strong></p>
-            <p>Amount: <strong>{amount}</strong> points</p>
-            <button onClick={copyReferralLink} className={styles.referralButton}>
-              Copy Link
-            </button>
-          </div>
-        )}
-        {showCreatorChoice && (
-          <div className={styles.creatorChoiceOverlay}>
-            <div className={styles.creatorChoicePopup}>
-              <button onClick={() => setShowCreatorChoice(false)} className={styles.closePopupButton}>
-                <FaTimes />
-              </button>
-              <h3 className={styles.popupTitle}>Choose Your Dashboard</h3>
-              <p className={styles.popupMessage}>You have multiple creator roles. Which dashboard would you like to access?</p>
-              <div className={styles.choiceButtons}>
-                {(isWriter || isSuperuser) && (
-                  <button onClick={() => handleCreatorChoice("/novel-creators-dashboard")} className={styles.choiceButton}>
-                    Novel Creators Dashboard
-                  </button>
-                )}
-                {(isArtist || isSuperuser) && (
-                  <button onClick={() => handleCreatorChoice("/manga-creators-dashboard")} className={styles.choiceButton}>
-                    Manga Creators Dashboard
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
         <section className={styles.contentSection}>
           <h2 className={styles.sectionTitle}>Featured Novels</h2>
           {error && <div className={styles.errorAlert}>{error}</div>}

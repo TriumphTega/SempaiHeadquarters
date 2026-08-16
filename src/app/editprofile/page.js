@@ -11,10 +11,7 @@ import {
   FaGem,
   FaBolt,
   FaSave,
-  FaHome,
   FaExchangeAlt,
-  FaBars,
-  FaTimes,
   FaBook,
   FaTwitter,
   FaDiscord,
@@ -24,8 +21,8 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
+import Navbar from "../../components/Navbar";
 import styles from "./EditProfile.module.css";
-import ConnectButton from "../../components/ConnectButton";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 
 export default function EditProfile() {
@@ -45,7 +42,6 @@ export default function EditProfile() {
   const [website, setWebsite] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [referralMessage, setReferralMessage] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -57,8 +53,6 @@ export default function EditProfile() {
   const [migrateError, setMigrateError] = useState("");
   const [migrateSuccess, setMigrateSuccess] = useState("");
   const { balance } = UseAmethystBalance();
-
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -493,27 +487,8 @@ export default function EditProfile() {
     address && address.length > 15 ? `${address.slice(0, 2)}**${address.slice(-2)}` : address || "";
 
   return (
-    <div className={`${styles.page} ${isCreator ? styles.creator : ""} ${menuOpen ? styles.menuActive : ""}`}>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <Link href="/profile" className={styles.navLink}>
-              <FaExchangeAlt /> View Profile
-            </Link>
-            <ConnectButton />
-          </div>
-        </div>
-      </nav>
+    <div className={`${styles.page} ${isCreator ? styles.creator : ""}`}>
+      <Navbar />
 
       <main className={styles.main}>
         <section className={styles.profileSection}>
@@ -533,7 +508,6 @@ export default function EditProfile() {
           {!connected && !embeddedWallet ? (
             <div className={styles.connectWrapper}>
               <p className={styles.connectText}>Connect your wallet to edit your profile</p>
-              <ConnectButton />
             </div>
           ) : (
             <>

@@ -9,9 +9,9 @@ import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
-import { FaHome, FaBars, FaTimes, FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem, FaSun, FaMoon, FaBullhorn, FaPaintBrush, FaLayerGroup, FaCamera } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaUpload, FaUserShield, FaGem, FaBullhorn, FaPaintBrush, FaLayerGroup, FaCamera } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
-import ConnectButton from "../../components/ConnectButton";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/MangaDashboard.module.css";
 import imageCompression from "browser-image-compression";
 
@@ -59,8 +59,6 @@ export default function MangaDashboard() {
   const [artistList, setArtistList] = useState([]);
   const [editingChapterIdx, setEditingChapterIdx] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [noticeTitle, setNoticeTitle] = useState("");
   const [noticeText, setNoticeText] = useState("");
   const [noticeDate, setNoticeDate] = useState(null);
@@ -454,34 +452,34 @@ export default function MangaDashboard() {
   const selectStyles = {
     control: (base) => ({
       ...base,
-      backgroundColor: isDarkTheme ? "#2a2a2a" : "#fff",
-      borderColor: isDarkTheme ? "#444" : "#ccc",
-      color: isDarkTheme ? "#fff" : "#000",
+      backgroundColor: "#2a2a2a",
+      borderColor: "#444",
+      color: "#fff",
     }),
     menu: (base) => ({
       ...base,
-      backgroundColor: isDarkTheme ? "#2a2a2a" : "#fff",
+      backgroundColor: "#2a2a2a",
     }),
     option: (base, { isFocused, isSelected }) => ({
       ...base,
       backgroundColor: isSelected
-        ? isDarkTheme ? "#555" : "#ddd"
+        ? "#555"
         : isFocused
-        ? isDarkTheme ? "#444" : "#eee"
-        : isDarkTheme ? "#2a2a2a" : "#fff",
-      color: isDarkTheme ? "#fff" : "#000",
+        ? "#444"
+        : "#2a2a2a",
+      color: "#fff",
     }),
     multiValue: (base) => ({
       ...base,
-      backgroundColor: isDarkTheme ? "#555" : "#ddd",
+      backgroundColor: "#555",
     }),
     multiValueLabel: (base) => ({
       ...base,
-      color: isDarkTheme ? "#fff" : "#000",
+      color: "#fff",
     }),
     multiValueRemove: (base) => ({
       ...base,
-      color: isDarkTheme ? "#fff" : "#000",
+      color: "#fff",
       ":hover": {
         backgroundColor: "#ff4444",
         color: "#fff",
@@ -489,7 +487,7 @@ export default function MangaDashboard() {
     }),
     input: (base) => ({
       ...base,
-      color: isDarkTheme ? "#fff" : "#000",
+      color: "#fff",
     }),
   };
 
@@ -497,32 +495,18 @@ export default function MangaDashboard() {
 
   return (
     <div className={styles.container}>
-      <nav className={`${styles.navbar} ${isMenuOpen ? styles.navOpen : ""}`}>
-        <Link href="/" className={styles.logo}>
-          <span>SempaiHQ</span>
-        </Link>
-        <button className={styles.navToggle} onClick={toggleMenu}>
-          {isMenuOpen ? <FaTimes /> : <FaBars />}
-        </button>
-        <ul className={`${styles.navLinks} ${isMenuOpen ? styles.navLinksOpen : ""}`}>
-          <li><Link href="/" className={styles.navLink}><FaHome /> Home</Link></li>
-          <li><button onClick={toggleTheme} className={styles.themeToggle}>{isDarkTheme ? <FaSun /> : <FaMoon />}</button></li>
-          <li><ConnectButton /></li>
-        </ul>
-      </nav>
+      <Navbar />
 
       <main className={styles.main}>
         {!isWalletConnected ? (
           <div className={styles.unauthorized}>
             <FaGem />
-            <p>Connect your wallet to access the Artist’s Studio.</p>
-            <ConnectButton />
+            <p>Connect your wallet to access the Artist's Studio.</p>
           </div>
         ) : !isArtist && !isAdmin ? (
           <div className={styles.unauthorized}>
             <FaTimes />
             <p>Access restricted to artists and admins.</p>
-            <Link href="/" className={styles.navLink}><FaHome /> Return Home</Link>
           </div>
         ) : (
           <>

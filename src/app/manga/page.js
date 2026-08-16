@@ -7,17 +7,13 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import {
-  FaHome,
-  FaExchangeAlt,
-  FaBars,
-  FaTimes,
   FaPaintBrush,
   FaWallet,
   FaEye,
   FaSearch,
   FaClock,
 } from "react-icons/fa";
-import ConnectButton from "../../components/ConnectButton";
+import Navbar from "../../components/Navbar";
 import { v4 as uuidv4 } from "uuid";
 import LoadingPage from "../../components/LoadingPage";
 import { Transaction, Connection } from "@solana/web3.js";
@@ -58,17 +54,13 @@ export default function MangaPage() {
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [walletPanelOpen, setWalletPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
   const [timeLeft, setTimeLeft] = useState(null);
   const connection = new Connection(RPC_URL);
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
   const toggleWalletPanel = () => setWalletPanelOpen((prev) => !prev);
-
-  const handleNavigation = (path) => router.push(path);
 
   const checkBalance = async () => {
     if (!publicKey) return;
@@ -248,23 +240,7 @@ export default function MangaPage() {
 
   return (
     <div className={styles.mangaContainer}>
-      {/* Navbar */}
-      <nav className={styles.mangaNavbar}>
-        <div className={styles.navbarContent}>
-          <Link href="/" className={styles.mangaLogo}>
-            <img src="/images/logo.jpeg" alt="SempaiHQ" className={styles.logoImage} />
-            <span className={styles.logoText}>SempaiHQ Manga Hoard</span>
-          </Link>
-          <button className={styles.menuButton} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navItems} ${menuOpen ? styles.navItemsOpen : ""}`}>
-            <Link href="/" className={styles.navItem}><FaHome /> Home</Link>
-            <Link href="/swap" className={styles.navItem}><FaExchangeAlt /> Swap</Link>
-            <ConnectButton className={styles.connectBtn} />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Rewards Belt */}
       <div className={styles.rewardsBelt}>

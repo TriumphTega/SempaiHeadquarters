@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
+import Navbar from "@/components/Navbar";
 import styles from "./Chat.module.css";
 
 // ---------------------------------------------------------------------------
@@ -943,10 +944,9 @@ export default function ChatPage() {
 
   return (
     <div className={styles.chatContainer}>
-      <nav className={styles.navbar}>
-        <Link href="/" className={styles.logoLink}>
-          <img src="/images/logo.jpeg" alt="Home" className={styles.logo} />
-        </Link>
+      <Navbar />
+
+      <div className={styles.chatHeader}>
         <button
           className={styles.sidebarToggle}
           onClick={() => setSidebarOpen((prev) => !prev)}
@@ -965,7 +965,7 @@ export default function ChatPage() {
             `Chat with ${activeChatName}`
           )}
         </div>
-      </nav>
+      </div>
 
       {error && (
         <div className={styles.error} role="alert">

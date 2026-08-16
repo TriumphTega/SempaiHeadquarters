@@ -10,6 +10,30 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Theme variables */
+  --bg-primary: #000;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #fff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --accent-primary: #f36316;
+  --accent-secondary: #e3b24d;
+  --accent-tertiary: #0077D6;
+  --accent-quaternary: #00A6D6;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --input-bg: #1A1A2E;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5fafd;
+  --bg-secondary: #ffffff;
+  --text-primary: #000;
+  --text-secondary: rgba(0, 0, 0, 0.7);
+  --accent-primary: #0077D6;
+  --accent-secondary: #e3b24d;
+  --accent-tertiary: #0077D6;
+  --accent-quaternary: #00A6D6;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --input-bg: #f0f0f0;
 }
 
 .btn-primary {
@@ -58,8 +82,25 @@ a {
   text-decoration: none;
 }
 
+/*
+ * Theme-aware browser chrome.
+ * html[data-theme] is set synchronously in layout.js (see THEME_INIT_SCRIPT)
+ * before first paint. This just tells the browser which native palette to
+ * use for scrollbars, form controls, etc., so they match whichever theme a
+ * page (e.g. the homepage) is currently rendering via page.module.css.
+ * Pages that haven't adopted per-page theming yet are unaffected — the
+ * prefers-color-scheme fallback below still applies for them.
+ */
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 @media (prefers-color-scheme: dark) {
-  html {
+  html:not([data-theme]) {
     color-scheme: dark;
   }
 }

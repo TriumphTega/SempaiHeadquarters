@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import LoadingPage from "@/components/LoadingPage";
-import { FaHome, FaBars, FaTimes, FaFeather, FaComment, FaRetweet, FaHeart, FaShare, FaEllipsisH, FaUser, FaPaperPlane, FaImage, FaGift } from "react-icons/fa";
+import { FaFeather, FaComment, FaRetweet, FaHeart, FaShare, FaEllipsisH, FaUser, FaPaperPlane, FaImage, FaGift } from "react-icons/fa";
+import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import styles from "@/styles/FeedPage.module.css";
 import { createClient } from '@supabase/supabase-js';
@@ -17,7 +18,6 @@ export default function CrazyCornerPage() {
   const { user, session } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [editingPost, setEditingPost] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -42,19 +42,35 @@ export default function CrazyCornerPage() {
         if (!res.ok) throw new Error(data.error || "Failed to fetch posts");
         setPosts(data.posts || []);
       } else {
-        const res = await fetch(`/api/feed/personalized?userId=${userId}`, {
-          method: "GET",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch personalized feed");
-        setPosts(data.posts || []);
-        
-        // Load user's existing likes and reshares
-        loadUserInteractions(data.posts || []);
+        try {
+          const res = await fetch(`/api/feed/personalized?userId=${userId}`, {
+            method: "GET",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to fetch personalized feed");
+          setPosts(data.posts || []);
+          
+          // Load user's existing likes and reshares
+          loadUserInteractions(data.posts || []);
+        } catch (personalizedError) {
+          console.warn("Personalized feed failed, falling back to regular feed:", personalizedError);
+          // Fallback to regular feed
+          const res = await fetch("/api/feed/posts", {
+            method: "GET",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to fetch posts");
+          setPosts(data.posts || []);
+          
+          // Load user's existing likes and reshares
+          loadUserInteractions(data.posts || []);
+        }
       }
     } catch (error) {
       console.error("Error fetching posts:", error);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -345,20 +361,7 @@ export default function CrazyCornerPage() {
 
   return (
     <div className={styles.feedContainer}>
-      <nav className={styles.feedNavbar}>
-        <div className={styles.navbarContent}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="SempaiHQ" className={styles.logo} />
-            <span className={styles.logoText}>SempaiHQ Feed</span>
-          </Link>
-          <button className={styles.menuButton} onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navItems} ${menuOpen ? styles.navItemsOpen : ""}`}>
-            <Link href="/" className={styles.navItem}><FaHome /> Home</Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className={styles.feedContent}>
         <div className={styles.feedMain}>

@@ -25,9 +25,6 @@ import {
 import DOMPurify from "dompurify";
 import Link from "next/link";
 import {
-  FaHome,
-  FaBars,
-  FaTimes,
   FaBookOpen,
   FaPlus,
   FaEdit,
@@ -35,8 +32,6 @@ import {
   FaUpload,
   FaUserShield,
   FaGem,
-  FaSun,
-  FaMoon,
   FaImage,
   FaBullhorn,
   FaLock,
@@ -55,6 +50,7 @@ import {
   FaBookReader,
 } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
+import Navbar from "../../../../../components/Navbar";
 import CommentSection from "../../../../../components/Comments/CommentSection";
 import styles from "../../../../../styles/ChapterPage.module.css";
 import autopayStyles from "../../../../../styles/AutopaySettings.module.css";
@@ -2041,25 +2037,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
         </div>
       )}
 
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => router.push("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href={`/novel/${id}`} onClick={() => router.push(`/novel/${id}`)} className={styles.navLink}>
-              <FaBookOpen className={styles.navIcon} /> Novel Hub
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className={styles.chapterContainer}>
         <div className={styles.headerSection}>

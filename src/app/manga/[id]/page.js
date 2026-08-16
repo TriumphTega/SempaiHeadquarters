@@ -5,8 +5,8 @@ import { use } from "react"; // For unwrapping params Promise
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { supabase } from "../../../services/supabase/supabaseClient";
-import { FaHome, FaBars, FaTimes, FaBook, FaUser, FaWallet, FaCoins, FaStar, FaLock } from "react-icons/fa";
-import ConnectButton from "../../../components/ConnectButton";
+import { FaBook, FaUser, FaWallet, FaCoins, FaStar, FaLock } from "react-icons/fa";
+import Navbar from "../../../components/Navbar";
 import LoadingPage from "../../../components/LoadingPage";
 import DraggableWalletPanel from "../../../components/DraggableWalletPanel";
 import MangaDetailCommentSection from "../../../components/MangaDetailCommentSection"; // Import the new component
@@ -18,13 +18,11 @@ export default function MangaDetail({ params }) {
   const [manga, setManga] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [walletPanelOpen, setWalletPanelOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false); // Track dragging state
   const [balance, setBalance] = useState(0);
   const [weeklyPoints, setWeeklyPoints] = useState(0);
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
   const toggleWalletPanel = () => setWalletPanelOpen((prev) => !prev);
 
   const fetchMangaDetails = async () => {
@@ -88,20 +86,7 @@ export default function MangaDetail({ params }) {
   return (
     <div className={styles.page}>
       <div className={styles.backgroundAnimation}></div>
-      <nav className={styles.navbar}>
-        <Link href="/" className={styles.logo}>
-          <FaBook className={styles.logoIcon} /> Sempai HQ
-        </Link>
-        <button className={styles.menuToggle} onClick={toggleMenu}>
-          {menuOpen ? <FaTimes /> : <FaBars />}
-        </button>
-        <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-          <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
-          <Link href="/manga" className={styles.navLink}><FaBook /> Manga</Link>
-          <Link href="/swap" className={styles.navLink}><FaCoins /> Swap</Link>
-          <ConnectButton className={styles.connectButton} />
-        </div>
-      </nav>
+      <Navbar />
 
       <main className={styles.main}>
         <section className={styles.header}>

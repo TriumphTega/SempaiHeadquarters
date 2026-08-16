@@ -1,7 +1,7 @@
 /* Base page styles */
 .page {
   min-height: 100vh;
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -9,7 +9,7 @@
 
 /* Default Theme for Non-Creators (Dark Sci-Fi) */
 .page:not(.creator):not(.artist):not(.both):not(.superuser) {
-  background: linear-gradient(145deg, #0d1b2a 0%, #1b263b 100%);
+  background: linear-gradient(145deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 .page:not(.creator):not(.artist):not(.both):not(.superuser)::before {
   content: "";
@@ -26,7 +26,7 @@
 
 /* Creator Theme (Orange Sci-Fi) */
 .creator {
-  background: linear-gradient(145deg, #0d1b2a 0%, #1b263b 100%);
+  background: linear-gradient(145deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 .creator::before {
   content: "";

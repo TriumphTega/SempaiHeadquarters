@@ -1,15 +1,15 @@
 /* Base styles */
 .container {
     min-height: 100vh;
-    background: #000;
-    color: #fff;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     display: flex;
     flex-direction: column;
 }
 
 /* Navigation */
 .navbar {
-    background: rgba(243, 99, 22, 0.9);
+    background: var(--accent-primary);
     padding: 1rem;
     display: flex;
     justify-content: space-between;
@@ -22,14 +22,14 @@
 .logo {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #fff;
+    color: var(--text-primary);
     text-decoration: none;
 }
 
 .navToggle {
     background: none;
     border: none;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 1.5rem;
     cursor: pointer;
     display: none;

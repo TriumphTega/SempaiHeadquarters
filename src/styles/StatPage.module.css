@@ -8,9 +8,9 @@
   /* Existing styles with tweaks */
   .statsPage {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     padding: 40px;
-    color: #fff;
+    color: var(--text-primary);
     font-family: 'Yoruka', Arial, sans-serif;
   }
   
@@ -20,8 +20,8 @@
     margin-bottom: 40px;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #00ffcc;
-    text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    color: var(--accent-primary);
+    text-shadow: 0 0 10px rgba(243, 99, 22, 0.5);
   }
   
   .statCard {

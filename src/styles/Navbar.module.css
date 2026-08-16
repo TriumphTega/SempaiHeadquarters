@@ -1,0 +1,1088 @@
+/* ==========================================================================
+   Navbar Styles
+   Dark mode = the exact palette from the legacy Navbar (dark gradient,
+   orange #ff6200 accent). Light mode is a matching variant that keeps the
+   same orange accent on a light surface. Everything below reads from
+   custom properties so the navbar actually responds to the theme toggle,
+   which sets data-theme="dark" | "light" on <html>.
+   ========================================================================== */
+
+:root,
+html[data-theme="dark"] {
+  --nav-bg-1: #1a1a1a;
+  --nav-bg-2: #333;
+  --nav-text: #fff;
+  --nav-text-dim: #cfcfcf;
+  --nav-orange: #ff6200;
+  --nav-orange-dark: #e55a00;
+  --nav-danger: #dc3545;
+  --nav-danger-dark: #c82333;
+  --nav-connect-bg: #fff;
+  --nav-connect-text: #000;
+  --nav-shadow: rgba(0, 0, 0, 0.4);
+  --nav-popup-line: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="light"] {
+  --nav-bg-1: #ffffff;
+  --nav-bg-2: #f2f2f2;
+  --nav-text: #1a1a1a;
+  --nav-text-dim: #555555;
+  --nav-orange: #ff6200;
+  --nav-orange-dark: #e55a00;
+  --nav-danger: #dc3545;
+  --nav-danger-dark: #c82333;
+  --nav-connect-bg: #1a1a1a;
+  --nav-connect-text: #fff;
+  --nav-shadow: rgba(0, 0, 0, 0.12);
+  --nav-popup-line: rgba(0, 0, 0, 0.1);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Navbar                                                                  */
+/* ---------------------------------------------------------------------- */
+.navbar {
+  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2)) !important;
+  padding: 0.85rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid var(--nav-popup-line);
+  transition: background 0.35s ease, box-shadow 0.3s ease, border-color 0.35s ease;
+}
+
+.navbar:hover {
+  box-shadow: 0 4px 16px rgba(255, 98, 0, 0.3);
+}
+
+.navContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Brand                                                                   */
+/* ---------------------------------------------------------------------- */
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 0.6rem;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.logoLink:hover .logo {
+  transform: rotate(360deg) scale(1.1);
+  box-shadow: 0 0 10px var(--nav-orange);
+}
+
+.logoText {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--nav-text);
+  white-space: nowrap;
+  transition: color 0.35s ease;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Primary links (desktop, centered)                                      */
+/* ---------------------------------------------------------------------- */
+.navLinks {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.4rem;
+  flex: 1;
+}
+
+.navLink {
+  color: var(--nav-text) !important;
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.navLink:hover {
+  color: var(--nav-orange) !important;
+  transform: translateX(3px);
+}
+
+.navIcon {
+  font-size: 1rem;
+  color: var(--nav-orange);
+  transition: transform 0.3s ease;
+}
+
+.navLink:hover .navIcon {
+  transform: rotate(20deg);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Right side controls                                                    */
+/* ---------------------------------------------------------------------- */
+.rightSide {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.menuToggle {
+  display: none;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--nav-text);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+  order: 99;
+  transition: color 0.35s ease;
+}
+
+/* "Become a Creator" / "Creator Dashboard" */
+.actionButton {
+  background: var(--nav-orange);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.actionButton:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.05);
+}
+
+/* Theme toggle */
+.themeToggleButton {
+  background: var(--nav-orange);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.themeToggleButton:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.1);
+}
+
+/* Notifications */
+.notificationWrapper { position: relative; display: flex; align-items: center; }
+
+.notificationButton {
+  background: var(--nav-orange);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.notificationButton:hover {
+  transform: scale(1.15);
+  background: var(--nav-orange-dark);
+}
+
+.bellIcon { display: block; }
+
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--nav-danger);
+  color: #fff;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Dropdown surfaces (notifications / referral) stay a fixed light card in
+   both themes for legibility, same as the legacy design. */
+.notificationDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: #fff;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--nav-shadow);
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 2000;
+  padding: 10px;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notificationDropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notificationItem {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.2s ease;
+}
+.notificationItem:last-of-type { border-bottom: none; }
+
+.notificationItem:hover { background: #f8f9fa; }
+
+.notificationItem a { color: var(--nav-orange); text-decoration: none; }
+.notificationItem a:hover { text-decoration: underline; }
+
+.markReadButton {
+  background: var(--nav-danger);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+  margin-top: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.markReadButton:hover {
+  background: var(--nav-danger-dark);
+  transform: scale(1.03);
+}
+
+.noNotifications {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.connectButton {
+  background: var(--nav-connect-bg);
+  color: var(--nav-connect-text) !important;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.connectButton:hover {
+  background: var(--nav-orange);
+  color: #fff !important;
+  transform: scale(1.05);
+}
+
+/* Referral */
+.referralToggle {
+  background: var(--nav-orange);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.referralToggle:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.1);
+}
+
+.referralIcon { transition: transform 0.3s ease; }
+.referralToggle:hover .referralIcon { transform: scale(1.15); }
+
+.referralDropdown {
+  position: fixed;
+  background: #fff;
+  color: #333;
+  border-radius: 10px;
+  padding: 0.85rem;
+  width: 190px;
+  box-shadow: 0 12px 26px var(--nav-shadow);
+  z-index: 2000;
+  user-select: none;
+  cursor: move;
+}
+
+.referralHeader {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nav-orange);
+  text-align: center;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #eee;
+}
+
+.referralCode {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #222;
+  text-align: center;
+  word-break: break-all;
+}
+
+.referralButton {
+  background: var(--nav-orange);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  width: 100%;
+  margin-top: 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+.referralButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
+.referralButton:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ---------------------------------------------------------------------- */
+/* Modal popups (creator choice / connect prompt)                         */
+/* ---------------------------------------------------------------------- */
+.creatorChoiceOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease;
+}
+
+.creatorChoicePopup {
+  position: relative;
+  width: 90%;
+  max-width: 400px;
+  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2));
+  border: 1px solid rgba(255, 98, 0, 0.3);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 24px 60px var(--nav-shadow);
+  animation: slideIn 0.3s ease-in-out;
+  transition: background 0.35s ease;
+}
+
+.popupTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: var(--nav-orange);
+}
+
+.popupMessage {
+  margin: 0 0 1.1rem;
+  color: var(--nav-text-dim);
+  font-size: 0.9rem;
+}
+
+.choiceButtons { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 1rem; }
+
+.choiceButton {
+  background: var(--nav-orange);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: transform 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.choiceButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                             */
+/* ---------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .navLinks { display: none; }
+  .actionButton { display: none; }
+}
+
+@media (max-width: 768px) {
+  .navbar { padding: 0.65rem 1rem; }
+  .navContainer { flex-wrap: nowrap; }
+  .menuToggle { display: block; }
+  .logo { width: 34px; height: 34px; }
+  .logoText { font-size: 1rem; }
+  .connectButton { padding: 6px 14px; font-size: 0.8rem; }
+  .rightSide { gap: 0.5rem; }
+
+  /* Trim secondary controls so the hamburger always has room and stays
+     on-screen instead of being pushed past the right edge. */
+  .referralToggle { display: none; }
+
+  .notificationDropdown { position: fixed; top: 60px; right: 0.75rem; width: min(320px, calc(100vw - 1.5rem)); }
+
+  .creatorChoiceOverlay { align-items: flex-start; padding-top: 70px; }
+  .creatorChoicePopup { margin-top: 10px; }
+}
+
+@media (max-width: 480px) {
+  .navbar { padding: 0.55rem 0.75rem; }
+  .logo { width: 30px; height: 30px; margin-right: 0.4rem; }
+  .logoText { font-size: 0.9rem; }
+  .themeToggleButton { display: none; }
+  .rightSide { gap: 0.4rem; }
+  .connectButton { padding: 5px 10px; font-size: 0.75rem; }
+
+  .creatorChoicePopup { width: 85%; padding: 1.4rem; }
+  .choiceButton { padding: 0.6rem 1rem; font-size: 0.9rem; }
+}/* ==========================================================================
+   Navbar Styles
+   Dark mode = the exact palette from the legacy Navbar (dark gradient,
+   orange #ff6200 accent). Light mode is a matching variant that keeps the
+   same orange accent on a light surface. Everything below reads from
+   custom properties so the navbar actually responds to the theme toggle,
+   which sets data-theme="dark" | "light" on <html>.
+   ========================================================================== */
+
+:root,
+html[data-theme="dark"] {
+  --nav-bg-1: #1a1a1a;
+  --nav-bg-2: #333;
+  --nav-text: #fff;
+  --nav-text-dim: #cfcfcf;
+  --nav-orange: #ff6200;
+  --nav-orange-dark: #e55a00;
+  --nav-danger: #dc3545;
+  --nav-danger-dark: #c82333;
+  --nav-connect-bg: #fff;
+  --nav-connect-text: #000;
+  --nav-shadow: rgba(0, 0, 0, 0.4);
+  --nav-popup-line: rgba(255, 255, 255, 0.1);
+  --navbar-h: 70px;
+}
+
+html[data-theme="light"] {
+  --nav-bg-1: #ffffff;
+  --nav-bg-2: #f2f2f2;
+  --nav-text: #1a1a1a;
+  --nav-text-dim: #555555;
+  --nav-orange: #ff6200;
+  --nav-orange-dark: #e55a00;
+  --nav-danger: #dc3545;
+  --nav-danger-dark: #c82333;
+  --nav-connect-bg: #1a1a1a;
+  --nav-connect-text: #fff;
+  --nav-shadow: rgba(0, 0, 0, 0.12);
+  --nav-popup-line: rgba(0, 0, 0, 0.1);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Navbar                                                                  */
+/* ---------------------------------------------------------------------- */
+.navbar {
+  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2)) !important;
+  padding: 0.85rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid var(--nav-popup-line);
+  transition: background 0.35s ease, box-shadow 0.3s ease, border-color 0.35s ease;
+}
+
+.navbar:hover {
+  box-shadow: 0 4px 16px rgba(255, 98, 0, 0.3);
+}
+
+.navContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Theme toggle - sticky strip directly under the navbar                  */
+/* ---------------------------------------------------------------------- */
+.themeBar {
+  position: sticky;
+  top: var(--navbar-h);
+  z-index: 950;
+  pointer-events: none;
+}
+
+.themeBarInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.themeToggleButton {
+  pointer-events: auto;
+  background: linear-gradient(135deg, var(--nav-orange), var(--nav-orange-dark));
+  border: 2px solid var(--nav-bg-1);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(255, 98, 0, 0.35), 0 2px 6px var(--nav-shadow);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.35s ease;
+}
+
+.themeToggleButton:hover {
+  transform: scale(1.1) rotate(-10deg);
+  box-shadow: 0 8px 22px rgba(255, 98, 0, 0.45), 0 2px 6px var(--nav-shadow);
+}
+
+.themeToggleButton:active {
+  transform: scale(0.94);
+}
+
+.themeIconStack {
+  position: relative;
+  width: 1.05rem;
+  height: 1.05rem;
+  display: inline-block;
+}
+
+.themeIcon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Dark mode shows the sun (click to switch to light) */
+.sunIcon { opacity: 1; transform: rotate(0deg) scale(1); }
+.moonIcon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+
+html[data-theme="light"] .sunIcon { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+html[data-theme="light"] .moonIcon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+/* ---------------------------------------------------------------------- */
+/* Brand                                                                   */
+/* ---------------------------------------------------------------------- */
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 0.6rem;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.logoLink:hover .logo {
+  transform: rotate(360deg) scale(1.1);
+  box-shadow: 0 0 10px var(--nav-orange);
+}
+
+.logoText {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--nav-text);
+  white-space: nowrap;
+  transition: color 0.35s ease;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Primary links (desktop, centered)                                      */
+/* ---------------------------------------------------------------------- */
+.navLinks {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.4rem;
+  flex: 1;
+}
+
+.navLink {
+  color: var(--nav-text) !important;
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.navLink:hover {
+  color: var(--nav-orange) !important;
+  transform: translateX(3px);
+}
+
+.navIcon {
+  font-size: 1rem;
+  color: var(--nav-orange);
+  transition: transform 0.3s ease;
+}
+
+.navLink:hover .navIcon {
+  transform: rotate(20deg);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Right side controls                                                    */
+/* ---------------------------------------------------------------------- */
+.rightSide {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.menuToggle {
+  display: none;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--nav-text);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+  order: 99;
+  transition: color 0.35s ease;
+}
+
+/* "Become a Creator" / "Creator Dashboard" */
+.actionButton {
+  background: var(--nav-orange);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.actionButton:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.05);
+}
+
+/* Notifications */
+.notificationWrapper { position: relative; display: flex; align-items: center; }
+
+.notificationButton {
+  background: var(--nav-orange);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.notificationButton:hover {
+  transform: scale(1.15);
+  background: var(--nav-orange-dark);
+}
+
+.bellIcon { display: block; }
+
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--nav-danger);
+  color: #fff;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Dropdown surfaces (notifications / referral) stay a fixed light card in
+   both themes for legibility, same as the legacy design. */
+.notificationDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: #fff;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--nav-shadow);
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 2000;
+  padding: 10px;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notificationDropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notificationItem {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.2s ease;
+}
+.notificationItem:last-of-type { border-bottom: none; }
+
+.notificationItem:hover { background: #f8f9fa; }
+
+.notificationItem a { color: var(--nav-orange); text-decoration: none; }
+.notificationItem a:hover { text-decoration: underline; }
+
+.markReadButton {
+  background: var(--nav-danger);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+  margin-top: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.markReadButton:hover {
+  background: var(--nav-danger-dark);
+  transform: scale(1.03);
+}
+
+.noNotifications {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.connectButton {
+  background: var(--nav-connect-bg);
+  color: var(--nav-connect-text) !important;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.connectButton:hover {
+  background: var(--nav-orange);
+  color: #fff !important;
+  transform: scale(1.05);
+}
+
+/* Referral */
+.referralToggle {
+  background: var(--nav-orange);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.referralToggle:hover {
+  background: var(--nav-orange-dark);
+  transform: scale(1.1);
+}
+
+.referralIcon { transition: transform 0.3s ease; }
+.referralToggle:hover .referralIcon { transform: scale(1.15); }
+
+.referralDropdown {
+  position: fixed;
+  background: #fff;
+  color: #333;
+  border-radius: 10px;
+  padding: 0.85rem;
+  width: 190px;
+  box-shadow: 0 12px 26px var(--nav-shadow);
+  z-index: 2000;
+  user-select: none;
+  cursor: move;
+}
+
+.referralHeader {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nav-orange);
+  text-align: center;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #eee;
+}
+
+.referralCode {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #222;
+  text-align: center;
+  word-break: break-all;
+}
+
+.referralButton {
+  background: var(--nav-orange);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  width: 100%;
+  margin-top: 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+.referralButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
+.referralButton:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ---------------------------------------------------------------------- */
+/* Modal popups (creator choice / connect prompt)                         */
+/* ---------------------------------------------------------------------- */
+.creatorChoiceOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease;
+}
+
+.creatorChoicePopup {
+  position: relative;
+  width: 90%;
+  max-width: 400px;
+  background: linear-gradient(135deg, var(--nav-bg-1), var(--nav-bg-2));
+  border: 1px solid rgba(255, 98, 0, 0.3);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 24px 60px var(--nav-shadow);
+  animation: slideIn 0.3s ease-in-out;
+  transition: background 0.35s ease;
+}
+
+.popupTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: var(--nav-orange);
+}
+
+.popupMessage {
+  margin: 0 0 1.1rem;
+  color: var(--nav-text-dim);
+  font-size: 0.9rem;
+}
+
+.choiceButtons { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 1rem; }
+
+.choiceButton {
+  background: var(--nav-orange);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: transform 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.choiceButton:hover { background: var(--nav-orange-dark); transform: scale(1.03); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                             */
+/* ---------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .navLinks { display: none; }
+  .actionButton { display: none; }
+}
+
+@media (max-width: 768px) {
+  :root, html[data-theme="dark"], html[data-theme="light"] { --navbar-h: 56px; }
+
+  .navbar { padding: 0.65rem 1rem; }
+  .navContainer { flex-wrap: nowrap; }
+  .menuToggle { display: block; }
+  .logo { width: 34px; height: 34px; }
+  .logoText { font-size: 1rem; }
+  .connectButton { padding: 6px 14px; font-size: 0.8rem; }
+  .rightSide { gap: 0.5rem; }
+
+  /* Trim secondary controls so the hamburger always has room and stays
+     on-screen instead of being pushed past the right edge. */
+  .referralToggle { display: none; }
+
+  .themeBarInner { padding: 0.5rem 1rem 0; }
+  .themeToggleButton { width: 38px; height: 38px; }
+
+  .notificationDropdown { position: fixed; top: 60px; right: 0.75rem; width: min(320px, calc(100vw - 1.5rem)); }
+
+  .creatorChoiceOverlay { align-items: flex-start; padding-top: 70px; }
+  .creatorChoicePopup { margin-top: 10px; }
+}
+
+@media (max-width: 480px) {
+  :root, html[data-theme="dark"], html[data-theme="light"] { --navbar-h: 48px; }
+
+  .navbar { padding: 0.55rem 0.75rem; }
+  .logo { width: 30px; height: 30px; margin-right: 0.4rem; }
+  .logoText { font-size: 0.9rem; }
+  .rightSide { gap: 0.4rem; }
+  .connectButton { padding: 5px 10px; font-size: 0.75rem; }
+
+  .themeBarInner { padding: 0.4rem 0.75rem 0; }
+  .themeToggleButton { width: 34px; height: 34px; }
+
+  .creatorChoicePopup { width: 85%; padding: 1.4rem; }
+  .choiceButton { padding: 0.6rem 1rem; font-size: 0.9rem; }
+}

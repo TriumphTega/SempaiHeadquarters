@@ -3,13 +3,12 @@
    Aesthetic: Edo-period ink wash × cyberpunk amber glow
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Color Palette ── */
-:root {
-  --ka-bg-primary: #0c0c0c;
-  --ka-bg-card: #141210;
+/* ── App Shell ── */
+.container {
+  --ka-bg-card: var(--bg-secondary);
   --ka-bg-elevated: #1a1714;
-  --ka-bg-input: #0f0e0d;
-  --ka-orange-primary: #cc5500;
+  --ka-bg-input: var(--input-bg);
+  --ka-orange-primary: var(--accent-primary);
   --ka-orange-bright: #ff6b35;
   --ka-orange-soft: #e67e22;
   --ka-orange-dim: #8b4513;
@@ -17,28 +16,25 @@
   --ka-red-deep: #8b0000;
   --ka-gold: #c9a84c;
   --ka-gold-bright: #ffd700;
-  --ka-ivory: #f5e6d3;
-  --ka-ivory-dim: #c4b5a0;
+  --ka-ivory: var(--text-primary);
+  --ka-ivory-dim: var(--text-secondary);
   --ka-ink: #2a2520;
-  --ka-border: #2d2418;
-  --ka-border-glow: #cc550040;
-  --ka-text-primary: #f5e6d3;
-  --ka-text-secondary: #a09080;
-  --ka-text-muted: #6b5d4f;
+  --ka-border: var(--border-color);
+  --ka-border-glow: var(--accent-primary);
+  --ka-text-primary: var(--text-primary);
+  --ka-text-secondary: var(--text-secondary);
+  --ka-text-muted: var(--text-secondary);
   --ka-success: #4a7c59;
   --ka-success-bright: #6ab77a;
   --ka-danger: #c41e3a;
   --ka-danger-soft: #8b3a3a;
-}
 
-/* ── App Shell ── */
-.container {
   min-height: 100vh;
   background:
     radial-gradient(ellipse 80% 50% at 50% 0%, #1a0f05 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 100%, #0f0803 0%, transparent 50%),
-    linear-gradient(180deg, #0c0c0c 0%, #0a0806 50%, #0c0c0c 100%);
-  color: var(--ka-ivory);
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+  color: var(--text-primary);
   font-family: "Noto Sans JP", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   position: relative;
   padding: 2rem 1rem;

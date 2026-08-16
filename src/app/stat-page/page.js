@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useContext } from "react";
-import { supabase } from "../../services/supabase/supabaseClient"; // Adjust path
+import { supabase } from "../../services/supabase/supabaseClient";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider"; // Adjust path
+import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
+import Navbar from "../../components/Navbar";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from "chart.js";
 import { Line, Bar, Pie } from "react-chartjs-2";
 import styles from "../../styles/StatPage.module.css";
@@ -255,6 +256,7 @@ export default function StatsPage() {
 
   return (
     <div className={styles.statsPage}>
+      <Navbar />
       <h1 className={styles.title}>Platform Statistics</h1>
       {errorMessage && <div className={styles.error}><p>Error: {errorMessage}</p></div>}
       <div className={styles.statGrid}>

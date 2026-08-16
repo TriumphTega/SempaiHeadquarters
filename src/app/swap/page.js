@@ -7,10 +7,10 @@ import { Connection, PublicKey, VersionedTransaction, Keypair } from "@solana/we
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import Link from "next/link";
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, USDC_MINT_ADDRESS, SKR_MINT_ADDRESS, RPC_URL } from "@/constants";
-import { FaHome, FaBars, FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode, FaChevronDown, FaExclamationCircle, FaCheckCircle, FaWifi, FaCheck, FaExclamationTriangle, FaCreditCard, FaTimes } from "react-icons/fa";
+import { FaGem, FaExchangeAlt, FaWallet, FaSyncAlt, FaPaperPlane, FaQrcode, FaChevronDown, FaExclamationCircle, FaCheckCircle, FaWifi, FaCheck, FaExclamationTriangle, FaCreditCard, FaTimes } from "react-icons/fa";
 import TreasuryBalance from "../../components/TreasuryBalance";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/SwapPage.module.css";
-import ConnectButton from "../../components/ConnectButton";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import BalanceModal from "../../components/BalanceModal";
 import SendModal from "../../components/SendModal";
@@ -182,7 +182,6 @@ export default function SwapPage() {
   const [coinTo, setCoinTo] = useState("SMP");
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -338,31 +337,9 @@ export default function SwapPage() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-
   return (
     <div className={styles.page}>
-      {/* Navbar */}
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <Link href="/swap" className={styles.navLink}>
-              <FaExchangeAlt /> Swap
-            </Link>
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Header */}
       <header className={styles.header}>

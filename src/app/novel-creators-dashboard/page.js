@@ -10,11 +10,11 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import {
-  FaHome, FaBars, FaTimes, FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
-  FaUserShield, FaGem, FaSun, FaMoon, FaImage, FaBullhorn
+  FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
+  FaUserShield, FaGem, FaImage, FaBullhorn
 } from "react-icons/fa";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import ConnectButton from "../../components/ConnectButton";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/CreatorsDashboard.module.css";
 
 // Predefined tag options
@@ -63,8 +63,6 @@ export default function NovelDashboard() {
   const [writers, setWriters] = useState([]);
   const [editChapterIndex, setEditChapterIndex] = useState(null);
   const [loading, setLoading] = useState(false); // Changed to false by default
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementReleaseDate, setAnnouncementReleaseDate] = useState(null);
@@ -532,40 +530,37 @@ export default function NovelDashboard() {
     setShowInHome(true);
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const toggleTheme = () => setIsDarkMode((prev) => !prev);
-
   const selectStyles = {
     control: (base) => ({
       ...base,
-      backgroundColor: isDarkMode ? "#2a2a2a" : "#fff",
-      borderColor: isDarkMode ? "#444" : "#ccc",
-      color: isDarkMode ? "#fff" : "#000",
+      backgroundColor: "#2a2a2a",
+      borderColor: "#444",
+      color: "#fff",
     }),
     menu: (base) => ({
       ...base,
-      backgroundColor: isDarkMode ? "#2a2a2a" : "#fff",
+      backgroundColor: "#2a2a2a",
     }),
     option: (base, { isFocused, isSelected }) => ({
       ...base,
       backgroundColor: isSelected
-        ? isDarkMode ? "#555" : "#ddd"
+        ? "#555"
         : isFocused
-        ? isDarkMode ? "#444" : "#eee"
-        : isDarkMode ? "#2a2a2a" : "#fff",
-      color: isDarkMode ? "#fff" : "#000",
+        ? "#444"
+        : "#2a2a2a",
+      color: "#fff",
     }),
     multiValue: (base) => ({
       ...base,
-      backgroundColor: isDarkMode ? "#555" : "#ddd",
+      backgroundColor: "#555",
     }),
     multiValueLabel: (base) => ({
       ...base,
-      color: isDarkMode ? "#fff" : "#000",
+      color: "#fff",
     }),
     multiValueRemove: (base) => ({
       ...base,
-      color: isDarkMode ? "#fff" : "#000",
+      color: "#fff",
       ":hover": {
         backgroundColor: "#ff4444",
         color: "#fff",
@@ -573,30 +568,13 @@ export default function NovelDashboard() {
     }),
     input: (base) => ({
       ...base,
-      color: isDarkMode ? "#fff" : "#000",
+      color: "#fff",
     }),
   };
 
   return (
-    <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
-      <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}><FaHome /> Home</Link>
-            <button onClick={toggleTheme} className={styles.themeToggle}>{isDarkMode ? <FaSun /> : <FaMoon />}</button>
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && <div className={styles.blurOverlay}></div>}
+    <div className={`${styles.page}`}>
+      <Navbar />
 
       <header className={styles.header}>
         <h1 className={styles.headerTitle}><FaUserShield /> Writer’s Vault</h1>
@@ -607,14 +585,12 @@ export default function NovelDashboard() {
         {!isWalletConnected ? (
           <div className={styles.connectPrompt}>
             <FaGem className={styles.connectIcon} />
-            <p>Connect your wallet to access the Writer’s Vault.</p>
-            <ConnectButton className={styles.connectButtonPrompt} />
+            <p>Connect your wallet to access the Writer's Vault.</p>
           </div>
         ) : !isWriter && !isSuperuser ? (
           <div className={styles.accessDenied}>
             <FaTimes className={styles.deniedIcon} />
             <p>Access Denied. Only writers and superusers may enter.</p>
-            <Link href="/" className={styles.backLink}><FaHome /> Return Home</Link>
           </div>
         ) : (
           <div className={styles.dashboard}>

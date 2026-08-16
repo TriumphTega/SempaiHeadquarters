@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaEye } from "react-icons/fa";
+import { FaBookOpen, FaEye } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../../../components/LoadingPage";
+import Navbar from "../../../components/Navbar";
 import NovelCommentSection from "../../../components/Comments/NovelCommentSection";
 import styles from "../../../styles/NovelPage.module.css";
 import { EmbeddedWalletContext } from "../../../components/EmbeddedWalletProvider";
@@ -21,8 +22,6 @@ export default function NovelPage() {
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showConnectPopup, setShowConnectPopup] = useState(false);
   const [viewCountError, setViewCountError] = useState(null);
 
   // Determine active wallet
@@ -41,12 +40,6 @@ export default function NovelPage() {
       '"': "",
       "'": "'",
     }[char]));
-  };
-
-  // Toggle mobile menu
-  const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
-    setShowConnectPopup(false);
   };
 
   // Fetch novel data
@@ -123,58 +116,20 @@ export default function NovelPage() {
     updateViewCount();
   }, [fetchNovel, updateViewCount]);
 
-  // Handle navigation with wallet check for chapters beyond 1
-  const handleNavigation = (path, chapterId) => {
-    const chapterNum = parseInt(chapterId, 10);
-    if (isNaN(chapterNum) || (!isWalletConnected && chapterNum > 1)) {
-      setShowConnectPopup(true);
-    } else {
-      router.push(path);
-    }
-  };
-
   if (loading) return <LoadingPage />;
 
   if (!novel || error) {
     return (
       <div className={styles.errorContainer}>
         <h2 className={styles.errorText}>{error || "Novel not found"}</h2>
-        <Link href="/" className={styles.backHomeLink}>
-          <FaHome /> Back to Home
-        </Link>
-      </div>
-    );
-  }
-
-  // Show connect popup only if triggered by navigation
-  if (showConnectPopup) {
-    return (
-      <div className={styles.connectPopupOverlay}>
-        <div className={`${styles.connectPopup} ${styles.dark}`}>
-          <button
-            onClick={() => setShowConnectPopup(false)}
-            className={styles.closePopupButton}
-          >
-            <FaTimes />
-          </button>
-          <h3 className={styles.popupTitle}>Access Denied</h3>
-          <p className={styles.popupMessage}>
-            Connect your wallet to explore this chapter.
-          </p>
-          <WalletMultiButton className={styles.connectWalletButton} />
-          <p className={styles.popupNote}>
-            Using an embedded wallet? Ensure you're logged in or connect above.
-          </p>
-          <Link href="/" className={styles.backHomeLink}>
-            <FaHome /> Back to Home
-          </Link>
-        </div>
       </div>
     );
   }
 
   return (
     <div className={`${styles.page} ${styles.dark}`}>
+      <Navbar />
+
       {/* Error Message for View Count */}
       {viewCountError && (
         <div className={styles.errorMessage}>
@@ -184,35 +139,6 @@ export default function NovelPage() {
           </button>
         </div>
       )}
-
-      {/* Futuristic Navbar */}
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img
-              src="/images/logo.jpeg"
-              alt="Sempai HQ"
-              className={styles.logo}
-            />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
-          </button>
-          <div
-            className={`${styles.navLinks} ${
-              menuOpen ? styles.navLinksOpen : ""
-            }`}
-          >
-            <Link href="/" className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href={`/novel/${id}/summary`} className={styles.navLink}>
-              <FaBookOpen className={styles.navIcon} /> Summary
-            </Link>
-          </div>
-        </div>
-      </nav>
 
       {/* Main Content */}
       <div className={styles.novelContainer}>

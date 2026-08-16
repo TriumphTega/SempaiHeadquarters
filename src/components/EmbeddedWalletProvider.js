@@ -304,6 +304,7 @@ export const EmbeddedWalletProvider = ({ children }) => {
         }
       } catch {
         // Silent: if prewarm fails, normal flow will handle errors later
+        // No console logging to avoid noise in development
       }
     };
     prewarm();

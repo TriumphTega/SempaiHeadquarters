@@ -1,0 +1,227 @@
+/* ==========================================================================
+   Sidebar Styles
+   Shares the navbar's theme-aware custom properties so it flips between
+   dark and light along with the rest of the site.
+   ========================================================================== */
+
+:root,
+html[data-theme="dark"] {
+  --sb-bg-1: #1a1a1a;
+  --sb-bg-2: #262626;
+  --sb-text: #fff;
+  --sb-text-dim: #b8b8b8;
+  --sb-line: rgba(255, 255, 255, 0.1);
+  --sb-group-bg: rgba(255, 255, 255, 0.04);
+  --sb-orange: #ff6200;
+  --sb-orange-dark: #e55a00;
+  --sb-shadow: rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="light"] {
+  --sb-bg-1: #ffffff;
+  --sb-bg-2: #f2f2f2;
+  --sb-text: #1a1a1a;
+  --sb-text-dim: #555555;
+  --sb-line: rgba(0, 0, 0, 0.1);
+  --sb-group-bg: rgba(0, 0, 0, 0.03);
+  --sb-orange: #ff6200;
+  --sb-orange-dark: #e55a00;
+  --sb-shadow: rgba(0, 0, 0, 0.15);
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 999;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100vh;
+  background: linear-gradient(160deg, var(--sb-bg-1), var(--sb-bg-2));
+  border-left: 1px solid var(--sb-line);
+  box-shadow: -4px 0 20px var(--sb-shadow);
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out, background 0.35s ease, border-color 0.35s ease;
+}
+
+.sidebarClosed { transform: translateX(100%); }
+.sidebarOpen { transform: translateX(0); }
+
+.sidebarContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 1rem 1rem;
+}
+
+/* Header row: brand + close button */
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0 0.9rem;
+  border-bottom: 1px solid var(--sb-line);
+}
+
+.sidebarLogo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.sidebarHeader:hover .sidebarLogo {
+  transform: rotate(360deg) scale(1.08);
+  box-shadow: 0 0 8px var(--sb-orange);
+}
+
+.sidebarTitle {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--sb-text);
+  transition: color 0.35s ease;
+}
+
+.closeButton {
+  background: var(--sb-orange);
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.45rem;
+  line-height: 1;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.closeButton:hover {
+  background: var(--sb-orange-dark);
+  transform: scale(1.08);
+}
+
+.navLinksContainer {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding-right: 0.25rem;
+}
+
+.navLinksContainer::-webkit-scrollbar { width: 6px; }
+.navLinksContainer::-webkit-scrollbar-track { background: transparent; }
+.navLinksContainer::-webkit-scrollbar-thumb { background: var(--sb-line); border-radius: 3px; }
+
+.navGroup { margin-bottom: 0.5rem; }
+
+.navGroupButton {
+  width: 100%;
+  background: var(--sb-group-bg);
+  border: 1px solid var(--sb-line);
+  color: var(--sb-text);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.navGroupButton:hover {
+  border-color: var(--sb-orange);
+  background: rgba(255, 98, 0, 0.08);
+}
+
+.navGroupButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.walletButtonConnected {
+  border-color: var(--sb-orange);
+  color: var(--sb-orange);
+}
+
+.navIcon {
+  font-size: 1rem;
+  color: var(--sb-orange);
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.navGroupButton:hover .navIcon { transform: rotate(20deg); }
+
+.navGroupText {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownIcon {
+  font-size: 0.75rem;
+  color: var(--sb-text-dim);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.walletButtonConnected .navIcon { color: var(--sb-orange); }
+.walletButtonConnected .dropdownIcon { color: var(--sb-orange); }
+
+.dropdown {
+  margin-top: 0.25rem;
+  padding-left: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  animation: dropIn 0.18s ease-out;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownItem {
+  background: transparent;
+  border: none;
+  color: var(--sb-text-dim);
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.dropdownItem:hover {
+  background: rgba(255, 98, 0, 0.12);
+  color: var(--sb-text);
+}
+
+.dropdownItem:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.dropdownItemText { flex: 1; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { width: 100%; }
+}

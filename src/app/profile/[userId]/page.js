@@ -7,8 +7,8 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/services/supabase/supabaseClient";
 import LoadingPage from "@/components/LoadingPage";
 import AutopaySettings from "@/components/AutopaySettings";
-import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet, FaHome, FaExchangeAlt, FaBars, FaTimes } from "react-icons/fa";
-import ConnectButton from "@/components/ConnectButton";
+import { FaBook, FaRocket, FaGlobe, FaTwitter, FaDiscord, FaWallet } from "react-icons/fa";
+import Navbar from "@/components/Navbar";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import BenefactorPricing from "@/components/BenefactorPricing";
 import styles from "../CreatorsProfile.module.css";
@@ -25,7 +25,6 @@ export default function CreatorsProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [walletReady, setWalletReady] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
   const [isArtist, setIsArtist] = useState(false);
@@ -39,8 +38,6 @@ export default function CreatorsProfilePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // Get benefactor badge image based on level
   const getBenefactorBadgeImage = () => {
@@ -76,7 +73,6 @@ export default function CreatorsProfilePage() {
 
   const handleNavigation = (path) => {
     setLoading(true);
-    setMenuOpen(false);
     setShowCreatorChoice(false);
     router.push(path);
   };
@@ -369,32 +365,8 @@ export default function CreatorsProfilePage() {
   const dashboardButton = getDashboardButtonProps();
 
   return (
-    <div className={`${styles.page} ${styles[userRole]} ${menuOpen ? styles.menuActive : ""}`}>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <Link href="/swap" onClick={() => handleNavigation("/swap")} className={styles.navLink}>
-              <FaExchangeAlt /> Swap
-            </Link>
-            {isOwnProfile && (
-              <Link href="/editprofile" onClick={() => handleNavigation("/editprofile")} className={styles.navLink}>
-                <FaExchangeAlt /> Edit Profile
-              </Link>
-            )}
-            <ConnectButton />
-          </div>
-        </div>
-      </nav>
+    <div className={`${styles.page} ${styles[userRole]}`}>
+      <Navbar />
 
       <main className={styles.main}>
         <div className={styles.content}>

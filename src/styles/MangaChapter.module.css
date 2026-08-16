@@ -2,8 +2,8 @@
 .page {
   position: relative;
   min-height: 100vh;
-  background: #1a1a1a; /* Dark gray base */
-  color: #d1d5db; /* Your preferred gray */
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow-x: hidden;
 }
 
@@ -30,20 +30,20 @@
 }
 
 .authorNoteText {
-  color: #d1d5db;
+  color: var(--text-primary);
   line-height: 1.6;
   margin: 0 0 15px 0;
   white-space: pre-wrap;
 }
 
 .authorNoteEmpty {
-  color: #888;
+  color: var(--text-secondary);
   font-style: italic;
   margin: 0 0 15px 0;
 }
 
 .editButton {
-  background: #D94F04;
+  background: var(--accent-primary);
   color: white;
   border: none;
   padding: 8px 16px;
