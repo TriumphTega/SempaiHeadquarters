@@ -368,13 +368,23 @@ export default function Navbar() {
 
       <nav className={styles.navbar}>
         <div className={styles.navContainer}>
-          {/* Brand */}
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
+          {/* Left side: Theme toggle + Brand */}
+          <div className={styles.leftSide}>
+            <button
+              onClick={toggleTheme}
+              className={styles.themeToggleButton}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <FaSun /> : <FaMoon />}
+            </button>
+            <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
+              <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
+              <span className={styles.logoText}>Sempai HQ</span>
+            </Link>
+          </div>
 
-          {/* Primary links - desktop only */}
+          {/* Center: Primary links - desktop only */}
           <div className={styles.navLinks}>
             {NAV_LINKS.map(({ name, path, icon: Icon }) => (
               <Link key={path} href={path} onClick={() => handleNavigation(path)} className={styles.navLink}>
@@ -399,7 +409,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Right side controls */}
+          {/* Right side: Controls + Hamburger */}
           <div className={styles.rightSide}>
             {isWalletConnected && (
               <div className={styles.notificationWrapper}>
@@ -470,15 +480,18 @@ export default function Navbar() {
             )}
 
             {isWalletConnected && (
+              <button
+                onClick={handleCreatorAccess}
+                className={styles.actionButton}
+              >
+                {isWriter || isArtist || isSuperuser ? "Creator Dashboard" : "Become a Creator"}
+              </button>
+            )}
+            {isWalletConnected && (
               <button onClick={toggleReferral} className={styles.referralToggle} aria-label="Referral link">
                 <FaShareAlt className={styles.referralIcon} />
               </button>
             )}
-
-            <button onClick={handleCreatorAccess} className={styles.actionButton}>
-              {isWriter || isArtist || isSuperuser ? "Creator Dashboard" : "Become a Creator"}
-            </button>
-
             <ConnectButton className={styles.connectButton} />
 
             <button
@@ -491,23 +504,6 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* Theme toggle - sticky bar directly under the navbar */}
-      <div className={styles.themeBar}>
-        <div className={styles.themeBarInner}>
-          <button
-            onClick={toggleTheme}
-            className={styles.themeToggleButton}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            <span className={styles.themeIconStack}>
-              <FaSun className={`${styles.themeIcon} ${styles.sunIcon}`} />
-              <FaMoon className={`${styles.themeIcon} ${styles.moonIcon}`} />
-            </span>
-          </button>
-        </div>
-      </div>
 
       {/* Referral popup */}
       {isReferralOpen && (
