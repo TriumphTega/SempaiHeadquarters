@@ -7,16 +7,14 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { EmbeddedWalletContext } from "../../components/EmbeddedWalletProvider";
 import Link from "next/link";
 import {
-  FaHome,
   FaWallet,
   FaExchangeAlt,
   FaEnvelope,
   FaCheckCircle,
   FaExclamationTriangle,
-  FaBars,
-  FaTimes,
 } from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/MigrateWallet.module.css";
 
 export default function MigrateWallet() {
@@ -30,7 +28,6 @@ export default function MigrateWallet() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
   const isWalletConnected = connected || !!embeddedWallet;
@@ -119,27 +116,9 @@ export default function MigrateWallet() {
     }
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-
   return (
     <div className={styles.page}>
-      <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className={styles.main}>
         <div className={styles.container}>

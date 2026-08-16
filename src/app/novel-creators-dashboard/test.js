@@ -7,18 +7,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
 import {
-  FaHome,
-  FaExchangeAlt,
-  FaUser,
-  FaComments,
-  FaBell,
-  FaBookOpen,
-  FaSun,
-  FaMoon,
   FaChevronLeft,
   FaChevronRight,
-  FaBars,
-  FaTimes,
   FaGamepad,
   FaBullhorn,
   FaFeatherAlt,
@@ -30,6 +20,7 @@ import {
 import Link from "next/link";
 import LoadingPage from "../components/LoadingPage";
 import ConnectButton from "../components/ConnectButton";
+import Navbar from "../components/Navbar";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -69,8 +60,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState("dark");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
@@ -85,17 +74,6 @@ export default function Home() {
 
   const isWalletConnected = connected || embeddedWallet;
   const walletPublicKey = publicKey?.toString() || embeddedWallet?.publicKey;
-
-  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-
-  const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
-    setNotificationsOpen(false);
-    setShowConnectPopup(false);
-    setAnnouncementsOpen(false);
-    setIsReferralOpen(false);
-    setShowCreatorChoice(false);
-  };
 
   const toggleNotifications = (e) => {
     e.stopPropagation();
@@ -715,103 +693,7 @@ export default function Home() {
           </div>
         )}
       </div>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => handleNavigation("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => handleNavigation("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href="/swap" onClick={() => (isWalletConnected ? handleNavigation("/swap") : toggleConnectPopup())} className={styles.navLink}>
-              <FaExchangeAlt className={styles.navIcon} /> Swap
-            </Link>
-            <Link
-              href={isWalletConnected && (isWriter || isArtist) ? `/profile/${userId}` : "/editprofile"}
-              onClick={() => (isWalletConnected ? handleNavigation((isWriter || isArtist) ? `/profile/${userId}` : "/editprofile") : toggleConnectPopup())}
-              className={styles.navLink}
-            >
-              <FaUser className={styles.navIcon} /> Profile
-            </Link>
-            <Link href="/chat" onClick={() => (isWalletConnected ? handleNavigation("/chat") : toggleConnectPopup())} className={styles.navLink}>
-              <FaComments className={styles.navIcon} /> Chat
-            </Link>
-            <Link href="/kaito-adventure" onClick={() => (isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup())} className={styles.navLink}>
-              <FaGamepad className={styles.navIcon} /> Kaito's Adventure
-            </Link>
-            <Link href="/wallet-import" onClick={() => handleNavigation("/wallet-import")} className={styles.navLink}>
-              <FaWallet className={styles.navIcon} /> Import Wallet
-            </Link>
-            <button onClick={handleCreatorAccess} className={styles.actionButton}>
-              {(isWriter || isArtist || isSuperuser) ? "Creator Dashboard" : "Become a Creator"}
-            </button>
-            {isWalletConnected && (
-              <div className={styles.notificationWrapper}>
-                <button onClick={toggleNotifications} className={styles.notificationButton}>
-                  <FaBell className={styles.bellIcon} />
-                  {notifications.length > 0 && (
-                    <span className={styles.notificationBadge}>{notifications.length}</span>
-                  )}
-                </button>
-                {notificationsOpen && (
-                  <div className={`${styles.notificationDropdown} ${notificationsOpen ? styles.open : ""}`}>
-                    {notifications.length > 0 ? (
-                      <>
-                        {notifications.map((notif) => (
-                          <div key={notif.id} className={styles.notificationItem}>
-                            {notif.type === "reply" && notif.comment_id ? (
-                              <Link href={`/novel/${notif.novel_id}/chapter/${notif.comment_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}/chapter/${notif.comment_id}`)}>
-                                📩 Someone replied: "{notif.message}"
-                              </Link>
-                            ) : notif.type === "new_chapter" ? (
-                              <Link href={`/novel/${notif.novel_id}`} onClick={() => handleNavigation(`/novel/${notif.novel_id}`)}>
-                                📖 {notif.message}
-                              </Link>
-                            ) : notif.type === "reward" ? (
-                              <Link href="/profile" onClick={() => handleNavigation("/profile")}>
-                                🎉 Weekly reward received!
-                              </Link>
-                            ) : notif.type === "chat_reply" ? (
-                              <Link href={`/chat?messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("chat_reply", notif.chat_id)}>
-                                💬 {notif.message}
-                              </Link>
-                            ) : notif.type === "private_message" ? (
-                              <Link href={`/chat?recipient=${notif.sender_wallet_address}&messageId=${notif.chat_id}`} onClick={() => handleChatNavigation("private_message", notif.chat_id, notif.recipient_wallet_address)}>
-                                💬 {notif.message}
-                              </Link>
-                            ) : (
-                              <span>{notif.message || "New notification"}</span>
-                            )}
-                          </div>
-                        ))}
-                        <button onClick={markAsRead} className={styles.markReadButton}>
-                          Mark All as Read
-                        </button>
-                      </>
-                    ) : (
-                      <div className={styles.noNotifications}>No new notifications</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {isWalletConnected && (
-              <button onClick={toggleReferral} className={styles.referralToggle}>
-                <FaShareAlt className={styles.referralIcon} />
-              </button>
-            )}
-            <button onClick={toggleTheme} className={styles.themeToggle}>
-              {theme === "dark" ? <FaSun /> : <FaMoon />}
-            </button>
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <header className={styles.hero}>
         <div className={styles.heroContent}>

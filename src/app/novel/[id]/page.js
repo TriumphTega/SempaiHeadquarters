@@ -179,10 +179,6 @@ export default function NovelPage() {
                 href={`/novel/${id}/chapter/${chapterId}`}
                 key={chapterId}
                 className={styles.chapterCard}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavigation(`/novel/${id}/chapter/${chapterId}`, chapterId);
-                }}
               >
                 <div className={styles.chapterContent}>
                   <h3 className={styles.chapterTitle}>{sanitizeText(title)}</h3>

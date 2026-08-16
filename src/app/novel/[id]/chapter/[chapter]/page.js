@@ -48,6 +48,7 @@ import {
   FaSpinner,
   FaShareAlt,
   FaBookReader,
+  FaHome,
 } from "react-icons/fa";
 import LoadingPage from "../../../../../components/LoadingPage";
 import Navbar from "../../../../../components/Navbar";

@@ -6,9 +6,10 @@ import { supabase } from "../../../../services/supabase/supabaseClient";
 import DOMPurify from "dompurify";
 import Head from "next/head";
 import Link from "next/link";
-import { FaHome, FaBars, FaTimes, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop, FaGem } from "react-icons/fa";
+import { FaHome, FaBookOpen, FaVolumeUp, FaPause, FaPlay, FaStop } from "react-icons/fa";
 import LoadingPage from "../../../../components/LoadingPage";
 import NovelCommentSection from "../../../../components/Comments/NovelCommentSection";
+import Navbar from "../../../../components/Navbar";
 import styles from "../../../../styles/NovelSummaryPage.module.css";
 
 const createDOMPurify = typeof window !== "undefined" ? DOMPurify : null;
@@ -19,12 +20,6 @@ export default function NovelSummaryPage() {
   const [novel, setNovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Toggle mobile menu
-  const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
-  };
 
   // Fetch novel data (no authentication required)
   const fetchNovel = async () => {
@@ -82,31 +77,12 @@ export default function NovelSummaryPage() {
   const sanitizedContent = createDOMPurify ? createDOMPurify.sanitize(novel.summary) : novel.summary;
 
   return (
-    <div className={`${styles.page} ${styles.dark}`}>
+    <div className={styles.page}>
       <Head>
         <title>{`${novel.title} - Summary`}</title>
       </Head>
 
-      {/* Futuristic Navbar */}
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" onClick={() => router.push("/")} className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            <FaBars />
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" onClick={() => router.push("/")} className={styles.navLink}>
-              <FaHome className={styles.navIcon} /> Home
-            </Link>
-            <Link href={`/novel/${id}`} onClick={() => router.push(`/novel/${id}`)} className={styles.navLink}>
-              <FaBookOpen className={styles.navIcon} /> Novel Hub
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <div className={styles.summaryContainer}>

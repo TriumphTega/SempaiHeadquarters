@@ -11,12 +11,9 @@ import {
   FaVoteYea,
   FaPlus,
   FaRocket,
-  FaBars,
-  FaTimes,
-  FaHome,
-  FaExchangeAlt,
   FaWallet,
 } from "react-icons/fa";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/PollsPage.module.css";
 
 export default function PollsPage() {
@@ -32,7 +29,6 @@ export default function PollsPage() {
   const [expiresAt, setExpiresAt] = useState("");
   const [totalVotes, setTotalVotes] = useState(0);
   const [showPolls, setShowPolls] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (publicKey) {
@@ -40,8 +36,6 @@ export default function PollsPage() {
       fetchUserVotes();
     }
   }, [publicKey]);
-
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   async function fetchPolls() {
     try {
@@ -196,26 +190,7 @@ export default function PollsPage() {
 
   return (
     <div className={styles.pollsContainer}>
-      {/* Floating Navbar */}
-      <nav className={styles.pollsNavbar}>
-        <div className={styles.navbarContent}>
-          <Link href="/" className={styles.nexusLogo}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logoImage} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuButton} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navItems} ${menuOpen ? styles.navItemsOpen : ""}`}>
-            <Link href="/" className={styles.navItem}>
-              <FaHome /> Home
-            </Link>
-            <Link href="/swap" className={styles.navItem}>
-              <FaExchangeAlt /> Swap
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Header */}
       <header className={styles.pollsHeader}>

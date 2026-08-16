@@ -6,33 +6,33 @@
 
 :root,
 html[data-theme="dark"] {
-  --nav-bg-1: #1a1a1a;
-  --nav-bg-2: #333;
-  --nav-text: #fff;
-  --nav-text-dim: #cfcfcf;
-  --nav-orange: #ff6200;
-  --nav-orange-dark: #e55a00;
-  --nav-danger: #dc3545;
-  --nav-danger-dark: #c82333;
-  --nav-connect-bg: #fff;
-  --nav-connect-text: #000;
-  --nav-shadow: rgba(0, 0, 0, 0.12);
-  --nav-popup-line: rgba(0, 0, 0, 0.1);
+  --nav-bg-1: #0d0d0d;
+  --nav-bg-2: #141414;
+  --nav-text: #f5f5f5;
+  --nav-text-dim: rgba(255, 255, 255, 0.65);
+  --nav-orange: #ff6b35;
+  --nav-orange-dark: #e55a2b;
+  --nav-danger: #ef4444;
+  --nav-danger-dark: #dc2626;
+  --nav-connect-bg: #1a1a1a;
+  --nav-connect-text: #f5f5f5;
+  --nav-shadow: rgba(0, 0, 0, 0.3);
+  --nav-popup-line: rgba(255, 107, 53, 0.12);
 }
 
 html[data-theme="light"] {
   --nav-bg-1: #ffffff;
-  --nav-bg-2: #f2f2f2;
-  --nav-text: #1a1a1a;
-  --nav-text-dim: #555555;
-  --nav-orange: #ff6200;
-  --nav-orange-dark: #e55a00;
-  --nav-danger: #dc3545;
-  --nav-danger-dark: #c82333;
-  --nav-connect-bg: #1a1a1a;
-  --nav-connect-text: #fff;
-  --nav-shadow: rgba(0, 0, 0, 0.12);
-  --nav-popup-line: rgba(0, 0, 0, 0.1);
+  --nav-bg-2: #f1f5f9;
+  --nav-text: #1e293b;
+  --nav-text-dim: rgba(30, 41, 59, 0.65);
+  --nav-orange: #3b82f6;
+  --nav-orange-dark: #2563eb;
+  --nav-danger: #ef4444;
+  --nav-danger-dark: #dc2626;
+  --nav-connect-bg: #f8fafc;
+  --nav-connect-text: #1e293b;
+  --nav-shadow: rgba(0, 0, 0, 0.08);
+  --nav-popup-line: rgba(59, 130, 246, 0.12);
 }
 
 /* ---------------------------------------------------------------------- */

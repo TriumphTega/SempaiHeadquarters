@@ -10,15 +10,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   FaHome,
-  FaBars,
-  FaTimes,
   FaBullhorn,
   FaUserShield,
   FaGem,
-  FaSun,
-  FaMoon,
+  FaTimes,
 } from "react-icons/fa";
 import ConnectButton from "../../components/ConnectButton";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/CreatorsDashboard.module.css";
 
 export default function Announcements() {
@@ -33,8 +31,6 @@ export default function Announcements() {
   const [isArtist, setIsArtist] = useState(false);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const router = useRouter();
 
   const activePublicKey = publicKey || (embeddedWallet ? embeddedWallet.publicKey : null);
@@ -178,36 +174,9 @@ export default function Announcements() {
     }
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const toggleTheme = () => setIsDarkMode((prev) => !prev);
-
   return (
-    <div className={`${styles.page} ${isDarkMode ? styles.darkMode : styles.lightMode}`}>
-      <nav className={`${styles.navbar} ${menuOpen ? styles.navbarOpen : ""}`}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-            <Link href="/creators-dashboard" className={styles.navLink}>
-              <FaUserShield /> Dashboard
-            </Link>
-            <button onClick={toggleTheme} className={styles.themeToggle}>
-              {isDarkMode ? <FaSun /> : <FaMoon />}
-            </button>
-            <ConnectButton className={styles.connectButton} />
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && <div className={styles.blurOverlay}></div>}
+    <div className={styles.page}>
+      <Navbar />
 
       <header className={styles.header}>
         <h1 className={styles.headerTitle}>

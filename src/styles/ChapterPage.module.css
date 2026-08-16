@@ -1,593 +1,532 @@
+/* ==========================================================================
+   Chapter Page
+   Retheme'd to use the site's shared design tokens (see globals.css:
+   :root / html[data-theme="light"]) instead of undefined --bg-primary /
+   --text-primary / --bg-secondary / --accent-primary variables and
+   hardcoded orange/black colors. The navbar/logo/menu rules that used to
+   live here were removed — this page renders the shared <Navbar />
+   component now, which brings its own (already themed) CSS.
+   ========================================================================== */
+
 .page {
-    min-height: 100vh;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    overflow-x: hidden;
-    position: relative;
-  }
-  
-  .dark {
-    background: var(--bg-primary);
-  }
-  
-  /* Navbar */
-  .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    padding: 15px 0;
-    background: var(--bg-secondary);
-    box-shadow: 0 2px 15px rgba(243, 99, 22, 0.3);
-    z-index: 1000;
-    animation: navFadeIn 0.6s ease-out;
-  }
-  
-  @keyframes navFadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .navContainer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1300px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-  
-  .logoLink {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-  }
-  
-  .logo {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid var(--accent-primary);
-    transition: transform 0.5s ease, box-shadow 0.5s ease;
-  }
-  
-  .logo:hover {
-    transform: rotate(360deg) scale(1.1);
-    box-shadow: 0 0 20px rgba(243, 99, 22, 0.8);
-  }
-  
-  .logoText {
-    font-size: 1.6rem;
-    font-weight: bold;
-    margin-left: 15px;
-    color: #ff6200;
-    text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
-    transition: color 0.3s ease;
-  }
-  
-  .logoText:hover {
-    color: #ff8345;
-  }
-  
-  .menuToggle {
-    background: transparent;
-    border: none;
-    font-size: 1.8rem;
-    color: #ff6200;
-    display: none;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-  }
-  
-  .menuToggle:hover {
-    transform: scale(1.2);
-  }
-  
-  .navLinks {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  
-  .navLink {
-    font-size: 1rem;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 15px;
-    border-radius: 25px;
-    color: #fff;
-    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
-  }
-  
-  .navLink:hover {
-    background: rgba(243, 99, 22, 0.4);
-    transform: translateY(-2px);
-    color: #ff6200;
-  }
-  
-  .navIcon {
-    font-size: 1.2rem;
-    transition: transform 0.3s ease;
-  }
-  
-  .navLink:hover .navIcon {
-    transform: scale(1.2) rotate(10deg);
-  }
-  
-  /* Chapter Content */
-  .chapterContainer {
-    padding: 100px 20px 40px;
-    margin: 0 auto;
-    position: relative;
-  }
-  
-  .headerSection {
-    text-align: center;
-    margin-bottom: 40px;
-  }
-  
-  .chapterTitle {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #ff6200;
-    text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
-    animation: titleGlow 2s infinite alternate;
-    margin-bottom: 20px;
-  }
-  
-  @keyframes titleGlow {
-    0% { text-shadow: 0 4px 15px rgba(243, 99, 22, 0.8); }
-    100% { text-shadow: 0 4px 25px rgba(243, 99, 22, 1); }
-  }
-  
-  .audioControls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-  }
-  
-  .audioButton {
-    background: rgba(243, 99, 22, 0.8);
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-size: 1rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: background 0.3s ease, transform 0.3s ease;
-  }
-  
-  .audioButton:hover {
-    background: #ff6200;
-    transform: scale(1.05);
-  }
-  
-  .successMessage, .warningMessage, .errorMessage {
-    padding: 10px;
-    border-radius: 10px;
-    margin-top: 20px;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    animation: fadeInMessage 0.5s ease-out;
-  }
-  
-  .successMessage {
-    background: rgba(40, 167, 69, 0.9);
-    color: #fff;
-  }
-  
-  .warningMessage {
-    background: rgba(255, 193, 7, 0.9);
-    color: #fff;
-  }
-  
-  .errorMessage {
-    background: rgba(220, 53, 69, 0.9);
-    color: #fff;
-  }
-  
-  @keyframes fadeInMessage {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .chapterContent {
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(243, 99, 22, 0.6);
-    border-radius: 15px;
-    padding: 40px; /* Increased padding for breathing room */
-    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-    margin-bottom: 40px;
-  }
-  
-  .contentText {
-    font-size: 1.2rem; /* Slightly larger font for readability */
-    line-height: 1.8; /* Increased line height for better spacing */
-    color: #e0e0e0; /* Softer white for less strain */
-    font-weight: 400; /* Lighter weight for comfort */
-    text-align: justify; /* Justified text for a clean look */
-    max-width: 100%; /* Ensure it fits the container */
-    margin: 0 auto; /* Center within container */
-  }
-  
-  /* Improved Typography for Readability */
-  .contentText p {
-    margin-bottom: 20px; /* Space between paragraphs */
-  }
-  
-  .contentText h1, .contentText h2, .contentText h3, .contentText h4, .contentText h5, .contentText h6 {
-    color: #ff6200;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    text-shadow: 0 2px 6px rgba(243, 99, 22, 0.5);
-  }
-  
-  .contentText ul, .contentText ol {
-    padding-left: 30px;
-    margin-bottom: 20px;
-  }
-  
-  .contentText li {
-    margin-bottom: 10px;
-  }
-  
-  .contentText blockquote {
-    border-left: 4px solid rgba(243, 99, 22, 0.8);
-    padding-left: 20px;
-    margin: 20px 0;
-    font-style: italic;
-    color: #ccc;
-  }
-  
-  .navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 40px;
-  }
-  
-  .navButton {
-    background: rgba(243, 99, 22, 0.8);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-size: 1rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: background 0.3s ease, transform 0.3s ease;
-  }
-  
-  .navButton:hover {
-    background: #ff6200;
-    transform: scale(1.05);
-  }
-  
-  .chapterSelector {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 40px;
-  }
-  
-  .selectorLabel {
-    font-size: 1.2rem;
-    color: #ff6200;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .selector {
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(243, 99, 22, 0.8);
-    border-radius: 25px;
-    padding: 8px 15px;
-    color: #fff;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
-  }
-  
-  .selector:hover, .selector:focus {
-    border-color: #ff6200;
-    outline: none;
-  }
-  
-  /* Error Container */
-  .errorContainer {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: #000;
-  }
-  
-  .errorText {
-    font-size: 2.5rem;
-    color: #dc3545;
-    text-shadow: 0 2px 10px rgba(220, 53, 69, 0.8);
-    animation: errorFlicker 1.5s infinite alternate;
-  }
-  
-  @keyframes errorFlicker {
-    0% { opacity: 0.7; }
-    100% { opacity: 1; }
-  }
-  
-  .backHomeButton {
-    background: rgba(243, 99, 22, 0.8);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-size: 1rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    margin-top: 20px;
-    transition: background 0.3s ease, transform 0.3s ease;
-  }
-  
-  .backHomeButton:hover {
-    background: #ff6200;
-    transform: scale(1.05);
-  }
-  
-  /* Connect Wallet Pop-up */
-  .connectPopupOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(8px);
-    z-index: 1001;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .connectPopup {
-    background: rgba(20, 20, 20, 0.95);
-    border: 2px solid rgba(243, 99, 22, 0.8);
-    border-radius: 15px;
-    padding: 25px;
-    max-width: 450px;
-    width: 90%;
-    text-align: center;
-    animation: popupFadeIn 0.5s ease-out;
-    position: relative;
-  }
-  
-  @keyframes popupFadeIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  
-  .closePopupButton {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    font-size: 1.8rem;
-    color: #ff6200;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-  }
-  
-  .closePopupButton:hover {
-    transform: scale(1.2) rotate(90deg);
-  }
-  
-  .popupTitle {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #ff6200;
-    text-shadow: 0 2px 8px rgba(243, 99, 22, 0.8);
-    margin-bottom: 20px;
-  }
-  
-  .popupMessage {
-    font-size: 1.2rem;
-    color: #fff;
-    opacity: 0.9;
-    margin-bottom: 25px;
-  }
-  
-  .connectWalletButton {
-    background: rgba(243, 99, 22, 0.8);
-    color: #fff !important;
-    padding: 10px 25px;
-    border-radius: 30px;
-    font-weight: bold;
-    font-size: 1.1rem;
-    transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  
-  .connectWalletButton:hover {
-    background: #ff6200;
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(243, 99, 22, 0.8);
-  }
-  
-  .backHomeLink {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 20px;
-    color: #ff6200;
-    text-decoration: none;
-    font-size: 1.1rem;
-    transition: color 0.3s ease;
-  }
-  
-  .backHomeLink:hover {
-    color: #ff8345;
-  }
-  
-  /* Footer */
-  .footer {
-    padding: 40px 0;
-    text-align: center;
-    background: rgba(20, 20, 20, 0.9);
-    box-shadow: 0 -2px 15px rgba(243, 99, 22, 0.2);
-  }
-  
-  .footerText {
-    font-size: 1rem;
-    color: #fff;
-    opacity: 0.8;
-    text-shadow: 0 1px 4px rgba(243, 99, 22, 0.3);
-  }
-  
-  /* Mobile Styles */
-  @media (max-width: 768px) {
-    .navContainer {
-      padding: 10px 15px;
-      flex-wrap: nowrap;
-    }
-  
-    .menuToggle {
-      display: block;
-    }
-  
-    .navLinks {
-      display: none;
-      flex-direction: column;
-      width: 100%;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      padding: 15px;
-      background: inherit;
-      box-shadow: 0 4px 15px rgba(243, 99, 22, 0.2);
-      z-index: 999;
-    }
-  
-    .navLinksOpen {
-      display: flex;
-      animation: slideDownMenu 0.3s ease-out;
-    }
-  
-    @keyframes slideDownMenu {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  
-    .navLink {
-      width: 100%;
-      justify-content: center;
-      padding: 10px 0;
-    }
-  
-    .chapterTitle {
-      font-size: 2rem;
-    }
-  
-    .audioControls {
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-  
-    .audioButton {
-      padding: 8px 15px;
-      font-size: 0.9rem;
-    }
-  
-    .chapterContent {
-      padding: 25px;
-    }
-  
-    .contentText {
-      font-size: 1rem;
-    }
-  
-    .navigation {
-      flex-direction: column;
-      gap: 15px;
-    }
-  
-    .navButton {
-      width: 100%;
-      justify-content: center;
-    }
-  
-    .chapterSelector {
-      flex-direction: column;
-      gap: 10px;
-    }
-  
-    .selector {
-      width: 100%;
-    }
-    
-  }
-  /* Locked content container with fade-in animation */
-.lockedContent {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  position: relative;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Chapter content                                                        */
+/* ---------------------------------------------------------------------- */
+.chapterContainer {
+  padding: 40px 20px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.headerSection {
   text-align: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+  margin-bottom: 40px;
+}
+
+.chapterTitle {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--vermillion);
+  text-shadow: 0 4px 15px rgba(var(--vermillion-rgb), 0.8);
+  animation: titleGlow 2s infinite alternate;
+  margin-bottom: 20px;
+}
+
+@keyframes titleGlow {
+  0% { text-shadow: 0 4px 15px rgba(var(--vermillion-rgb), 0.8); }
+  100% { text-shadow: 0 4px 25px rgba(var(--vermillion-rgb), 1); }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.shareButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--on-accent);
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.shareButton:hover {
+  background: var(--vermillion);
+  transform: scale(1.05);
+}
+
+.audioControls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.audioButton {
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--on-accent);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.audioButton:hover {
+  background: var(--vermillion);
+  transform: scale(1.05);
+}
+
+/* Semantic status pills — deliberately fixed-color (not theme-tokenized).
+   Green/amber/red on a solid, fairly dark tint reads correctly against
+   both a dark and a light page background, and "success/warning/error"
+   benefits from staying visually consistent regardless of theme. */
+.successMessage, .warningMessage, .errorMessage {
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-top: 20px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  animation: fadeInMessage 0.5s ease-out;
+}
+
+.successMessage { background: rgba(40, 167, 69, 0.9); color: #fff; }
+.warningMessage { background: rgba(200, 150, 0, 0.9); color: #fff; }
+.errorMessage { background: rgba(220, 53, 69, 0.9); color: #fff; }
+
+@keyframes fadeInMessage {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chapterContent {
+  background: rgba(var(--ink-800-rgb), 0.9);
+  border: 1px solid rgba(var(--vermillion-rgb), 0.4);
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 4px 15px rgba(var(--vermillion-rgb), 0.15);
+  margin-bottom: 40px;
+}
+
+.contentText {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: var(--text);
+  font-weight: 400;
+  text-align: justify;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.contentText p { margin-bottom: 20px; }
+
+.contentText h1, .contentText h2, .contentText h3,
+.contentText h4, .contentText h5, .contentText h6 {
+  color: var(--vermillion);
+  margin-top: 30px;
+  margin-bottom: 15px;
+  text-shadow: 0 2px 6px rgba(var(--vermillion-rgb), 0.5);
+}
+
+.contentText ul, .contentText ol {
+  padding-left: 30px;
+  margin-bottom: 20px;
+}
+
+.contentText li { margin-bottom: 10px; }
+
+.contentText blockquote {
+  border-left: 4px solid rgba(var(--vermillion-rgb), 0.8);
+  padding-left: 20px;
+  margin: 20px 0;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Chapter carousel ("More Chapters")                                    */
+/* ---------------------------------------------------------------------- */
+.chapterCarousel {
+  margin: 40px 0;
+  padding: 20px;
+  background: rgba(var(--ink-800-rgb), 0.9);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  margin: 2rem auto;
-  animation: fadeIn 0.5s ease-in-out;
+  border: 1px solid rgba(var(--vermillion-rgb), 0.25);
 }
 
-/* Fade-in animation */
+.carouselTitle {
+  color: var(--paper);
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+.carouselContainer {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scroll-behavior: smooth;
+}
+
+.carouselContainer::-webkit-scrollbar { height: 8px; }
+.carouselContainer::-webkit-scrollbar-track {
+  background: rgba(var(--ink-800-rgb), 0.5);
+  border-radius: 4px;
+}
+.carouselContainer::-webkit-scrollbar-thumb {
+  background: rgba(var(--vermillion-rgb), 0.6);
+  border-radius: 4px;
+}
+
+.carouselCard {
+  flex: 0 0 auto;
+  min-width: 200px;
+  max-width: 250px;
+  padding: 16px;
+  background: rgba(var(--ink-900-rgb), 0.9);
+  border-radius: 10px;
+  border: 2px solid rgba(var(--vermillion-rgb), 0.35);
+  text-decoration: none;
+  color: var(--paper);
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.carouselCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--vermillion);
+  box-shadow: 0 8px 20px rgba(var(--vermillion-rgb), 0.3);
+}
+
+.currentCard {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+}
+
+.lockedCard {
+  opacity: 0.6;
+  border-color: var(--ink-line);
+}
+
+.cardNumber {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--paper);
+}
+
+/* Renamed from the old .lockIcon — it used to share that class name with
+   the big centered "chapter locked" icon below, and because both rules
+   lived in the same CSS module, whichever was declared last in the file
+   silently won for BOTH usages. This small corner badge and the large
+   pulsing icon now have separate names so each keeps its own look. */
+.carouselLockIcon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.currentIcon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--gold);
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Prev / next / jump-to-chapter                                         */
+/* ---------------------------------------------------------------------- */
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  gap: 12px;
+}
+
+.navButton {
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--on-accent);
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.navButton:hover {
+  background: var(--vermillion);
+  transform: scale(1.05);
+}
+
+.chapterSelector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.selectorLabel {
+  font-size: 1.2rem;
+  color: var(--vermillion);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector {
+  background: rgba(var(--ink-800-rgb), 0.9);
+  border: 1px solid rgba(var(--vermillion-rgb), 0.8);
+  border-radius: 25px;
+  padding: 8px 15px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.selector:hover, .selector:focus {
+  border-color: var(--vermillion);
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Not-found state                                                        */
+/* ---------------------------------------------------------------------- */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--ink-950);
+}
+
+.errorText {
+  font-size: 2.5rem;
+  color: #dc3545;
+  text-shadow: 0 2px 10px rgba(220, 53, 69, 0.8);
+  animation: errorFlicker 1.5s infinite alternate;
+}
+
+@keyframes errorFlicker {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.backHomeButton {
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--on-accent);
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  margin-top: 20px;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.backHomeButton:hover {
+  background: var(--vermillion);
+  transform: scale(1.05);
+}
+
+.backHomeLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: var(--vermillion);
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color 0.3s ease;
+}
+
+.backHomeLink:hover { color: var(--gold); }
+
+/* ---------------------------------------------------------------------- */
+/* Connect-wallet popup                                                   */
+/* ---------------------------------------------------------------------- */
+.connectPopupOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-scrim);
+  backdrop-filter: blur(8px);
+  z-index: 1001;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.connectPopup {
+  background: rgba(var(--ink-800-rgb), 0.97);
+  border: 2px solid rgba(var(--vermillion-rgb), 0.6);
+  border-radius: 15px;
+  padding: 25px;
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  animation: popupFadeIn 0.5s ease-out;
+  position: relative;
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.closePopupButton {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  color: var(--vermillion);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.closePopupButton:hover { transform: scale(1.2) rotate(90deg); }
+
+.popupTitle {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--vermillion);
+  text-shadow: 0 2px 8px rgba(var(--vermillion-rgb), 0.8);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.popupMessage {
+  font-size: 1.2rem;
+  color: var(--text);
+  opacity: 0.9;
+  margin-bottom: 25px;
+}
+
+.connectWalletButton {
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--on-accent) !important;
+  padding: 10px 25px;
+  border-radius: 30px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.connectWalletButton:hover {
+  background: var(--vermillion);
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(var(--vermillion-rgb), 0.8);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Footer                                                                 */
+/* ---------------------------------------------------------------------- */
+.footer {
+  padding: 40px 0;
+  text-align: center;
+  background: rgba(var(--ink-800-rgb), 0.9);
+  box-shadow: 0 -2px 15px rgba(var(--vermillion-rgb), 0.15);
+}
+
+.footerText {
+  font-size: 1rem;
+  color: var(--text);
+  opacity: 0.8;
+  text-shadow: 0 1px 4px rgba(var(--vermillion-rgb), 0.3);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Locked-chapter panel                                                   */
+/* Was defined twice with partially conflicting properties (gradient bg
+   vs. flat rgba bg, different shadows) — consolidated into one rule. */
+/* ---------------------------------------------------------------------- */
+.lockedContent {
+  position: relative;
+  text-align: center;
+  padding: 30px 20px;
+  background: rgba(var(--ink-800-rgb), 0.95);
+  border: 1px solid rgba(var(--vermillion-rgb), 0.4);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px var(--shadow-2);
+  margin: 40px auto;
+  max-width: 600px;
+  animation: fadeIn 0.6s ease-out;
+}
+
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.fadeIn {
-  animation: fadeIn 0.5s ease-in-out;
-}
+.lockedHeader { margin-bottom: 1.5rem; }
 
-/* Locked header styling */
-.lockedHeader {
-  margin-bottom: 1.5rem;
-}
-
-/* Locked message with icon */
 .lockedMessage {
   font-size: 1.2rem;
-  color: #e0e0e0;
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
 }
 
-.lockIcon {
-  color: #ff5555;
-  font-size: 1.5rem;
-}
-
-/* Subscription prompt with gem icon */
 .subscriptionPrompt {
   font-size: 1.1rem;
-  color: #b0b0b0;
+  color: var(--text-dim);
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
@@ -595,37 +534,12 @@
   gap: 0.5rem;
 }
 
-.gemIcon {
-  color: #00cc99;
-  font-size: 1.3rem;
-}
-
-/* Button container for layout */
 .buttonContainer {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-/* Container */
-.lockedContent {
-  background: rgba(20, 30, 50, 0.95);
-  border: 1px solid rgba(255, 98, 0, 0.4);
-  border-radius: 12px;
-  padding: 20px;
-  margin: 20px auto;
-  text-align: center;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-  position: relative;
-  animation: fadeIn 0.8s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Lock Icon Wrapper */
 .lockIconWrapper {
   position: absolute;
   top: -35px;
@@ -633,18 +547,18 @@
   transform: translateX(-50%);
   width: 70px;
   height: 70px;
-  background: rgba(255, 98, 0, 0.15);
+  background: rgba(var(--vermillion-rgb), 0.15);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px rgba(255, 98, 0, 0.3);
+  box-shadow: 0 0 15px rgba(var(--vermillion-rgb), 0.3);
 }
 
 .lockIcon {
   font-size: 2.2rem;
-  color: #ff6200;
-  filter: drop-shadow(0 0 8px rgba(255, 98, 0, 0.5));
+  color: var(--vermillion);
+  filter: drop-shadow(0 0 8px rgba(var(--vermillion-rgb), 0.5));
   animation: lockPulse 2s ease-in-out infinite;
 }
 
@@ -653,10 +567,9 @@
   50% { transform: scale(1.05); }
 }
 
-/* Messages */
 .message {
   font-size: 1.1rem;
-  color: #e0e0e0;
+  color: var(--text);
   margin: 15px 0 10px;
   display: flex;
   align-items: center;
@@ -667,12 +580,12 @@
 
 .messageIcon {
   font-size: 1.2rem;
-  color: #ff6200;
+  color: var(--vermillion);
 }
 
 .subMessage {
   font-size: 1rem;
-  color: #b0b0b0;
+  color: var(--text-dim);
   margin-bottom: 18px;
   display: flex;
   align-items: center;
@@ -681,15 +594,18 @@
   animation: slideUp 0.7s ease-out;
 }
 
-.gemIcon {
-  font-size: 1.1rem;
-  color: #ff6200;
-  animation: gemGlow 1.5s ease-in-out infinite;
-}
-
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Used inline next to messages/status text (SMP unlock prompt, benefactor
+   status, etc). Was also defined a second time with a different color —
+   consolidated to one themed value plus its glow animation. */
+.gemIcon {
+  font-size: 1.1rem;
+  color: var(--vermillion);
+  animation: gemGlow 1.5s ease-in-out infinite;
 }
 
 @keyframes gemGlow {
@@ -697,29 +613,36 @@
   50% { transform: scale(1.1); filter: brightness(1.3); }
 }
 
-/* Buttons */
+/* ---------------------------------------------------------------------- */
+/* Unlock buttons                                                         */
+/* Was defined twice; the second block's bare `transition` property was
+   silently replacing the first's multi-property transition (killing the
+   hover scale/shadow animation) and its border-radius/font-size changes
+   were landing invisibly. Consolidated into one deliberate rule. */
+/* ---------------------------------------------------------------------- */
 .unlockButton {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  max-width: 400px;
+  margin: 8px auto;
   padding: 10px 15px;
-  margin: 8px 0;
   border: none;
   border-radius: 20px;
-  background: #ff6200;
-  color: #ffffff;
+  background: var(--vermillion);
+  color: var(--on-accent);
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  box-shadow: 0 4px 12px rgba(255, 98, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--vermillion-rgb), 0.3);
   position: relative;
   overflow: hidden;
 }
 
 .unlockButton:disabled {
-  background: #666666;
+  background: #6c757d;
   cursor: not-allowed;
   box-shadow: none;
   opacity: 0.6;
@@ -727,8 +650,8 @@
 
 .unlockButton:not(:disabled):hover {
   transform: scale(1.03);
-  box-shadow: 0 6px 18px rgba(255, 98, 0, 0.5);
-  background: #ff7500;
+  box-shadow: 0 6px 18px rgba(var(--vermillion-rgb), 0.5);
+  background: var(--vermillion-deep);
 }
 
 .unlockButton::after {
@@ -754,466 +677,54 @@
   transition: transform 0.2s ease;
 }
 
-.unlockButton:not(:disabled):hover .buttonIcon {
-  transform: scale(1.2);
-}
+.unlockButton:not(:disabled):hover .buttonIcon { transform: scale(1.2); }
 
-.buttonText {
-  flex-grow: 1;
-  text-align: left;
-}
+.buttonText { flex-grow: 1; text-align: left; }
 
-.price {
-  font-size: 0.85rem;
-  opacity: 0.9;
-}
+.price { font-size: 0.85rem; opacity: 0.9; }
 
-/* Button Variants */
-.threeChapters .buttonIcon {
-  color: #ffd700; /* Gold for rocket */
-}
+/* Tier badge variants — deliberately fixed brand colors (gold/orange),
+   not tokenized, since they represent a distinct "premium tier" identity
+   that should look the same regardless of site theme. */
+.threeChapters .buttonIcon { color: #ffd700; }
+.fullChapters .buttonIcon { color: #00ffcc; }
+.threeChapters { background-color: #ff4500; }
+.fullChapters { background-color: #ffd700; color: #333; }
 
-.fullChapters .buttonIcon {
-  color: #00ffcc; /* Cyan for crown */
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .lockedContent {
-    padding: 18px;
-    max-width: 90%;
-    margin: 15px auto;
-  }
-
-  .lockIconWrapper {
-    top: -30px;
-    width: 60px;
-    height: 60px;
-  }
-
-  .lockIcon {
-    font-size: 2rem;
-  }
-
-  .message {
-    font-size: 1rem;
-  }
-
-  .subMessage {
-    font-size: 0.95rem;
-  }
-
-  .unlockButton {
-    padding: 9px 12px;
-    font-size: 0.9rem;
-  }
-
-  .buttonIcon {
-    font-size: 1.1rem;
-  }
-
-  .price {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .lockedContent {
-    padding: 15px;
-  }
-
-  .lockIconWrapper {
-    top: -25px;
-    width: 50px;
-    height: 50px;
-  }
-
-  .lockIcon {
-    font-size: 1.8rem;
-  }
-
-  .message {
-    font-size: 0.9rem;
-  }
-
-  .subMessage {
-    font-size: 0.85rem;
-  }
-
-  .unlockButton {
-    padding: 8px 10px;
-    font-size: 0.85rem;
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .buttonIcon {
-    margin-right: 0;
-    margin-bottom: 4px;
-  }
-
-  .buttonText {
-    margin-bottom: 4px;
-  }
-
-  .price {
-    font-size: 0.75rem;
-  }
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.subscriptionOption {
-  margin: 20px 0;
+.alternativeOption {
   text-align: center;
-}
-
-.optionTitle {
-  font-size: 1.2rem;
-  color: #fff;
-  margin-bottom: 10px;
-}
-
-.unlockButton {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 300px;
-  margin: 10px auto;
-  padding: 10px 15px;
-  font-size: 1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.threeChapters {
-  background-color: #ff4500; /* Orange for 3 chapters */
-}
-
-.fullChapters {
-  background-color: #ffd700; /* Gold for full unlock */
-  color: #333;
-}
-
-.unlockButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.buttonText {
-  flex-grow: 1;
-  text-align: center;
-}
-
-.price {
+  margin: 15px 0 10px 0;
+  color: var(--text-dim);
   font-size: 0.9rem;
-  margin-left: 10px;
-}
-.ratingSection {
-  margin-top: 20px;
-  padding: 10px;
-  background: #1a1a1a;
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.userRating, .averageRating {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.star {
-  color: #555; /* Empty star color */
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.filledStar {
-  color: #ffd700; /* Gold color for filled stars */
-}
-
-.averageRating .star {
-  cursor: default; /* Disable cursor for average rating stars */
-}
-.transactionPopupOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.transactionPopup {
-  background: #fff;
-  color: #333;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.popupTitle {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-}
-
-.popupMessage {
-  font-size: 1rem;
-  margin-bottom: 15px;
-}
-
-.transactionDetails p {
-  font-size: 0.9rem;
-  margin: 5px 0;
-}
-
-.popupButtons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-
-.confirmButton {
-  background-color: #007bff;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.confirmButton:hover {
-  background-color: #0056b3;
-}
-
-.cancelButton {
-  background-color: #6c757d;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.cancelButton:hover {
-  background-color: #5a6268;
-}
-
-.popupNote {
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 15px;
-  text-align: center;
-}
-.readingOptions {
-  margin-bottom: 20px;
-  text-align: center;
-}
-.readWithSmpButton {
-  background-color: #007bff;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.readWithSmpButton:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.badgesButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-  color: #000;
-  padding: 12px 24px;
-  border-radius: 30px;
-  font-weight: bold;
-  font-size: 1rem;
-  text-decoration: none;
-  border: 2px solid #ffcc00;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
-  transition: all 0.3s ease;
-  margin-bottom: 15px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.badgesButton:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
-  background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.shareButton {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(243, 99, 22, 0.8);
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-weight: bold;
-  font-size: 0.95rem;
-  border: none;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-
-.shareButton:hover {
-  background: #ff6200;
-  transform: scale(1.05);
-}
-
-.chapterCarousel {
-  margin: 40px 0;
-  padding: 20px;
-  background: rgba(20, 20, 20, 0.9);
-  border-radius: 12px;
-  border: 1px solid rgba(243, 99, 22, 0.3);
-}
-
-.carouselTitle {
-  color: #f5e6d3;
-  font-size: 1.4rem;
-  margin-bottom: 20px;
-  font-weight: bold;
-}
-
-.carouselContainer {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding: 10px 0;
-  scroll-behavior: smooth;
-}
-
-.carouselContainer::-webkit-scrollbar {
-  height: 8px;
-}
-
-.carouselContainer::-webkit-scrollbar-track {
-  background: rgba(20, 20, 20, 0.5);
-  border-radius: 4px;
-}
-
-.carouselContainer::-webkit-scrollbar-thumb {
-  background: rgba(243, 99, 22, 0.6);
-  border-radius: 4px;
-}
-
-.carouselCard {
-  flex: 0 0 auto;
-  min-width: 200px;
-  max-width: 250px;
-  padding: 16px;
-  background: rgba(30, 30, 30, 0.9);
-  border-radius: 10px;
-  border: 2px solid rgba(243, 99, 22, 0.4);
-  text-decoration: none;
-  color: #f5e6d3;
-  transition: all 0.3s ease;
-  position: relative;
-  cursor: pointer;
-}
-
-.carouselCard:hover {
-  transform: translateY(-4px);
-  border-color: #ff6200;
-  box-shadow: 0 8px 20px rgba(243, 99, 22, 0.3);
-}
-
-.currentCard {
-  border-color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
-}
-
-.lockedCard {
-  opacity: 0.6;
-  border-color: rgba(128, 128, 128, 0.4);
-}
-
-.cardNumber {
-  font-size: 0.85rem;
-  color: #a09080;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.cardTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #f5e6d3;
-}
-
-.lockIcon {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  color: #a09080;
-  font-size: 0.9rem;
-}
-
-.currentIcon {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  color: #ffd700;
-  font-size: 0.9rem;
-}
-.readingModeText {
-  margin-top: 10px;
   font-style: italic;
 }
 
-/* Ad-based unlock styles */
+.readingModeText { margin-top: 10px; font-style: italic; color: var(--text-dim); }
+
+.readingOptions { margin-bottom: 20px; text-align: center; }
+
+.readWithSmpButton {
+  background: var(--vermillion);
+  color: var(--on-accent);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.readWithSmpButton:hover:not(:disabled) {
+  background: var(--vermillion-deep);
+  transform: scale(1.02);
+}
+
+.readWithSmpButton:disabled {
+  background: #888888;
+  cursor: not-allowed;
+}
+
+/* Ad-based unlock — kept as a fixed green "free" affordance regardless
+   of theme, distinct from the paid (vermillion) unlock button. */
 .adUnlock {
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   border: 2px solid #28a745;
@@ -1247,19 +758,11 @@
   transition: left 0.5s;
 }
 
-.adUnlock:not(:disabled):hover::before {
-  left: 100%;
-}
+.adUnlock:not(:disabled):hover::before { left: 100%; }
 
-.alternativeOption {
-  text-align: center;
-  margin: 15px 0 10px 0;
-  color: #999;
-  font-size: 0.9rem;
-  font-style: italic;
-}
-
-/* Benefactor unlock styles */
+/* Benefactor / writer-subscription — a self-contained "premium card" look
+   (light cream + gold) that's intentionally the same in both themes, like
+   a certificate. */
 .benefactorUnlock {
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
   border: 2px solid #FFD700;
@@ -1293,9 +796,7 @@
   transition: left 0.5s;
 }
 
-.benefactorUnlock:not(:disabled):hover::before {
-  left: 100%;
-}
+.benefactorUnlock:not(:disabled):hover::before { left: 100%; }
 
 .benefactorStatus {
   display: flex;
@@ -1309,49 +810,244 @@
   margin-bottom: 20px;
 }
 
-.statusText {
-  font-size: 1rem;
+.statusText { font-size: 1rem; font-weight: bold; color: #333; }
+.expiryText { font-size: 0.9rem; color: #666; }
+
+.badgesButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 30px;
   font-weight: bold;
-  color: #333;
+  font-size: 1rem;
+  text-decoration: none;
+  border: 2px solid #ffcc00;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+  width: 100%;
+  max-width: 400px;
 }
 
-.expiryText {
+.badgesButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+  background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%);
+}
+
+/* Loading spinner */
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ---------------------------------------------------------------------- */
+/* Rating stars                                                           */
+/* ---------------------------------------------------------------------- */
+.ratingSection {
+  margin-top: 20px;
+  padding: 12px;
+  background: rgba(var(--ink-800-rgb), 0.85);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.userRating, .averageRating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+
+.star { color: var(--text-dim); font-size: 24px; cursor: pointer; }
+.filledStar { color: var(--gold); }
+.averageRating .star { cursor: default; }
+
+/* ---------------------------------------------------------------------- */
+/* Transaction confirmation popup                                        */
+/* Renamed from .popupTitle/.popupMessage — those names were shared with
+   the connect-wallet popup above. Because CSS Modules don't scope by
+   section, the connect-popup's `.popupMessage { color: #fff; }` was
+   winning here too, and with .transactionPopup's `background: #fff`
+   that made the message text invisible (white on white). */
+/* ---------------------------------------------------------------------- */
+.transactionPopupOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-scrim);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.transactionPopup {
+  background: rgba(var(--ink-800-rgb), 0.98);
+  color: var(--text);
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 4px 8px var(--shadow-2);
+  border: 1px solid var(--ink-line);
+}
+
+.transactionPopupTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--paper);
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transactionPopupMessage {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 15px;
+}
+
+.transactionDetails p {
   font-size: 0.9rem;
-  color: #666;
+  margin: 5px 0;
+  color: var(--text-dim);
 }
 
-/* Loading spinner animation */
-.spinner {
-  animation: spin 1s linear infinite;
+.transactionDetails strong { color: var(--text); }
+
+.popupButtons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.confirmButton {
+  background-color: var(--vermillion);
+  color: var(--on-accent);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
+.confirmButton:hover { background-color: var(--vermillion-deep); }
+
+.cancelButton {
+  background-color: #6c757d;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancelButton:hover { background-color: #5a6268; }
+
+.popupNote {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Floating balance chip                                                  */
+/* ---------------------------------------------------------------------- */
 .balanceFloat {
   position: fixed;
-  top: 100px; /* Moved down to avoid navbar overlap */
+  top: 90px; /* below the shared sticky Navbar */
   right: 20px;
-  background-color: rgba(0, 0, 0, 0.85);
-  color: #fff;
+  background: rgba(var(--ink-950-rgb), 0.9);
+  border: 1px solid var(--ink-line);
+  color: var(--text);
   padding: 15px;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  box-shadow: 0 4px 8px var(--shadow-2);
+  z-index: 900;
   font-family: 'Yoruka', Arial, sans-serif;
 }
+
 .balanceItem {
   display: flex;
   align-items: center;
   margin: 8px 0;
 }
-.balanceIcon {
-  margin-right: 8px;
-  color: #ffd700; /* Gold color for icons */
+
+.balanceIcon { margin-right: 8px; color: var(--gold); }
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                             */
+/* ---------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .chapterContainer { padding: 20px 15px 30px; }
+
+  .chapterTitle { font-size: 2rem; }
+
+  .audioControls { flex-wrap: wrap; gap: 10px; }
+
+  .audioButton { padding: 8px 15px; font-size: 0.9rem; }
+
+  .chapterContent { padding: 25px; }
+
+  .contentText { font-size: 1rem; }
+
+  .navigation { flex-direction: column; gap: 15px; }
+
+  .navButton { width: 100%; justify-content: center; }
+
+  .chapterSelector { flex-direction: column; gap: 10px; }
+
+  .selector { width: 100%; }
+
+  .balanceFloat { top: 78px; right: 10px; padding: 10px; font-size: 0.85rem; }
+
+  .lockedContent { padding: 18px; max-width: 90%; margin: 24px auto; }
+
+  .lockIconWrapper { top: -30px; width: 60px; height: 60px; }
+
+  .lockIcon { font-size: 2rem; }
+
+  .message { font-size: 1rem; }
+
+  .subMessage { font-size: 0.95rem; }
+
+  .unlockButton { padding: 9px 12px; font-size: 0.9rem; }
+
+  .buttonIcon { font-size: 1.1rem; }
+
+  .price { font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+  .lockedContent { padding: 15px; }
+
+  .lockIconWrapper { top: -25px; width: 50px; height: 50px; }
+
+  .lockIcon { font-size: 1.8rem; }
+
+  .message { font-size: 0.9rem; }
+
+  .subMessage { font-size: 0.85rem; }
+
+  .unlockButton {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .buttonIcon { margin-right: 0; margin-bottom: 4px; }
+
+  .buttonText { margin-bottom: 4px; }
+
+  .price { font-size: 0.75rem; }
 }

@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../services/supabase/supabaseClient";
 import Link from "next/link";
-import { FaHome, FaBookOpen, FaSearch } from "react-icons/fa";
+import { FaBookOpen, FaSearch } from "react-icons/fa";
 import LoadingPage from "../../components/LoadingPage";
+import Navbar from "../../components/Navbar";
 import styles from "../../styles/SummaryPage.module.css";
 
 export default function SummaryPage() {
@@ -51,7 +52,7 @@ export default function SummaryPage() {
         <h2 className={styles.errorText}>Error Loading Summaries</h2>
         <p className={styles.errorMessage}>{error}</p>
         <Link href="/" className={styles.backHomeButton}>
-          <FaHome /> Back to Home
+          Back to Home
         </Link>
       </div>
     );
@@ -59,16 +60,7 @@ export default function SummaryPage() {
 
   return (
     <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <h1 className={styles.pageTitle}>Novel Summaries</h1>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Search Bar */}
       <div className={styles.searchSection}>

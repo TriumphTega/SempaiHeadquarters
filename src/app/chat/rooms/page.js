@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FaUsers, FaUser, FaSearch } from "react-icons/fa";
 import { supabase } from "@/services/supabase/supabaseClient";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
+import Navbar from "@/components/Navbar";
 import styles from "./RoomSelection.module.css";
 
 const truncateName = (name) => {
@@ -160,12 +161,7 @@ export default function RoomSelectionPage() {
 
   return (
     <div className={styles.container}>
-      <nav className={styles.navbar}>
-        <Link href="/" className={styles.logoLink}>
-          <img src="/images/logo.jpeg" alt="Home" className={styles.logo} />
-        </Link>
-        <h1 className={styles.title}>Select Chat Room</h1>
-      </nav>
+      <Navbar />
 
       <main className={styles.main}>
         {!walletAddress ? (

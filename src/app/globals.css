@@ -6,34 +6,77 @@
   font-style: normal; /* Adjust if your font has specific styles */
 }
 
-/* Root variables */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Root variables - default (dark mode) */
+:root,
+html[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
   /* Theme variables */
-  --bg-primary: #000;
-  --bg-secondary: #1a1a1a;
-  --text-primary: #fff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --accent-primary: #f36316;
-  --accent-secondary: #e3b24d;
-  --accent-tertiary: #0077D6;
-  --accent-quaternary: #00A6D6;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --input-bg: #1A1A2E;
+  --bg-primary: #0d0d0d;
+  --bg-secondary: #141414;
+  --text-primary: #f5f5f5;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --accent-primary: #ff6b35;
+  --accent-primary-rgb: 255, 107, 53;
+  --accent-secondary: #e8b04a;
+  --accent-tertiary: #ff8c42;
+  --accent-quaternary: #ffa366;
+  --border-color: rgba(255, 107, 53, 0.15);
+  --input-bg: #1a1a1a;
+  --subtle-orange: rgba(255, 107, 53, 0.08);
+  --glow-orange: rgba(255, 107, 53, 0.25);
+  
+  /* Chapter page specific variables */
+  --ink-950: #0a0a0a;
+  --ink-900: #0d0d0d;
+  --ink-800: #141414;
+  --ink-line: rgba(255, 107, 53, 0.15);
+  --text: #f5f5f5;
+  --text-dim: rgba(255, 255, 255, 0.65);
+  --vermillion: #ff6b35;
+  --vermillion-deep: #e55a2b;
+  --vermillion-rgb: 255, 107, 53;
+  --gold: #e8b04a;
+  --gold-rgb: 232, 176, 74;
+  --paper: #f5f5f5;
+  --on-accent: #ffffff;
+  --shadow-2: rgba(0, 0, 0, 0.25);
+  --overlay-scrim: rgba(0, 0, 0, 0.7);
 }
 
-[data-theme="light"] {
-  --bg-primary: #f5fafd;
-  --bg-secondary: #ffffff;
-  --text-primary: #000;
-  --text-secondary: rgba(0, 0, 0, 0.7);
-  --accent-primary: #0077D6;
-  --accent-secondary: #e3b24d;
-  --accent-tertiary: #0077D6;
-  --accent-quaternary: #00A6D6;
-  --border-color: rgba(0, 0, 0, 0.1);
-  --input-bg: #f0f0f0;
+html[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: rgba(30, 41, 59, 0.7);
+  --accent-primary: #3b82f6;
+  --accent-primary-rgb: 59, 130, 246;
+  --accent-secondary: #60a5fa;
+  --accent-tertiary: #2563eb;
+  --accent-quaternary: #93c5fd;
+  --border-color: rgba(59, 130, 246, 0.15);
+  --input-bg: #f8fafc;
+  --subtle-blue: rgba(59, 130, 246, 0.08);
+  --glow-blue: rgba(59, 130, 246, 0.25);
+  
+  /* Chapter page specific variables */
+  --ink-950: #f8fafc;
+  --ink-900: #ffffff;
+  --ink-800: #f1f5f9;
+  --ink-line: rgba(59, 130, 246, 0.15);
+  --text: #1e293b;
+  --text-dim: rgba(30, 41, 59, 0.65);
+  --vermillion: #3b82f6;
+  --vermillion-deep: #2563eb;
+  --vermillion-rgb: 59, 130, 246;
+  --gold: #60a5fa;
+  --gold-rgb: 96, 165, 250;
+  --paper: #1e293b;
+  --on-accent: #ffffff;
+  --shadow-2: rgba(0, 0, 0, 0.08);
+  --overlay-scrim: rgba(0, 0, 0, 0.4);
 }
 
 .btn-primary {

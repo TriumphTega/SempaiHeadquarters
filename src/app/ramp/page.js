@@ -5,8 +5,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { EmbeddedWalletContext } from "@/components/EmbeddedWalletProvider";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { FaCreditCard, FaArrowLeft, FaInfoCircle } from "react-icons/fa";
+import { FaCreditCard, FaInfoCircle } from "react-icons/fa";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import styles from "@/styles/RampPage.module.css";
 
 // Dynamic import for MoonPay widget to avoid SSR issues
@@ -50,14 +51,7 @@ export default function RampPage() {
 
   return (
     <div className={styles.rampContainer}>
-      <nav className={styles.navbar}>
-        <Link href="/" className={styles.navLink}>
-          <FaArrowLeft /> Back to Home
-        </Link>
-        <div className={styles.logo}>
-          <FaCreditCard /> Ramp - Buy Crypto
-        </div>
-      </nav>
+      <Navbar />
 
       <main className={styles.content}>
         <div className={styles.header}>

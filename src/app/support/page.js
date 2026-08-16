@@ -4,15 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../services/supabase/supabaseClient";
 import {
-  FaHome,
-  FaBars,
-  FaTimes,
   FaEnvelope,
   FaUser,
   FaComment,
   FaPaperPlane,
   FaSpinner,
 } from "react-icons/fa";
+import Navbar from "../../components/Navbar";
 import styles from "./Support.module.css";
 
 export default function Support() {
@@ -23,9 +21,6 @@ export default function Support() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,23 +65,8 @@ export default function Support() {
   };
 
   return (
-    <div className={`${styles.page} ${menuOpen ? styles.menuActive : ""}`}>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          <button className={styles.menuToggle} onClick={toggleMenu}>
-            {menuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={`${styles.navLinks} ${menuOpen ? styles.navLinksOpen : ""}`}>
-            <Link href="/" className={styles.navLink}>
-              <FaHome /> Home
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className={styles.page}>
+      <Navbar />
 
       <main className={styles.main}>
         <section className={styles.supportSection}>

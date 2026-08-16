@@ -3,31 +3,18 @@
 import { useEffect, useState, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import styles from "../../styles/Haven.module.css";
 
 export default function Haven() {
   const [isClient, setIsClient] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const toggleButtonRef = useRef(null);
-  const navLinksRef = useRef(null);
 
   useEffect(() => {
     setIsClient(true);
     const timer = setTimeout(() => setLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (isClient && !loading && toggleButtonRef.current && navLinksRef.current) {
-      const toggleMenu = () => {
-        setMenuOpen((prev) => !prev);
-      };
-      const toggleButton = toggleButtonRef.current;
-      toggleButton.addEventListener("click", toggleMenu);
-      return () => toggleButton.removeEventListener("click", toggleMenu);
-    }
-  }, [isClient, loading]);
 
   if (!isClient || loading) {
     return (
@@ -52,16 +39,7 @@ export default function Haven() {
         />
       </Head>
 
-      {/* Navigation */}
-      <header className={styles.header}>
-        <nav className={styles.nav}>
-          <Link href="/" className={styles.logoLink}>
-            <img src="/images/logo.jpeg" alt="Sempai HQ" className={styles.logo} />
-            <span className={styles.logoText}>Sempai HQ</span>
-          </Link>
-          
-        </nav>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className={styles.main}>

@@ -8,12 +8,13 @@ import {
   FaGoogle,
   FaFilter,
   FaGem,
-  FaBars, FaTimes
+  FaTimes
 } from "react-icons/fa";
 import styles from "./Marketplace.module.css";
 import kaitoStyles from "../../styles/MarketplaceKaito.module.css";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import Navbar from "@/components/Navbar";
 
 export default function MarketplacePage() {
   const router = useRouter();
@@ -24,16 +25,6 @@ export default function MarketplacePage() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [embers, setEmbers] = useState([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Handle window resize for mobile responsiveness
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Build ember particles
   useEffect(() => {
@@ -113,89 +104,7 @@ export default function MarketplacePage() {
           ))}
         </div>
 
-        {/* Navbar */}
-        <nav style={{
-          position: "sticky",
-          top: 0,
-          background: "linear-gradient(180deg, #0c0c0c 0%, #141210 100%)",
-          borderBottom: "1px solid #2d2418",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 40px rgba(204,85,0,0.04)",
-          padding: "0",
-          zIndex: 1000,
-        }}>
-          <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0 16px", position: "relative" }}>
-            {/* Top amber accent line */}
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "2px",
-              background: "linear-gradient(90deg, transparent, #cc5500, #c9a84c, #cc5500, transparent)",
-              opacity: 0.5,
-            }} />
-
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "12px 0",
-            }}>
-              {/* Brand */}
-              <div 
-                onClick={() => router.push("/")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  color: "#f5e6d3",
-                  fontWeight: 700,
-                  fontSize: "1rem",
-                  letterSpacing: "2px",
-                  fontFamily: "'Noto Serif JP', Georgia, serif",
-                  textDecoration: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <img 
-                  src="/images/logo.jpeg" 
-                  alt="Sempai HQ" 
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    filter: "drop-shadow(0 0 8px rgba(204,85,0,0.4))",
-                  }}
-                />
-                <span>Sempai HQ</span>
-              </div>
-
-              {/* Sign In Button */}
-              <button
-                onClick={signInWithGoogle}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#ff6b35",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                  padding: "6px 12px",
-                  borderRadius: "2px",
-                  border: "1px solid rgba(204,85,0,0.3)",
-                  background: "rgba(204,85,0,0.08)",
-                  transition: "all 0.2s",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <FaGoogle size={14} />
-                Sign In
-              </button>
-            </div>
-          </div>
-        </nav>
+        <Navbar />
 
         {/* Landing Content */}
         <div className={`${styles.landingPage} ${kaitoStyles.heroSection}`}>
@@ -237,185 +146,10 @@ export default function MarketplacePage() {
         ))}
       </div>
 
-      {/* Navbar */}
-      <nav style={{
-        position: "sticky",
-        top: 0,
-        background: "linear-gradient(180deg, #0c0c0c 0%, #141210 100%)",
-        borderBottom: "1px solid #2d2418",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 40px rgba(204,85,0,0.04)",
-        padding: "0",
-        zIndex: 1000,
-      }}>
-        <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0 16px", position: "relative" }}>
-          {/* Top amber accent line */}
-          <div style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "2px",
-            background: "linear-gradient(90deg, transparent, #cc5500, #c9a84c, #cc5500, transparent)",
-            opacity: 0.5,
-          }} />
-
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 0",
-          }}>
-            {/* Brand */}
-            <div 
-              onClick={() => router.push("/")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                color: "#f5e6d3",
-                fontWeight: 700,
-                fontSize: "1rem",
-                letterSpacing: "2px",
-                fontFamily: "'Noto Serif JP', Georgia, serif",
-                textDecoration: "none",
-                cursor: "pointer",
-              }}
-            >
-              <img 
-                src="/images/logo.jpeg" 
-                alt="Sempai HQ" 
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  filter: "drop-shadow(0 0 8px rgba(204,85,0,0.4))",
-                }}
-              />
-              <span>Sempai HQ</span>
-            </div>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{
-                display: isMobile ? "block" : "none",
-                background: "transparent",
-                border: "none",
-                color: "#a09080",
-                padding: "8px",
-                cursor: "pointer",
-              }}
-            >
-              {menuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-            </button>
-
-            {/* Nav Links */}
-            <div style={{ 
-              display: isMobile ? (menuOpen ? "flex" : "none") : "flex",
-              flexDirection: isMobile ? "column" : "row",
-              gap: "8px", 
-              alignItems: "center",
-              position: isMobile ? "absolute" : "static",
-              top: isMobile ? "100%" : "auto",
-              left: isMobile ? "0" : "auto",
-              right: isMobile ? "0" : "auto",
-              background: isMobile ? "linear-gradient(180deg, #0c0c0c 0%, #141210 100%)" : "transparent",
-              padding: isMobile ? "16px" : "0",
-              borderBottom: isMobile ? "1px solid #2d2418" : "none",
-            }}>
-              <button
-                onClick={() => router.push("/marketplace")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#ff6b35",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                  padding: "6px 12px",
-                  borderRadius: "2px",
-                  border: "1px solid rgba(204,85,0,0.3)",
-                  background: "rgba(204,85,0,0.08)",
-                  transition: "all 0.2s",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  width: isMobile ? "100%" : "auto",
-                  justifyContent: isMobile ? "center" : "flex-start",
-                }}
-              >
-                <FaSearch size={14} />
-                Bazaar
-              </button>
-              <button
-                onClick={() => router.push("/marketplace/hoard")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#a09080",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                  padding: "6px 12px",
-                  borderRadius: "2px",
-                  border: "1px solid transparent",
-                  background: "transparent",
-                  transition: "all 0.2s",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  width: isMobile ? "100%" : "auto",
-                  justifyContent: isMobile ? "center" : "flex-start",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#f5e6d3";
-                  e.currentTarget.style.borderColor = "rgba(204,85,0,0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#a09080";
-                  e.currentTarget.style.borderColor = "transparent";
-                }}
-              >
-                <FaShoppingCart size={14} />
-                Hoard
-              </button>
-              <button
-                onClick={() => router.push(`/profile/${user.id}`)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#a09080",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                  padding: "6px 12px",
-                  borderRadius: "2px",
-                  border: "1px solid transparent",
-                  background: "transparent",
-                  transition: "all 0.2s",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  width: isMobile ? "100%" : "auto",
-                  justifyContent: isMobile ? "center" : "flex-start",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#f5e6d3";
-                  e.currentTarget.style.borderColor = "rgba(204,85,0,0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#a09080";
-                  e.currentTarget.style.borderColor = "transparent";
-                }}
-              >
-                <FaUser size={14} />
-                Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Header */}
-      <section className={`${styles.hoardHeader} ${kaitoStyles.heroSection}`}>
+      <section className={`${styles.marketplaceHeader} ${kaitoStyles.heroSection}`}>
         <div className={`${styles.hoardHeaderContent} ${kaitoStyles.mainContent}`}>
           <h1 className={`${styles.hoardTitle} ${kaitoStyles.heroTitle}`}>
             <FaShoppingCart /> Bazaar
