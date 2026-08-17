@@ -76,8 +76,8 @@
 /* set. Higher specificity than the bare .page rule, so it always wins.   */
 /* ---------------------------------------------------------------------- */
 :global(html[data-theme="light"]) .page {
-  --ink-950: #f5fafd;          --ink-950-rgb: 245, 250, 253;
-  --ink-900: #e9f6fc;          --ink-900-rgb: 233, 246, 252;
+  --ink-950: #FDFBD4;          --ink-950-rgb: 253, 251, 212;
+  --ink-900: #f5f0d0;          --ink-900-rgb: 245, 240, 208;
   --ink-800: #ffffff;          --ink-800-rgb: 255, 255, 255;
   --ink-line: rgba(0, 119, 214, 0.14);
 
@@ -96,7 +96,7 @@
   --gold-deep: #005f78;
   --badge-ink: #04202e;
 
-  --nav-bg: rgba(255, 255, 255, 0.78);
+  --nav-bg: rgba(253, 251, 212, 0.78);
   --overlay-scrim: rgba(8, 35, 55, 0.4);
   --shadow-1: rgba(4, 60, 90, 0.1);
   --shadow-2: rgba(4, 60, 90, 0.14);
