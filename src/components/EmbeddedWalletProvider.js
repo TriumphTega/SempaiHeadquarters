@@ -323,12 +323,10 @@ export const EmbeddedWalletProvider = ({ children }) => {
         privateKeyBase58 = await edgeDecrypt(encryptedSecret);
         setCachedPrivateKeyBase58(privateKeyBase58);
       }
-      if (!privateKeyBase58) throw new Error("Corrupted wallet data.");
-      return bs58.decode(privateKeyBase58);
-    } catch (err) {
-      setError("Failed to decrypt wallet data.");
-      console.error(err);
-      return null;
+      return privateKeyBase58;
+    } catch (e) {
+      console.error("[EmbeddedWallet] Failed to decrypt wallet:", e?.message || e);
+      throw new Error("Unable to decrypt wallet. The encryption service may be temporarily unavailable. Please try again later or use a standard wallet connection.");
     }
   };
 

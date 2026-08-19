@@ -11,7 +11,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import {
   FaBookOpen, FaPlus, FaEdit, FaTrash, FaUpload,
-  FaUserShield, FaGem, FaImage, FaBullhorn
+  FaUserShield, FaGem, FaImage, FaBullhorn, FaTimes
 } from "react-icons/fa";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Navbar from "../../components/Navbar";

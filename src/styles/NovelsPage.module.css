@@ -1,7 +1,7 @@
 /* src/styles/NovelsPage.module.css */
 .libraryContainer {
   min-height: 100vh;
-  background: linear-gradient(145deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  background: linear-gradient(0deg, var(--bg-primary), var(--bg-secondary) 45%, var(--bg-primary));
   color: var(--text-primary);
   padding-bottom: 80px;
   position: relative;

@@ -104,3 +104,28 @@
   margin-left: 4px;
   font-size: 0.9em;
 }
+
+/* Light mode overrides */
+:global(html[data-theme="light"]) .benefactorBadge {
+  filter: brightness(1);
+}
+
+:global(html[data-theme="light"]) .benefactorBadge:hover {
+  filter: brightness(1.1);
+}
+
+:global(html[data-theme="light"]) .benefactorBadge[data-level="platinum"] {
+  animation: shimmer-light 2s infinite;
+}
+
+@keyframes shimmer-light {
+  0% {
+    box-shadow: 0 4px 15px rgba(204, 85, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(204, 85, 0, 0.5);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(204, 85, 0, 0.3);
+  }
+}

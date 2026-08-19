@@ -479,6 +479,39 @@
   transform: translateY(0);
 }
 
+/* ── Light Mode Overrides ── */
+:global(html[data-theme="light"]) .container {
+  --ka-bg-elevated: #f5f0d0;
+  --ka-ink: #2a2520;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(253, 251, 212, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(245, 240, 208, 0.3) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+}
+
+:global(html[data-theme="light"]) .backButton {
+  background: linear-gradient(145deg, #f5f0d0 0%, #FDFBD4 100%);
+}
+
+:global(html[data-theme="light"]) .badgeCard {
+  background: linear-gradient(145deg, #FDFBD4 0%, #f5f0d0 50%, #FDFBD4 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 0 60px rgba(204, 85, 0, 0.05);
+}
+
+:global(html[data-theme="light"]) .badgeCard:hover {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 16px 48px rgba(0, 0, 0, 0.12),
+    0 0 80px rgba(204, 85, 0, 0.15);
+}
+
+:global(html[data-theme="light"]) .tokenOption {
+  background: rgba(253, 251, 212, 0.95);
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .container {
