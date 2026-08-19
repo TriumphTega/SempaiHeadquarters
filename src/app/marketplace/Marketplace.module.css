@@ -2,9 +2,36 @@
 
 .marketplace {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0A0A0A 0%, #111111 50%, #0D1117 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Light mode overrides */
+:global(html[data-theme="light"]) .marketplace {
+  background: linear-gradient(135deg, #FDFBD4 0%, #f5f0d0 50%, #FDFBD4 100%);
+}
+
+:global(html[data-theme="light"]) .navbar {
+  background: rgba(253, 251, 212, 0.95);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+:global(html[data-theme="light"]) .searchBar {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(204, 85, 0, 0.3);
+}
+
+:global(html[data-theme="light"]) .searchBar:focus-within {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:global(html[data-theme="light"]) .searchIcon {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+:global(html[data-theme="light"]) .searchInput {
+  color: #1a1a1a;
 }
 
 /* Navigation Bar */

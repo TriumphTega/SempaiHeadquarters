@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
+import { useAuth } from "./AuthProvider";
+import { supabase } from "@/services/supabase/supabaseClient";
 import {
   FaHome,
   FaExchangeAlt,
@@ -32,8 +34,10 @@ import styles from "../styles/Sidebar.module.css";
 const Sidebar = ({ isVisible, onClose }) => {
   const router = useRouter();
   const walletContext = useContext(EmbeddedWalletContext);
+  const { user } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [userRole, setUserRole] = useState(null); // "writer", "artist", "both", "superuser", "user"
 
   const wallet = walletContext?.wallet;
   const disconnectWallet = walletContext?.disconnectWallet;
@@ -42,6 +46,39 @@ const Sidebar = ({ isVisible, onClose }) => {
 
   const isWalletConnected = !!wallet;
   const walletPublicKey = wallet?.publicKey || null;
+
+  // Fetch user role when authenticated
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user?.id) {
+        setUserRole(null);
+        return;
+      }
+
+      try {
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("isWriter, isArtist, isSuperuser")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (userData) {
+          if (userData.isSuperuser) setUserRole("superuser");
+          else if (userData.isWriter && userData.isArtist) setUserRole("both");
+          else if (userData.isArtist) setUserRole("artist");
+          else if (userData.isWriter) setUserRole("writer");
+          else setUserRole("user");
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+        setUserRole("user");
+      }
+    };
+
+    fetchUserRole();
+  }, [user?.id]);
 
   const navGroups = [
     {
@@ -70,8 +107,12 @@ const Sidebar = ({ isVisible, onClose }) => {
       title: "Content",
       icon: FaBookOpen,
       items: [
-        { name: "Novel Dashboard", path: "/novel-creators-dashboard", icon: FaBookOpen },
-        { name: "Manga Dashboard", path: "/manga-creators-dashboard", icon: FaImages },
+        ...(userRole === "writer" || userRole === "both" || userRole === "superuser"
+          ? [{ name: "Novel Dashboard", path: "/novel-creators-dashboard", icon: FaBookOpen }]
+          : []),
+        ...(userRole === "artist" || userRole === "both" || userRole === "superuser"
+          ? [{ name: "Manga Dashboard", path: "/manga-creators-dashboard", icon: FaImages }]
+          : []),
         { name: "Hoard", path: "/novels", icon: FaBookOpen },
         { name: "Manga Hoard", path: "/manga", icon: FaImages },
       ],

@@ -1,15 +1,25 @@
 .page {
-    background-color: #1a1a1a;
-    color: #fff;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     min-height: 100vh;
     font-family: 'Yoruka', Arial, sans-serif;
   }
-  
-  .navbar {
-    background-color: #333;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  }
+
+/* Light mode overrides */
+:global(html[data-theme="light"]) .page {
+  background-color: #FDFBD4;
+}
+
+:global(html[data-theme="light"]) .navbar {
+  background-color: #f5f0d0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar {
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
   
   .navContainer {
     max-width: 1200px;
