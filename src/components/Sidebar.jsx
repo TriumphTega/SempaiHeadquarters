@@ -100,7 +100,7 @@ const Sidebar = ({ isVisible, onClose }) => {
       items: [
         { name: "Home", path: "/", icon: FaHome },
         { name: "Feed", path: "/feed", icon: FaNewspaper },
-        { name: "Profile", path: isWalletConnected ? "/profile" : "/editprofile", icon: FaUser },
+        { name: "Profile", path: user?.id ? `/profile/${user.id}` : (isWalletConnected ? "/profile" : "/editprofile"), icon: FaUser },
       ],
     },
     {
