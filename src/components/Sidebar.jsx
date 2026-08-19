@@ -3,7 +3,6 @@
 import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
-import { useAuth } from "./AuthProvider";
 import { supabase } from "@/services/supabase/supabaseClient";
 import {
   FaHome,
@@ -34,10 +33,12 @@ import styles from "../styles/Sidebar.module.css";
 const Sidebar = ({ isVisible, onClose }) => {
   const router = useRouter();
   const walletContext = useContext(EmbeddedWalletContext);
-  const { user } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [userRole, setUserRole] = useState(null); // "writer", "artist", "both", "superuser", "user"
+  const [isWriter, setIsWriter] = useState(false);
+  const [isArtist, setIsArtist] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   const wallet = walletContext?.wallet;
   const disconnectWallet = walletContext?.disconnectWallet;
@@ -47,38 +48,43 @@ const Sidebar = ({ isVisible, onClose }) => {
   const isWalletConnected = !!wallet;
   const walletPublicKey = wallet?.publicKey || null;
 
-  // Fetch user role when authenticated
+  // Fetch user role when wallet is connected
   useEffect(() => {
     const fetchUserRole = async () => {
-      if (!user?.id) {
-        setUserRole(null);
+      if (!isWalletConnected || !walletPublicKey) {
+        setIsWriter(false);
+        setIsArtist(false);
+        setIsSuperuser(false);
+        setUserId(null);
         return;
       }
 
       try {
-        const { data: userData, error } = await supabase
+        const { data: user, error } = await supabase
           .from("users")
-          .select("isWriter, isArtist, isSuperuser")
-          .eq("id", user.id)
+          .select("id, isWriter, isArtist, isSuperuser")
+          .eq("wallet_address", walletPublicKey)
           .single();
 
-        if (error) throw error;
+        if (error && error.code !== "PGRST116") throw error;
 
-        if (userData) {
-          if (userData.isSuperuser) setUserRole("superuser");
-          else if (userData.isWriter && userData.isArtist) setUserRole("both");
-          else if (userData.isArtist) setUserRole("artist");
-          else if (userData.isWriter) setUserRole("writer");
-          else setUserRole("user");
+        if (user) {
+          setIsWriter(user.isWriter || false);
+          setIsArtist(user.isArtist || false);
+          setIsSuperuser(user.isSuperuser || false);
+          setUserId(user.id);
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
-        setUserRole("user");
+        setIsWriter(false);
+        setIsArtist(false);
+        setIsSuperuser(false);
+        setUserId(null);
       }
     };
 
     fetchUserRole();
-  }, [user?.id]);
+  }, [isWalletConnected, walletPublicKey]);
 
   const navGroups = [
     {
@@ -100,17 +106,17 @@ const Sidebar = ({ isVisible, onClose }) => {
       items: [
         { name: "Home", path: "/", icon: FaHome },
         { name: "Feed", path: "/feed", icon: FaNewspaper },
-        { name: "Profile", path: user?.id ? `/profile/${user.id}` : (isWalletConnected ? "/profile" : "/editprofile"), icon: FaUser },
+        { name: "Profile", path: userId ? `/profile/${userId}` : (isWalletConnected ? "/profile" : "/editprofile"), icon: FaUser },
       ],
     },
     {
       title: "Content",
       icon: FaBookOpen,
       items: [
-        ...(userRole === "writer" || userRole === "both" || userRole === "superuser"
+        ...(isWriter || isSuperuser
           ? [{ name: "Novel Dashboard", path: "/novel-creators-dashboard", icon: FaBookOpen }]
           : []),
-        ...(userRole === "artist" || userRole === "both" || userRole === "superuser"
+        ...(isArtist || isSuperuser
           ? [{ name: "Manga Dashboard", path: "/manga-creators-dashboard", icon: FaImages }]
           : []),
         { name: "Hoard", path: "/novels", icon: FaBookOpen },
