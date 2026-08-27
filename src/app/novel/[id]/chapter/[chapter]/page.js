@@ -1758,7 +1758,7 @@ const response = await fetch("/api/benefactor-payment-proxy", {
     const authorPublicKey = new PublicKey(authorData.wallet_address);
 
     // Calculate payment amount
-    const usdAmount = 0.0025;
+    const usdAmount = 0.025; // Match mobile app's CHAPTER_READ_USD_COST
     let paymentAmount = 0;
     let paymentMint = null;
 

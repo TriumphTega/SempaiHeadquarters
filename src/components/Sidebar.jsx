@@ -119,6 +119,7 @@ const Sidebar = ({ isVisible, onClose }) => {
         ...(isArtist || isSuperuser
           ? [{ name: "Manga Dashboard", path: "/manga-creators-dashboard", icon: FaImages }]
           : []),
+        { name: "Badges", path: "/badges", icon: FaStar },
         { name: "Hoard", path: "/novels", icon: FaBookOpen },
         { name: "Manga Hoard", path: "/manga", icon: FaImages },
       ],
@@ -143,7 +144,6 @@ const Sidebar = ({ isVisible, onClose }) => {
       title: "Features",
       icon: FaStar,
       items: [
-        { name: "Badges", path: "/badges", icon: FaStar },
         { name: "Notifications", path: "/notifications", icon: FaBell },
         { name: "Stats", path: "/stat-page", icon: FaChartBar },
         { name: "Kaito's Adventure", path: "/kaito-adventure", icon: FaGamepad },
