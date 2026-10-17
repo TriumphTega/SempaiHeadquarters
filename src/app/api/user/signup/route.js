@@ -1,6 +1,6 @@
 // src/app/api/user/signup/route.js
 import { supabase } from "../../../../services/supabase/supabaseClient";
-import { supabaseAdmin } from "../supabaseAdmin";
+import { supabaseAdmin } from "../../supabaseAdmin";
 
 export async function POST(req) {
   const { wallet_address, referral_code } = await req.json();
