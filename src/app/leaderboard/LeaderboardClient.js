@@ -48,7 +48,8 @@ export default function LeaderboardClient() {
         setReaders(processedReaders);
       } catch (error) {
         console.error("Error fetching leaderboard:", error);
-        setError("Failed to load leaderboard.");
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        setError(`Failed to load leaderboard: ${error?.message || JSON.stringify(error)}`);
       } finally {
         setLoading(false);
       }
