@@ -23,98 +23,27 @@ export default function LeaderboardClient() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        // Query users and their unlocked chapters count
-      const { data: users, error: usersError } = await supabase
-        .from("users")
-        .select("id, email, wallet_address, weekly_points, amethyst_count, balance")
-        .or("weekly_points.gt.0,balance.gt.0") // Get users with either weekly_points or balance
-        .order("weekly_points", { ascending: false, nullsFirst: false })
-        .limit(50);
-
-      if (usersError) throw usersError;
-
-      // Get unlocked chapters count and cached Amethyst balances for each user
-      const data = await Promise.all(
-        (users || []).map(async (user) => {
-          // Count unlocked story chapters
-          const { data: storyChapters } = await supabase
-            .from("unlocked_story_chapters")
-            .select("chapters_unlocked_count")
-            .eq("user_id", user.id);
-
-          // Count unlocked manga chapters  
-          const { data: mangaChapters } = await supabase
-            .from("unlocked_manga_chapters")
-            .select("id")
-            .eq("user_id", user.id);
-
-          const storyCount = storyChapters?.reduce((sum, chapter) => sum + (chapter.chapters_unlocked_count || 1), 0) || 0;
-          const mangaCount = mangaChapters?.length || 0;
-          const totalUnlockedChapters = storyCount + mangaCount;
-
-          // Get cached Amethyst balance from database
-          const { data: amethystData } = await supabase
-            .from("amethyst_balances")
-            .select("amethyst_balance")
-            .eq("user_id", user.id)
-            .single();
-
-          const cachedAmethystBalance = Number(amethystData?.amethyst_balance) || 0;
-
-          return {
-            ...user,
-            total_points_read: totalUnlockedChapters, // Override with actual chapters count
-            cached_amethyst_balance: cachedAmethystBalance // Use cached balance
-          };
-        })
-      );
+        setLoading(true);
         
-        // Process readers with Amethyst multiplier using cached balances
-        const processedReaders = (data || []).map(user => {
-          // Handle actual database data types
-          // weekly_points is numeric
-          const weeklyPoints = Number(user.weekly_points) || 0;
-          const totalChaptersUnlocked = Number(user.total_points_read) || 0; // Now contains actual chapters count
-          const amethystCount = Number(user.cached_amethyst_balance) || 0; // Use cached balance
-          
-          // If no weekly_points, use balance as fallback
-          const basePoints = weeklyPoints > 0 ? weeklyPoints : (Number(user.balance) || 0);
-          
-          // Amethyst tier-based reward system (show full reward amount)
-          let amethystBonus = 0;
-          
-          // Debug logging to see actual values
-          console.log(`[Leaderboard] User: ${user.email}, AmethystCount: ${amethystCount}, Type: ${typeof amethystCount}`);
-          
-          if (amethystCount >= 5000000) amethystBonus = 250;
-          else if (amethystCount >= 1000000) amethystBonus = 200;
-          else if (amethystCount >= 500000) amethystBonus = 170;
-          else if (amethystCount >= 250000) amethystBonus = 150;
-          else if (amethystCount >= 100000) amethystBonus = 120;
-          // Default: 0 bonus (just use base points)
-          
-          console.log(`[Leaderboard] User: ${user.email}, Amethyst: ${amethystCount}, Bonus: ${amethystBonus}, EffectivePoints: ${basePoints + amethystBonus}`);
-          
-          const effectivePoints = basePoints + amethystBonus;
-          
-          return {
-            id: user.id,
-            email: user.email,
-            walletAddress: user.wallet_address,
-            weeklyPoints: basePoints,
-            totalPointsRead: totalChaptersUnlocked, // Shows actual unlocked chapters count
-            amethystCount: amethystCount,
-            multiplierBonus: amethystBonus, // Show the bonus amount
-            effectivePoints: effectivePoints,
-            rank: 0 // Will be calculated
-          };
-        });
+        // Call the SQL function with the selected time frame
+        const { data: leaderboardData, error: rpcError } = await supabase
+          .rpc('get_leaderboard_data', { p_timeframe: timeFrame });
 
-        // Assign ranks
-        processedReaders.sort((a, b) => b.effectivePoints - a.effectivePoints);
-        processedReaders.forEach((reader, index) => {
-          reader.rank = index + 1;
-        });
+        if (rpcError) throw rpcError;
+
+        // Process the data
+        const processedReaders = (leaderboardData || []).map((user, index) => ({
+          id: user.user_id,
+          email: user.email,
+          name: user.name,
+          walletAddress: user.wallet_address,
+          weeklyPoints: user.base_points,
+          totalPointsRead: user.chapters_read,
+          amethystCount: user.amethyst_count,
+          multiplierBonus: user.amethyst_bonus,
+          effectivePoints: user.effective_points,
+          rank: index + 1
+        }));
 
         setReaders(processedReaders);
       } catch (error) {
@@ -126,7 +55,7 @@ export default function LeaderboardClient() {
     };
 
     fetchLeaderboard();
-  }, []);
+  }, [timeFrame]);
 
   const getRankIcon = (rank) => {
     switch (rank) {
@@ -277,7 +206,7 @@ export default function LeaderboardClient() {
                 </div>
                 <div className={styles.effectiveCell}>
                   <span className={styles.effectivePoints}>
-                    +{reader.multiplierBonus}
+                    {reader.effectivePoints.toLocaleString()}
                   </span>
                 </div>
                 <div className={styles.totalCell}>

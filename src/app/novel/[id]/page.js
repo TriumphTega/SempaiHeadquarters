@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { FaBookOpen, FaEye } from "react-icons/fa";
+import { FaBookOpen, FaEye, FaTimes } from "react-icons/fa";
 import Link from "next/link";
 import LoadingPage from "../../../components/LoadingPage";
 import Navbar from "../../../components/Navbar";

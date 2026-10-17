@@ -1,5 +1,6 @@
 // src/app/api/user/signup/route.js
 import { supabase } from "../../../../services/supabase/supabaseClient";
+import { supabaseAdmin } from "../supabaseAdmin";
 
 export async function POST(req) {
   const { wallet_address, referral_code } = await req.json();
@@ -48,8 +49,9 @@ export async function POST(req) {
     const CURRENCY = "SMP";
     const DECIMALS = 6;
 
+    // Use service role for financial operations (wallet_balances, referrals)
     // Check and update inviter's balance
-    const { data: inviterBalance } = await supabase
+    const { data: inviterBalance } = await supabaseAdmin
       .from("wallet_balances")
       .select("amount")
       .eq("user_id", inviterId)
@@ -58,14 +60,14 @@ export async function POST(req) {
       .single();
 
     if (inviterBalance) {
-      await supabase
+      await supabaseAdmin
         .from("wallet_balances")
         .update({ amount: inviterBalance.amount + REWARD_AMOUNT })
         .eq("user_id", inviterId)
         .eq("chain", CHAIN)
         .eq("currency", CURRENCY);
     } else {
-      await supabase
+      await supabaseAdmin
         .from("wallet_balances")
         .insert({
           user_id: inviterId,
@@ -78,7 +80,7 @@ export async function POST(req) {
     }
 
     // Set invitee's balance
-    await supabase
+    await supabaseAdmin
       .from("wallet_balances")
       .insert({
         user_id: newUser.id,
@@ -89,7 +91,7 @@ export async function POST(req) {
         wallet_address,
       });
 
-    await supabase
+    await supabaseAdmin
       .from("referrals")
       .insert({ inviter_id: inviterId, invitee_id: newUser.id, reward_claimed: true });
   }

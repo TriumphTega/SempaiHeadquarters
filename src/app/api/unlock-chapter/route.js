@@ -1,4 +1,5 @@
 import { supabase } from "@/services/supabase/supabaseClient";
+import { supabaseAdmin } from "../supabaseAdmin";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { RPC_URL, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -150,7 +151,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid recipient" }), { status: 400 });
     }
 
-    const { data: novel, error: novelError } = await supabase
+    const { data: novel, error: novelError } = await supabaseAdmin
       .from("novels")
       .select("chaptercontents, advance_chapters")
       .eq("id", story_id)
@@ -167,7 +168,7 @@ export async function POST(req) {
     for (let i = 0; i < currentChapterNum; i++) {
       const advanceInfo = advanceChapters.find((c) => c.index === i) || { is_advance: false, free_release_date: null };
       if (advanceInfo.is_advance && (!advanceInfo.free_release_date || new Date(advanceInfo.free_release_date) > new Date())) {
-        const { data: unlock } = await supabase
+        const { data: unlock } = await supabaseAdmin
           .from("unlocked_story_chapters")
           .select("chapter_unlocked_till, expires_at")
           .eq("user_id", user_id)
@@ -205,7 +206,7 @@ export async function POST(req) {
       chapters_purchased: subscription_type === "3CHAPTERS" ? 3 : null,
     };
 
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from("unlocked_story_chapters")
       .select("*")
       .eq("user_id", user_id)
@@ -214,13 +215,13 @@ export async function POST(req) {
 
     if (existing) {
       const new_unlocked_till = existing.chapter_unlocked_till === -1 ? -1 : Math.max(existing.chapter_unlocked_till, chapter_unlocked_till);
-      await supabase
+      await supabaseAdmin
         .from("unlocked_story_chapters")
         .update({ ...unlockData, chapter_unlocked_till: new_unlocked_till })
         .eq("user_id", user_id)
         .eq("story_id", story_id);
     } else {
-      await supabase
+      await supabaseAdmin
         .from("unlocked_story_chapters")
         .insert(unlockData);
     }

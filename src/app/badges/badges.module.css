@@ -419,6 +419,32 @@
   flex: 1;
 }
 
+/* ── Badge Links ── */
+.badgeLinks {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.badgeLink {
+  font-size: 0.8rem;
+  color: var(--ka-orange-soft);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--ka-border);
+  border-radius: 2px;
+  background: rgba(20, 20, 20, 0.5);
+  transition: all 0.3s ease;
+}
+
+.badgeLink:hover {
+  border-color: var(--ka-orange-primary);
+  color: var(--ka-ivory);
+  background: rgba(204, 85, 0, 0.1);
+  transform: translateY(-1px);
+}
+
 /* ── Badge Price ── */
 .badgePrice {
   font-size: 1rem;

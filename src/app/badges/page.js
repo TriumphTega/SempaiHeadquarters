@@ -511,6 +511,16 @@ export default function BadgesPage() {
                 )}
                 <h3 className={styles.badgeName}>{userBadge.badges?.name || "Unknown Badge"}</h3>
                 <p className={styles.badgeDescription}>{userBadge.badges?.description || ""}</p>
+                {userBadge.badges?.writer_id && (
+                  <div className={styles.badgeLinks}>
+                    <Link href={`/profile/${userBadge.badges.writer_id}`} className={styles.badgeLink}>
+                      View Author Profile
+                    </Link>
+                    <Link href={`/chat/${userBadge.badges.writer_id}`} className={styles.badgeLink}>
+                      Chat with Author
+                    </Link>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -542,6 +552,16 @@ export default function BadgesPage() {
                 )}
                 <h3 className={styles.badgeName}>{badge.name}</h3>
                 <p className={styles.badgeDescription}>{badge.description}</p>
+                {badge.writer_id && (
+                  <div className={styles.badgeLinks}>
+                    <Link href={`/profile/${badge.writer_id}`} className={styles.badgeLink}>
+                      View Author Profile
+                    </Link>
+                    <Link href={`/chat/${badge.writer_id}`} className={styles.badgeLink}>
+                      Chat with Author
+                    </Link>
+                  </div>
+                )}
                 <div className={styles.badgePrice}>
                   {convertPrice(badge.price)}
                 </div>

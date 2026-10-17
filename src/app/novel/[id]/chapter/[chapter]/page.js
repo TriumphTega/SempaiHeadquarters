@@ -425,6 +425,20 @@ export default function ChapterPage() {
   // PoRP Layer 4 - Dashboard state
   const [showPoRPDashboard, setShowPoRPDashboard] = useState(false);
 
+  // Fullscreen on scroll up from beginning
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      if (scrollTop === 0 && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.log("Fullscreen request denied:", err);
+        });
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // PoRP tracking functions

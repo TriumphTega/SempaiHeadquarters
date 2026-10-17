@@ -116,15 +116,22 @@ export default function Announcements() {
         }
 
         const workIds = works.map((work) => work.id);
-        const { data: interactions, error: interactionsError } = await supabase
-          .from(isWriter ? "novel_interactions" : "manga_interactions")
-          .select("user_id")
-          .in(isWriter ? "novel_id" : "manga_id", workIds)
-          .neq("user_id", currentUserId);
+        let interactions = [];
+        let interactionsError = null;
+        
+        if (workIds.length > 0) {
+          const result = await supabase
+            .from(isWriter ? "novel_interactions" : "manga_interactions")
+            .select("user_id")
+            .in(isWriter ? "novel_id" : "manga_id", workIds)
+            .neq("user_id", currentUserId);
+          interactions = result.data;
+          interactionsError = result.error;
+        }
 
         if (interactionsError) throw new Error(`Failed to fetch interactions: ${interactionsError.message}`);
 
-        targetUsers = [...new Set(interactions?.map((interaction) => interaction.user_id) || [])];
+        targetUsers = [...new Set((interactions || []).map((interaction) => interaction.user_id) || [])];
         console.log("Target users (writer/artist):", targetUsers); // Debug log
       }
 

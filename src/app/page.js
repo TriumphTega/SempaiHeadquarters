@@ -146,14 +146,21 @@ export default function Home() {
       }
 
       const userIds = novelsData.map((novel) => novel.user_id).filter((id) => id);
-      const { data: usersData, error: usersError } = await supabase
-        .from("users")
-        .select("id, name, isWriter")
-        .in("id", userIds);
+      let usersData = [];
+      let usersError = null;
+      
+      if (userIds.length > 0) {
+        const result = await supabase
+          .from("users")
+          .select("id, name, isWriter")
+          .in("id", userIds);
+        usersData = result.data;
+        usersError = result.error;
+      }
 
       if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
 
-      const usersMap = usersData.reduce((acc, user) => {
+      const usersMap = (usersData || []).reduce((acc, user) => {
         acc[user.id] = { name: user.name || "Unknown", isWriter: user.isWriter || false };
         return acc;
       }, {});
@@ -211,14 +218,21 @@ export default function Home() {
       }
 
       const userIds = mangaData.map((manga) => manga.user_id).filter((id) => id);
-      const { data: usersData, error: usersError } = await supabase
-        .from("users")
-        .select("id, name, isArtist")
-        .in("id", userIds);
+      let usersData = [];
+      let usersError = null;
+      
+      if (userIds.length > 0) {
+        const result = await supabase
+          .from("users")
+          .select("id, name, isArtist")
+          .in("id", userIds);
+        usersData = result.data;
+        usersError = result.error;
+      }
 
       if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
 
-      const usersMap = usersData.reduce((acc, user) => {
+      const usersMap = (usersData || []).reduce((acc, user) => {
         acc[user.id] = { name: user.name || "Unknown", isArtist: user.isArtist || false };
         return acc;
       }, {});
@@ -287,14 +301,21 @@ export default function Home() {
       const userIds = recentAnnouncements
         .map((a) => a.users?.id)
         .filter((id) => id && id !== undefined);
-      const { data: usersData, error: usersError } = await supabase
-        .from("users")
-        .select("id, name")
-        .in("id", userIds.length > 0 ? userIds : ["none"]);
+      let usersData = [];
+      let usersError = null;
+      
+      if (userIds.length > 0) {
+        const result = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", userIds);
+        usersData = result.data;
+        usersError = result.error;
+      }
 
       if (usersError) throw usersError;
 
-      const userMap = usersData.reduce((acc, user) => {
+      const userMap = (usersData || []).reduce((acc, user) => {
         acc[user.id] = user.name || "Unknown";
         return acc;
       }, {});
