@@ -15,9 +15,14 @@ export default function DownloadPage() {
         if (!res.ok) throw new Error('Failed to fetch download info');
         const data = await res.json();
         const normalized = Array.isArray(data) ? data : [];
-        // If API returns empty, fall back to local files for 1.0.8, 1.0.3 and 1.0.2
+        // If API returns empty, fall back to local files for v1.1, 1.0.8, 1.0.3 and 1.0.2
         if (normalized.length === 0) {
           setDownloadInfo([
+            {
+              version: 'v1.1',
+              download_url: '/apk/sempaihq-v1.1.apk',
+              created_at: new Date().toISOString(),
+            },
             {
               version: '1.0.8',
               download_url: '/apk/sempai-1.0.8.apk',
@@ -40,6 +45,11 @@ export default function DownloadPage() {
       } catch (err) {
         // On error, still provide local fallback
         setDownloadInfo([
+          {
+            version: 'v1.1',
+            download_url: '/apk/sempaihq-v1.1.apk',
+            created_at: new Date().toISOString(),
+          },
           {
             version: '1.0.8',
             download_url: '/apk/sempai-1.0.8.apk',

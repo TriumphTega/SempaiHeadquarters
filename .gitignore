@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 supabase/.temp
+
+# APK files (hosted externally)
+public/apk/*.apk
