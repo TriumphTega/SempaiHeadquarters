@@ -686,17 +686,19 @@ export const EmbeddedWalletProvider = ({ children }) => {
   // Determine active wallet (embedded or external)
   const activeWallet = wallet || (externalConnected && externalPublicKey ? { publicKey: externalPublicKey.toBase58() } : null);
   const isExternalWallet = externalConnected && !wallet;
+  const isWalletConnected = !!activeWallet;
 
   return (
     <EmbeddedWalletContext.Provider
-      value={{ 
-        wallet: activeWallet, 
-        createEmbeddedWallet, 
-        retrieveEmbeddedWallet, 
-        getSecretKey, 
+      value={{
+        wallet: activeWallet,
+        isWalletConnected,
+        createEmbeddedWallet,
+        retrieveEmbeddedWallet,
+        getSecretKey,
         signAndSendTransaction,
         signMessage,
-        isLoading, 
+        isLoading,
         error,
         isExternalWallet,
         externalPublicKey: externalConnected ? externalPublicKey : null

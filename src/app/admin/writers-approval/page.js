@@ -1,32 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useState, useEffect, useContext } from "react";
+import { EmbeddedWalletContext } from "../../../components/EmbeddedWalletProvider";
+import ConnectButton from "../../../components/ConnectButton";
 import { supabase } from "../../../services/supabase/supabaseClient";
 import styles from "../../../styles/CreatorApprovals.module.css";
 
 export default function CreatorApprovals() {
-  const { connected, publicKey } = useWallet();
+  const { wallet, isWalletConnected } = useContext(EmbeddedWalletContext);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  console.log('[WritersApproval] State:', { isWalletConnected, wallet, loading });
+
   // Check superuser status and fetch applications
   useEffect(() => {
     const checkSuperuserAndFetch = async () => {
-      if (!connected || !publicKey) {
+      console.log('[WritersApproval] checkSuperuserAndFetch called:', { isWalletConnected, wallet });
+
+      if (!isWalletConnected || !wallet) {
+        console.log('[WritersApproval] Wallet not connected, clearing loading');
         setLoading(false);
         return;
       }
 
-      const walletAddress = publicKey.toString();
+      const walletAddress = wallet.publicKey.toString();
+      console.log('[WritersApproval] Checking superuser for:', walletAddress);
+
       const { data: user, error: userError } = await supabase
         .from("users")
         .select("id, isSuperuser")
         .eq("wallet_address", walletAddress)
         .single();
+
+      console.log('[WritersApproval] User data:', { user, userError });
 
       if (userError || !user || !user.isSuperuser) {
         setIsSuperuser(false);
@@ -53,7 +62,7 @@ export default function CreatorApprovals() {
     };
 
     checkSuperuserAndFetch();
-  }, [connected, publicKey]);
+  }, [isWalletConnected, wallet]);
 
   // Handle approval or rejection
   const handleAction = async (applicationId, userId, role, action) => {
@@ -90,14 +99,14 @@ export default function CreatorApprovals() {
     return <div className={styles.loading}>Loading...</div>;
   }
 
-  if (!connected) {
+  if (!isWalletConnected) {
     return (
       <div className={styles.container}>
         <div className={styles.wrapper}>
           <h2 className={styles.title}>Superuser Access Required</h2>
           <div className={styles.connectContainer}>
             <p>Connect your wallet to continue.</p>
-            <WalletMultiButton className={styles.btnConnect} />
+            <ConnectButton />
           </div>
         </div>
       </div>
@@ -112,7 +121,7 @@ export default function CreatorApprovals() {
           <p className={styles.error}>
             {error || "Only superusers can access this page."}
           </p>
-          <WalletMultiButton className={styles.btnConnect} />
+          <ConnectButton />
         </div>
       </div>
     );
