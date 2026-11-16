@@ -1,5 +1,5 @@
 // src/app/api/referral/generate/route.js
-import { supabase } from "../../../../services/supabase/supabaseClient";
+import { supabaseAdmin as supabase } from "@/app/api/supabaseAdmin";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req) {

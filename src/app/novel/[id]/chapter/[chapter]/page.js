@@ -1752,7 +1752,13 @@ const response = await fetch("/api/benefactor-payment-proxy", {
       return true;
     }
 
-    // Fetch author
+    // Paid chapters are unlocked in the SempaiHQ app. Stop BEFORE any payment
+    // is sent, so nobody pays on the web for an unlock that can't be recorded.
+    setError("Paid chapters unlock in the SempaiHQ app — download it from sempaihq.com/download to keep reading.");
+    setTimeout(() => setError(null), 8000);
+    return false;
+
+    // eslint-disable-next-line no-unreachable
     const { data: novelData, error: novelError } = await supabase
       .from("novels")
       .select("user_id")
