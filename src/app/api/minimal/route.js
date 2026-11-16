@@ -1,20 +1,9 @@
-import { NextResponse } from 'next/server';
+// Retired: this endpoint moved money or settings without checking the caller
+// and nothing in the app or website uses it any more.
+import { gone } from "@/app/api/_lib/guard";
 
-export async function POST(request) {
-  console.log('[Minimal API] HIT!');
-  
-  try {
-    const body = await request.json();
-    console.log('[Minimal API] Body:', body);
-    
-    return NextResponse.json({ 
-      success: true,
-      sessionId: 'minimal-session-' + Date.now(),
-      message: 'Minimal API working',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[Minimal API] Error:', error);
-    return NextResponse.json({ error: 'Minimal API error' }, { status: 500 });
-  }
-}
+export const GET = gone;
+export const POST = gone;
+export const PUT = gone;
+export const PATCH = gone;
+export const DELETE = gone;

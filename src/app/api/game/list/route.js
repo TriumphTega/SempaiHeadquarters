@@ -1,17 +1,9 @@
-import { supabase } from "@/services/supabase/supabaseClient";
+// Retired: this endpoint moved money or settings without checking the caller
+// and nothing in the app or website uses it any more.
+import { gone } from "@/app/api/_lib/guard";
 
-export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from("rock_paper_scissors")
-      .select("*")
-      .eq("status", "waiting");
-
-    if (error) throw error;
-
-    return Response.json({ success: true, games: data }, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching games:", error);
-    return Response.json({ success: false, message: "Failed to fetch games" }, { status: 500 });
-  }
-}
+export const GET = gone;
+export const POST = gone;
+export const PUT = gone;
+export const PATCH = gone;
+export const DELETE = gone;

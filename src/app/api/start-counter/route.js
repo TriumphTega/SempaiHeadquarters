@@ -1,19 +1,9 @@
-import { supabase } from "@/services/supabase/supabaseClient";
+// Retired: this endpoint moved money or settings without checking the caller
+// and nothing in the app or website uses it any more.
+import { gone } from "@/app/api/_lib/guard";
 
-export async function POST() {
-  try {
-    const now = new Date().toISOString(); // Get current timestamp
-
-    // Insert or update the countdown start time
-    const { error } = await supabase
-      .from("settings")
-      .upsert([{ key: "weekly_reward_timer", value: now }]);
-
-    if (error) throw new Error(`Failed to start countdown: ${error.message}`);
-
-    return Response.json({ success: true, message: "Countdown started!", startTime: now });
-  } catch (err) {
-    console.error("🔥 Error:", err.message);
-    return Response.json({ success: false, message: err.message }, { status: 500 });
-  }
-}
+export const GET = gone;
+export const POST = gone;
+export const PUT = gone;
+export const PATCH = gone;
+export const DELETE = gone;

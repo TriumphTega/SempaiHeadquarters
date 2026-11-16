@@ -1,26 +1,9 @@
-import { NextResponse } from 'next/server';
+// Retired: this endpoint moved money or settings without checking the caller
+// and nothing in the app or website uses it any more.
+import { gone } from "@/app/api/_lib/guard";
 
-export async function GET() {
-  console.log('[Debug API] GET request received');
-  return NextResponse.json({ 
-    message: 'Debug API working',
-    timestamp: new Date().toISOString()
-  });
-}
-
-export async function POST(request) {
-  try {
-    console.log('[Debug API] POST request received');
-    const body = await request.json();
-    console.log('[Debug API] Body:', body);
-    
-    return NextResponse.json({ 
-      message: 'Debug POST successful',
-      received: body,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[Debug API] Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+export const GET = gone;
+export const POST = gone;
+export const PUT = gone;
+export const PATCH = gone;
+export const DELETE = gone;

@@ -81,9 +81,13 @@ export default function MigrateWallet() {
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/migrate-wallet", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
         body: JSON.stringify({
           oldWalletAddress: currentWallet,
           newWalletAddress: newWalletAddress.trim(),

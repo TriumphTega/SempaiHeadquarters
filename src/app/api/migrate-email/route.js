@@ -25,7 +25,7 @@ export async function POST(request) {
     }
 
     // Only the signed-in owner of this account may change its email (Phase 0 lockdown).
-    const token = (request.headers.get("authorization") || "").replace(/^Bearers+/i, "").trim();
+    const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
     const { data: tokenUser } = token ? await supabaseAdmin.auth.getUser(token) : { data: null };
     if (!tokenUser?.user?.id || tokenUser.user.id !== initialUserId) {
       return NextResponse.json({ error: "Please sign in to change your email" }, { status: 401 });

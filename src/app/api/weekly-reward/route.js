@@ -1,6 +1,9 @@
-import { supabase } from "@/services/supabase/supabaseClient";
+import { supabaseAdmin as supabase } from "@/app/api/supabaseAdmin";
+import { requireSuperuser } from "@/app/api/_lib/guard";
 
 export async function POST(req) {
+  const { response: denied } = await requireSuperuser(req);
+  if (denied) return denied;
   try {
     const { amount } = await req.json();
     if (!amount || amount <= 0) {

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../services/supabase/supabaseClient";
+import { supabaseAdmin as supabase } from "@/app/api/supabaseAdmin";
+import { requireUser } from "@/app/api/_lib/guard";
 
 export async function POST(request) {
+  const { user: caller, response: denied } = await requireUser(request);
+  if (denied) return denied;
   try {
     const { oldWalletAddress, newWalletAddress, email, userId } = await request.json();
 
@@ -10,6 +13,10 @@ export async function POST(request) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    if (caller.id !== userId) {
+      return NextResponse.json({ error: "You can only move your own account" }, { status: 403 });
     }
 
     // Verify the user owns the old wallet
