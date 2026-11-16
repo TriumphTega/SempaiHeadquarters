@@ -1,60 +1,84 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
+import { supabaseAdmin } from "../supabaseAdmin";
 
-const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+/*
+ * Wallet key encrypt / decrypt proxy (Phase 0 lockdown).
+ *
+ *  · encrypt — anyone (reveals nothing)
+ *  · decrypt — only a signed-in caller (Authorization: Bearer <access token>)
+ *    decrypting a key whose wallet address is theirs. Ownership is proven
+ *    from the plaintext: the secret key must genuinely derive its address,
+ *    and that address must be one of the caller's wallets.
+ *
+ * WALLET_DECRYPT_REQUIRE_AUTH=false temporarily allows anonymous decrypts
+ * (only while older mobile builds that still call this route are updating).
+ */
 const functionName = process.env.NEXT_PUBLIC_WALLET_FUNCTION || "wallet-encryption";
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const requireAuth = process.env.WALLET_DECRYPT_REQUIRE_AUTH !== "false";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+const reply = (body, status = 200) => NextResponse.json(body, { status, headers: corsHeaders });
 
-// Create Supabase client with service role for server-side admin access
-const supabase = createClient(projectUrl, serviceRoleKey);
+const addressOfSecret = (plain) => {
+  try {
+    const t = String(plain || "").trim();
+    const sk = t.startsWith("[") ? Uint8Array.from(JSON.parse(t)) : bs58.decode(t);
+    if (sk.length !== 64) return null;
+    // fromSecretKey validates that the seed derives the embedded public key.
+    return Keypair.fromSecretKey(sk).publicKey.toBase58();
+  } catch {
+    return null;
+  }
+};
 
 export async function OPTIONS() {
-  return new NextResponse("ok", {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_SITE_URL || "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    },
-  });
+  return new NextResponse("ok", { status: 200, headers: corsHeaders });
 }
 
 export async function POST(request) {
   try {
     const { action, data } = await request.json();
-    if (!action || typeof data !== "string") {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-    }
-    if (!projectUrl || !serviceRoleKey) {
-      console.error("[Wallet Encryption] Missing config:", { 
-        hasProjectUrl: !!projectUrl, 
-        hasServiceRoleKey: !!serviceRoleKey 
-      });
-      return NextResponse.json({ error: "Missing Supabase configuration" }, { status: 500 });
+    if (!["encrypt", "decrypt"].includes(action) || typeof data !== "string" || !data) {
+      return reply({ error: "Invalid payload" }, 400);
     }
 
-    const url = `${projectUrl}/functions/v1/${functionName}`;
-    console.log("[Wallet Encryption] Calling function:", { url, functionName });
-    
-    // Use Supabase client to invoke the function
-    const { data: result, error } = await supabase.functions.invoke(functionName, {
+    let userId = null;
+    if (action === "decrypt" && requireAuth) {
+      const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+      if (!token) return reply({ error: "Sign in to unlock your wallet" }, 401);
+      const { data: auth } = await supabaseAdmin.auth.getUser(token);
+      userId = auth?.user?.id || null;
+      if (!userId) return reply({ error: "Your session has expired — please sign in again" }, 401);
+    }
+
+    // Server-to-server call with the service role.
+    const { data: result, error } = await supabaseAdmin.functions.invoke(functionName, {
       body: { action, data },
     });
-
     if (error) {
-      console.error("[Wallet Encryption] Supabase function error:", error);
-      return NextResponse.json({ error: error.message || "Function invocation failed" }, { status: 500 });
+      console.error("[Wallet Encryption] function error:", error.message);
+      return reply({ error: "Wallet service unavailable" }, 502);
+    }
+    if (typeof result?.result !== "string") return reply({ error: "Invalid function response" }, 502);
+
+    if (action === "decrypt" && requireAuth) {
+      const address = addressOfSecret(result.result);
+      const { data: rows } = await supabaseAdmin.from("user_wallets").select("address").eq("user_id", userId);
+      const owned = new Set((rows || []).map((r) => r.address));
+      if (!address || !owned.has(address)) {
+        console.warn("[Wallet Encryption] refused decrypt: not the caller's wallet", { userId });
+        return reply({ error: "This wallet does not belong to your account" }, 403);
+      }
     }
 
-    // Expect { result }
-    if (typeof result?.result !== "string") {
-      console.error("[Wallet Encryption] Invalid response shape:", result);
-      return NextResponse.json({ error: "Invalid function response shape" }, { status: 500 });
-    }
-
-    return NextResponse.json({ result: result.result }, { status: 200 });
+    return reply({ result: result.result });
   } catch (e) {
-    console.error("[Wallet Encryption] Server error:", e);
-    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+    console.error("[Wallet Encryption] server error:", e?.message);
+    return reply({ error: "Server error" }, 500);
   }
 }

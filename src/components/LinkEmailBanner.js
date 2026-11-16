@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { EmbeddedWalletContext } from "./EmbeddedWalletProvider";
 import { FaEnvelope, FaTimes, FaShieldAlt, FaGoogle } from "react-icons/fa";
 import styles from "../styles/LinkEmailBanner.module.css";
 import { supabase } from "@/services/supabase/supabaseClient";
@@ -11,11 +13,33 @@ export default function LinkEmailBanner({ walletAddress, onDismiss, onLinked }) 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const external = useWallet();
+  const embedded = useContext(EmbeddedWalletContext);
+
+  // Proof that this wallet is yours: sign a short message before leaving for
+  // Google. The callback page sends it to /api/link-wallet-to-email.
+  const signLinkProof = async () => {
+    const message = `SempaiHQ: link wallet ${walletAddress} to my Google account.
+Issued: ${new Date().toISOString()}`;
+    const bytes = new TextEncoder().encode(message);
+    let signature;
+    if (external?.connected && external.publicKey?.toBase58() === walletAddress && external.signMessage) {
+      signature = Buffer.from(await external.signMessage(bytes)).toString("base64");
+    } else if (embedded?.signMessage) {
+      signature = await embedded.signMessage(message); // base64
+    } else {
+      throw new Error("Connect your wallet first, then try again.");
+    }
+    sessionStorage.setItem("sempai_link_proof", JSON.stringify({ walletAddress, message, signature }));
+  };
+
   const handleLinkWithGoogle = async () => {
     setIsLinking(true);
     setError("");
 
     try {
+      await signLinkProof();
+
       // Sign in with Google
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",

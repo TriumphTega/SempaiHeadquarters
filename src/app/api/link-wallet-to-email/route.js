@@ -1,6 +1,30 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../services/supabase/supabaseClient";
+import nacl from "tweetnacl";
+import bs58 from "bs58";
 import { supabaseAdmin } from "../supabaseAdmin";
+
+// The caller is verified below (session + wallet signature), so this route
+// performs the move with the server key: it re-points wallets and copies
+// roles, which the public key can no longer do.
+const supabase = supabaseAdmin;
+
+const PROOF_MAX_AGE_MS = 15 * 60 * 1000;
+
+/** Signed message format: see src/components/LinkEmailBanner.js */
+const verifyLinkProof = ({ walletAddress, message, signature }) => {
+  try {
+    if (!message.includes(`wallet ${walletAddress}`)) return { ok: false, error: "Signature is for a different wallet" };
+    const issued = Date.parse((message.match(/Issued: (.+)$/m) || [])[1] || "");
+    if (!issued || Math.abs(Date.now() - issued) > PROOF_MAX_AGE_MS) {
+      return { ok: false, error: "Wallet signature expired — please start linking again" };
+    }
+    const sig = Uint8Array.from(Buffer.from(signature, "base64"));
+    const ok = nacl.sign.detached.verify(new TextEncoder().encode(message), sig, bs58.decode(walletAddress));
+    return ok ? { ok: true } : { ok: false, error: "Wallet signature is invalid" };
+  } catch {
+    return { ok: false, error: "Wallet signature is invalid" };
+  }
+};
 
 /**
  * POST /api/link-wallet-to-email
@@ -9,14 +33,26 @@ import { supabaseAdmin } from "../supabaseAdmin";
  */
 export async function POST(request) {
   try {
-    const { walletAddress, authUserId, signature } = await request.json();
+    const { walletAddress, message, signature } = await request.json();
 
-    // Validate input
-    if (!walletAddress || !authUserId) {
-      return NextResponse.json(
-        { error: "Missing required fields: walletAddress, authUserId" },
-        { status: 400 }
-      );
+    // ── Who is asking? (Phase 0 lockdown) ──────────────────────────────
+    // 1) The Google account comes from the caller's own session token —
+    //    never from the request body.
+    const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+    const { data: tokenUser } = token ? await supabaseAdmin.auth.getUser(token) : { data: null };
+    const authUserId = tokenUser?.user?.id;
+    if (!authUserId) {
+      return NextResponse.json({ error: "Please sign in with Google first" }, { status: 401 });
+    }
+
+    // 2) Proof of wallet ownership: a fresh signature, by that wallet, over
+    //    a message naming that wallet.
+    if (!walletAddress || !message || !signature) {
+      return NextResponse.json({ error: "Missing wallet signature — please start linking again" }, { status: 400 });
+    }
+    const proof = verifyLinkProof({ walletAddress, message, signature });
+    if (!proof.ok) {
+      return NextResponse.json({ error: proof.error }, { status: 403 });
     }
 
     // Get auth user details

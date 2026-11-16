@@ -3,11 +3,23 @@
 import { createContext, useState, useEffect } from "react";
 import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import bs58 from "bs58";
+import nacl from "tweetnacl";
 import CryptoJS from "crypto-js";
 import { RPC_URL } from "@/constants"; // Ensure RPC_URL is defined in your constants
 import { supabase } from "@/services/supabase/supabaseClient";
 import { useAuth } from "./AuthProvider";
 import { useWallet } from "@solana/wallet-adapter-react";
+
+const SIGN_IN_TO_UNLOCK = "Sign in with Google to unlock this wallet.";
+
+/** The signed-in user's own encrypted wallet key (server-checked). */
+const loadMyWalletKey = async (address) => {
+  const { data, error } = await supabase.rpc("get_my_wallet_key", { p_address: address || null });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.private_key) throw new Error("No wallet found for this account");
+  return row; // { address, private_key }
+};
 
 // Fast proxy fetch with timeout and 1 retry (improves perceived latency)
 const callProxy = async (payload) => {
@@ -16,10 +28,14 @@ const callProxy = async (payload) => {
     dataLength: payload.data?.length 
   });
   
+  // Decrypting requires proof of who you are (the route only decrypts your own wallet).
+  const { data: { session } = {} } = await supabase.auth.getSession();
+  const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+
   const attempt = async (signal) => {
     const resp = await fetch("/api/wallet-encryption", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify(payload),
       signal,
     });
@@ -221,25 +237,12 @@ export const EmbeddedWalletProvider = ({ children }) => {
         if (!userData?.wallet_address) throw new Error("No wallet associated with this account");
         userRow = userData;
 
-        const { data: wallet, error: walletErr } = await supabase
-          .from("user_wallets")
-          .select("address, private_key")
-          .eq("user_id", userRow.id)
-          .eq("address", userRow.wallet_address)
-          .single();
-        if (walletErr) throw walletErr;
-        walletRow = wallet;
-      } 
-      // If NOT authenticated but has wallet address, retrieve by wallet address (wallet-only mode)
+        walletRow = await loadMyWalletKey(userRow.wallet_address);
+      }
+      // Keys are only released to their signed-in owner (Phase 0 lockdown).
       else if (walletAddress) {
-        const { data: wallet, error: walletErr } = await supabase
-          .from("user_wallets")
-          .select("address, private_key")
-          .eq("address", walletAddress)
-          .single();
-        if (walletErr) throw walletErr;
-        walletRow = wallet;
-      } 
+        throw new Error(SIGN_IN_TO_UNLOCK);
+      }
       else {
         throw new Error("Please sign in or connect wallet to retrieve your wallet");
       }
@@ -337,12 +340,13 @@ export const EmbeddedWalletProvider = ({ children }) => {
       
       if (user && user.id) {
         // Authenticated user - get from user_wallets table
-        const { data: walletData, error: walletError } = await supabase
-          .from("user_wallets")
-          .select("private_key")
-          .eq("user_id", user.id)
-          .eq("address", wallet.publicKey)
-          .single();
+        let walletData = null;
+        let walletError = null;
+        try {
+          walletData = await loadMyWalletKey(String(wallet.publicKey));
+        } catch (e) {
+          walletError = e;
+        }
         
         if (walletError || !walletData) {
           privateKeyBase58 = cachedPrivateKeyBase58;
@@ -371,7 +375,8 @@ export const EmbeddedWalletProvider = ({ children }) => {
       const messageBytes = typeof message === 'string' 
         ? new TextEncoder().encode(message) 
         : message;
-      const signature = keypair.sign(messageBytes);
+      // Keypair has no .sign(); ed25519 detached signature via tweetnacl.
+      const signature = nacl.sign.detached(messageBytes, keypair.secretKey);
       
       // Return as base64 or Uint8Array depending on what the caller expects
       return Buffer.from(signature).toString('base64');
@@ -424,12 +429,13 @@ export const EmbeddedWalletProvider = ({ children }) => {
       if (user && user.id) {
         // Authenticated user - get from user_wallets table
         console.log("[EmbeddedWallet] Fetching wallet from database for user:", user.id);
-        const { data: walletData, error: walletError } = await supabase
-          .from("user_wallets")
-          .select("private_key")
-          .eq("user_id", user.id)
-          .eq("address", wallet.publicKey)
-          .single();
+        let walletData = null;
+        let walletError = null;
+        try {
+          walletData = await loadMyWalletKey(String(wallet.publicKey));
+        } catch (e) {
+          walletError = e;
+        }
         
         console.log("[EmbeddedWallet] Database query result:", { 
           walletError: walletError?.message, 
@@ -455,25 +461,8 @@ export const EmbeddedWalletProvider = ({ children }) => {
         if (!privateKeyBase58) {
           console.log("[EmbeddedWallet] No cached key, attempting database lookup without auth");
           
-          // Try to get wallet by address only (without user authentication)
-          try {
-            const { data: walletData, error: walletError } = await supabase
-              .from("user_wallets")
-              .select("private_key")
-              .eq("address", wallet.publicKey)
-              .single();
-            
-            if (!walletError && walletData) {
-              console.log("[EmbeddedWallet] Found wallet by address, decrypting");
-              privateKeyBase58 = await edgeDecrypt(walletData.private_key);
-            } else {
-              console.log("[EmbeddedWallet] Wallet not found by address either");
-              throw new Error("No wallet found and no cached key available");
-            }
-          } catch (dbError) {
-            console.error("[EmbeddedWallet] Database lookup failed:", dbError);
-            throw new Error("Failed to access wallet database");
-          }
+          // Keys are only released to their signed-in owner (Phase 0 lockdown).
+          throw new Error(SIGN_IN_TO_UNLOCK);
           
           // Only show password prompt as last resort
           if (!privateKeyBase58) {

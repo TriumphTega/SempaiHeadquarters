@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../services/supabase/supabaseClient";
 import { supabaseAdmin } from "../supabaseAdmin";
+
+// The caller is verified below (must be the signed-in owner of the account),
+// so the migration runs with the server key — it re-points wallets, which
+// the public key can no longer do.
+const supabase = supabaseAdmin;
 
 /**
  * POST /api/migrate-email
@@ -18,6 +22,13 @@ export async function POST(request) {
         { error: "Missing required fields: userId, oldEmail, newEmail, walletAddress" },
         { status: 400 }
       );
+    }
+
+    // Only the signed-in owner of this account may change its email (Phase 0 lockdown).
+    const token = (request.headers.get("authorization") || "").replace(/^Bearers+/i, "").trim();
+    const { data: tokenUser } = token ? await supabaseAdmin.auth.getUser(token) : { data: null };
+    if (!tokenUser?.user?.id || tokenUser.user.id !== initialUserId) {
+      return NextResponse.json({ error: "Please sign in to change your email" }, { status: 401 });
     }
 
     // Validate email format

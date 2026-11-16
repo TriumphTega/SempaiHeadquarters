@@ -19,6 +19,7 @@ import {
   FaPen,
   FaSpinner,
   FaExclamationTriangle,
+  FaTimes,
 } from "react-icons/fa";
 import UseAmethystBalance from "../../components/UseAmethystBalance";
 import Navbar from "../../components/Navbar";
@@ -445,10 +446,12 @@ export default function EditProfile() {
     try {
       const walletAddress = publicKey?.toString() || embeddedWallet?.publicKey;
       
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/migrate-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
         },
         body: JSON.stringify({
           userId,

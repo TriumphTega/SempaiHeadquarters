@@ -33,17 +33,33 @@ function LinkWalletCallbackContent() {
 
         setMessage(`Linking wallet to ${user.email}...`);
 
-        // Call the link API
+        // Proof of wallet ownership signed before the Google redirect.
+        let proof = null;
+        try {
+          proof = JSON.parse(sessionStorage.getItem("sempai_link_proof") || "null");
+        } catch {
+          proof = null;
+        }
+        if (!proof || proof.walletAddress !== walletAddress) {
+          throw new Error("Wallet signature missing — please start linking again from the banner.");
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+
+        // Call the link API (the server takes your account from your session)
         const response = await fetch("/api/link-wallet-to-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || ""}`,
           },
           body: JSON.stringify({
             walletAddress,
-            authUserId: user.id,
+            message: proof.message,
+            signature: proof.signature,
           }),
         });
+        sessionStorage.removeItem("sempai_link_proof");
 
         const data = await response.json();
 
