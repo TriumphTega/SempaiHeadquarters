@@ -48,17 +48,21 @@ export async function POST(request) {
     }
 
     let userId = null;
-    if (action === "decrypt" && requireAuth) {
+    let userToken = "";
+    if (action === "decrypt") {
       const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
       if (!token) return reply({ error: "Sign in to unlock your wallet" }, 401);
       const { data: auth } = await supabaseAdmin.auth.getUser(token);
       userId = auth?.user?.id || null;
       if (!userId) return reply({ error: "Your session has expired — please sign in again" }, 401);
+      userToken = token;
     }
 
-    // Server-to-server call with the service role.
+    // Decrypt runs AS THE SIGNED-IN USER (the wallet function no longer
+    // accepts the server key for decryption); encrypt may use the server key.
     const { data: result, error } = await supabaseAdmin.functions.invoke(functionName, {
       body: { action, data },
+      ...(userToken ? { headers: { Authorization: `Bearer ${userToken}` } } : {}),
     });
     if (error) {
       console.error("[Wallet Encryption] function error:", error.message);
@@ -66,7 +70,7 @@ export async function POST(request) {
     }
     if (typeof result?.result !== "string") return reply({ error: "Invalid function response" }, 502);
 
-    if (action === "decrypt" && requireAuth) {
+    if (action === "decrypt") {
       const address = addressOfSecret(result.result);
       const { data: rows } = await supabaseAdmin.from("user_wallets").select("address").eq("user_id", userId);
       const owned = new Set((rows || []).map((r) => r.address));
