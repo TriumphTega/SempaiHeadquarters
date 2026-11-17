@@ -4,7 +4,7 @@ import { getAccount, TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana
 import { AMETHYST_MINT_ADDRESS, SMP_MINT_ADDRESS, RPC_URL } from '@/constants';
 
 const SOLANA_RPC_URL = RPC_URL;
-const TREASURY_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
+const TREASURY_WALLET = "71fLWcS1rvkfyYZvBjHUwHZQbcenk5Bdj2ebXBsgfZzD";
 
 const TreasuryBalance = () => {
   const [amethystBalance, setAmethystBalance] = useState(null);

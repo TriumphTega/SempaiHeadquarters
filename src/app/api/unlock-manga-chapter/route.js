@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/services/supabase/supabaseClient";
+import { supabaseAdmin } from "../supabaseAdmin";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { RPC_URL } from "@/constants";
 
-const MERCHANT_WALLET = "3p1HL3nY5LUNwuAj6dKLRiseSU93UYRqYPGbR7LQaWd5";
+const MERCHANT_WALLET = "71fLWcS1rvkfyYZvBjHUwHZQbcenk5Bdj2ebXBsgfZzD"; // the treasury
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SKR_MINT_ADDRESS = "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3";
 const connection = new Connection(RPC_URL, "confirmed");
@@ -178,7 +179,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid recipient" }, { status: 400 });
     }
 
-    const { data: existingPayment } = await supabase
+    const { data: existingPayment } = await supabaseAdmin
       .from("user_payments")
       .select("id")
       .eq("user_wallet", user_wallet)
@@ -200,7 +201,7 @@ export async function POST(req) {
       paid_at: new Date().toISOString(),
     };
 
-    const { error: insertError } = await supabase.from("user_payments").insert(paymentData);
+    const { error: insertError } = await supabaseAdmin.from("user_payments").insert(paymentData);
     if (insertError) {
       console.error("Error inserting payment:", insertError);
       return NextResponse.json({ error: "Failed to record payment" }, { status: 500 });

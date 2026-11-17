@@ -4,7 +4,7 @@ import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { RPC_URL, SMP_FALLBACK_PRICE_USDC } from "@/constants";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-const TARGET_WALLET = "HSxUYwGM3NFzDmeEJ6o4bhyn8knmQmq7PLUZ6nZs4F58";
+const TARGET_WALLET = "71fLWcS1rvkfyYZvBjHUwHZQbcenk5Bdj2ebXBsgfZzD";
 const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SMP_MINT_ADDRESS = "SMP1xiPwpMiLPpnJtdEmsDGSL9fR1rvat6NFGznKPor";
 const SKR_MINT_ADDRESS = "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3";

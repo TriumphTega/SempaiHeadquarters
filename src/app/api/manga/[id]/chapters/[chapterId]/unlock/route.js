@@ -43,7 +43,7 @@ export async function POST(request, { params }) {
   }
 
   // Solana Pay setup (assuming USDC at $2.5)
-  const recipient = new PublicKey("YOUR_TREASURY_PUBLIC_KEY"); // Replace with real treasury key
+  const recipient = new PublicKey("71fLWcS1rvkfyYZvBjHUwHZQbcenk5Bdj2ebXBsgfZzD"); // the treasury
   const amount = 2.5; // $2.5 in USDC (adjust decimals: 2.5 * 10^6 for 6 decimals if needed)
   const reference = new PublicKey(userId); // Use user ID as reference
 
