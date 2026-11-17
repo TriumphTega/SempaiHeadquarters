@@ -2,6 +2,7 @@
 
 import { supabase } from "@/services/supabase/supabaseClient";
 import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '../../supabaseAdmin';
 
 export async function GET() {
   const { data, error } = await supabase
@@ -16,7 +17,7 @@ export async function GET() {
         novels(id,title,image,summary,user_id),
         manga(id,title,cover_image,summary,author,user_id)
       ),
-      seller:seller_id (id, name, email, image)
+      seller:seller_id (id, name, image)
     `)
     .eq('status', 'active')
     .order('listed_at', { ascending: false });
@@ -49,7 +50,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid item" }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('marketplace_listings')
     .insert({
       hoard_item_id,
@@ -64,7 +65,7 @@ export async function POST(request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  await supabase.from('hoard_items').update({ status: 'listed' }).eq('id', hoard_item_id);
+  await supabaseAdmin.from('hoard_items').update({ status: 'listed' }).eq('id', hoard_item_id);
 
   return NextResponse.json({ success: true, listing: data });
 }

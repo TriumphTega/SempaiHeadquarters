@@ -1,7 +1,7 @@
 // src/app/api/check-twitter/route.js
 import { NextResponse } from "next/server";
 import axios from "axios";
-import { supabase } from "@/services/supabase/supabaseClient";
+import { supabaseAdmin as supabase } from "../supabaseAdmin";
 
 
 
