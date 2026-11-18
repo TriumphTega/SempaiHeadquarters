@@ -40,7 +40,7 @@ export default function MigrateWallet() {
         const walletAddress = activePublicKey.toString();
         const { data, error } = await supabase
           .from("users")
-          .select("id, wallet_address, email")
+          .select("id, wallet_address")
           .eq("wallet_address", walletAddress)
           .single();
 
@@ -48,7 +48,7 @@ export default function MigrateWallet() {
 
         setUserId(data.id);
         setCurrentWallet(data.wallet_address);
-        setEmail(data.email || "");
+        setEmail((await supabase.auth.getSession()).data.session?.user?.email || "");
       } catch (err) {
         console.error("Error fetching user:", err);
         setError("Failed to load user data");

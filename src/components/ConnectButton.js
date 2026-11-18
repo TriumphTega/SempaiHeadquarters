@@ -47,7 +47,7 @@ export default function ConnectButton({ className = "" }) {
 
       const { data: existingUser, error: fetchError } = await supabase
         .from("users")
-        .select("id, referral_code, has_updated_profile, email")
+        .select("id, referral_code, has_updated_profile")
         .eq("wallet_address", walletAddress)
         .single();
 
@@ -246,12 +246,9 @@ export default function ConnectButton({ className = "" }) {
           const address = externalPublicKey.toBase58();
           
           // Check if this email already exists with a DIFFERENT wallet address
-          const { data: existingUserWithEmail, error: emailCheckError } = await supabase
-            .from('users')
-            .select('id, wallet_address, email')
-            .eq('email', user.email)
-            .neq('id', user.id)
-            .single();
+          // Emails are private: the server compares against your own sign-in email
+          const { data: otherWallet } = await supabase.rpc('email_linked_wallet_elsewhere');
+          const existingUserWithEmail = otherWallet ? { wallet_address: otherWallet } : null;
 
           if (existingUserWithEmail && existingUserWithEmail.wallet_address && existingUserWithEmail.wallet_address !== address) {
             // Email already linked to a different wallet - prevent sign in

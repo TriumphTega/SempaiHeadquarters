@@ -64,7 +64,7 @@ export default function EditProfile() {
         const { data: user, error: userError } = await supabase
           .from("users")
           .select(
-            "id, email, name, x_account, x_verified_at, image, isWriter, isArtist, isSuperuser, referred_by, has_updated_profile, weekly_points"
+            "id, name, x_account, x_verified_at, image, isWriter, isArtist, isSuperuser, referred_by, has_updated_profile, weekly_points"
           )
           .eq("wallet_address", walletAddress)
           .single();
@@ -78,7 +78,7 @@ export default function EditProfile() {
         }
 
         setUserId(user.id);
-        setEmail(user.email || "");
+        setEmail((await supabase.auth.getSession()).data.session?.user?.email || "");
         setName(user.name || "");
         setXAccount(user.x_account || "");
         setImageUrl(user.image || "");

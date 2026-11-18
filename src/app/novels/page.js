@@ -117,7 +117,7 @@ export default function NovelsPage() {
     try {
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, weekly_points, name, email, x_account, x_verified_at")
+        .select("id, weekly_points, name, x_account, x_verified_at")
         .eq("wallet_address", activePublicKey.toString())
         .single();
 
@@ -201,14 +201,15 @@ export default function NovelsPage() {
       // Fetch user data
       const { data: user, error: userError } = await supabase
         .from("users")
-        .select("id, name, email, x_account, x_verified_at")
+        .select("id, name, x_account, x_verified_at")
         .eq("wallet_address", activePublicKey.toString())
         .single();
 
       if (userError || !user) throw new Error("User not found");
 
       // Check if required fields are present
-      if (!user.name || !user.email || !user.x_account || !user.x_verified_at) {
+      const signedInEmail = (await supabase.auth.getSession()).data.session?.user?.email;
+      if (!user.name || !signedInEmail || !user.x_account || !user.x_verified_at) {
         setShowProfileWarning(true);
         setIsWithdrawing(false);
         return;

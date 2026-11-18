@@ -296,7 +296,7 @@ export default function CrazyCornerPage() {
     try {
       const { data } = await supabase
         .from('feed_comments')
-        .select('*, users(*)')
+        .select('*, users(id, name, image, wallet_address, isWriter, isArtist)')
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
       

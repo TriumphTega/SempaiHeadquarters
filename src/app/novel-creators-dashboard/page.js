@@ -134,9 +134,7 @@ export default function NovelDashboard() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("users")
-        .select("id, name, email, isWriter")
-        .eq("isWriter", true);
+        .rpc("admin_list_users", { p_role: "writer", p_limit: 1000 });
 
       if (error) throw new Error(error.message);
       setWriters(data || []);

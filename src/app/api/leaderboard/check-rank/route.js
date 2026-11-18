@@ -23,7 +23,7 @@ export async function GET(request) {
     // Get user's leaderboard rank
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, email, weekly_points, amethyst_count, balance')
+      .select('id, weekly_points, amethyst_count, balance')
       .or('weekly_points.gt.0,balance.gt.0')
       .order('weekly_points', { ascending: false, nullsFirst: false });
 

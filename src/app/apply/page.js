@@ -28,7 +28,7 @@ export default function ApplyForCreator() {
 
       const { data, error } = await supabase
         .from("users")
-        .select("id, email, name")
+        .select("id, name")
         .eq("wallet_address", publicKey.toString())
         .single();
 
@@ -38,7 +38,7 @@ export default function ApplyForCreator() {
       }
 
       setUserId(data.id); // Expecting UUID
-      setEmail(data.email || "");
+      setEmail((await supabase.auth.getSession()).data.session?.user?.email || "");
       setName(data.name || "");
     };
 

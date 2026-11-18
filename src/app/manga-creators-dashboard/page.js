@@ -131,9 +131,7 @@ export default function MangaDashboard() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("users")
-        .select("id, name, email, isArtist")
-        .eq("isArtist", true);
+        .rpc("admin_list_users", { p_role: "artist", p_limit: 1000 });
       if (error) throw new Error("Failed to fetch artists");
 
       setArtistList(data || []);
