@@ -8,10 +8,22 @@ export const runtime = 'edge';
 const ORANGE = '#F36316';
 const LOGO = 'https://www.sempaihq.com/images/logo.jpg';
 
+// Only keep a cover the card renderer can draw (some old uploads are not images at all).
+async function usableCover(url) {
+  if (!url) return null;
+  try {
+    const r = await fetch(url, { method: 'HEAD' });
+    return r.ok && /^image/(png|jpe?g|gif)/i.test(r.headers.get('content-type') || '') ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const kind = searchParams.get('kind') === 'manga' ? 'manga' : 'novel';
   const info = await shareInfo(kind, searchParams.get('id'), searchParams.get('ch'));
+  if (info) info.cover = await usableCover(info.cover);
   const title = info?.title || 'Stories that pay you back';
   const eyebrow = info ? `${kind === 'manga' ? 'MANGA' : 'NOVEL'}${info.chapterLabel ? ` · ${info.chapterLabel.toUpperCase()}` : ''}` : 'SEMPAI HQ';
   const sub = info?.chapterTitle || (info ? (info.author ? `by ${info.author}` : '') : 'Read novels & manga from independent creators — and earn.');
