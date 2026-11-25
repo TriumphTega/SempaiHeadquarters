@@ -13,7 +13,7 @@ async function usableCover(url) {
   if (!url) return null;
   try {
     const r = await fetch(url, { method: 'HEAD' });
-    return r.ok && /^image/(png|jpe?g|gif)/i.test(r.headers.get('content-type') || '') ? url : null;
+    return r.ok && /^image\/(png|jpe?g|gif)/i.test(r.headers.get('content-type') || '') ? url : null;
   } catch {
     return null;
   }
