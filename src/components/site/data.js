@@ -32,6 +32,15 @@ async function count(table, filter = '') {
   }
 }
 
+async function isImage(url) {
+  try {
+    const r = await fetch(url, { method: 'HEAD', next: { revalidate: 3600 } });
+    return r.ok && /^image\//i.test(r.headers.get('content-type') || '');
+  } catch {
+    return false;
+  }
+}
+
 export async function siteData() {
   const [novels, manga, books, nUsers, nNovels, nManga] = await Promise.all([
     get('novels?select=id,title,image,users(name)&image=not.is.null&order=viewers_count.desc.nullslast&limit=14'),
@@ -45,8 +54,11 @@ export async function siteData() {
     ...novels.map((n) => ({ kind: 'novel', id: n.id, title: clean(n.title, 42), cover: n.image, by: n.users?.name && !BASE58.test(n.users.name) ? clean(n.users.name, 28) : null })),
     ...manga.map((m) => ({ kind: 'manga', id: m.id, title: clean(m.title, 42), cover: m.cover_image, by: m.author && !BASE58.test(m.author) ? clean(m.author, 28) : null })),
   ].filter((t) => t.cover);
+  // keep only covers that are real images (a few old uploads are broken files)
+  const ok = await Promise.all(titles.map((t) => isImage(t.cover)));
+  const good = titles.filter((_, i) => ok[i]);
   return {
-    titles,
+    titles: good,
     books: books.map((b) => ({ id: b.id, title: clean(b.title, 40), cover: b.cover_url, by: clean(b.author_name, 28) || null })),
     stats: { users: nUsers, novels: nNovels, manga: nManga },
   };
