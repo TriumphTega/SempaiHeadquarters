@@ -1,159 +1,32 @@
-"use client";
+// www.sempaihq.com/support — contact the team.
+import SiteShell, { Aura } from "../../components/site/SiteShell";
+import { Reveal } from "../../components/site/Motion";
+import { X_URL, APP } from "../../components/site/links";
+import SupportForm from "./SupportForm";
 
-import { useState } from "react";
-import Link from "next/link";
-import { supabase } from "../../services/supabase/supabaseClient";
-import {
-  FaEnvelope,
-  FaUser,
-  FaComment,
-  FaPaperPlane,
-  FaSpinner,
-} from "react-icons/fa";
-import Navbar from "../../components/Navbar";
-import styles from "./Support.module.css";
+export const metadata = { title: "Support — Sempai HQ", description: "Get help with Sempai HQ." };
 
 export default function Support() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setIsSubmitting(true);
-
-    if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
-      setError("All fields are required.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const { error: supabaseError } = await supabase.from("support_requests").insert({
-        name: name.trim(),
-        email: email.trim(),
-        subject: subject.trim(),
-        message: message.trim(),
-        created_at: new Date().toISOString(),
-      });
-
-      if (supabaseError) throw new Error("Error submitting request: " + supabaseError.message);
-
-      setSuccess("Your support request has been submitted successfully!");
-      setName("");
-      setEmail("");
-      setSubject("");
-      setMessage("");
-    } catch (err) {
-      setError(err.message);
-      console.error("Submit error:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className={styles.page}>
-      <Navbar />
-
-      <main className={styles.main}>
-        <section className={styles.supportSection}>
-          <h1 className={styles.title}>
-            <FaComment /> Contact Support
-          </h1>
-          <p className={styles.description}>
-            Have an issue or question? Fill out the form below, and our team will get back to you soon.
-          </p>
-
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.inputGroup}>
-              <label htmlFor="name" className={styles.inputLabel}>
-                <FaUser className={styles.inputIcon} /> Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-                className={styles.input}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.inputLabel}>
-                <FaEnvelope className={styles.inputIcon} /> Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className={styles.input}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="subject" className={styles.inputLabel}>
-                <FaComment className={styles.inputIcon} /> Subject
-              </label>
-              <input
-                id="subject"
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Enter the subject"
-                className={styles.input}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="message" className={styles.inputLabel}>
-                <FaComment className={styles.inputIcon} /> Message
-              </label>
-              <textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your issue or question"
-                className={styles.textarea}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {error && <div className={styles.alertError}>{error}</div>}
-            {success && <div className={styles.alertSuccess}>{success}</div>}
-
-            <button
-              type="submit"
-              className={styles.submitButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? <FaSpinner className={styles.spinner} /> : <FaPaperPlane />} Submit
-            </button>
-          </form>
-        </section>
-      </main>
-    </div>
+    <SiteShell>
+      <section className="sx-page-hero" style={{ paddingBottom: 30 }}>
+        <Aura />
+        <div className="sx-wrap" style={{ position: "relative" }}>
+          <Reveal><span className="sx-eyebrow">Support</span></Reveal>
+          <Reveal delay={80}><h1 className="sx-display">How can we <span className="sx-grad">help?</span></h1></Reveal>
+          <Reveal delay={160}><p className="sx-lead" style={{ margin: "20px auto 0" }}>Send us a message and the team will get back to you by email. For quick questions, reach us on X.</p></Reveal>
+        </div>
+      </section>
+      <section style={{ paddingBottom: 80 }}>
+        <div className="sx-wrap" style={{ maxWidth: 760 }}>
+          <Reveal delay={120}><div className="sx-card" style={{ padding: 30 }}><SupportForm /></div></Reveal>
+          <Reveal delay={200}>
+            <p style={{ textAlign: "center", color: "var(--ink3)", marginTop: 22 }}>
+              Also on X: <a href={X_URL} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontWeight: 800 }}>@HomeforSempai</a> · In the app: <a href={`${APP}/chat`} style={{ color: "var(--accent)", fontWeight: 800 }}>Community chat</a>
+            </p>
+          </Reveal>
+        </div>
+      </section>
+    </SiteShell>
   );
 }

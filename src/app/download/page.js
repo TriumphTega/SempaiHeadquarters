@@ -1,150 +1,52 @@
-"use client";
+// www.sempaihq.com/download — the Android app.
+import SiteShell, { Aura } from '../../components/site/SiteShell';
+import { Reveal, Spotlight } from '../../components/site/Motion';
+import { APK, APP } from '../../components/site/links';
+import { IconAndroid, IconApple, IconMonitor, IconArrow, IconShield, IconBolt } from '../../components/site/Icons';
 
-import { useEffect, useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+export const metadata = {
+  title: 'Download for Android — Sempai HQ',
+  description: 'Download the Sempai HQ Android app. Read novels and manga, earn SMP, play Kaiji.',
+};
 
-export default function DownloadPage() {
-  const [downloadInfo, setDownloadInfo] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    async function fetchDownloadInfo() {
-      try {
-        const res = await fetch('/api/android-download');
-        if (!res.ok) throw new Error('Failed to fetch download info');
-        const data = await res.json();
-        const normalized = Array.isArray(data) ? data : [];
-        // If API returns empty, fall back to local files for v1.1, 1.0.8, 1.0.3 and 1.0.2
-        if (normalized.length === 0) {
-          setDownloadInfo([
-            {
-              version: 'v1.1',
-              download_url: '/apk/sempaihq-v1.1.apk',
-              created_at: new Date().toISOString(),
-            },
-            {
-              version: '1.0.8',
-              download_url: '/apk/sempai-1.0.8.apk',
-              created_at: '2005-08-30T00:00:00.000Z',
-            },
-            {
-              version: '1.0.3',
-              download_url: '/apk/sempai-1.0.3.apk',
-              created_at: '2005-08-16T00:00:00.000Z',
-            },
-            {
-              version: '1.0.2',
-              download_url: '/apk/sempai-1.0.2.apk',
-              created_at: '2005-08-16T00:00:00.000Z',
-            },
-          ]);
-        } else {
-          setDownloadInfo(normalized);
-        }
-      } catch (err) {
-        // On error, still provide local fallback
-        setDownloadInfo([
-          {
-            version: 'v1.1',
-            download_url: '/apk/sempaihq-v1.1.apk',
-            created_at: new Date().toISOString(),
-          },
-          {
-            version: '1.0.8',
-            download_url: '/apk/sempai-1.0.8.apk',
-            created_at: '2005-08-30T00:00:00.000Z',
-          },
-          {
-            version: '1.0.3',
-            download_url: '/apk/sempai-1.0.3.apk',
-            created_at: '2005-08-16T00:00:00.000Z',
-          },
-          {
-            version: '1.0.2',
-            download_url: '/apk/sempai-1.0.2.apk',
-            created_at: '2005-08-16T00:00:00.000Z',
-          },
-        ]);
-        setError('Could not load download info. Showing local downloads.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDownloadInfo();
-  }, []);
-
-  // Hide deprecated versions 1.0.1 and 1.0.7 from rendering
-  const visibleDownloadInfo = Array.isArray(downloadInfo)
-    ? downloadInfo.filter((apk) => apk?.version !== '1.0.1' && apk?.version !== '1.0.7')
-    : [];
-
+export default function Download() {
   return (
-    <div className="bg-light min-vh-100 px-3 px-md-4 py-5">
-      <div className="container">
-        <h1 className="display-5 fw-bold mb-5 text-center text-dark">
-          Download Android App
-        </h1>
-
-        {loading && (
-          <div className="text-center">
-            <div
-              className="spinner-border text-warning"
-              style={{ width: '2rem', height: '2rem' }}
-              role="status"
-            >
-              <span className="visually-hidden">Loading...</span>
+    <SiteShell>
+      <section className="sx-page-hero">
+        <Aura grid />
+        <div className="sx-wrap" style={{ position: 'relative' }}>
+          <Reveal><span className="sx-eyebrow">Android · version 1.1</span></Reveal>
+          <Reveal delay={80}><h1 className="sx-display">Download <span className="sx-grad">Sempai HQ</span></h1></Reveal>
+          <Reveal delay={160}><p className="sx-lead" style={{ margin: '20px auto 0' }}>Install once — every new feature after that arrives automatically, no reinstall needed.</p></Reveal>
+          <Reveal delay={240}>
+            <div className="sx-hero-ctas" style={{ justifyContent: 'center', animation: 'none' }}>
+              <a className="sx-btn sx-btn-primary" href={APK} download><IconAndroid size={20} /> Download APK</a>
+              <a className="sx-btn" href="/install#android">How to install</a>
             </div>
-            <p className="mt-2 text-muted">Loading...</p>
-          </div>
-        )}
+          </Reveal>
+        </div>
+      </section>
 
-        {error && (
-          <p className="fw-medium text-center text-danger">{error}</p>
-        )}
-
-        {visibleDownloadInfo.length > 0 && (
-          <div className="g-4 row">
-            {visibleDownloadInfo.map((apk) => (
-              <div key={apk.version} className="col-12">
-                <div className="border-0 card h-100 shadow-sm">
-                  <div className="align-items-md-center card-body d-flex flex-column flex-md-row gap-3 justify-content-md-between">
-                    <div>
-                      <h5 className="card-title fw-semibold mb-1">
-                        Version {apk.version}
-                      </h5>
-                      {apk.created_at && (
-                        <p className="card-text mb-0 small text-muted">
-                          Released: {new Date(apk.created_at).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <a
-                      href={apk.download_url}
-                      className="btn btn-warning fw-medium px-4 text-white"
-                      style={{ backgroundColor: '#ff6600', borderColor: '#ff6600' }}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Download APK
-                    </a>
-                  </div>
-                </div>
-              </div>
+      <section className="sx-section" style={{ paddingTop: 10 }}>
+        <div className="sx-wrap">
+          <div className="sx-cards">
+            {[
+              { I: IconBolt, t: 'Auto-updates', d: 'New features and fixes are delivered over the air the next time you open the app.' },
+              { I: IconShield, t: 'Locked to you', d: 'Your built-in wallet is locked with your own password, with biometrics if you like.' },
+              { I: IconAndroid, t: 'Android 7 and up', d: 'Works on most Android phones and tablets. Allow installs from your browser when asked.' },
+            ].map(({ I, t, d }, i) => (
+              <Reveal key={t} delay={i * 110}><Spotlight className="sx-card"><div className="sx-orb-icon"><I /></div><h3 className="sx-display" style={{ fontSize: 24 }}>{t}</h3><p>{d}</p></Spotlight></Reveal>
             ))}
-            <p className="mt-4 small text-center text-muted">
-              If you have issues installing, make sure "Install from Unknown Sources" is enabled on your device.
-            </p>
           </div>
-        )}
-
-        {visibleDownloadInfo.length === 0 && !loading && !error && (
-          <p className="fw-medium text-center text-muted">
-            No APK versions available.
-          </p>
-        )}
-      </div>
-    </div>
+          <div className="sx-center" style={{ marginTop: 60 }}>
+            <Reveal><h2 className="sx-h2 sx-display" style={{ fontSize: 'clamp(28px,3.6vw,40px)' }}>Not on Android?</h2></Reveal>
+          </div>
+          <div className="sx-cards" style={{ gridTemplateColumns: 'repeat(2, 1fr)', maxWidth: 820, margin: '30px auto 0' }}>
+            <Reveal><Spotlight className="sx-card" href="/install#iphone"><div className="sx-orb-icon"><IconApple /></div><h3 className="sx-display" style={{ fontSize: 24 }}>iPhone & iPad</h3><p>Add the web app to your Home Screen from Safari.</p><p style={{ color: 'var(--accent)', fontWeight: 800, marginTop: 14, display: 'flex', gap: 8, alignItems: 'center' }}>See how <IconArrow size={16} /></p></Spotlight></Reveal>
+            <Reveal delay={110}><Spotlight className="sx-card" href={APP}><div className="sx-orb-icon"><IconMonitor /></div><h3 className="sx-display" style={{ fontSize: 24 }}>PC & Mac</h3><p>Use it in your browser, or install it as a desktop app.</p><p style={{ color: 'var(--accent)', fontWeight: 800, marginTop: 14, display: 'flex', gap: 8, alignItems: 'center' }}>Open web app <IconArrow size={16} /></p></Spotlight></Reveal>
+          </div>
+        </div>
+      </section>
+    </SiteShell>
   );
 }

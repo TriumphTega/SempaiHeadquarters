@@ -1,647 +1,321 @@
-"use client";
-
-import { useState, useEffect, useCallback, useRef, useContext } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "../services/supabase/supabaseClient";
-import { EmbeddedWalletContext } from "../components/EmbeddedWalletProvider";
+// www.sempaihq.com — the public landing page. The app itself lives at app.sempaihq.com.
+import SiteShell, { Aura } from '../components/site/SiteShell';
+import { Reveal, CountUp, Spotlight, Parallax, Faq } from '../components/site/Motion';
+import { siteData, APP, APK } from '../components/site/data';
 import {
-  FaBookOpen,
-  FaChevronLeft,
-  FaChevronRight,
-  FaBullhorn,
-  FaFeatherAlt,
-  FaEye,
-  FaStar,
-  FaTimes,
-  FaRss,
-} from "react-icons/fa";
-import Link from "next/link";
-import LoadingPage from "../components/LoadingPage";
-import ConnectButton from "../components/ConnectButton";
-import Navbar from "../components/Navbar";
-import ZenCarousel from "../components/ZenCarousel/ZenCarousel";
-import styles from "./page.module.css";
+  IconBook, IconCoins, IconGem, IconCards, IconStore, IconWallet, IconPen, IconBell, IconShield,
+  IconBolt, IconArrow, IconAndroid, IconApple, IconMonitor, IconGlobe, IconUsers, IconTrophy,
+} from '../components/site/Icons';
 
-const PrevArrow = (props) => {
-  const { className, style, onClick } = props;
-  return (
-    <button className={`${styles.carouselArrow} ${className}`} style={{ ...style, left: "10px" }} onClick={onClick}>
-      <FaChevronLeft />
-    </button>
-  );
+export const revalidate = 600;
+
+export const metadata = {
+  title: 'Sempai HQ — Stories that pay you back',
+  description: 'Read novels and manga from independent creators, earn SMP as you read, play Kaiji, and own what you love. Free on Android, iPhone and the web.',
+  alternates: { canonical: 'https://www.sempaihq.com' },
+  openGraph: {
+    title: 'Sempai HQ — Stories that pay you back',
+    description: 'Novels, manga and games from independent creators — where readers earn as they read.',
+    url: 'https://www.sempaihq.com',
+    siteName: 'Sempai HQ',
+    images: ['https://www.sempaihq.com/images/sempaiCard.png?v=3'],
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', site: '@HomeforSempai', title: 'Sempai HQ — Stories that pay you back', images: ['https://www.sempaihq.com/images/sempaiCard.png?v=3'] },
 };
 
-const NextArrow = (props) => {
-  const { className, style, onClick } = props;
+const linkFor = (t) => `${APP}/${t.kind}/${t.id}`;
+
+function Cover({ t }) {
   return (
-    <button className={`${styles.carouselArrow} ${className}`} style={{ ...style, right: "10px" }} onClick={onClick}>
-      <FaChevronRight />
-    </button>
+    <a className="sx-cover" href={linkFor(t)} aria-label={`${t.title}${t.by ? ` by ${t.by}` : ''}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={t.cover} alt="" loading="lazy" />
+      <span className="sx-tag">{t.kind === 'manga' ? 'MANGA' : 'NOVEL'}</span>
+      <span className="sx-cover-meta"><b>{t.title}</b>{t.by ? <small>by {t.by}</small> : null}</span>
+    </a>
   );
-};
+}
 
-const LoadingSpinner = () => (
-  <div className={styles.loadingSpinner}>
-    <svg width="50" height="50" viewBox="0 0 50 50">
-      <circle
-        cx="25"
-        cy="25"
-        r="20"
-        stroke="#00ccff"
-        strokeWidth="4"
-        fill="none"
-        strokeDasharray="31.4"
-        strokeDashoffset="0"
-      >
-        <animateTransform
-          attributeName="transform"
-          type="rotate"
-          from="0 25 25"
-          to="360 25 25"
-          dur="1s"
-          repeatCount="indefinite"
-        />
-      </circle>
-    </svg>
-  </div>
-);
-
-export default function Home() {
-  const { wallet: embeddedWallet } = useContext(EmbeddedWalletContext);
-  const router = useRouter();
-  const [isWriter, setIsWriter] = useState(false);
-  const [isArtist, setIsArtist] = useState(false);
-  const [isSuperuser, setIsSuperuser] = useState(false);
-  const [novels, setNovels] = useState([]);
-  const [manga, setManga] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true); // Initial full page load
-  const [pageLoading, setPageLoading] = useState(false); // Navigation load
-  const [contentLoading, setContentLoading] = useState(true); // Novels/Manga spinner
-  const [error, setError] = useState("");
-  const [showConnectPopup, setShowConnectPopup] = useState(false);
-  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
-  const [petalsCount, setPetalsCount] = useState(30);
-
-  const hasLoadedInitialData = useRef(false); // Prevent reload on wallet change
-
-  const isWalletConnected = !!embeddedWallet;
-  const walletPublicKey = embeddedWallet?.publicKey || null;
-
-  // Adjust sakura density based on viewport width for better mobile performance
-  useEffect(() => {
-    const calcPetals = () => {
-      const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
-      if (w < 380) return 8;
-      if (w < 768) return 14;
-      if (w < 1024) return 24;
-      return 40;
-    };
-    const apply = () => setPetalsCount(calcPetals());
-    apply();
-    window.addEventListener('resize', apply);
-    return () => window.removeEventListener('resize', apply);
-  }, []);
-
-  const toggleConnectPopup = () => setShowConnectPopup((prev) => !prev);
-
-  const toggleAnnouncements = () => setAnnouncementsOpen((prev) => !prev);
-
-  // Only used to gate the "Create Announcement" button in the dropdown
-  // below. The navbar's own creator-role state (for the dashboard button,
-  // profile link, etc.) lives entirely in <Navbar /> now.
-  const fetchCreatorFlags = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) return;
-    try {
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("isWriter, isArtist, isSuperuser")
-        .eq("wallet_address", walletPublicKey)
-        .single();
-      if (error && error.code !== "PGRST116") throw error;
-      if (user) {
-        setIsWriter(user.isWriter || false);
-        setIsArtist(user.isArtist || false);
-        setIsSuperuser(user.isSuperuser || false);
-      }
-    } catch (err) {
-      // Non-critical — the button just stays hidden if this fails.
-    }
-  }, [isWalletConnected, walletPublicKey]);
-
-  const fetchNovels = useCallback(async () => {
-    setContentLoading(true);
-    try {
-      // Fetch featured novels for the carousel
-      const { data: novelsData, error } = await supabase
-        .from("novels")
-        .select("id, title, image, summary, user_id, tags, viewers_count")
-        .eq("is_visible", true)
-        .eq("featured", true);
-
-      if (error) throw new Error(`Failed to fetch novels: ${error.message}`);
-      if (!novelsData || novelsData.length === 0) {
-        setNovels([]);
-        return;
-      }
-
-      const userIds = novelsData.map((novel) => novel.user_id).filter((id) => id);
-      let usersData = [];
-      let usersError = null;
-      
-      if (userIds.length > 0) {
-        const result = await supabase
-          .from("users")
-          .select("id, name, isWriter")
-          .in("id", userIds);
-        usersData = result.data;
-        usersError = result.error;
-      }
-
-      if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
-
-      const usersMap = (usersData || []).reduce((acc, user) => {
-        acc[user.id] = { name: user.name || "Unknown", isWriter: user.isWriter || false };
-        return acc;
-      }, {});
-
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from("chapter_ratings")
-        .select("content_id, rating")
-        .eq("content_type", "novel");
-
-      if (ratingsError) throw new Error(`Failed to fetch novel ratings: ${ratingsError.message}`);
-
-      const ratingsMap = ratingsData.reduce((acc, rating) => {
-        if (!acc[rating.content_id]) acc[rating.content_id] = [];
-        acc[rating.content_id].push(rating.rating);
-        return acc;
-      }, {});
-
-      const enrichedNovels = novelsData.map((novel) => {
-        const ratings = ratingsMap[novel.id] || [];
-        const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-        return {
-          ...novel,
-          writer: usersMap[novel.user_id] || { name: "Unknown", isWriter: false },
-          viewers_count: novel.viewers_count || 0,
-          averageRating: averageRating,
-          isAdult: novel.tags && novel.tags.includes("Adult(18+)"),
-        };
-      });
-
-      // Featured novels are manually curated, no sorting needed
-      setNovels(enrichedNovels);
-    } catch (err) {
-      setError(err.message);
-      setNovels([]); // Clear on error
-    } finally {
-      setContentLoading(false);
-    }
-  }, []);
-
-  const fetchManga = useCallback(async () => {
-    setContentLoading(true);
-    try {
-      // Fetch featured manga for the carousel
-      const { data: mangaData, error } = await supabase
-        .from("manga")
-        .select("id, title, cover_image, summary, user_id, status, tags")
-        .eq("is_visible", true)
-        .eq("featured", true)
-        .in("status", ["ongoing", "completed"]);
-
-      if (error) throw new Error(`Failed to fetch manga: ${error.message}`);
-      if (!mangaData || mangaData.length === 0) {
-        setManga([]);
-        return;
-      }
-
-      const userIds = mangaData.map((manga) => manga.user_id).filter((id) => id);
-      let usersData = [];
-      let usersError = null;
-      
-      if (userIds.length > 0) {
-        const result = await supabase
-          .from("users")
-          .select("id, name, isArtist")
-          .in("id", userIds);
-        usersData = result.data;
-        usersError = result.error;
-      }
-
-      if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
-
-      const usersMap = (usersData || []).reduce((acc, user) => {
-        acc[user.id] = { name: user.name || "Unknown", isArtist: user.isArtist || false };
-        return acc;
-      }, {});
-
-      const { data: interactionsData, error: interactionsError } = await supabase
-        .from("manga_interactions")
-        .select("manga_id, user_id");
-
-      if (interactionsError) throw new Error(`Failed to fetch manga interactions: ${interactionsError.message}`);
-
-      const viewerCounts = interactionsData.reduce((acc, interaction) => {
-        if (!acc[interaction.manga_id]) acc[interaction.manga_id] = new Set();
-        acc[interaction.manga_id].add(interaction.user_id);
-        return acc;
-      }, {});
-
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from("chapter_ratings")
-        .select("content_id, rating")
-        .eq("content_type", "manga");
-
-      if (ratingsError) throw new Error(`Failed to fetch manga ratings: ${ratingsError.message}`);
-
-      const ratingsMap = ratingsData.reduce((acc, rating) => {
-        if (!acc[rating.content_id]) acc[rating.content_id] = [];
-        acc[rating.content_id].push(rating.rating);
-        return acc;
-      }, {});
-
-      const enrichedManga = mangaData.map((manga) => {
-        const ratings = ratingsMap[manga.id] || [];
-        const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-        const uniqueViewers = viewerCounts[manga.id] ? viewerCounts[manga.id].size : 0;
-        return {
-          ...manga,
-          image: manga.cover_image,
-          writer: usersMap[manga.user_id] || { name: "Unknown", isArtist: false },
-          viewers: uniqueViewers,
-          averageRating: averageRating.toFixed(1),
-          isAdult: manga.tags && manga.tags.includes("Adult(18+)"),
-        };
-      });
-
-      setManga(enrichedManga);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setContentLoading(false);
-    }
-  }, []);
-
-  const fetchAnnouncements = useCallback(async () => {
-    if (!isWalletConnected || !walletPublicKey) return;
-    try {
-      const response = await fetch(`/api/announcements${walletPublicKey ? `?publicKey=${walletPublicKey}` : ""}`);
-      const { data } = await response.json();
-
-      const recentAnnouncements = data
-        .filter((announcement) => {
-          const createdAt = new Date(announcement.created_at);
-          const now = new Date();
-          return (now - createdAt) / (1000 * 60 * 60 * 24) <= 7;
-        })
-        .slice(0, 3);
-
-      const userIds = recentAnnouncements
-        .map((a) => a.users?.id)
-        .filter((id) => id && id !== undefined);
-      let usersData = [];
-      let usersError = null;
-      
-      if (userIds.length > 0) {
-        const result = await supabase
-          .from("users")
-          .select("id, name")
-          .in("id", userIds);
-        usersData = result.data;
-        usersError = result.error;
-      }
-
-      if (usersError) throw usersError;
-
-      const userMap = (usersData || []).reduce((acc, user) => {
-        acc[user.id] = user.name || "Unknown";
-        return acc;
-      }, {});
-
-      const enrichedAnnouncements = recentAnnouncements.map((announcement) => ({
-        ...announcement,
-        name: userMap[announcement.users?.id] || "Unknown",
-        user_id: announcement.users?.id,
-        novels: announcement.novels || { id: null, title: "General Announcement" },
-      }));
-
-      setAnnouncements(enrichedAnnouncements);
-    } catch (err) {
-      setError("");
-    }
-  }, [isWalletConnected, walletPublicKey]);
-
-  const handleNavigation = (path) => {
-    setPageLoading(true);
-    setAnnouncementsOpen(false);
-    setShowConnectPopup(false);
-    router.push(path);
-  };
-
-  const handleNovelNavigation = (id) => handleNavigation(`/novel/${id}`);
-  const handleMangaNavigation = (id) => handleNavigation(`/manga/${id}`);
-
-  useEffect(() => {
-    if (hasLoadedInitialData.current) return; // Skip if already loaded
-    const loadInitialData = async () => {
-      setLoading(true);
-      try {
-        setLoading(false); // Show UI with swirls
-        await Promise.all([fetchNovels(), fetchManga()]); // Load content after UI
-        hasLoadedInitialData.current = true;
-      } catch (err) {
-        setError("Failed to load initial data.");
-        setLoading(false);
-      }
-    };
-    loadInitialData();
-  }, [fetchNovels, fetchManga]);
-
-  useEffect(() => {
-    if (!isWalletConnected) {
-      setAnnouncements([]);
-      setIsWriter(false);
-      setIsArtist(false);
-      setIsSuperuser(false);
-      return;
-    }
-    if (walletPublicKey) {
-      fetchCreatorFlags();
-      fetchAnnouncements();
-    }
-  }, [isWalletConnected, walletPublicKey, fetchCreatorFlags, fetchAnnouncements]);
-
-  const announcementCarouselSettings = {
-    dots: true,
-    infinite: true,
-    speed: 600,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 3500,
-    arrows: true,
-    prevArrow: <PrevArrow />,
-    nextArrow: <NextArrow />,
-    fade: true,
-    pauseOnHover: true,
-    adaptiveHeight: true,
-    customPaging: (i) => <button className={styles.customDot}>{i + 1}</button>,
-  };
-
-  if (loading || pageLoading) return <LoadingPage />;
+export default async function Home() {
+  const { titles, books, stats } = await siteData();
+  const rowA = titles.filter((_, i) => i % 2 === 0);
+  const rowB = titles.filter((_, i) => i % 2 === 1);
+  const phone = titles.slice(0, 8);
+  const [f1, f2, f3] = titles.slice(8, 11).length === 3 ? titles.slice(8, 11) : titles.slice(0, 3);
 
   return (
-    <div className={styles.page}>
-      <div className={styles.backgroundAnimation}></div>
-      {/* Sakura petals overlay */}
-      <div className={styles.sakura} aria-hidden>
-        {Array.from({ length: petalsCount }).map((_, i) => (
-          <span key={i} style={{ "--i": i }}></span>
-        ))}
-      </div>
-
-      <div className={styles.announcementToggleWrapper}>
-        {announcementsOpen && (
-          <div className={styles.announcementDropdown}>
-            <button onClick={toggleAnnouncements} className={styles.closeAnnouncementButton}>
-              <FaTimes className={styles.closeIcon} />
-            </button>
-            {(isWriter || isArtist || isSuperuser) && (
-              <button
-                onClick={() => handleNavigation("/announcements")}
-                className={styles.createAnnouncementButton}
-              >
-                <FaBullhorn className={styles.heroIcon} /> Create Announcement
-              </button>
-            )}
-            {error && <div className={styles.errorAlert}>{error}</div>}
-            {announcements.length > 0 ? (
-              <Slider {...announcementCarouselSettings} className={styles.announcementCarousel}>
-                {announcements.map((announcement) => (
-                  <div key={announcement.id} className={styles.announcementSlide}>
-                    <div className={styles.announcementCard}>
-                      <div className={styles.announcementGlow}></div>
-                      <h3 className={styles.announcementTitle}>{announcement.title}</h3>
-                      <p className={styles.announcementMessage}>{announcement.message}</p>
-                      <div className={styles.announcementDetails}>
-                        <Link
-                          href={`/profile/${announcement.user_id}`}
-                          onClick={() => handleNavigation(`/profile/${announcement.user_id}`)}
-                          className={styles.announcementAuthor}
-                        >
-                          <FaFeatherAlt className={styles.writerBadge} /> {announcement.name}
-                        </Link>
-                        {announcement.novels.id ? (
-                          <Link
-                            href={`/novel/${announcement.novels.id}`}
-                            onClick={() => handleNovelNavigation(announcement.novels.id)}
-                            className={styles.announcementLink}
-                          >
-                            {announcement.novels.title}
-                          </Link>
-                        ) : (
-                          <span className={styles.announcementLink}>{announcement.novels.title}</span>
-                        )}
-                        <span className={styles.announcementDate}>
-                          {new Date(announcement.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </Slider>
-            ) : (
-              <p className={styles.noAnnouncements}>No recent announcements.</p>
-            )}
+    <SiteShell>
+      {/* ───────────────────────── hero ───────────────────────── */}
+      <section className="sx-hero">
+        <Aura grid />
+        <div className="sx-wrap sx-hero-grid">
+          <div>
+            <span className="sx-eyebrow">Read · Earn · Own</span>
+            <h1 className="sx-display">
+              <span className="sx-line"><span>Stories that</span></span>
+              <span className="sx-line"><span className="sx-grad">pay you back.</span></span>
+            </h1>
+            <p className="sx-lead">
+              Novels, manga and games from independent creators. Every chapter you read earns you SMP, every coin you spend goes mostly to the people who made it.
+            </p>
+            <div className="sx-hero-ctas">
+              <a className="sx-btn sx-btn-primary" href={APP}>Start reading free <IconArrow size={18} /></a>
+              <a className="sx-btn" href="/install"><IconPhone2 /> Get the app</a>
+            </div>
+            <div className="sx-hero-note">
+              <span>No card needed</span><span>Android, iPhone & web</span><span>Wallet built in</span>
+            </div>
           </div>
-        )}
-      </div>
 
-      <Navbar onNavigate={() => setPageLoading(true)} />
+          <Parallax depth={22}>
+            <div className="sx-stage">
+              {f1 ? <div className="sx-float-card f1">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={f1.cover} alt="" /></div> : null}
+              {f2 ? <div className="sx-float-card f2">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={f2.cover} alt="" /></div> : null}
+              {f3 ? <div className="sx-float-card f3">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={f3.cover} alt="" /></div> : null}
+              <div className="sx-phone">
+                <div className="sx-phone-screen">
+                  <div className="sx-phone-notch" />
+                  <div className="sx-phone-feed">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {[...phone, ...phone].map((t, i) => <img key={i} src={t.cover} alt="" />)}
+                  </div>
+                  <div className="sx-phone-bar"><i /><i /><i /><i /><i /></div>
+                </div>
+              </div>
+              <div className="sx-chip-float c1"><span className="sx-coin">S</span><span>+250 <b>SMP</b> for reading</span></div>
+              <div className="sx-chip-float c2"><span className="sx-coin" style={{ background: 'radial-gradient(circle at 35% 30%, #c4b5fd, #8b5cf6 55%, #4c1d95)' }}>✦</span><span>Creators keep <b>70%</b></span></div>
+            </div>
+          </Parallax>
+        </div>
+      </section>
 
-      <div className={styles.banner}>
-        <p className={styles.bannerText}>And there's a hope burning in our chests, so we build.</p>
-      </div>
-
-      <header className={styles.hero}>
-        <div className={styles.heroContent}>
-          <button onClick={toggleAnnouncements} className={styles.announcementToggle}>
-            <FaBullhorn className={styles.announcementIcon} />
-            {announcements.length > 0 && (
-              <span className={styles.announcementBadge}>{announcements.length}</span>
-            )}
-          </button>
-          <h1 className={styles.heroTitle}>Embark on Epic Journeys</h1>
-          <p className={styles.heroSubtitle}>Explore Novels & Manga, Earn Tokens, Unleash Your Imagination</p>
-          <div className={styles.heroButtons}>
-            <button onClick={() => handleNavigation("/novels")} className={styles.heroButton}>
-              <FaBookOpen className={styles.heroIcon} /> Explore Novels
-            </button>
-            <button onClick={() => handleNavigation("/manga")} className={styles.heroButton}>
-              <FaBookOpen className={styles.heroIcon} /> Explore Manga
-            </button>
+      {/* ───────────────────────── library wall ───────────────────────── */}
+      <section id="read" style={{ position: 'relative', paddingBottom: 40 }}>
+        <div className="sx-wrap sx-center">
+          <Reveal><span className="sx-eyebrow">The library</span></Reveal>
+          <Reveal delay={80}><h2 className="sx-h2 sx-display">Fresh drops, <span className="sx-grad">every day.</span></h2></Reveal>
+          <Reveal delay={160}><p className="sx-lead">Hand-written novels and hand-drawn manga from creators around the world. Tap any cover to start reading.</p></Reveal>
+        </div>
+        <div style={{ marginTop: 50, display: 'grid', gap: 18 }}>
+          {rowA.length ? <div className="sx-marquee"><div className="sx-marquee-track">{[...rowA, ...rowA].map((t, i) => <Cover key={`a${i}`} t={t} />)}</div></div> : null}
+          {rowB.length ? <div className="sx-marquee rev"><div className="sx-marquee-track">{[...rowB, ...rowB].map((t, i) => <Cover key={`b${i}`} t={t} />)}</div></div> : null}
+        </div>
+        <div className="sx-wrap">
+          <div className="sx-stats">
+            {[
+              { n: stats.users, l: 'Readers & creators' },
+              { n: stats.novels, l: 'Novels' },
+              { n: stats.manga, l: 'Manga series' },
+              { n: 70, l: 'Of every sale to the creator', s: '%' },
+            ].filter((x) => x.n != null).map((x, i) => (
+              <Reveal key={x.l} delay={i * 90} className="sx-stat"><strong><CountUp value={x.n} suffix={x.s || '+'} /></strong><span>{x.l}</span></Reveal>
+            ))}
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className={styles.mainContent}>
-        <section className={styles.contentSection}>
-          <h2 className={styles.sectionTitle}>Featured Novels</h2>
-          {error && <div className={styles.errorAlert}>{error}</div>}
-          {contentLoading ? (
-            <LoadingSpinner />
-          ) : novels.length > 0 ? (
-            <ZenCarousel>
-              {novels.map((novel) => (
-                <div key={novel.id}>
-                  <div className={styles.contentCard}>
-                    <Link href={`/novel/${novel.id}`} onClick={(e) => { e.preventDefault(); handleNovelNavigation(novel.id); }}>
-                      <img src={novel.image} alt={novel.title} className={styles.contentImage} />
-                      <div className={styles.contentOverlay}>
-                        <h3 className={styles.contentTitle}>{novel.title}</h3>
-                        {novel.isAdult && <span className={styles.adultWarning}>Adult(18+)</span>}
-                        <p className={styles.contentSummary}>{novel.summary}</p>
-                        <div className={styles.contentStats}>
-                          <span className={styles.viewers}>
-                            <FaEye /> {novel.viewers_count.toLocaleString()} Views
-                          </span>
-                          <span className={styles.rating}>
-                            <FaStar /> {novel.averageRating.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                    {novel.writer.isWriter && (
-                      <Link
-                        href={`/profile/${novel.user_id}`}
-                        onClick={() => handleNavigation(`/profile/${novel.user_id}`)}
-                        className={styles.writerName}
-                      >
-                        <FaFeatherAlt className={styles.writerBadge} /> {novel.writer.name}
-                      </Link>
-                    )}
-                  </div>
+      {/* ───────────────────────── three pillars ───────────────────────── */}
+      <section className="sx-section" id="earn">
+        <div className="sx-wrap">
+          <div className="sx-center">
+            <Reveal><span className="sx-eyebrow">How it works</span></Reveal>
+            <Reveal delay={80}><h2 className="sx-h2 sx-display">Read it. Earn it. <span className="sx-grad">Own it.</span></h2></Reveal>
+          </div>
+          <div className="sx-cards">
+            {[
+              { I: IconBook, t: 'Read', d: 'Thousands of chapters across fantasy, romance, action and more — in a reader built for phones, with offline drafts and reading history.' },
+              { I: IconCoins, t: 'Earn', d: 'Reading, commenting and finishing chapters earns SMP. Climb the weekly leaderboard for bigger rewards — paid straight to your wallet.' },
+              { I: IconGem, t: 'Own', d: 'Collect badges, limited-edition books and collectibles on Solana. What you buy is yours — not a licence that disappears.' },
+            ].map(({ I, t, d }, i) => (
+              <Reveal key={t} delay={i * 120}>
+                <Spotlight className="sx-card">
+                  <div className="sx-orb-icon"><I /></div>
+                  <h3 className="sx-display">{t}</h3>
+                  <p>{d}</p>
+                </Spotlight>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────────────────── creators ───────────────────────── */}
+      <section className="sx-section" style={{ paddingTop: 40 }}>
+        <div className="sx-wrap sx-split">
+          <Reveal>
+            <span className="sx-eyebrow">For creators</span>
+            <h2 className="sx-h2 sx-display">Your story. <span className="sx-grad">Your money.</span></h2>
+            <p className="sx-lead">Publish novels and manga, sell e-books in the Bazaar, and get paid in seconds — not months.</p>
+            <ul className="sx-list">
+              <li>70% of every chapter unlock and book sale goes straight to your wallet</li>
+              <li>Write anywhere — the studio keeps drafts on your phone, even offline</li>
+              <li>Readers get a phone notification the moment you publish</li>
+              <li>Every payment is public on the open ledger — nothing hidden</li>
+            </ul>
+            <div className="sx-hero-ctas" style={{ animation: 'none' }}>
+              <a className="sx-btn sx-btn-primary" href="/creators">Why creators choose us <IconArrow size={18} /></a>
+            </div>
+          </Reveal>
+          <Reveal delay={150}>
+            <div className="sx-visual">
+              <div className="sx-ring" />
+              {[
+                ['Chapter 41 unlocked', 'The Chronos Ledger', '+$0.02'],
+                ['E-book sold', 'Bazaar · limited edition', '+$0.70'],
+                ['Tip from a reader', 'Sweethearts · Season 1', '+5 SKR'],
+                ['Chapter 12 unlocked', 'Rising Water', '+$0.02'],
+              ].map(([a, b, c]) => (
+                <div key={a + b} className="sx-earn-row">
+                  <span className="sx-orb-icon" style={{ width: 42, height: 42 }}><IconCoins size={18} /></span>
+                  <div><div style={{ fontWeight: 800 }}>{a}</div><small>{b}</small></div>
+                  <b>{c}</b>
                 </div>
               ))}
-            </ZenCarousel>
-          ) : (
-            <p className={styles.noContent}>No novels available yet.</p>
-          )}
-        </section>
+              <p style={{ color: 'var(--ink3)', fontSize: 14, marginTop: 14 }}>Example of what a creator sees as readers unlock, buy and tip.</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
-        <section className={styles.contentSection}>
-          <h2 className={styles.sectionTitle}>Featured Manga</h2>
-          {error && <div className={styles.errorAlert}>{error}</div>}
-          {contentLoading ? (
-            <LoadingSpinner />
-          ) : manga.length > 0 ? (
-            <ZenCarousel>
-              {manga.map((mangaItem) => (
-                <div key={mangaItem.id}>
-                  <div className={styles.contentCard}>
-                    <Link href={`/manga/${mangaItem.id}`} onClick={(e) => { e.preventDefault(); handleMangaNavigation(mangaItem.id); }}>
-                      <img src={mangaItem.image} alt={mangaItem.title} className={styles.contentImage} />
-                      <div className={styles.contentOverlay}>
-                        <h3 className={styles.contentTitle}>{mangaItem.title}</h3>
-                        {mangaItem.isAdult && <span className={styles.adultWarning}>Adult(18+)</span>}
-                        <p className={styles.contentSummary}>{mangaItem.summary}</p>
-                        <div className={styles.contentStats}>
-                          <span className={styles.viewers}>
-                            <FaEye /> {mangaItem.viewers} Views
-                          </span>
-                          <span className={styles.rating}>
-                            <FaStar /> {mangaItem.averageRating}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                    {mangaItem.writer.isArtist && (
-                      <Link
-                        href={`/profile/${mangaItem.user_id}`}
-                        onClick={() => handleNavigation(`/profile/${mangaItem.user_id}`)}
-                        className={styles.writerName}
-                      >
-                        <FaFeatherAlt className={styles.writerBadge} /> {mangaItem.writer.name}
-                      </Link>
-                    )}
-                  </div>
-                </div>
+      {/* ───────────────────────── kaiji ───────────────────────── */}
+      <section className="sx-section" id="play">
+        <div className="sx-wrap sx-split flip">
+          <Reveal>
+            <span className="sx-eyebrow">Play</span>
+            <h2 className="sx-h2 sx-display">Kaiji. <span className="sx-grad">Mind games for real stakes.</span></h2>
+            <p className="sx-lead">A 1-v-1 card duel of nerve and reads. Wager SKR, challenge a friend, or enter a 24-player knockout tournament — the top three split the prize pool.</p>
+            <ul className="sx-list">
+              <li>Quick matches, open challenges and tournaments</li>
+              <li>Escrowed stakes, paid out automatically on-chain</li>
+              <li>Practice free against the computer first</li>
+            </ul>
+            <div className="sx-hero-ctas" style={{ animation: 'none' }}>
+              <a className="sx-btn sx-btn-primary" href={`${APP}/kaiji`}><IconCards size={18} /> Play Kaiji</a>
+            </div>
+          </Reveal>
+          <Reveal delay={150}>
+            <div className="sx-visual"><div className="sx-kaiji"><div className="sx-kcard">ROCK</div><div className="sx-kcard">PAPER</div><div className="sx-kcard">SCISSORS</div></div></div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ───────────────────────── everything else ───────────────────────── */}
+      <section className="sx-section" style={{ paddingTop: 40 }}>
+        <div className="sx-wrap">
+          <div className="sx-center">
+            <Reveal><span className="sx-eyebrow">All in one app</span></Reveal>
+            <Reveal delay={80}><h2 className="sx-h2 sx-display">Everything a fan needs.</h2></Reveal>
+          </div>
+          <div className="sx-cards">
+            {[
+              { I: IconStore, t: 'The Bazaar', d: 'Indie e-books to buy or borrow — limited editions with numbered copies.' },
+              { I: IconWallet, t: 'Built-in wallet', d: 'A Solana wallet locked with your password. Swap, buy with a card, cash out USDC.' },
+              { I: IconUsers, t: 'Crazy Corner', d: 'Post, reply and follow — the community feed for readers and creators.' },
+              { I: IconBell, t: 'Never miss a drop', d: 'Push notifications for new chapters, replies, sales and Kaiji games.' },
+              { I: IconTrophy, t: 'Leaderboards', d: 'Weekly reading rankings with SMP prizes for the top readers.' },
+              { I: IconShield, t: 'Open by default', d: 'Every payment, payout and swap is shown on the public ledger.' },
+            ].map(({ I, t, d }, i) => (
+              <Reveal key={t} delay={(i % 3) * 110}>
+                <Spotlight className="sx-card">
+                  <div className="sx-orb-icon"><I /></div>
+                  <h3 className="sx-display" style={{ fontSize: 24 }}>{t}</h3>
+                  <p>{d}</p>
+                </Spotlight>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────────────────── bazaar strip ───────────────────────── */}
+      {books.length ? (
+        <section style={{ paddingBottom: 60 }}>
+          <div className="sx-wrap sx-center">
+            <Reveal><h2 className="sx-h2 sx-display" style={{ fontSize: 'clamp(30px,4vw,46px)' }}>New in the <span className="sx-grad">Bazaar</span></h2></Reveal>
+          </div>
+          <div className="sx-marquee" style={{ marginTop: 34 }}>
+            <div className="sx-marquee-track">
+              {[...books, ...books, ...books].map((b, i) => (
+                <a key={i} className="sx-cover" href={`${APP}/bazaar/${b.id}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={b.cover} alt="" loading="lazy" />
+                  <span className="sx-tag">E-BOOK</span>
+                  <span className="sx-cover-meta"><b>{b.title}</b>{b.by ? <small>by {b.by}</small> : null}</span>
+                </a>
               ))}
-            </ZenCarousel>
-          ) : (
-            <p className={styles.noContent}>No manga available yet.</p>
-          )}
-        </section>
-
-        <section className={styles.featuresSection}>
-          <h2 className={styles.sectionTitle}>Explore More</h2>
-          <div className={styles.featuresGrid}>
-            <div className={styles.featureCard}>
-              <Link href="/kaito-adventure" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/kaito-adventure") : toggleConnectPopup(); }}>
-                <img src="/background.jpg" alt="Kaito Adventure" className={styles.featureImage} />
-                <div className={styles.featureOverlay}>
-                  <h3 className={styles.featureTitle}>Kaito's Adventure</h3>
-                </div>
-              </Link>
-            </div>
-            <div className={styles.featureCard}>
-              <Link href="/dao-governance" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/dao-governance") : toggleConnectPopup(); }}>
-                <img src="/images/dao.jpg" alt="DAO Governance" className={styles.featureImage} />
-                <div className={styles.featureOverlay}>
-                  <h3 className={styles.featureTitle}>DAO Governance</h3>
-                </div>
-              </Link>
-            </div>
-            <div className={styles.featureCard}>
-              <Link href="/novels" onClick={(e) => { e.preventDefault(); handleNavigation("/novels"); }}>
-                <img src="/images/novel-3.jpg" alt="Hoard" className={styles.featureImage} />
-                <div className={styles.featureOverlay}>
-                  <h3 className={styles.featureTitle}>Hoard</h3>
-                </div>
-              </Link>
-            </div>
-            <div className={styles.featureCard}>
-              <Link href="/keep-it-simple" onClick={(e) => { e.preventDefault(); isWalletConnected ? handleNavigation("/keep-it-simple") : toggleConnectPopup(); }}>
-                <img src="/images/novel-4.jpg" alt="KISS" className={styles.featureImage} />
-                <div className={styles.featureOverlay}>
-                  <h3 className={styles.featureTitle}>KISS</h3>
-                </div>
-              </Link>
             </div>
           </div>
         </section>
-      </main>
+      ) : null}
 
-      {showConnectPopup && (
-        <div className={styles.connectPopupOverlay}>
-          <div className={styles.connectPopup}>
-            <button onClick={toggleConnectPopup} className={styles.closePopupButton}>
-              <FaTimes />
-            </button>
-            <h3 className={styles.popupTitle}>Connect Your Wallet</h3>
-            <p className={styles.popupMessage}>Please connect your wallet to access this content.</p>
-            <ConnectButton />
+      {/* ───────────────────────── get the app ───────────────────────── */}
+      <section className="sx-section" id="get">
+        <div className="sx-wrap">
+          <div className="sx-center">
+            <Reveal><span className="sx-eyebrow">Get Sempai HQ</span></Reveal>
+            <Reveal delay={80}><h2 className="sx-h2 sx-display">On every screen you own.</h2></Reveal>
+          </div>
+          <div className="sx-steps" style={{ counterReset: 'none' }}>
+            {[
+              { I: IconAndroid, t: 'Android', d: 'Download the app and install it — updates arrive automatically.', href: APK, cta: 'Download APK' },
+              { I: IconApple, t: 'iPhone & iPad', d: 'Open app.sempaihq.com in Safari, tap Share, then “Add to Home Screen”.', href: '/install#iphone', cta: 'How to install' },
+              { I: IconMonitor, t: 'PC & Mac', d: 'Open the web app in Chrome or Edge and click “Install” in the address bar.', href: APP, cta: 'Open web app' },
+            ].map(({ I, t, d, href, cta }, i) => (
+              <Reveal key={t} delay={i * 120}>
+                <Spotlight className="sx-card" href={href}>
+                  <div className="sx-orb-icon"><I /></div>
+                  <h3 className="sx-display">{t}</h3>
+                  <p>{d}</p>
+                  <p style={{ color: 'var(--accent)', fontWeight: 800, marginTop: 18, display: 'flex', alignItems: 'center', gap: 8 }}>{cta} <IconArrow size={16} /></p>
+                </Spotlight>
+              </Reveal>
+            ))}
           </div>
         </div>
-      )}
+      </section>
 
-      <footer className={styles.footer}>
-        <div className={styles.footerContent}>
-          <div className={styles.footerTop}>
-            <p>© 2025 - 2026 Sempai HQ. All rights reserved.</p>
+      {/* ───────────────────────── FAQ ───────────────────────── */}
+      <section className="sx-section" style={{ paddingTop: 20 }}>
+        <div className="sx-wrap">
+          <div className="sx-center">
+            <Reveal><span className="sx-eyebrow">Questions</span></Reveal>
+            <Reveal delay={80}><h2 className="sx-h2 sx-display">Good to know.</h2></Reveal>
           </div>
-          <div className={styles.footerLinks}>
-            <Link href="/privacy-policy">Privacy Policy</Link>
-            <span className={styles.divider}>|</span>
-            <Link href="/terms">Terms & Conditions</Link>
-          </div>
-          <div className={styles.footerDisclaimer}>
-            By continuing, you accept our Terms and Conditions of use and our Privacy Policy.
-          </div>
+          <Reveal delay={120}>
+            <div className="sx-faqs">
+              <Faq q="Is Sempai HQ free?">Yes. Most chapters are free to read, and you earn SMP while you read. Some chapters are early-access — you can unlock them for a couple of cents and 70% goes to the creator.</Faq>
+              <Faq q="What is SMP?">SMP is Sempai HQ’s reward token on Solana. You earn it by reading and taking part, and you can use it to unlock chapters, borrow books and more.</Faq>
+              <Faq q="Do I need crypto to start?">No. Sign in with Google and the app creates a wallet for you, locked with your own password. Buy USDC or SOL with a card any time from Ramp.</Faq>
+              <Faq q="How do creators get paid?">Instantly. Chapter unlocks, e-book sales and tips land in the creator’s wallet in the same transaction, and every payment is visible on the open ledger.</Faq>
+              <Faq q="Is there an iPhone app?">The full app runs at app.sempaihq.com — add it to your Home Screen from Safari and it opens full screen like any other app.</Faq>
+            </div>
+          </Reveal>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      {/* ───────────────────────── CTA ───────────────────────── */}
+      <section style={{ padding: '20px 0 40px' }}>
+        <div className="sx-wrap">
+          <Reveal>
+            <div className="sx-cta-band">
+              <div className="sx-aura" aria-hidden><div className="sx-orb o2" /><div className="sx-orb o3" /></div>
+              <div style={{ position: 'relative' }}>
+                <h2 className="sx-display">Your next favourite story is waiting.</h2>
+                <p>Join the readers and creators building the home for independent stories.</p>
+                <div className="sx-hero-ctas" style={{ justifyContent: 'center', animation: 'none' }}>
+                  <a className="sx-btn" href={APP}><IconBolt size={18} /> Open Sempai HQ</a>
+                  <a className="sx-btn sx-ghost" href="/creators"><IconPen size={18} /> I&apos;m a creator</a>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </SiteShell>
   );
+}
+
+function IconPhone2() {
+  return <IconGlobe size={18} />;
 }

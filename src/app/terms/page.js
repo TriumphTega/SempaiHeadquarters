@@ -1,22 +1,15 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import styles from "./terms.module.css";
-import { FaArrowLeft } from "react-icons/fa";
+import SiteShell from "../../components/site/SiteShell";
 
 export default function Terms() {
-  const router = useRouter();
 
   return (
-    <div className={styles.container}>
-      <button onClick={() => router.back()} className={styles.backButton}>
-        <FaArrowLeft /> Back
-      </button>
-      <div className={styles.content}>
+    <SiteShell>
+      <div className="sx-wrap" style={{ paddingTop: 150, paddingBottom: 40 }}>
+      <div className="sx-prose">
         <h1>Terms & Conditions</h1>
-        <p className={styles.lastUpdated}>Updated at 2025-05-25</p>
+        <p style={{ color: "var(--ink3)", fontWeight: 700 }}>Updated at 2025-05-25</p>
 
-        <div className={styles.termsContent}>
+        <div>
           <h2>General Terms</h2>
           <p>By accessing and placing an order with Sempai HQ, you confirm that you are in agreement with and bound by the terms of service contained in the Terms & Conditions outlined below. These terms apply to the entire website and any email or other type of communication between you and Sempai HQ.</p>
 
@@ -106,6 +99,7 @@ export default function Terms() {
           <p>Via this Address: 9, Irepodun Street, Alaagba, Iyana-Ipaja Lagos, Nigeria</p>
         </div>
       </div>
-    </div>
+      </div>
+    </SiteShell>
   );
-} 
+}

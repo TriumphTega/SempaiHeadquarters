@@ -1,22 +1,15 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import styles from "./privacy-policy.module.css";
-import { FaArrowLeft } from "react-icons/fa";
+import SiteShell from "../../components/site/SiteShell";
 
 export default function PrivacyPolicy() {
-  const router = useRouter();
 
   return (
-    <div className={styles.container}>
-      <button onClick={() => router.back()} className={styles.backButton}>
-        <FaArrowLeft /> Back
-      </button>
-      <div className={styles.content}>
+    <SiteShell>
+      <div className="sx-wrap" style={{ paddingTop: 150, paddingBottom: 40 }}>
+      <div className="sx-prose">
         <h1>Privacy Policy</h1>
-        <p className={styles.lastUpdated}>Updated at 2025-05-25</p>
+        <p style={{ color: "var(--ink3)", fontWeight: 700 }}>Updated at 2025-05-25</p>
 
-        <div className={styles.policyContent}>
+        <div>
           <p>Sempai HQ ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by Sempai HQ.</p>
           
           <p>This Privacy Policy applies to our website, and its associated subdomains (collectively, our "Service") alongside our application, Sempai HQ. By accessing or using our Service, you signify that you have read, understood, and agree to our collection, storage, use, and disclosure of your personal information as described in this Privacy Policy and our Terms of Service. This Privacy Policy was created with Termify.</p>
@@ -105,6 +98,7 @@ export default function PrivacyPolicy() {
           <p>Via this Address: 9, Irepodun Street, Alaagba, Iyana-Ipaja Lagos, Nigeria</p>
         </div>
       </div>
-    </div>
+      </div>
+    </SiteShell>
   );
-} 
+}
