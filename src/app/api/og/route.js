@@ -8,12 +8,14 @@ export const runtime = 'edge';
 const ORANGE = '#F36316';
 const LOGO = 'https://www.sempaihq.com/images/logo.jpg';
 
-// Only keep a cover the card renderer can draw (some old uploads are not images at all).
+// Download the cover once and hand the bytes to the renderer — but only if it's an image the
+// renderer can draw (some old uploads are not images at all).
 async function usableCover(url) {
   if (!url) return null;
   try {
-    const r = await fetch(url, { method: 'HEAD' });
-    return r.ok && /^image\/(png|jpe?g|gif)/i.test(r.headers.get('content-type') || '') ? url : null;
+    const r = await fetch(url);
+    if (!r.ok || !/^image\/(png|jpe?g|gif)/i.test(r.headers.get('content-type') || '')) return null;
+    return await r.arrayBuffer();
   } catch {
     return null;
   }
@@ -31,12 +33,9 @@ export async function GET(request) {
   return new ImageResponse(
     (
       <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative', background: '#0B0B14', fontFamily: 'sans-serif' }}>
-        {info?.cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.cover} alt="" width={1200} height={630} style={{ position: 'absolute', inset: 0, width: 1200, height: 630, objectFit: 'cover', opacity: 0.28 }} />
-        ) : null}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', background: 'linear-gradient(100deg, rgba(11,11,20,0.97) 0%, rgba(11,11,20,0.86) 55%, rgba(11,11,20,0.55) 100%)' }} />
-        <div style={{ position: 'absolute', top: -160, right: -120, width: 520, height: 520, borderRadius: 520, display: 'flex', background: 'radial-gradient(circle, rgba(243,99,22,0.45), rgba(243,99,22,0) 70%)' }} />
+        {/* Smooth glows only (no full-bleed photo behind the card): keeps the PNG small so X loads it fast. */}
+        <div style={{ position: 'absolute', top: -180, right: -140, width: 620, height: 620, borderRadius: 620, display: 'flex', background: 'radial-gradient(circle, rgba(243,99,22,0.42), rgba(243,99,22,0) 70%)' }} />
+        <div style={{ position: 'absolute', bottom: -260, left: -160, width: 640, height: 640, borderRadius: 640, display: 'flex', background: 'radial-gradient(circle, rgba(139,92,246,0.28), rgba(139,92,246,0) 70%)' }} />
 
         <div style={{ display: 'flex', width: '100%', height: '100%', padding: '64px 70px', alignItems: 'center', gap: 56 }}>
           {info?.cover ? (
@@ -66,6 +65,6 @@ export async function GET(request) {
         </div>
       </div>
     ),
-    { width: 1200, height: 630, headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400' } },
+    { width: 1200, height: 630, headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' } },
   );
 }
