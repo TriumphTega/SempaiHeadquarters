@@ -203,7 +203,7 @@ export default async function Home() {
           <Reveal delay={80}><h2 className="lx-title sx-display">Good to know.</h2></Reveal>
           <Reveal delay={120}>
             <div className="sx-faqs lx-faqs">
-              <Faq q="Is Sempai HQ free?">The first 3 chapters of every novel are free. After that, reading costs just $0.0025 per page, and 70% of it goes straight to the creator. Premium early-access chapters are priced separately. You earn SMP while you read, too.</Faq>
+              <Faq q="Is Sempai HQ free?">The first 3 chapters of every novel are free. After that, reading costs just $0.025 per page, and 70% of it goes straight to the creator. Premium early-access chapters are priced separately. You earn SMP while you read, too.</Faq>
               <Faq q="What is SMP?">Sempai HQ’s reward token on Solana. You earn it by reading and taking part, and spend it on chapters, borrowed books and more.</Faq>
               <Faq q="Do I need crypto to start?">No. Sign in with Google and the app sets up a wallet for you, locked with your own password. You can buy USDC or SOL with a card whenever you like.</Faq>
               <Faq q="How do creators get paid?">Instantly. Unlocks, sales and tips are split in the same transaction, and every payment is visible on the open ledger.</Faq>
