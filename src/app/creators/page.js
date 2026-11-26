@@ -38,7 +38,7 @@ export default function Creators() {
           <div className="sx-cards">
             {[
               { I: IconPen, t: 'A studio in your pocket', d: 'Write chapters on your phone with a full editor. Drafts save on the device, so you can keep writing offline.' },
-              { I: IconBook, t: 'Novels & manga', d: 'Publish prose chapters or upload manga pages. Free chapters build your audience; early-access chapters earn.' },
+              { I: IconBook, t: 'Novels & manga', d: 'Publish prose chapters or upload manga pages. Your first 3 chapters are free to hook readers; after that every page read pays you, and premium early-access chapters earn more.' },
               { I: IconStore, t: 'Sell e-books', d: 'List EPUB or PDF books in the Bazaar — sell them, lend them, or release numbered limited editions.' },
               { I: IconBell, t: 'Your readers, notified', d: 'Everyone reading your work gets a phone notification when you publish. No algorithm in the way.' },
               { I: IconCoins, t: 'Tips & badges', d: 'Fans can tip you in SKR or buy your badge — and the money lands in your wallet straight away.' },
@@ -65,7 +65,7 @@ export default function Creators() {
           <div className="sx-steps">
             {[
               ['Apply', 'Tell us whether you write or draw, and share a link to your work. The team reviews every application.'],
-              ['Publish', 'Open the studio, create your title and post your first chapters — free ones to hook readers, early-access ones to earn.'],
+              ['Publish', 'Open the studio, create your title and post your chapters — the first 3 are free to hook readers, the rest earn from every page read.'],
               ['Get paid', 'Every unlock pays you instantly. Watch it happen in your wallet and on the open ledger.'],
             ].map(([t, d], i) => (
               <Reveal key={t} delay={i * 120} className="sx-step"><h3 className="sx-display">{t}</h3><p>{d}</p></Reveal>

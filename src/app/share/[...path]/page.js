@@ -20,7 +20,7 @@ export async function generateMetadata({ params }) {
   const title = info.chapterLabel
     ? `${info.title} — ${info.chapterLabel}${info.chapterTitle ? `: ${info.chapterTitle}` : ''}`
     : info.title;
-  const description = `${info.kind === 'manga' ? 'Manga' : 'Novel'}${info.author ? ` by ${info.author}` : ''} on Sempai HQ — read free, earn as you read.`;
+  const description = `${info.kind === 'manga' ? 'Manga' : 'Novel'}${info.author ? ` by ${info.author}` : ''} on Sempai HQ — first 3 chapters free, earn as you read.`;
   const url = `${APP_ORIGIN}${info.path}`;
   const image = `https://www.sempaihq.com/api/og?kind=${info.kind}&id=${p.id}${p.ch != null ? `&ch=${encodeURIComponent(p.ch)}` : ''}`;
   return {

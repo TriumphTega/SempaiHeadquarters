@@ -9,7 +9,7 @@ export const revalidate = 600;
 
 export const metadata = {
   title: 'Sempai HQ — Stories that pay you back',
-  description: 'Read novels and manga from independent creators, earn SMP as you read, play Kaiji, and own what you love. Free on Android, iPhone and the web.',
+  description: 'Read novels and manga from independent creators, earn SMP as you read, play Kaiji, and own what you love. On Android, iPhone and the web.',
   alternates: { canonical: 'https://www.sempaihq.com' },
   openGraph: {
     title: 'Sempai HQ — Stories that pay you back',
@@ -44,11 +44,11 @@ export default async function Home() {
           </h1>
           <p className="lx-sub">Read independent novels and manga, earn SMP for every chapter, and back the creators you love — 70% of what you spend goes straight to them.</p>
           <div className="lx-ctas">
-            <a className="sx-btn sx-btn-primary" href={APP}>Start reading free <IconArrow size={18} /></a>
+            <a className="sx-btn sx-btn-primary" href={APP}>Start reading <IconArrow size={18} /></a>
             <a className="sx-btn" href="/install">Get the app</a>
           </div>
           <div className="lx-trust">
-            <span>Free to read</span>
+            <span>First 3 chapters free</span>
             <span>Android, iPhone &amp; web</span>
             {stats.users ? <span>{stats.users.toLocaleString()}+ readers</span> : null}
           </div>
@@ -203,7 +203,7 @@ export default async function Home() {
           <Reveal delay={80}><h2 className="lx-title sx-display">Good to know.</h2></Reveal>
           <Reveal delay={120}>
             <div className="sx-faqs lx-faqs">
-              <Faq q="Is Sempai HQ free?">Yes. Most chapters are free, and you earn SMP while you read. Some chapters are early access — unlocking one costs a couple of cents, and 70% goes to the creator.</Faq>
+              <Faq q="Is Sempai HQ free?">The first 3 chapters of every novel are free. After that, reading costs just $0.0025 per page, and 70% of it goes straight to the creator. Premium early-access chapters are priced separately. You earn SMP while you read, too.</Faq>
               <Faq q="What is SMP?">Sempai HQ’s reward token on Solana. You earn it by reading and taking part, and spend it on chapters, borrowed books and more.</Faq>
               <Faq q="Do I need crypto to start?">No. Sign in with Google and the app sets up a wallet for you, locked with your own password. You can buy USDC or SOL with a card whenever you like.</Faq>
               <Faq q="How do creators get paid?">Instantly. Unlocks, sales and tips are split in the same transaction, and every payment is visible on the open ledger.</Faq>
